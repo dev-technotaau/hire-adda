@@ -33,14 +33,14 @@
   "license": "MIT",
   "lint-staged": {
     "backend/src/**/*.{ts,js}": [
-      "eslint --fix",
+      "node backend/node_modules/eslint/bin/eslint.js --fix --config backend/eslint.config.mjs",
       "prettier --write"
     ],
     "frontend/src/**/*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
+      "node frontend/node_modules/eslint/bin/eslint.js --fix --config frontend/eslint.config.mjs",
       "prettier --write"
     ],
-    "*.{json,md,yml,yaml}": [
+    "*.{md,yml,yaml}": [
       "prettier --write"
     ]
   },
