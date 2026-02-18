@@ -27,7 +27,9 @@ try {
     // Env-var UIs often store PEM certs with literal \n — convert to real newlines
     const caCert = rawCert ? rawCert.replace(/\\n/g, '\n') : null;
 
-    kafkaConfig.ssl = caCert ? { ca: [caCert] } : { rejectUnauthorized: false };
+    kafkaConfig.ssl = caCert
+      ? { ca: [caCert], rejectUnauthorized: false }
+      : { rejectUnauthorized: false };
 
     kafkaConfig.sasl = {
       mechanism:
