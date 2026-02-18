@@ -1,0 +1,189 @@
+import { WhatsappTemplate } from '../../types/notification-templates';
+
+// ===============================
+// Authentication & Onboarding
+// ===============================
+
+export const welcomeWhatsapp = (name: string): WhatsappTemplate => ({
+    templateName: 'welcome_message',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: name },
+            ],
+        },
+    ],
+    text: `Welcome to Talent Bridge, ${name}! We're excited to help you find your perfect career match. Complete your profile to get started.`,
+});
+
+export const otpWhatsapp = (otp: string): WhatsappTemplate => ({
+    templateName: 'auth_otp',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: otp },
+            ],
+        },
+        {
+            type: 'button',
+            sub_type: 'url',
+            index: '0',
+            parameters: [
+                { type: 'text', text: otp },
+            ],
+        },
+    ],
+    text: `Your Talent Bridge verification code is ${otp}. Valid for 10 minutes. Do not share this code.`,
+});
+
+export const profileCompletionWhatsapp = (name: string, progress: number): WhatsappTemplate => ({
+    templateName: 'profile_completion',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: name },
+                { type: 'text', text: `${progress}%` },
+            ],
+        },
+    ],
+    text: `Hi ${name}, your Talent Bridge profile is ${progress}% complete. Complete it to get up to 5x more interview invitations!`,
+});
+
+// ===============================
+// Jobs & Applications
+// ===============================
+
+export const jobAlertWhatsapp = (jobTitle: string, company: string, link: string): WhatsappTemplate => ({
+    templateName: 'job_alert',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: jobTitle },
+                { type: 'text', text: company },
+            ],
+        },
+        {
+            type: 'button',
+            sub_type: 'url',
+            index: '0',
+            parameters: [
+                { type: 'text', text: link },
+            ],
+        },
+    ],
+    text: `New job match: ${jobTitle} at ${company}. Apply now: ${link}`,
+});
+
+export const interviewWhatsapp = (jobTitle: string, date: string, link: string): WhatsappTemplate => ({
+    templateName: 'interview_invite',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: jobTitle },
+                { type: 'text', text: date },
+            ],
+        },
+        {
+            type: 'button',
+            sub_type: 'url',
+            index: '0',
+            parameters: [
+                { type: 'text', text: link },
+            ],
+        },
+    ],
+    text: `Interview scheduled for ${jobTitle} on ${date}. Join here: ${link}`,
+});
+
+export const applicationStatusWhatsapp = (status: string, company: string, jobTitle: string): WhatsappTemplate => ({
+    templateName: 'application_status_update',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: jobTitle },
+                { type: 'text', text: company },
+                { type: 'text', text: status },
+            ],
+        },
+    ],
+    text: `Your application for ${jobTitle} at ${company} has been updated to: ${status}. Open Talent Bridge for details.`,
+});
+
+export const jobOfferWhatsapp = (jobTitle: string, company: string, link: string): WhatsappTemplate => ({
+    templateName: 'job_offer',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: jobTitle },
+                { type: 'text', text: company },
+            ],
+        },
+        {
+            type: 'button',
+            sub_type: 'url',
+            index: '0',
+            parameters: [
+                { type: 'text', text: link },
+            ],
+        },
+    ],
+    text: `Congratulations! You've received an offer for ${jobTitle} at ${company}. View details: ${link}`,
+});
+
+// ===============================
+// Documents & Verification
+// ===============================
+
+export const documentRequestWhatsapp = (docName: string, link: string): WhatsappTemplate => ({
+    templateName: 'document_request',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: docName },
+            ],
+        },
+        {
+            type: 'button',
+            sub_type: 'url',
+            index: '0',
+            parameters: [
+                { type: 'text', text: link },
+            ],
+        },
+    ],
+    text: `Action required: Please upload your ${docName} to continue your verification. Upload here: ${link}`,
+});
+
+// ===============================
+// Security
+// ===============================
+
+export const securityAlertWhatsapp = (action: string): WhatsappTemplate => ({
+    templateName: 'security_alert',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: action },
+            ],
+        },
+    ],
+    text: `Security alert: ${action} was detected on your Talent Bridge account. If this wasn't you, secure your account immediately.`,
+});

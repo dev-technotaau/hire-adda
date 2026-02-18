@@ -1,0 +1,268 @@
+// Sentry must be imported first before any other modules
+import './instrument';
+import express, { Application, Request, Response, Router } from 'express';
+import * as Sentry from '@sentry/node';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import morgan from 'morgan';
+import hpp from 'hpp';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
+import logger from './config/logger';
+import healthRoutes from './routes/health.routes';
+import requestId from './middleware/request-id';
+// Audit middleware applied per-route in admin.routes.ts
+
+const app: Application = express();
+
+// API v1 Router (for versioning)
+const apiV1Router = Router();
+
+// Trust proxy - required when behind Nginx/load balancer
+app.set('trust proxy', 1);
+
+import { env } from './config/env';
+
+import { xssSanitize } from './middleware/xss-sanitize';
+import { enforceContentType } from './middleware/content-type';
+import { ddosProtection } from './middleware/ddos-protection';
+import { waf } from './middleware/waf';
+import { protect, restrictTo } from './middleware/auth';
+import { handleCspReport } from './controllers/csp-report.controller';
+
+// Security middleware
+app.use(requestId()); // Add request ID for tracing
+app.use(ddosProtection()); // DDoS protection (Redis-backed per-IP rate tracking)
+app.use(waf()); // WAF rules (SQL injection, path traversal, exploit probes)
+
+// Helmet with strict Content Security Policy (CSP) & HSTS
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "https://challenges.cloudflare.com"], // Allow Cloudflare Turnstile
+            frameSrc: ["'self'", "https://challenges.cloudflare.com"], // Allow Turnstile iframe
+            imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://assets.talentbridge.com"], // Allow Cloudinary & R2
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: [],
+            reportUri: ['/api/csp-report'],
+        },
+    },
+    hsts: {
+        maxAge: 31536000, // 1 year
+        includeSubDomains: true,
+        preload: true,
+    },
+}));
+
+app.use(hpp()); // Prevent HTTP Parameter Pollution
+
+// CORS configuration with preflight caching
+app.use(cors({
+    origin: (origin, callback) => {
+        const allowedOrigins = env.CORS_ORIGIN === '*' ? '*' : env.CORS_ORIGIN.split(',');
+
+        if (allowedOrigins === '*') {
+            callback(null, true);
+        } else if (allowedOrigins.indexOf(origin as string) !== -1 || !origin) {
+            // !origin allows requests from non-browser sources (like Postman)
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    maxAge: 86400, // Cache preflight responses for 24 hours
+    exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After'],
+}));
+
+// Rate limiting
+import { apiLimiter, authLimiter } from './middleware/rate-limit';
+
+// Apply rate limits
+// Note: authLimiter should be applied specifically to auth routes in their router, 
+// but we perform a global API limit here.
+app.use('/api', apiLimiter);
+// We can also apply strict limits to specific paths globally if the router isn't mounted yet
+app.use('/api/v1/auth', authLimiter);
+
+// Body parsing
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(cookieParser()); // Cookie parser must be before CSRF
+
+// Content-Type enforcement (must run AFTER body parsing)
+app.use(enforceContentType());
+
+// XSS sanitization (must run AFTER body parsing so req.body exists)
+app.use(xssSanitize());
+
+// Compression
+app.use(compression());
+
+// Request timeout (30s for normal requests)
+import { requestTimeout } from './middleware/timeout';
+app.use(requestTimeout(30000));
+
+// Structured request logging with correlation ID and duration
+app.use((req: Request, res: Response, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        const logData = `${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms [${req.id}]`;
+        if (res.statusCode >= 500) {
+            logger.error(logData);
+        } else if (res.statusCode >= 400) {
+            logger.warn(logData);
+        } else {
+            logger.info(logData);
+        }
+    });
+    next();
+});
+
+// HTTP request logging (morgan — development only)
+if (env.NODE_ENV === 'development') {
+    app.use(morgan('dev', {
+        stream: { write: (message) => logger.debug(message.trim()) },
+    }));
+}
+
+// Swagger API docs (protected in production)
+const swaggerSetup = swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Talent Bridge API Docs',
+});
+if (env.NODE_ENV === 'production') {
+    app.use('/api-docs', protect, restrictTo('ADMIN', 'SUPER_ADMIN'), swaggerUi.serve, swaggerSetup);
+} else {
+    app.use('/api-docs', swaggerUi.serve, swaggerSetup);
+}
+
+// CSP violation reporting endpoint (before CSRF so browser reports aren't blocked)
+app.post('/api/csp-report', express.json({ type: ['application/csp-report', 'application/json'] }), handleCspReport);
+
+// CSRF Protection (using csrf-csrf)
+// We only protect API routes, health check and docs are excluded
+import { generateCsrfToken, doubleCsrfProtection } from './config/csrf';
+
+// CSRF Token Endpoint (Frontend calls this to get the token)
+app.get('/api/csrf-token', (req: Request, res: Response) => {
+    const csrfToken = generateCsrfToken(req, res);
+    res.json({ csrfToken });
+});
+
+// Protect all state-changing API routes
+// Note: This applies to POST, PUT, DELETE, PATCH requests
+apiV1Router.use(doubleCsrfProtection);
+
+// Health check route
+app.use('/health', healthRoutes);
+
+// Maintenance mode check (after health routes so probes still work)
+import { maintenanceCheck } from './middleware/maintenance';
+app.use('/api', maintenanceCheck());
+
+// Passport initialization
+import passport from './config/passport';
+app.use(passport.initialize());
+
+// Track user last active time (debounced via Redis)
+import { updateLastActive } from './middleware/last-active';
+app.use(updateLastActive());
+
+// API v1 routes (versioning)
+// Mount all versioned API routes under /api/v1
+import authRoutes from './routes/auth.routes';
+import candidateRoutes from './routes/candidate.routes';
+import employerRoutes from './routes/employer.routes';
+import jobRoutes from './routes/job.routes';
+import verificationRoutes from './routes/verification.routes';
+import adminRoutes from './routes/admin.routes';
+import notificationRoutes from './routes/notification.routes';
+import deviceRoutes from './routes/device.routes';
+import draftRoutes from './routes/draft.routes';
+import sessionRoutes from './routes/session.routes';
+import superAdminRoutes from './routes/super-admin.routes';
+import savedCandidateRoutes from './routes/saved-candidate.routes';
+import savedSearchRoutes from './routes/saved-search.routes';
+import searchRoutes from './routes/search.routes';
+import reportRoutes from './routes/report.routes';
+import featureFlagRoutes from './routes/feature-flag.routes';
+import webauthnRoutes from './routes/webauthn.routes';
+import webhookRoutes from './routes/webhook.routes';
+import recommendationRoutes from './routes/recommendation.routes';
+import analyticsRoutes from './routes/analytics.routes';
+import contactRoutes from './routes/contact.routes';
+import publicRoutes from './routes/public.routes';
+import ticketRoutes from './routes/ticket.routes';
+
+apiV1Router.use('/auth', authRoutes);
+apiV1Router.use('/candidates', candidateRoutes);
+apiV1Router.use('/employers', employerRoutes);
+apiV1Router.use('/jobs', jobRoutes);
+apiV1Router.use('/verifications', verificationRoutes);
+apiV1Router.use('/admin', adminRoutes);
+apiV1Router.use('/notifications', notificationRoutes);
+apiV1Router.use('/devices', deviceRoutes);
+apiV1Router.use('/drafts', draftRoutes);
+apiV1Router.use('/sessions', sessionRoutes);
+apiV1Router.use('/super-admin', superAdminRoutes);
+apiV1Router.use('/saved-candidates', savedCandidateRoutes);
+apiV1Router.use('/saved-searches', savedSearchRoutes);
+apiV1Router.use('/search', searchRoutes);
+apiV1Router.use('/reports', reportRoutes);
+apiV1Router.use('/feature-flags', featureFlagRoutes);
+apiV1Router.use('/webauthn', webauthnRoutes);
+apiV1Router.use('/webhooks', webhookRoutes);
+apiV1Router.use('/recommendations', recommendationRoutes);
+apiV1Router.use('/analytics', analyticsRoutes);
+apiV1Router.use('/contact', contactRoutes);
+apiV1Router.use('/public', publicRoutes);
+apiV1Router.use('/tickets', ticketRoutes);
+
+app.use('/api/v1', apiV1Router);
+
+// Root route
+app.get('/', (_req: Request, res: Response) => {
+    res.json({
+        message: 'Welcome to Talent Bridge API',
+        docs: '/api-docs',
+    });
+});
+
+// Test Sentry route (dev only)
+if (env.NODE_ENV !== 'production') {
+    app.get('/debug-sentry', (_req: Request, _res: Response) => {
+        throw new Error('Sentry test error!');
+    });
+}
+
+// API versioning enforcement — reject unsupported versions
+app.all('/api/v:version/*path', (req: Request, res: Response) => {
+    const version = req.params.version;
+    if (version !== '1') {
+        res.status(400).json({
+            success: false,
+            error: { message: `API version v${version} is not supported. Use /api/v1/`, code: 'UNSUPPORTED_API_VERSION' },
+        });
+        return;
+    }
+    res.status(404).json({ success: false, error: { message: 'API route not found', code: 'ROUTE_NOT_FOUND' } });
+});
+
+// 404 handler for undefined API routes
+app.all('/api/*path', (_req: Request, res: Response) => {
+    res.status(404).json({ success: false, error: { message: 'API route not found', code: 'ROUTE_NOT_FOUND' } });
+});
+
+// Sentry error handler
+Sentry.setupExpressErrorHandler(app);
+
+// Global Error Handling Middleware
+import { errorHandler } from './middleware/error';
+app.use(errorHandler);
+
+export default app;

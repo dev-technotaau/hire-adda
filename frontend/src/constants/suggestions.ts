@@ -1,0 +1,549 @@
+/**
+ * Auto-suggestion data for onboarding and profile forms.
+ * Comprehensive lists based on Indian job market (Naukri/Indeed style).
+ */
+
+import { INDIAN_CITIES } from './indian-cities';
+
+export const SKILL_SUGGESTIONS = [
+    // Programming Languages
+    'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'Go', 'Rust', 'Ruby', 'PHP', 'Swift', 'Kotlin', 'Scala', 'R', 'MATLAB', 'Dart',
+    'Perl', 'Lua', 'Haskell', 'Elixir', 'Clojure', 'F#', 'Objective-C', 'Assembly', 'COBOL', 'Fortran', 'Shell Script', 'Bash', 'PowerShell',
+    // Frontend
+    'React', 'Angular', 'Vue.js', 'Next.js', 'Svelte', 'HTML5', 'CSS3', 'Tailwind CSS', 'Bootstrap', 'SASS', 'jQuery', 'Redux', 'Zustand', 'GraphQL',
+    'Nuxt.js', 'Remix', 'Astro', 'SvelteKit', 'Storybook', 'Webpack', 'Vite', 'esbuild', 'Rollup', 'Turbopack',
+    'Material UI', 'Chakra UI', 'Ant Design', 'Radix UI', 'Shadcn UI', 'Framer Motion', 'Three.js', 'D3.js', 'Chart.js',
+    // Backend
+    'Node.js', 'Express.js', 'Django', 'Flask', 'Spring Boot', 'ASP.NET', 'FastAPI', 'Ruby on Rails', 'Laravel', 'NestJS',
+    'Gin', 'Fiber', 'Actix', 'Phoenix', 'Hono', 'Koa', 'Fastify', 'Strapi', 'Prisma', 'Drizzle', 'tRPC',
+    // Database
+    'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Elasticsearch', 'DynamoDB', 'Cassandra', 'Oracle', 'SQL Server', 'Firebase', 'Supabase',
+    'CockroachDB', 'PlanetScale', 'Neo4j', 'InfluxDB', 'TimescaleDB', 'MariaDB', 'SQLite', 'Pinecone', 'Weaviate', 'Qdrant',
+    // Cloud & DevOps
+    'AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes', 'Terraform', 'Jenkins', 'CI/CD', 'GitHub Actions', 'Linux', 'Nginx', 'Apache',
+    'Ansible', 'Pulumi', 'CloudFormation', 'Helm', 'ArgoCD', 'GitLab CI', 'CircleCI', 'Travis CI', 'Datadog', 'Grafana', 'Prometheus',
+    'New Relic', 'PagerDuty', 'Vault', 'Consul', 'Istio', 'Envoy', 'DigitalOcean', 'Vercel', 'Netlify', 'Cloudflare',
+    // Mobile
+    'React Native', 'Flutter', 'iOS Development', 'Android Development', 'SwiftUI', 'Jetpack Compose',
+    'Expo', 'Capacitor', 'Ionic', 'Xamarin', 'MAUI', 'KMM (Kotlin Multiplatform)',
+    // Data & AI
+    'Machine Learning', 'Deep Learning', 'Natural Language Processing', 'Computer Vision', 'TensorFlow', 'PyTorch', 'Data Science', 'Data Analysis',
+    'Pandas', 'NumPy', 'Tableau', 'Power BI', 'Apache Spark', 'Hadoop', 'ETL', 'Data Engineering',
+    'LangChain', 'LlamaIndex', 'OpenAI API', 'Hugging Face', 'scikit-learn', 'Keras', 'XGBoost', 'LightGBM',
+    'Apache Kafka', 'Apache Airflow', 'dbt', 'Snowflake', 'Databricks', 'Looker', 'Metabase', 'Superset',
+    'MLflow', 'Kubeflow', 'Ray', 'Weights & Biases', 'Generative AI', 'Prompt Engineering', 'RAG',
+    // Design
+    'Figma', 'Adobe XD', 'Sketch', 'Adobe Photoshop', 'Adobe Illustrator', 'UI/UX Design', 'Wireframing', 'Prototyping', 'Design Systems',
+    'Adobe After Effects', 'Adobe Premiere Pro', 'Canva', 'InVision', 'Zeplin', 'Abstract', 'Principle', 'Lottie',
+    // Testing
+    'Jest', 'Selenium', 'Cypress', 'Playwright', 'JUnit', 'Postman', 'API Testing', 'Performance Testing', 'Load Testing',
+    'Vitest', 'Mocha', 'Chai', 'TestNG', 'Appium', 'k6', 'JMeter', 'Gatling', 'Robot Framework', 'Cucumber', 'BDD', 'TDD',
+    // Management & Soft Skills
+    'Project Management', 'Agile', 'Scrum', 'JIRA', 'Confluence', 'Team Leadership', 'Communication', 'Problem Solving', 'Critical Thinking',
+    'Kanban', 'Lean', 'OKRs', 'Stakeholder Management', 'Risk Management', 'Change Management', 'Strategic Planning', 'Negotiation',
+    'Monday.com', 'Asana', 'Trello', 'Notion', 'Linear', 'ClickUp', 'Basecamp',
+    // Others
+    'REST API', 'Microservices', 'System Design', 'DSA', 'OOP', 'Git', 'Blockchain', 'Cybersecurity', 'SEO', 'Digital Marketing',
+    'Content Writing', 'Copywriting', 'Sales', 'Business Development', 'Customer Service', 'Financial Analysis', 'Accounting',
+    'Excel', 'SAP', 'Salesforce', 'HubSpot', 'Zoho', 'Tally', 'AutoCAD', 'SolidWorks', 'CATIA',
+    'Solidity', 'Web3.js', 'Ethers.js', 'IPFS', 'RabbitMQ', 'gRPC', 'Protocol Buffers', 'WebSocket', 'OAuth', 'JWT',
+    'ServiceNow', 'Workday', 'Oracle ERP', 'SAP HANA', 'Dynamics 365', 'Zendesk', 'Freshdesk', 'Intercom',
+    'Google Ads', 'Meta Ads', 'Mailchimp', 'SendGrid', 'Twilio', 'Stripe', 'Razorpay',
+    'Unreal Engine', 'Unity', 'Blender', 'Maya', 'Cinema 4D', 'ANSYS', 'CREO', 'PTC Windchill',
+] as const;
+
+export const INDUSTRY_SUGGESTIONS = [
+    'Information Technology', 'Software Development', 'E-Commerce', 'FinTech', 'EdTech', 'HealthTech',
+    'Banking & Financial Services', 'Insurance', 'Management Consulting', 'KPO/Research',
+    'BPO/Call Center', 'Advertising & Marketing', 'Media & Entertainment', 'Telecom',
+    'Manufacturing', 'Automobile', 'Aerospace & Defence', 'Oil & Gas', 'Mining',
+    'Pharmaceuticals', 'Healthcare', 'Biotechnology', 'Medical Devices',
+    'Real Estate', 'Construction', 'Architecture & Interior Design',
+    'Retail', 'FMCG', 'Consumer Electronics', 'Fashion & Lifestyle',
+    'Education & Training', 'Travel & Tourism', 'Hospitality',
+    'Government & Public Sector', 'NGO/Social Services', 'Legal',
+    'Logistics & Supply Chain', 'Shipping & Marine', 'Aviation',
+    'Agriculture & Forestry', 'Food Processing', 'Textiles',
+    'Power & Energy', 'Renewable Energy', 'Chemicals',
+    'Recruitment & Staffing', 'Facility Management', 'Security Services',
+    'Sports & Fitness', 'Gaming', 'Blockchain & Cryptocurrency',
+    'PropTech', 'CleanTech', 'SpaceTech', 'LegalTech', 'HRTech', 'FoodTech',
+    'Quick Commerce', 'D2C Brands', 'SaaS', 'Cloud Computing',
+    'Robotics & Automation', 'Electric Vehicles', 'Drones & UAV',
+    'Semiconductors', 'Internet of Things', 'AR/VR/Metaverse',
+    'Social Media', 'Content & Publishing', 'OTT & Streaming',
+    'Animation & VFX', 'Market Research', 'Data Analytics',
+    'Environmental Services', 'Waste Management', 'Water & Sanitation',
+    'Packaging', 'Printing', 'Gems & Jewellery', 'Leather',
+    'Cement', 'Steel', 'Paper & Pulp', 'Glass & Ceramics',
+    'Railways', 'Ports & Warehousing', 'Urban Planning',
+    'Venture Capital & PE', 'Wealth Management', 'Stock Broking',
+] as const;
+
+export const DEPARTMENT_SUGGESTIONS = [
+    'Engineering - Software', 'Engineering - Hardware', 'Engineering - Mechanical',
+    'Engineering - Civil', 'Engineering - Electrical', 'Engineering - Chemical',
+    'Data Science & Analytics', 'Artificial Intelligence & ML', 'Product Management',
+    'Design - UI/UX', 'Design - Graphic', 'Quality Assurance & Testing',
+    'DevOps & Infrastructure', 'Information Security', 'IT & Networking',
+    'Sales & Business Development', 'Marketing & Communications',
+    'Digital Marketing & SEO', 'Content & Creative',
+    'Human Resources', 'Talent Acquisition', 'Learning & Development',
+    'Finance & Accounting', 'Legal & Compliance', 'Operations',
+    'Customer Success', 'Customer Support', 'Technical Support',
+    'Supply Chain & Logistics', 'Procurement', 'Administration',
+    'Research & Development', 'Strategy & Consulting',
+    'Project Management', 'Business Analysis',
+] as const;
+
+export const ROLE_CATEGORY_SUGGESTIONS = [
+    'Software Developer', 'Full Stack Developer', 'Frontend Developer', 'Backend Developer',
+    'Mobile Developer', 'DevOps Engineer', 'Cloud Engineer', 'Site Reliability Engineer',
+    'Data Scientist', 'Data Analyst', 'Data Engineer', 'ML Engineer', 'AI Researcher',
+    'Product Manager', 'Project Manager', 'Scrum Master', 'Business Analyst',
+    'UI/UX Designer', 'Graphic Designer', 'Product Designer', 'UX Researcher',
+    'QA Engineer', 'SDET', 'Test Lead', 'Automation Engineer',
+    'Technical Lead', 'Engineering Manager', 'VP of Engineering', 'CTO',
+    'Solutions Architect', 'Enterprise Architect', 'Technical Architect',
+    'Sales Executive', 'Account Manager', 'Business Development Manager',
+    'Marketing Manager', 'Digital Marketing Specialist', 'SEO Specialist', 'Content Writer',
+    'HR Manager', 'Recruiter', 'Talent Acquisition Specialist',
+    'Finance Manager', 'Chartered Accountant', 'Financial Analyst',
+    'Operations Manager', 'Customer Success Manager', 'Support Engineer',
+    'Consultant', 'Analyst', 'Researcher', 'Intern',
+    // Extended roles
+    'Platform Engineer', 'Security Engineer', 'AppSec Engineer', 'Penetration Tester',
+    'Staff Engineer', 'Principal Engineer', 'Distinguished Engineer', 'Fellow',
+    'Developer Relations (DevRel)', 'Developer Advocate', 'Technical Writer', 'Technical Program Manager',
+    'Cloud Architect', 'Database Administrator', 'Network Engineer', 'Systems Administrator',
+    'Embedded Systems Engineer', 'Firmware Engineer', 'Hardware Engineer', 'VLSI Design Engineer',
+    'Game Developer', 'Game Designer', 'AR/VR Developer', 'Blockchain Developer',
+    'AI/ML Ops Engineer', 'NLP Engineer', 'Computer Vision Engineer', 'Robotics Engineer',
+    'Growth Hacker', 'Performance Marketer', 'Brand Manager', 'Social Media Manager',
+    'Content Strategist', 'Communications Manager', 'PR Manager', 'Copywriter',
+    'Chief Product Officer', 'Chief Data Officer', 'Chief Information Officer', 'Chief Revenue Officer',
+    'VP of Product', 'VP of Design', 'VP of Sales', 'VP of Marketing',
+    'Supply Chain Manager', 'Procurement Manager', 'Warehouse Manager', 'Logistics Coordinator',
+    'Compliance Officer', 'Risk Analyst', 'Internal Auditor', 'Legal Counsel',
+    'Investment Banker', 'Equity Research Analyst', 'Credit Analyst', 'Treasury Manager',
+    'Instructional Designer', 'Learning Experience Designer', 'Training Manager',
+    'Talent Development Specialist', 'Compensation & Benefits Analyst', 'HRBP',
+    'Solutions Engineer', 'Pre-Sales Consultant', 'Customer Engineer', 'Implementation Specialist',
+] as const;
+
+export const LOCATION_SUGGESTIONS: readonly string[] = INDIAN_CITIES;
+
+export const INSTITUTION_SUGGESTIONS = [
+    // IITs
+    'IIT Bombay', 'IIT Delhi', 'IIT Madras', 'IIT Kanpur', 'IIT Kharagpur',
+    'IIT Roorkee', 'IIT Guwahati', 'IIT Hyderabad', 'IIT BHU', 'IIT Indore',
+    'IIT Gandhinagar', 'IIT Patna', 'IIT Jodhpur', 'IIT Mandi', 'IIT Bhubaneswar',
+    'IIT Tirupati', 'IIT Dhanbad (ISM)', 'IIT Palakkad', 'IIT Dharwad', 'IIT Bhilai',
+    // IIMs
+    'IIM Ahmedabad', 'IIM Bangalore', 'IIM Calcutta', 'IIM Lucknow', 'IIM Indore',
+    'IIM Kozhikode', 'IIM Shillong', 'IIM Ranchi', 'IIM Raipur', 'IIM Tiruchirappalli',
+    'IIM Udaipur', 'IIM Kashipur', 'IIM Nagpur', 'IIM Rohtak', 'IIM Bodh Gaya',
+    // NITs
+    'NIT Trichy', 'NIT Warangal', 'NIT Surathkal', 'NIT Calicut', 'NIT Rourkela',
+    'NIT Allahabad', 'NIT Jaipur', 'NIT Nagpur', 'NIT Kurukshetra', 'NIT Durgapur',
+    'NIT Bhopal', 'NIT Srinagar', 'NIT Silchar', 'NIT Hamirpur', 'NIT Jalandhar',
+    // IIITs
+    'IIIT Hyderabad', 'IIIT Bangalore', 'IIIT Allahabad', 'IIIT Delhi', 'IIIT Gwalior',
+    'IIIT Jabalpur', 'IIIT Kancheepuram', 'IIIT Sri City', 'IIIT Lucknow',
+    // IISERs
+    'IISER Pune', 'IISER Kolkata', 'IISER Mohali', 'IISER Bhopal', 'IISER Thiruvananthapuram',
+    // BITS & ISI
+    'BITS Pilani', 'BITS Hyderabad', 'BITS Goa', 'ISI Kolkata', 'ISI Delhi', 'ISI Bangalore',
+    // Central Universities
+    'Delhi University', 'JNU (Jawaharlal Nehru University)', 'BHU (Banaras Hindu University)',
+    'Aligarh Muslim University', 'Jamia Millia Islamia', 'Hyderabad Central University',
+    'Pondicherry University', 'Visva-Bharati', 'Tezpur University',
+    // State Universities
+    'Anna University', 'Jadavpur University', 'Pune University (SPPU)', 'Mumbai University',
+    'Osmania University', 'Calcutta University', 'Madras University', 'Bangalore University',
+    'Gujarat University', 'Rajasthan University', 'Lucknow University', 'Patna University',
+    'Andhra University', 'Kerala University', 'Mysore University', 'Gauhati University',
+    // Deemed & Private
+    'VIT Vellore', 'SRM University', 'Manipal Academy (MAHE)', 'Amity University',
+    'Christ University', 'Symbiosis International', 'NMIMS', 'XLRI Jamshedpur',
+    'Thapar University', 'Shiv Nadar University', 'Ashoka University', 'Plaksha University',
+    'Lovely Professional University', 'Chandigarh University', 'Jain University',
+    'KIIT Bhubaneswar', 'Vellore Institute of Technology (VIT AP)', 'SRM AP',
+    // Engineering Colleges
+    'PSG College of Technology', 'BMS College of Engineering', 'RVCE Bangalore', 'PES University',
+    'DTU Delhi', 'NSUT Delhi', 'IIITD&M Kancheepuram', 'College of Engineering Pune (COEP)',
+    'Netaji Subhas University of Technology', 'Jadavpur Engineering', 'MNNIT Allahabad',
+    // Management & Business
+    'ISB Hyderabad', 'FMS Delhi', 'SPJIMR Mumbai', 'MDI Gurgaon', 'IIM Sambalpur',
+    'IMT Ghaziabad', 'TAPMI Manipal', 'Great Lakes Chennai', 'SIBM Pune', 'SCMHRD Pune',
+    // Medical & Law
+    'AIIMS Delhi', 'AIIMS Jodhpur', 'JIPMER', 'CMC Vellore', 'KEM Hospital Mumbai',
+    'NLSIU Bangalore', 'NALSAR Hyderabad', 'NLU Delhi', 'NLU Jodhpur', 'NUJS Kolkata',
+    // Distance & Open
+    'IGNOU', 'Sikkim Manipal Distance', 'Annamalai University Distance',
+] as const;
+
+export const DEGREE_SUGGESTIONS = [
+    // Undergraduate
+    'B.Tech', 'B.E.', 'B.Sc', 'BCA', 'BBA', 'B.Com', 'BA', 'B.Arch', 'B.Des', 'B.Pharm',
+    'B.Ed', 'BFA', 'BHM (Hotel Management)', 'B.Voc', 'BJMC (Journalism)', 'BSW (Social Work)',
+    'BMS (Management Studies)', 'B.Stat', 'B.Math', 'BPA (Performing Arts)', 'B.Lib',
+    // Postgraduate
+    'M.Tech', 'M.E.', 'M.Sc', 'MCA', 'MBA', 'M.Com', 'MA', 'M.Arch', 'M.Des', 'M.Pharm',
+    'PGDM', 'PGDBA', 'PGPM', 'M.Phil', 'M.Ed', 'MFA', 'MSW (Social Work)',
+    'M.Stat', 'M.Math', 'MPA (Public Administration)', 'M.Lib',
+    // Doctoral
+    'Ph.D.', 'Post Doctoral', 'D.Litt', 'D.Sc', 'DBA',
+    // Professional
+    'CA', 'CS', 'CMA', 'CFA', 'ICWA', 'FRM', 'ACCA',
+    'LLB', 'LLM', 'Integrated LLB (5-year)',
+    'MBBS', 'MD', 'MS', 'BDS', 'MDS', 'BAMS', 'BHMS', 'BPT', 'B.Sc Nursing',
+    // Diploma & Certificate
+    'Diploma', 'ITI', 'Polytechnic', 'Advanced Diploma', 'Post Graduate Diploma',
+    'Certificate Course', 'Executive Diploma', 'Executive MBA',
+    // Integrated
+    'Integrated B.Tech + M.Tech (5-year)', 'Integrated M.Sc (5-year)', 'Dual Degree',
+    // School
+    '10th', '12th', 'CBSE', 'ICSE', 'State Board', 'IB', 'IGCSE',
+] as const;
+
+export const FIELD_OF_STUDY_SUGGESTIONS = [
+    // Engineering
+    'Computer Science', 'Information Technology', 'Electronics & Communication',
+    'Electrical Engineering', 'Mechanical Engineering', 'Civil Engineering',
+    'Chemical Engineering', 'Aerospace Engineering', 'Biotechnology',
+    'Biomedical Engineering', 'Robotics Engineering', 'Marine Engineering',
+    'Petroleum Engineering', 'Mining Engineering', 'Metallurgical Engineering',
+    'Industrial Engineering', 'Production Engineering', 'Instrumentation Engineering',
+    'Automobile Engineering', 'Textile Engineering', 'Agricultural Engineering',
+    'Mechatronics', 'Nanotechnology', 'Nuclear Engineering', 'Environmental Engineering',
+    // Science & Math
+    'Data Science', 'Artificial Intelligence', 'Cybersecurity',
+    'Mathematics', 'Statistics', 'Physics', 'Chemistry', 'Biology',
+    'Actuarial Science', 'Applied Mathematics', 'Bioinformatics', 'Computational Biology',
+    'Geology', 'Geophysics', 'Astrophysics', 'Material Science', 'Polymer Science',
+    // Business & Management
+    'Business Administration', 'Finance', 'Marketing', 'Human Resource Management',
+    'Commerce', 'Economics', 'Accounting', 'International Business',
+    'Operations Management', 'Supply Chain Management', 'Entrepreneurship',
+    'Business Analytics', 'Sports Management', 'Healthcare Management', 'Hospitality Management',
+    'Event Management', 'Retail Management', 'Rural Management', 'Real Estate Management',
+    // Humanities & Social Sciences
+    'Law', 'Political Science', 'Psychology', 'Sociology',
+    'English Literature', 'Hindi Literature', 'History', 'Philosophy',
+    'Journalism & Mass Communication', 'Public Relations', 'Advertising',
+    'Social Work', 'Anthropology', 'Geography', 'Linguistics', 'Education',
+    // Design & Arts
+    'Design', 'Architecture', 'Fine Arts', 'Mass Communication',
+    'Graphic Design', 'Fashion Design', 'Interior Design', 'Animation & Multimedia',
+    'Film Studies', 'Performing Arts', 'Music', 'Visual Communication',
+    // Medical & Health
+    'Pharmacy', 'Medicine', 'Nursing', 'Public Health',
+    'Dentistry', 'Physiotherapy', 'Veterinary Science', 'Ayurveda', 'Homeopathy',
+    'Nutrition & Dietetics', 'Occupational Therapy', 'Optometry',
+    // Agriculture & Environment
+    'Environmental Science', 'Agricultural Science', 'Food Technology',
+    'Forestry', 'Horticulture', 'Fisheries Science', 'Dairy Technology', 'Food Science',
+] as const;
+
+export const COMPANY_NAME_SUGGESTIONS = [
+    // Major IT Services
+    'TCS', 'Infosys', 'Wipro', 'HCL Technologies', 'Tech Mahindra',
+    'Cognizant', 'Accenture', 'Capgemini', 'IBM', 'Oracle',
+    'LTIMindtree', 'Mphasis', 'Persistent Systems', 'Coforge', 'Hexaware',
+    'Zensar Technologies', 'NIIT Technologies', 'Cyient', 'Birlasoft', 'L&T Infotech',
+    'Mindtree', 'iGate', 'Syntel', 'Virtusa', 'UST',
+    // Global Big Tech
+    'Google', 'Microsoft', 'Amazon', 'Meta', 'Apple',
+    'Netflix', 'Uber', 'Airbnb', 'Spotify', 'Salesforce',
+    'Adobe', 'VMware', 'Cisco', 'Dell Technologies', 'HP',
+    'Twitter/X', 'LinkedIn', 'Snap', 'Pinterest', 'Shopify',
+    // Indian Startups & Unicorns
+    'Flipkart', 'Swiggy', 'Zomato', 'Paytm', 'Razorpay',
+    'Ola', 'PhonePe', 'CRED', 'Dream11', 'Byju\'s',
+    'Zerodha', 'Groww', 'Meesho', 'Nykaa', 'UrbanCompany',
+    'Delhivery', 'Pine Labs', 'Postman', 'Freshworks', 'Zoho',
+    'Chargebee', 'BrowserStack', 'Unacademy', 'upGrad', 'Vedantu',
+    'Lenskart', 'CarDekho', 'Cars24', 'OYO Rooms', 'MakeMyTrip',
+    'PolicyBazaar', 'Pharmeasy', '1mg', 'Practo', 'CureFit',
+    'Dunzo', 'BigBasket', 'BlinkIt', 'Rapido', 'Ather Energy',
+    'Juspay', 'Simpl', 'Slice', 'Jupiter', 'Fi Money',
+    'ShareChat', 'Moj', 'Koo', 'Dailyhunt', 'InMobi',
+    // Indian Conglomerates
+    'Reliance Industries', 'Tata Group', 'Mahindra Group', 'Adani Group', 'Godrej Group',
+    'Aditya Birla Group', 'ITC', 'Bajaj Group', 'Larsen & Toubro', 'Vedanta',
+    'JSW Group', 'Hinduja Group', 'TVS Group', 'RPG Group', 'Hero Group',
+    // Banking & Financial
+    'HDFC Bank', 'ICICI Bank', 'SBI', 'Kotak Mahindra', 'Axis Bank',
+    'Yes Bank', 'IndusInd Bank', 'Federal Bank', 'Bandhan Bank', 'IDFC First Bank',
+    'RBI', 'SEBI', 'NSE', 'BSE', 'CRISIL',
+    'LIC', 'SBI Life', 'ICICI Prudential', 'HDFC Life', 'Bajaj Allianz',
+    // Consulting & Professional Services
+    'Deloitte', 'EY', 'PwC', 'KPMG', 'McKinsey',
+    'BCG', 'Bain & Company', 'Oliver Wyman', 'Alvarez & Marsal', 'ZS Associates',
+    // Product Companies
+    'Atlassian', 'SAP', 'ServiceNow', 'Twilio', 'Stripe',
+    'GitHub', 'GitLab', 'Confluent', 'DataDog', 'Snowflake',
+    'Palantir', 'Databricks', 'HashiCorp', 'Elastic', 'MongoDB',
+    // Semiconductor & Hardware
+    'Samsung', 'LG', 'Qualcomm', 'Intel', 'NVIDIA',
+    'AMD', 'Broadcom', 'Texas Instruments', 'MediaTek', 'ARM',
+    'TSMC', 'SK Hynix', 'Micron', 'Western Digital', 'Foxconn',
+    // Government & PSU
+    'ISRO', 'DRDO', 'BARC', 'HAL', 'BEL',
+    'BHEL', 'ONGC', 'NTPC', 'Indian Oil', 'GAIL',
+    'SAIL', 'Coal India', 'Power Grid', 'BSNL', 'Indian Railways',
+] as const;
+
+export const CERTIFICATION_SUGGESTIONS = [
+    // Cloud - AWS
+    'AWS Solutions Architect - Associate', 'AWS Solutions Architect - Professional',
+    'AWS Developer Associate', 'AWS DevOps Engineer', 'AWS SysOps Administrator',
+    'AWS Security Specialty', 'AWS Machine Learning Specialty', 'AWS Database Specialty',
+    'AWS Data Analytics Specialty', 'AWS Advanced Networking Specialty',
+    // Cloud - Azure
+    'Azure Administrator (AZ-104)', 'Azure Developer (AZ-204)', 'Azure Solutions Architect (AZ-305)',
+    'Azure DevOps Engineer (AZ-400)', 'Azure Security Engineer (AZ-500)',
+    'Azure Data Engineer (DP-203)', 'Azure AI Engineer (AI-102)', 'Azure Fundamentals (AZ-900)',
+    // Cloud - Google
+    'Google Cloud Professional Cloud Architect', 'Google Cloud Professional Data Engineer',
+    'Google Cloud Professional ML Engineer', 'Google Cloud Associate Cloud Engineer',
+    'Google Cloud Professional DevOps Engineer', 'Google Cloud Professional Security Engineer',
+    // Development
+    'Oracle Certified Java Programmer', 'Microsoft Certified: Azure Developer',
+    'Certified Kubernetes Administrator (CKA)', 'Certified Kubernetes Developer (CKAD)',
+    'Docker Certified Associate', 'MongoDB Certified Developer',
+    'Salesforce Certified Administrator', 'Salesforce Certified Developer',
+    'Salesforce Certified Architect', 'Red Hat Certified System Administrator (RHCSA)',
+    'Red Hat Certified Engineer (RHCE)', 'HashiCorp Terraform Associate',
+    'HashiCorp Vault Associate', 'Linux Foundation Certified System Administrator',
+    // Data & AI
+    'TensorFlow Developer Certificate', 'IBM Data Science Professional',
+    'Google Data Analytics Professional', 'Microsoft Power BI Data Analyst',
+    'Databricks Certified Data Engineer', 'Databricks Certified ML Professional',
+    'Snowflake SnowPro Core', 'Tableau Desktop Specialist', 'Tableau Certified Data Analyst',
+    'SAS Certified Data Scientist', 'Cloudera Certified Data Analyst',
+    'dbt Analytics Engineering Certification', 'Apache Spark Developer Certification',
+    // Project Management & Agile
+    'PMP (Project Management Professional)', 'Certified Scrum Master (CSM)',
+    'PRINCE2 Practitioner', 'PMI-ACP (Agile Certified Practitioner)',
+    'SAFe Agilist', 'SAFe Scrum Master', 'SAFe Product Owner',
+    'Six Sigma Green Belt', 'Six Sigma Black Belt', 'Six Sigma Yellow Belt',
+    'Lean Six Sigma', 'ITIL 4 Foundation', 'ITIL 4 Managing Professional',
+    'TOGAF 10 Certified', 'COBIT Foundation', 'Certified Product Manager (CPM)',
+    // Security
+    'CISSP', 'CEH (Certified Ethical Hacker)', 'CompTIA Security+',
+    'OSCP', 'CISM (Certified Information Security Manager)', 'CISA (Certified Information Systems Auditor)',
+    'CompTIA Network+', 'CompTIA Linux+', 'CompTIA A+', 'CompTIA CySA+', 'CompTIA PenTest+',
+    'GIAC Security Essentials (GSEC)', 'Certified Cloud Security Professional (CCSP)',
+    'SOC 2 Type II', 'ISO 27001 Lead Auditor',
+    // Networking
+    'Cisco CCNA', 'Cisco CCNP', 'Cisco CCIE', 'Juniper JNCIA',
+    // Design & Marketing
+    'Google UX Design Certificate', 'Meta Frontend Developer',
+    'HubSpot Inbound Marketing', 'HubSpot Content Marketing', 'HubSpot Sales Software',
+    'Google Analytics Certification', 'Google Ads Certification', 'Meta Blueprint Certification',
+    'Adobe Certified Expert', 'Figma Professional Certification',
+    // Others
+    'Certified ScrumMaster (CSM)', 'Professional Scrum Master (PSM)',
+    'Microsoft 365 Certified', 'ServiceNow Certified System Administrator',
+    'Workday Certified', 'SAP Certified Application Associate', 'SAP ABAP Developer',
+] as const;
+
+export const LANGUAGE_SUGGESTIONS = [
+    'English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam',
+    'Marathi', 'Gujarati', 'Bengali', 'Punjabi', 'Odia', 'Assamese',
+    'Urdu', 'Sanskrit', 'Konkani', 'Manipuri', 'Nepali',
+    'French', 'German', 'Spanish', 'Japanese', 'Mandarin Chinese',
+    'Korean', 'Arabic', 'Portuguese', 'Italian', 'Russian',
+] as const;
+
+export const BENEFIT_SUGGESTIONS = [
+    // Health & Insurance
+    'Health Insurance', 'Life Insurance', 'Dental Coverage', 'Vision Coverage',
+    'Mental Health Support', 'Gym Membership', 'Wellness Programs',
+    // Leave & Time Off
+    'Paid Vacation', 'Sick Leave', 'Maternity Leave', 'Paternity Leave',
+    'Period Leave', 'Sabbatical', 'Bereavement Leave', 'Comp-Off',
+    // Financial
+    'Performance Bonus', 'Stock Options (ESOPs)', 'Profit Sharing',
+    'Gratuity', 'Provident Fund', 'Annual Increment', 'Relocation Allowance',
+    // Work-Life
+    'Work From Home', 'Flexible Hours', 'Hybrid Work', 'No Notice Period',
+    'Compressed Work Week', 'Remote Work', '5-Day Work Week',
+    // Learning
+    'Education Reimbursement', 'Training Budget', 'Conference Attendance',
+    'Online Course Subscriptions', 'Certification Reimbursement',
+    // Office & Others
+    'Free Meals', 'Cafeteria', 'Transport Allowance', 'Cab Facility',
+    'Team Outings', 'Game Room', 'Creche/Daycare', 'Parking',
+    'Employee Referral Bonus', 'Joining Bonus', 'Retention Bonus',
+    'Mobile Reimbursement', 'Internet Allowance', 'Laptop Provided',
+] as const;
+
+export const INDIAN_STATES = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+    'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+    'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+    'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+    'Chandigarh', 'Delhi', 'Jammu & Kashmir', 'Ladakh',
+    'Puducherry', 'Andaman & Nicobar Islands', 'Lakshadweep',
+    'Dadra & Nagar Haveli and Daman & Diu',
+] as const;
+
+export const REVENUE_RANGE_OPTIONS = [
+    'Less than ₹1 Crore', '₹1 - ₹10 Crore', '₹10 - ₹50 Crore',
+    '₹50 - ₹100 Crore', '₹100 - ₹500 Crore', '₹500 - ₹1000 Crore',
+    '₹1000 - ₹5000 Crore', 'More than ₹5000 Crore',
+] as const;
+
+export const VISA_STATUS_OPTIONS = [
+    'Indian Citizen', 'OCI Card Holder', 'PIO Card Holder',
+    'H-1B Visa', 'L-1 Visa', 'Work Permit',
+    'Student Visa', 'PR (Permanent Resident)', 'Not Applicable',
+] as const;
+
+export const VOLUNTEER_CAUSE_SUGGESTIONS = [
+    'Animal Welfare', 'Arts and Culture', 'Children', 'Civil Rights',
+    'Disaster Relief', 'Education', 'Environment', 'Health',
+    'Human Rights', 'Hunger', 'Poverty Alleviation', 'Science and Technology',
+    'Senior Citizens', 'Social Services', 'Women Empowerment', 'Youth Development',
+    'Community Development', 'Rural Development', 'Digital Literacy', 'Mental Health',
+] as const;
+
+export const HOBBY_SUGGESTIONS = [
+    'Reading', 'Writing', 'Blogging', 'Photography', 'Videography',
+    'Cooking', 'Baking', 'Gardening', 'Painting', 'Drawing', 'Sketching',
+    'Music', 'Singing', 'Dancing', 'Playing Guitar', 'Playing Piano',
+    'Travelling', 'Trekking', 'Hiking', 'Cycling', 'Running', 'Swimming',
+    'Cricket', 'Football', 'Badminton', 'Tennis', 'Chess', 'Table Tennis',
+    'Yoga', 'Meditation', 'Fitness', 'Gym', 'CrossFit', 'Martial Arts',
+    'Gaming', 'Coding', 'Open Source', 'DIY Projects', 'Electronics',
+    'Volunteering', 'Public Speaking', 'Debating', 'Stand-up Comedy',
+    'Astronomy', 'Bird Watching', 'Calligraphy', 'Origami', 'Pottery',
+    'Film Making', 'Podcasting', 'Content Creation', 'Social Media',
+] as const;
+
+export const INTEREST_SUGGESTIONS = [
+    'Artificial Intelligence', 'Machine Learning', 'Blockchain', 'Web3', 'Cryptocurrency',
+    'Startups', 'Entrepreneurship', 'Venture Capital', 'Product Management',
+    'Cloud Computing', 'Cybersecurity', 'Data Science', 'IoT', 'Robotics',
+    'Sustainability', 'Clean Energy', 'Climate Tech', 'AgriTech',
+    'FinTech', 'EdTech', 'HealthTech', 'SpaceTech', 'BioTech',
+    'UX Design', 'Design Thinking', 'Leadership', 'Mentoring',
+    'Stock Market', 'Personal Finance', 'Real Estate', 'Economics',
+    'Psychology', 'Philosophy', 'History', 'Politics', 'Geopolitics',
+    'Open Source Software', 'Developer Community', 'Technical Writing',
+    'Public Policy', 'Social Impact', 'Diversity & Inclusion',
+] as const;
+
+export const PROFESSIONAL_ORGANIZATION_SUGGESTIONS = [
+    'IEEE', 'ACM', 'NASSCOM', 'CII', 'FICCI', 'IETE', 'CSI (Computer Society of India)',
+    'ISCA', 'PMI (Project Management Institute)', 'SHRM', 'CIPD',
+    'ICAI (Institute of Chartered Accountants)', 'ICSI', 'ICWAI',
+    'Bar Council of India', 'Medical Council of India', 'IEI (Institution of Engineers)',
+    'ISTE', 'Indian Physics Association', 'Indian Chemical Society',
+    'Institution of Mechanical Engineers', 'Institution of Civil Engineers',
+    'Data Science Society', 'AI & ML India', 'Google Developer Groups',
+    'AWS User Group', 'Microsoft MVP Program', 'GitHub Campus Expert',
+] as const;
+
+export const TEST_SCORE_SUGGESTIONS = [
+    'GRE', 'GMAT', 'CAT', 'XAT', 'MAT', 'CMAT', 'SNAP', 'NMAT',
+    'GATE', 'NET/SET', 'UGC NET', 'CSIR NET',
+    'TOEFL', 'IELTS', 'PTE', 'Duolingo English Test',
+    'AMCAT', 'CoCubes', 'eLitmus', 'Wheebox',
+    'HackerRank', 'LeetCode', 'CodeChef Rating', 'Codeforces Rating',
+    'AWS Certification Score', 'Google Cloud Score', 'Azure Score',
+    'SAT', 'ACT', 'JEE Main', 'JEE Advanced', 'BITSAT', 'VITEEE',
+] as const;
+
+export const SUB_INDUSTRY_SUGGESTIONS = [
+    // IT Sub-industries
+    'SaaS', 'PaaS', 'Cloud Infrastructure', 'Cybersecurity', 'AI/ML',
+    'Data Analytics', 'IT Consulting', 'IT Services', 'Product Development',
+    // FinTech Sub-industries
+    'Payments', 'Lending', 'InsurTech', 'WealthTech', 'RegTech', 'Neo Banking',
+    // E-Commerce Sub-industries
+    'B2B Commerce', 'B2C Commerce', 'D2C', 'Marketplace', 'Quick Commerce',
+    // HealthTech Sub-industries
+    'Telemedicine', 'Health Analytics', 'Medical Devices', 'Digital Health',
+    // EdTech Sub-industries
+    'K-12', 'Higher Education', 'Test Prep', 'Skill Development', 'Corporate Training',
+    // Others
+    'Logistics Tech', 'PropTech', 'AgriTech', 'FoodTech', 'CleanTech',
+    'SpaceTech', 'Gaming', 'Media Streaming', 'Social Media', 'AdTech',
+    'HRTech', 'LegalTech', 'Construction Tech', 'AutoTech', 'Retail Tech',
+] as const;
+
+export const CORE_VALUE_SUGGESTIONS = [
+    'Innovation', 'Integrity', 'Excellence', 'Collaboration', 'Customer First',
+    'Transparency', 'Accountability', 'Diversity & Inclusion', 'Sustainability',
+    'Continuous Learning', 'Empowerment', 'Respect', 'Trust', 'Agility',
+    'Ownership', 'Passion', 'Quality', 'Teamwork', 'Meritocracy', 'Empathy',
+] as const;
+
+export const INVESTOR_SUGGESTIONS = [
+    // Indian VCs
+    'Sequoia Capital India', 'Accel Partners', 'Matrix Partners India', 'Nexus Venture Partners',
+    'Blume Ventures', 'Elevation Capital', 'Peak XV Partners', 'Tiger Global',
+    'Lightspeed India', 'India Quotient', 'Chiratae Ventures', 'Kalaari Capital',
+    'DST Global', 'SoftBank Vision Fund', 'Steadview Capital', 'Jungle Ventures',
+    '3one4 Capital', 'Prime Venture Partners', 'Stellaris Venture Partners', 'Fireside Ventures',
+    // Global VCs
+    'Andreessen Horowitz (a16z)', 'Y Combinator', 'General Catalyst', 'Insight Partners',
+    'GGV Capital', 'Falcon Edge', 'Coatue Management', 'B Capital Group',
+    'Goldman Sachs', 'Morgan Stanley', 'Temasek', 'GIC',
+] as const;
+
+export const PRODUCT_SERVICE_SUGGESTIONS = [
+    'Enterprise Software', 'Mobile Applications', 'Web Applications', 'API Services',
+    'Cloud Solutions', 'Data Platform', 'AI/ML Platform', 'Analytics Dashboard',
+    'Payment Gateway', 'CRM Software', 'ERP Solutions', 'HRMS', 'ATS',
+    'Marketing Automation', 'Customer Support Platform', 'E-Commerce Platform',
+    'Supply Chain Management', 'Inventory Management', 'Accounting Software',
+    'Learning Management System', 'Project Management Tool', 'Communication Platform',
+    'Security Solutions', 'IoT Platform', 'Blockchain Solutions', 'Consulting Services',
+    'Managed Services', 'Staff Augmentation', 'Digital Transformation',
+] as const;
+
+export const NATIONALITY_SUGGESTIONS = [
+    'Indian', 'American', 'British', 'Canadian', 'Australian', 'German', 'French',
+    'Japanese', 'Chinese', 'Korean', 'Singaporean', 'Emirati', 'Saudi', 'Dutch',
+    'Swedish', 'Swiss', 'Irish', 'New Zealander', 'Malaysian', 'Bangladeshi',
+    'Nepalese', 'Sri Lankan', 'Pakistani', 'South African', 'Brazilian', 'Israeli',
+    'Thai', 'Filipino', 'Indonesian', 'Vietnamese', 'Italian', 'Spanish', 'Russian',
+] as const;
+
+export const COUNTRY_SUGGESTIONS = [
+    'India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany',
+    'France', 'Japan', 'China', 'South Korea', 'Singapore', 'United Arab Emirates',
+    'Saudi Arabia', 'Netherlands', 'Sweden', 'Switzerland', 'Ireland', 'New Zealand',
+    'Malaysia', 'Bangladesh', 'Nepal', 'Sri Lanka', 'Pakistan', 'South Africa',
+    'Brazil', 'Israel', 'Thailand', 'Philippines', 'Indonesia', 'Vietnam', 'Italy',
+    'Spain', 'Russia', 'Denmark', 'Norway', 'Finland', 'Belgium', 'Austria', 'Poland',
+    'Czech Republic', 'Portugal', 'Taiwan', 'Hong Kong', 'Qatar', 'Kuwait', 'Oman',
+    'Bahrain', 'Kenya', 'Nigeria', 'Egypt', 'Turkey', 'Mexico', 'Argentina', 'Chile',
+] as const;
+
+export const PUBLISHER_SUGGESTIONS = [
+    'IEEE', 'ACM', 'Springer', 'Elsevier', 'Wiley', 'Nature Publishing Group',
+    'Oxford University Press', 'Cambridge University Press', 'Taylor & Francis',
+    'Sage Publications', 'Emerald Publishing', 'Inderscience', 'MDPI',
+    'IOP Publishing', 'Royal Society', 'ArXiv', 'SSRN', 'ResearchGate',
+    'Medium', 'Dev.to', 'Towards Data Science', 'HackerNoon', 'freeCodeCamp',
+    'InfoQ', "O'Reilly Media", 'Packt Publishing', 'Manning Publications',
+    'Apress', 'Pearson', 'McGraw-Hill', 'PHI Learning',
+] as const;
+
+export const ERG_SUGGESTIONS = [
+    'Women in Tech', 'LGBTQ+ Alliance', 'Black Professionals Network',
+    'Asian Professionals Network', 'Hispanic/Latinx Network', 'Veterans Network',
+    'Parents and Caregivers', 'Disability Inclusion', 'Women in Leadership',
+    'Young Professionals', 'Sustainability Champions', 'Mental Health Advocates',
+    'Neurodiversity Alliance', 'Multi-Faith Network', 'Remote Workers Guild',
+    'First-Generation Professionals', 'Working Mothers Forum',
+    'Accessibility Champions', 'Cultural Exchange Group', 'Wellness Warriors',
+] as const;

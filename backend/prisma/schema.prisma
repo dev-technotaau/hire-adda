@@ -1,0 +1,1227 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+enum Role {
+  CANDIDATE
+  EMPLOYER
+  ADMIN
+  SUPER_ADMIN
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?
+  role      Role     @default(CANDIDATE)
+  firstName String?
+  lastName  String?
+  avatar    String?
+
+  // Social Auth
+  googleId    String? @unique
+  linkedinId  String? @unique
+
+  // Mobile Auth
+  mobileNumber            String?   @unique
+  isMobileVerified        Boolean   @default(false)
+  mobileVerificationToken String?
+  mobileVerificationExpires DateTime?
+
+  // WhatsApp
+  isWhatsappVerified              Boolean   @default(false)
+  whatsappVerificationToken       String?
+  whatsappVerificationExpires     DateTime?
+
+  // Account Status
+  isActive       Boolean   @default(true)
+  isSuspended    Boolean   @default(false)
+  suspendedAt    DateTime?
+  suspendedBy    String?
+
+  // Email Verification
+  isEmailVerified         Boolean   @default(false)
+  emailVerificationToken  String?
+  emailVerificationExpires DateTime?
+
+  // Password Reset
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+
+  // MFA (TOTP)
+  mfaSecret      String?
+  mfaEnabled     Boolean  @default(false)
+  mfaBackupCodes String[] @default([])
+
+  // Account Security
+  loginAttempts  Int       @default(0)
+  lockUntil      DateTime?
+  lastLoginAt    DateTime?
+  lastLoginIp    String?
+
+  // Activity Tracking
+  lastActiveAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  auditLogs     AuditLog[]
+  refreshTokens RefreshToken[]
+  sessions      Session[]
+
+  // Profiles
+  candidateProfile CandidateProfile?
+  companyProfile   CompanyProfile?
+  savedJobs        SavedJob[]
+
+  // Verifications
+  verificationRequests VerificationRequest[] @relation("UserVerifications")
+  reviewedVerifications VerificationRequest[] @relation("AdminReviews")
+
+  // Notifications, Drafts, Devices
+  notifications      Notification[]
+  formDrafts         FormDraft[]
+  pushSubscriptions  PushSubscription[]
+  deviceTokens       DeviceToken[]
+
+  // Saved Candidates & Searches
+  savedCandidates    SavedCandidate[] @relation("EmployerSavedCandidates")
+  savedByEmployers   SavedCandidate[] @relation("CandidateSavedBy")
+  savedSearches      SavedSearch[]
+
+  // WebAuthn & Webhooks
+  webauthnCredentials WebAuthnCredential[]
+  webhookEndpoints    WebhookEndpoint[]
+
+  // Support Tickets
+  tickets         SupportTicket[] @relation("UserTickets")
+  assignedTickets SupportTicket[] @relation("AssignedTickets")
+
+  // Profile Views
+  profileViews       ProfileView[] @relation("ProfileViewer")
+  profileViewedBy    ProfileView[] @relation("ProfileViewed")
+
+  // Job Alerts & Recommendations
+  jobAlerts                JobAlert[]
+  dismissedRecommendations DismissedRecommendation[]
+
+  // Security & Privacy
+  deletionRequestedAt DateTime?
+  knownDevices        KnownDevice[]
+  loginLocations      LoginLocation[]
+  consents            UserConsent[]
+
+  @@index([email])
+  @@index([role])
+  @@index([emailVerificationToken])
+  @@index([passwordResetToken])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Device info
+  userAgent String?
+  ipAddress String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  userAgent String?
+  ipAddress String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String   // e.g., "CREATE_JOB", "DELETE_USER"
+  entity      String   // e.g., "Job", "User"
+  entityId    String?  // ID of the affected entity
+  performedBy String?  // User ID of who performed the action
+  details     Json?    // Additional context (e.g., diff of changes)
+  ipAddress   String?
+  userAgent   String?
+  checksum    String?  // SHA-256 integrity checksum
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User?    @relation(fields: [performedBy], references: [id], onDelete: SetNull)
+
+  @@index([performedBy])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+
+// --- Enums ---
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  FREELANCE
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+  DRAFT
+  EXPIRED
+}
+
+enum ApplicationStatus {
+  APPLIED
+  VIEWED
+  SHORTLISTED
+  INTERVIEW_SCHEDULED
+  REJECTED
+  OFFERED
+  HIRED
+  WITHDRAWN
+}
+
+enum VerificationType {
+  GST
+  EMPLOYMENT
+  IDENTITY
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUESTED_CHANGES
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+  OTHER
+}
+
+enum WorkStatus {
+  EMPLOYED
+  UNEMPLOYED
+  STUDENT
+  FREELANCER
+  ACTIVELY_LOOKING
+}
+
+enum NoticePeriod {
+  IMMEDIATE
+  FIFTEEN_DAYS
+  THIRTY_DAYS
+  SIXTY_DAYS
+  NINETY_DAYS
+  MORE_THAN_NINETY_DAYS
+}
+
+enum WorkMode {
+  ON_SITE
+  REMOTE
+  HYBRID
+}
+
+enum ShiftType {
+  DAY
+  NIGHT
+  ROTATIONAL
+  FLEXIBLE
+}
+
+enum ExperienceLevel {
+  FRESHER
+  ENTRY
+  MID
+  SENIOR
+  LEAD
+  EXECUTIVE
+}
+
+enum SalaryType {
+  ANNUAL
+  MONTHLY
+  HOURLY
+}
+
+enum CompanyType {
+  PRIVATE
+  PUBLIC
+  STARTUP
+  MNC
+  GOVERNMENT
+  NGO
+  SEMI_GOVERNMENT
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+  PREFER_NOT_TO_SAY
+}
+
+enum EducationLevel {
+  TENTH
+  TWELFTH
+  DIPLOMA
+  BACHELORS
+  MASTERS
+  PHD
+  POST_DOCTORAL
+}
+
+enum EducationType {
+  FULL_TIME
+  PART_TIME
+  DISTANCE
+  CORRESPONDENCE
+}
+
+enum UrgencyLevel {
+  NORMAL
+  URGENT
+  IMMEDIATE
+}
+
+enum DisabilityType {
+  NONE
+  VISUAL
+  HEARING
+  LOCOMOTOR
+  INTELLECTUAL
+  MULTIPLE
+  OTHER
+}
+
+enum CareerBreakType {
+  HEALTH
+  FAMILY
+  HIGHER_EDUCATION
+  TRAVEL
+  LAYOFF
+  PERSONAL
+  CAREGIVING
+  CAREER_TRANSITION
+  OTHER
+}
+
+enum ReservationCategory {
+  GENERAL
+  SC
+  ST
+  OBC
+  EWS
+  PREFER_NOT_TO_SAY
+}
+
+enum OpenToWorkStatus {
+  ACTIVELY_LOOKING
+  OPEN_TO_OFFERS
+  NOT_LOOKING
+}
+
+enum PatentStatus {
+  FILED
+  PUBLISHED
+  GRANTED
+}
+
+enum FundingStage {
+  BOOTSTRAPPED
+  SEED
+  SERIES_A
+  SERIES_B
+  SERIES_C
+  SERIES_D_PLUS
+  PRE_IPO
+  PUBLIC
+  ACQUIRED
+  NOT_APPLICABLE
+}
+
+enum LanguageProficiency {
+  BASIC
+  INTERMEDIATE
+  FLUENT
+  NATIVE
+}
+
+// --- Models ---
+
+model CandidateProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+
+  // Personal Details
+  headline        String?          // Professional headline ("Senior Java Dev | 8 yrs exp")
+  pronouns        String?          // e.g., "he/him", "she/her", "they/them"
+  gender          Gender?
+  dob             DateTime?
+  maritalStatus   MaritalStatus?
+  nationality     String?          @default("Indian")
+  hometown        String?
+  category        ReservationCategory? // Indian reservation: GENERAL, SC, ST, OBC, EWS
+  bio             String?
+  resume          String?          // URL to file (Cloudinary/R2)
+  resumeOriginalName String?
+  additionalResumes Json?          // Array of { name, url, originalName?, isDefault?, uploadedAt? }
+  videoResumeUrl    String?        // URL to video resume
+  profileImage    String?          // Cloudinary URL
+
+  // Structured Address
+  addressLine1    String?
+  addressLine2    String?
+  city            String?
+  state           String?
+  pincode         String?
+  country         String?          @default("India")
+
+  // Contact & Location
+  currentLocation    String?
+  preferredLocations String[]
+  phone              String?
+  alternatePhone     String?
+  alternateEmail     String?
+
+  // Geo Coordinates (auto-populated by geocoding worker)
+  latitude           Float?
+  longitude          Float?
+
+  // Professional
+  experienceYears       Float          @default(0)
+  totalExperienceMonths Int?           // More precise than Float years
+  currentCompany        String?
+  currentRole           String?
+  currentIndustry       String?
+  currentDepartment     String?
+  functionalArea        String?
+  currSalary            Float?
+  expectedSalaryMin     Float?
+  expectedSalaryMax     Float?
+  salaryCurrency        String         @default("INR")
+  noticePeriod          NoticePeriod?
+  servingNoticePeriod   Boolean        @default(false)
+  workStatus            WorkStatus?    @default(ACTIVELY_LOOKING)
+  hasCareerBreak        Boolean        @default(false)
+  careerBreakType       CareerBreakType?
+  careerBreakReason     String?
+  openToWork            OpenToWorkStatus?
+
+  // Career Preferences
+  preferredJobType        JobType[]    @default([])
+  preferredWorkMode       WorkMode[]   @default([])
+  preferredShift          ShiftType?
+  preferredIndustries     String[]     @default([])
+  preferredRoleCategories String[]     @default([])
+  dateOfAvailability      DateTime?
+  willingToRelocate       Boolean?     @default(false)
+  travelWillingnessPercent Int?        @default(0)
+
+  // Visa, Work Authorization & Documents
+  visaStatus         String?
+  workPermitStatus   String?
+  passportNumber     String?
+  passportExpiryDate DateTime?
+  hasDrivingLicense  Boolean        @default(false)
+  ownVehicle         Boolean        @default(false)
+  isVeteran          Boolean        @default(false)
+  blockedCompanies   String[]       @default([])
+
+  // Skills & Education (JSON for flexibility)
+  skills                String[]
+  languages             String[]
+  itSkills              Json?    // Array of { technology, version?, lastUsed?, experienceYears?, proficiency? }
+  education             Json?    // Array of { institution, degree, field, startDate, endDate?, grade?, gradeType?, courseType?, specialization?, description?, activities? }
+  experience            Json?    // Array of { company, role, location?, industry?, department?, employmentType?, startDate, endDate?, isCurrent?, description?, keyAchievements[]?, teamSize?, reportingTo?, annualCtc? }
+  certifications        Json?    // Array of { name, issuer, issueDate?, expiryDate?, credentialId?, url?, doesNotExpire? }
+  projects              Json?    // Array of { name, description?, url?, startDate?, endDate?, technologies[]?, role?, teamSize?, client?, isCurrent? }
+  publications          Json?    // Array of { title, publisher?, publicationDate?, url?, description?, authors? }
+  patents               Json?    // Array of { title, patentOffice?, patentNumber?, status?, filingDate?, issueDate?, url?, description?, inventors? }
+  awards                Json?    // Array of { title, issuer?, date?, description? }
+  volunteerExperience   Json?    // Array of { organization, role, cause?, startDate?, endDate?, isCurrent?, description? }
+  professionalMemberships Json?  // Array of { organization, role?, startDate?, endDate?, membershipId?, description? }
+  courses               Json?    // Array of { name, provider?, completionDate?, url?, associatedWith? }
+  testScores            Json?    // Array of { testName, score, dateOfExam?, associatedWith?, description? }
+  references            Json?    // Array of { name, designation?, organization?, email?, phone?, relationship? }
+  languageProficiency   Json?    // Array of { language, proficiency: BASIC|INTERMEDIATE|FLUENT|NATIVE, readWrite? }
+  skillsWithProficiency Json?    // Array of { skill, proficiency: BEGINNER|INTERMEDIATE|ADVANCED|EXPERT, yearsOfExperience? }
+
+  // Interests
+  interests       String[]       @default([])
+  hobbies         String[]       @default([])
+
+  // Disability Details
+  isPhysicallyChallenged Boolean        @default(false)
+  disabilityType         DisabilityType? @default(NONE)
+  disabilityPercentage   Int?
+
+  // Social & Online Profiles
+  githubProfile        String?
+  linkedinProfile      String?
+  portfolioUrl         String?
+  stackOverflowProfile String?
+  twitterProfile       String?
+  personalBlogUrl      String?
+  dribbbleProfile      String?
+  behanceProfile       String?
+  mediumProfile        String?
+  youtubeChannel       String?
+
+  // AI-parsed resume data (from Document AI)
+  parsedResumeData       Json?
+
+  // Cached scores
+  profileCompleteness    Int     @default(0) // 0-100 percentage
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+
+  @@index([userId])
+  @@index([currentLocation])
+  @@index([experienceYears])
+  @@index([workStatus])
+  @@index([noticePeriod])
+  @@index([currentIndustry])
+  @@index([willingToRelocate])
+  @@index([openToWork])
+  @@index([city, state])
+  @@index([latitude, longitude])
+}
+
+model CompanyProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+
+  // Company Details
+  companyName   String
+  companyType   CompanyType?     // PRIVATE, PUBLIC, STARTUP, MNC, GOVERNMENT, etc.
+  tagline       String?
+  logo          String?          // Cloudinary URL
+  coverImage    String?          // Banner image (Cloudinary URL)
+  industry      String?
+  subIndustry   String?          // e.g., "SaaS", "Payments", "Cloud Infrastructure"
+  specialties   String[]  @default([])
+  companySize   String?          // e.g., "1-10", "11-50"
+  employeeCount Int?             // Approximate exact count
+  description   String?
+  whyWorkForUs  String?          // Employer pitch / "Why Work For Us" section
+  website       String?
+  careersPageUrl String?         // Company careers page
+  blogUrl       String?          // Company blog
+  foundedYear   Int?
+  parentCompany String?          // Parent/holding company
+  stockTicker   String?          // Stock exchange ticker symbol
+
+  // Registration & Verification
+  gstNumber     String?  @unique
+  cinNumber     String?  @unique  // Corporate Identity Number (India)
+  panNumber     String?
+  isVerified    Boolean  @default(false)
+
+  // Financial & Funding
+  annualRevenueRange  String?     // e.g., "1-5 Cr", "100-500 Cr"
+  fundingStage        FundingStage?
+  totalFundingRaised  String?     // e.g., "$50M", "₹200 Cr"
+  investors           String[]  @default([])
+
+  // Products & Tech
+  productsServices String[]  @default([])
+  techStack        String[]  @default([])
+
+  // Culture & Benefits
+  companyCulture      String?
+  missionStatement    String?
+  visionStatement     String?
+  coreValues          String[]  @default([])
+  diversityStatement  String?
+  employeeResourceGroups String[] @default([])
+  csrInitiatives      String?    // CSR / social impact description
+  benefits            String[]  @default([])
+  structuredPerks     Json?     // Array of { category, perks[] }
+  workplacePolicies   Json?     // Array of { title, description }
+  interviewProcess    String?   // Description of interview/hiring process
+  awardsRecognitions  Json?     // Array of { title, year?, issuingOrg?, description? }
+  leadershipTeam      Json?     // Array of { name, designation, linkedinUrl?, imageUrl?, bio? }
+  employeeTestimonials Json?    // Array of { name, designation?, department?, quote, imageUrl? }
+  officePhotos        Json?     // Array of { url, caption?, location? }
+  socialLinks         Json?     // { linkedin, twitter, facebook, instagram, youtube, glassdoor }
+
+  // Contact
+  contactEmail              String?
+  contactPhone              String?
+  contactPersonName         String?
+  contactPersonDesignation  String?
+
+  // Structured Address
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String?
+  pincode        String?
+  country        String?    @default("India")
+
+  // Location
+  headquarters  String?
+  locations     String[]
+
+  // Geo Coordinates (auto-populated by geocoding worker)
+  latitude      Float?
+  longitude     Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs     JobPost[]
+
+  @@index([userId])
+  @@index([companyName])
+  @@index([companyType])
+  @@index([industry])
+  @@index([fundingStage])
+  @@index([city, state])
+  @@index([latitude, longitude])
+}
+
+model JobPost {
+  id          String   @id @default(uuid())
+  companyId   String
+
+  // Job Details
+  title              String
+  description        String
+  keyResponsibilities String?     // Separate from description (Naukri-style)
+  requirements       String?     // Rich text or raw text
+  benefits           String?
+
+  // Metadata
+  type        JobType        @default(FULL_TIME)
+  status      JobStatus      @default(OPEN)
+  workMode    WorkMode?      @default(ON_SITE)  // ON_SITE, REMOTE, HYBRID
+  shiftType   ShiftType?                         // DAY, NIGHT, ROTATIONAL, FLEXIBLE
+
+  // Classification
+  industry     String?
+  department   String?
+  roleCategory String?
+
+  // Experience & Education
+  experienceMin          Int              @default(0)
+  experienceMax          Int?
+  experienceLevel        ExperienceLevel? // FRESHER through EXECUTIVE
+  educationRequired      EducationLevel?  // Minimum education level
+  preferredEducationField String?
+
+  // Compensation & Location
+  location        String
+  latitude        Float?
+  longitude       Float?
+  isRemote        Boolean      @default(false)  // Kept for backward compat
+  salaryMin       Float?
+  salaryMax       Float?
+  currency        String       @default("INR")
+  salaryType      SalaryType?  @default(ANNUAL)  // ANNUAL, MONTHLY, HOURLY
+  salaryDisclosed Boolean      @default(true)
+
+  // Skills
+  skillsRequired         String[]
+  niceToHaveSkills       String[]  @default([])
+  certificationsRequired String[]  @default([])
+  languagesRequired      Json?     // Array of { language, proficiency }
+
+  // Vacancy & Urgency
+  numberOfOpenings  Int?          @default(1)
+  urgencyLevel      UrgencyLevel? @default(NORMAL)
+  isFeatured        Boolean       @default(false)
+  isPremium         Boolean       @default(false)
+
+  // Content & SEO
+  tags              String[]      @default([])
+  jobPerks          String[]      @default([])
+
+  // Travel & Relocation
+  travelRequirementPercent Int?    @default(0)
+  relocationAssistance     Boolean @default(false)
+
+  // Application & Interview
+  applicationDeadline DateTime?
+  interviewProcess    String?
+  isWalkIn            Boolean    @default(false)
+  walkInDetails       Json?      // { date, time, venue, contactPerson, contactPhone }
+  contactPerson       String?
+  contactEmail        String?
+
+  // Stats
+  views       Int       @default(0)
+
+  // Lifecycle
+  closedReason  String?    // "EXPIRED", "FILLED", "CANCELLED"
+  closedAt      DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  company      CompanyProfile   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+  savedBy      SavedJob[]
+  dismissedBy  DismissedRecommendation[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([title])
+  @@index([location])
+  @@index([companyId, status])
+  @@index([companyId, createdAt])
+  @@index([status, createdAt])
+  @@index([industry])
+  @@index([expiresAt])
+  @@index([workMode])
+  @@index([shiftType])
+  @@index([experienceLevel])
+  @@index([educationRequired])
+  @@index([urgencyLevel])
+  @@index([isFeatured])
+  @@index([applicationDeadline])
+  @@index([status, workMode])
+  @@index([status, experienceLevel])
+  @@index([latitude, longitude])
+}
+
+model JobApplication {
+  id          String   @id @default(uuid())
+  jobId       String
+  candidateId String
+
+  status      ApplicationStatus @default(APPLIED)
+  coverLetter String?
+  resumeSnapshot String? // Link to resume at time of application
+
+  // Match & Source
+  matchScore       Float?     // Pre-computed match score at apply time
+  source           String?    // "SEARCH", "RECOMMENDATION", "DIRECT", "WALK_IN", "REFERRAL"
+  candidateNotes   String?    // Candidate's own notes about the application
+
+  // Interview & Decision
+  interviewDate      DateTime?
+  interviewNotes     String?
+  interviewFeedback  Json?       // Array of { stage, interviewer?, rating?, feedback?, date? }
+  rejectionReason    String?
+  viewedAt           DateTime?   // When employer first viewed
+
+  // Offer & Hiring
+  offerDetails  Json?       // { salary, joiningDate, designation, location }
+  offeredAt     DateTime?
+  hiredAt       DateTime?
+
+  appliedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  job       JobPost          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, candidateId]) // Prevent duplicate applications
+  @@index([jobId])
+  @@index([candidateId])
+  @@index([status])
+  @@index([jobId, status])
+  @@index([candidateId, status])
+  @@index([source])
+  @@index([offeredAt])
+  @@index([hiredAt])
+}
+
+model VerificationRequest {
+  id        String   @id @default(uuid())
+  userId    String
+
+  type      VerificationType
+  status    VerificationStatus @default(PENDING)
+
+  // Data
+  documentUrl String? // R2/Cloudinary URL
+  data        Json?   // Extra data (e.g., entered GST number)
+
+  // Admin logic
+  reviewedBy      String?
+  adminComments   String?
+  reviewedAt      DateTime?
+
+  // Escalation
+  escalatedAt      DateTime?
+  escalatedBy      String?
+  escalationReason String?
+  priority         String?  @default("NORMAL") // NORMAL, HIGH, URGENT
+
+  // SLA & Approval Chain
+  slaDeadline          DateTime?
+  approvalChain        Json?      // Array of { level, approverId, approvedAt?, comments? }
+  currentApprovalLevel Int?       @default(1)
+  autoEscalated        Boolean    @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation("UserVerifications", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer  User?    @relation("AdminReviews", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([type, status])
+  @@index([priority])
+}
+
+model SavedJob {
+  id        String   @id @default(uuid())
+  userId    String
+  jobId     String
+
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job       JobPost  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+}
+
+// --- Saved Candidates (Employer bookmarks candidates) ---
+
+model SavedCandidate {
+  id          String   @id @default(uuid())
+  employerId  String
+  candidateId String
+  notes       String?
+  savedAt     DateTime @default(now())
+
+  employer    User @relation("EmployerSavedCandidates", fields: [employerId], references: [id], onDelete: Cascade)
+  candidate   User @relation("CandidateSavedBy", fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([employerId, candidateId])
+  @@index([employerId])
+  @@index([candidateId])
+}
+
+// --- Saved Searches ---
+
+model SavedSearch {
+  id         String   @id @default(uuid())
+  userId     String
+  name       String
+  searchType String   // "CANDIDATE_SEARCH" or "JOB_SEARCH"
+  filters    Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, searchType])
+}
+
+// --- Profile Views ---
+
+model ProfileView {
+  id            String   @id @default(uuid())
+  viewerId      String
+  profileUserId String
+  viewType      String   // "CANDIDATE_PROFILE" or "COMPANY_PROFILE"
+  createdAt     DateTime @default(now())
+
+  viewer      User @relation("ProfileViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  profileUser User @relation("ProfileViewed", fields: [profileUserId], references: [id], onDelete: Cascade)
+
+  @@index([profileUserId, createdAt])
+  @@index([viewerId])
+}
+
+// --- Notification System ---
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  category  String?          // e.g., "job_match", "application_update", "security"
+  link      String?          // Deep link to relevant page
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  metadata  Json?            // Extra structured data
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+// --- Form Drafts ---
+
+enum FormDraftType {
+  CANDIDATE_PROFILE
+  JOB_SEARCH_PREFERENCES
+  CANDIDATE_SEARCH
+  JOB_POSTING
+  EMPLOYER_PROFILE
+}
+
+model FormDraft {
+  id        String        @id @default(uuid())
+  userId    String
+  formType  FormDraftType
+  data      Json          // The draft form data
+  name      String?       // Optional user-given name for the draft
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, formType, name])
+  @@index([userId, formType])
+}
+
+// --- Push Subscriptions (Web Push VAPID) ---
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// --- Device Tokens (FCM) ---
+
+model DeviceToken {
+  id         String   @id @default(uuid())
+  userId     String
+  token      String   @unique
+  platform   String?  // "android", "ios", "web"
+  deviceName String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// --- System Configuration ---
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+// --- WebAuthn Credentials (Passkeys) ---
+
+model WebAuthnCredential {
+  id           String   @id @default(cuid())
+  userId       String
+  credentialId String   @unique
+  publicKey    Bytes
+  counter      BigInt   @default(0)
+  transports   String[]
+  deviceType   String?
+  backedUp     Boolean  @default(false)
+  friendlyName String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// --- Webhook Endpoints ---
+
+model WebhookEndpoint {
+  id              String    @id @default(cuid())
+  userId          String
+  url             String
+  secret          String
+  events          String[]
+  isActive        Boolean   @default(true)
+  description     String?
+  failureCount    Int       @default(0)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+// --- Webhook Deliveries ---
+
+model WebhookDelivery {
+  id         String   @id @default(cuid())
+  webhookId  String
+  event      String
+  payload    Json
+  statusCode Int?
+  response   String?
+  success    Boolean  @default(false)
+  attempt    Int      @default(1)
+  error      String?
+  createdAt  DateTime @default(now())
+
+  webhook WebhookEndpoint @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@index([createdAt])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  isRead    Boolean  @default(false)
+  repliedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// --- Support Ticket System ---
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  AWAITING_REPLY
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketCategory {
+  GENERAL
+  ACCOUNT
+  BILLING
+  TECHNICAL
+  BUG_REPORT
+  FEATURE_REQUEST
+  JOB_POSTING
+  APPLICATION
+  VERIFICATION
+  OTHER
+}
+
+enum TicketSatisfaction {
+  SATISFIED
+  NEUTRAL
+  NOT_SATISFIED
+}
+
+model SupportTicket {
+  id             String              @id @default(cuid())
+  ticketNumber   String              @unique
+  subject        String
+  description    String
+  status         TicketStatus        @default(OPEN)
+  priority       TicketPriority      @default(MEDIUM)
+  category       TicketCategory      @default(GENERAL)
+
+  // Submitter — either a registered user OR a guest
+  userId         String?
+  guestName      String?
+  guestEmail     String?
+
+  // Assignment
+  assignedToId   String?
+
+  // Resolution
+  satisfaction        TicketSatisfaction?
+  satisfactionComment String?
+  resolvedAt          DateTime?
+  closedAt            DateTime?
+  firstResponseAt     DateTime?
+
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  // Relations
+  user           User?               @relation("UserTickets", fields: [userId], references: [id], onDelete: SetNull)
+  assignedTo     User?               @relation("AssignedTickets", fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages       TicketMessage[]
+
+  @@index([userId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([ticketNumber])
+  @@index([createdAt])
+  @@index([category])
+}
+
+model TicketMessage {
+  id          String   @id @default(cuid())
+  ticketId    String
+  senderId    String?
+  senderType  String   // USER, ADMIN, SYSTEM, GUEST
+  senderName  String
+  body        String
+  isInternal  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+// --- Security & Privacy ---
+
+model KnownDevice {
+  id          String   @id @default(cuid())
+  userId      String
+  fingerprint String
+  name        String?
+  ipAddress   String?
+  location    String?
+  lastUsedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fingerprint])
+  @@index([userId])
+}
+
+model LoginLocation {
+  id        String   @id @default(cuid())
+  userId    String
+  ipAddress String
+  country   String?
+  city      String?
+  latitude  Float?
+  longitude Float?
+  isTrusted Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model UserConsent {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  version   String
+  givenAt   DateTime  @default(now())
+  revokedAt DateTime?
+  ipAddress String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+}
+
+// --- Job Alerts ---
+
+enum AlertFrequency {
+  INSTANT
+  DAILY
+  WEEKLY
+  OFF
+}
+
+model JobAlert {
+  id             String         @id @default(uuid())
+  userId         String
+  name           String
+  filters        Json
+  frequency      AlertFrequency @default(DAILY)
+  isActive       Boolean        @default(true)
+  lastNotifiedAt DateTime?
+  newMatchCount  Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([isActive, frequency])
+}
+
+// --- Dismissed Recommendations ---
+
+model DismissedRecommendation {
+  id        String   @id @default(uuid())
+  userId    String
+  jobId     String
+  createdAt DateTime @default(now())
+
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPost @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+}

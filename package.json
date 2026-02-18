@@ -1,0 +1,53 @@
+{
+  "name": "talent-bridge-monorepo",
+  "version": "1.0.0",
+  "description": "Talent Bridge - A specialized job portal for blue-collar workers.",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npx -y concurrently \"npm run dev:backend\" \"npm run dev:frontend\" --kill-others",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspaces --if-present",
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "start": "npx -y concurrently \"npm run start:backend\" \"npm run start:frontend\" --kill-others",
+    "start:backend": "npm run start --workspace=backend",
+    "start:frontend": "npm run start --workspace=frontend",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "clean": "npx -y rimraf node_modules coverage backend/node_modules frontend/node_modules backend/dist frontend/.next",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "job-portal",
+    "full-stack",
+    "nextjs",
+    "express",
+    "typescript"
+  ],
+  "author": "Talent Bridge Team",
+  "license": "MIT",
+  "lint-staged": {
+    "backend/src/**/*.{ts,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "frontend/src/**/*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.4.1",
+    "@commitlint/config-conventional": "^20.4.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7"
+  }
+}
