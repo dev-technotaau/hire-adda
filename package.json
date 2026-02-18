@@ -20,7 +20,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "clean": "npx -y rimraf node_modules coverage backend/node_modules frontend/node_modules backend/dist frontend/.next",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "keywords": [
     "job-portal",
@@ -47,7 +47,9 @@
   "devDependencies": {
     "@commitlint/cli": "^20.4.1",
     "@commitlint/config-conventional": "^20.4.1",
+    "eslint": "10.0.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7"
+    "lint-staged": "^16.2.7",
+    "prettier": "3.8.1"
   }
 }
