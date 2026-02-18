@@ -1,6 +1,7 @@
 // Sentry must be imported first before any other modules
 import './instrument';
-import express, { Application, Request, Response, Router } from 'express';
+import type { Application, Request, Response } from 'express';
+import express, { Router } from 'express';
 import * as Sentry from '@sentry/node';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -38,51 +39,66 @@ app.use(ddosProtection()); // DDoS protection (Redis-backed per-IP rate tracking
 app.use(waf()); // WAF rules (SQL injection, path traversal, exploit probes)
 
 // Helmet with strict Content Security Policy (CSP) & HSTS
-app.use(helmet({
+app.use(
+  helmet({
     contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "https://challenges.cloudflare.com"], // Allow Cloudflare Turnstile
-            frameSrc: ["'self'", "https://challenges.cloudflare.com"], // Allow Turnstile iframe
-            imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://assets.talentbridge.com"], // Allow Cloudinary & R2
-            objectSrc: ["'none'"],
-            upgradeInsecureRequests: [],
-            reportUri: ['/api/csp-report'],
-        },
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", 'https://challenges.cloudflare.com'], // Allow Cloudflare Turnstile
+        frameSrc: ["'self'", 'https://challenges.cloudflare.com'], // Allow Turnstile iframe
+        imgSrc: [
+          "'self'",
+          'data:',
+          'https://res.cloudinary.com',
+          'https://assets.talentbridge.com',
+        ], // Allow Cloudinary & R2
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+        reportUri: ['/api/csp-report'],
+      },
     },
     hsts: {
-        maxAge: 31536000, // 1 year
-        includeSubDomains: true,
-        preload: true,
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true,
     },
-}));
+  })
+);
 
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 
 // CORS configuration with preflight caching
-app.use(cors({
+app.use(
+  cors({
     origin: (origin, callback) => {
-        const allowedOrigins = env.CORS_ORIGIN === '*' ? '*' : env.CORS_ORIGIN.split(',');
+      const allowedOrigins = env.CORS_ORIGIN === '*' ? '*' : env.CORS_ORIGIN.split(',');
 
-        if (allowedOrigins === '*') {
-            callback(null, true);
-        } else if (allowedOrigins.indexOf(origin as string) !== -1 || !origin) {
-            // !origin allows requests from non-browser sources (like Postman)
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
+      if (allowedOrigins === '*') {
+        callback(null, true);
+      } else if (allowedOrigins.indexOf(origin as string) !== -1 || !origin) {
+        // !origin allows requests from non-browser sources (like Postman)
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
     },
     credentials: true,
     maxAge: 86400, // Cache preflight responses for 24 hours
-    exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After'],
-}));
+    exposedHeaders: [
+      'X-Request-ID',
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'X-RateLimit-Reset',
+      'Retry-After',
+    ],
+  })
+);
 
 // Rate limiting
 import { apiLimiter, authLimiter } from './middleware/rate-limit';
 
 // Apply rate limits
-// Note: authLimiter should be applied specifically to auth routes in their router, 
+// Note: authLimiter should be applied specifically to auth routes in their router,
 // but we perform a global API limit here.
 app.use('/api', apiLimiter);
 // We can also apply strict limits to specific paths globally if the router isn't mounted yet
@@ -108,50 +124,56 @@ app.use(requestTimeout(30000));
 
 // Structured request logging with correlation ID and duration
 app.use((req: Request, res: Response, next) => {
-    const start = Date.now();
-    res.on('finish', () => {
-        const duration = Date.now() - start;
-        const logData = `${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms [${req.id}]`;
-        if (res.statusCode >= 500) {
-            logger.error(logData);
-        } else if (res.statusCode >= 400) {
-            logger.warn(logData);
-        } else {
-            logger.info(logData);
-        }
-    });
-    next();
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const logData = `${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms [${req.id}]`;
+    if (res.statusCode >= 500) {
+      logger.error(logData);
+    } else if (res.statusCode >= 400) {
+      logger.warn(logData);
+    } else {
+      logger.info(logData);
+    }
+  });
+  next();
 });
 
 // HTTP request logging (morgan — development only)
 if (env.NODE_ENV === 'development') {
-    app.use(morgan('dev', {
-        stream: { write: (message) => logger.debug(message.trim()) },
-    }));
+  app.use(
+    morgan('dev', {
+      stream: { write: (message) => logger.debug(message.trim()) },
+    })
+  );
 }
 
 // Swagger API docs (protected in production)
 const swaggerSetup = swaggerUi.setup(swaggerSpec, {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'Talent Bridge API Docs',
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Talent Bridge API Docs',
 });
 if (env.NODE_ENV === 'production') {
-    app.use('/api-docs', protect, restrictTo('ADMIN', 'SUPER_ADMIN'), swaggerUi.serve, swaggerSetup);
+  app.use('/api-docs', protect, restrictTo('ADMIN', 'SUPER_ADMIN'), swaggerUi.serve, swaggerSetup);
 } else {
-    app.use('/api-docs', swaggerUi.serve, swaggerSetup);
+  app.use('/api-docs', swaggerUi.serve, swaggerSetup);
 }
 
 // CSP violation reporting endpoint (before CSRF so browser reports aren't blocked)
-app.post('/api/csp-report', express.json({ type: ['application/csp-report', 'application/json'] }), handleCspReport);
+app.post(
+  '/api/csp-report',
+  express.json({ type: ['application/csp-report', 'application/json'] }),
+  handleCspReport
+);
 
-// CSRF Protection (using csrf-csrf)
+// CSRF Protection (stateless HMAC-signed token — no cookies needed for cross-origin)
 // We only protect API routes, health check and docs are excluded
 import { generateCsrfToken, doubleCsrfProtection } from './config/csrf';
 
 // CSRF Token Endpoint (Frontend calls this to get the token)
 app.get('/api/csrf-token', (req: Request, res: Response) => {
-    const csrfToken = generateCsrfToken(req, res);
-    res.json({ csrfToken });
+  const csrfToken = generateCsrfToken(req, res);
+  res.json({ csrfToken });
 });
 
 // Protect all state-changing API routes
@@ -227,35 +249,42 @@ app.use('/api/v1', apiV1Router);
 
 // Root route
 app.get('/', (_req: Request, res: Response) => {
-    res.json({
-        message: 'Welcome to Talent Bridge API',
-        docs: '/api-docs',
-    });
+  res.json({
+    message: 'Welcome to Talent Bridge API',
+    docs: '/api-docs',
+  });
 });
 
 // Test Sentry route (dev only)
 if (env.NODE_ENV !== 'production') {
-    app.get('/debug-sentry', (_req: Request, _res: Response) => {
-        throw new Error('Sentry test error!');
-    });
+  app.get('/debug-sentry', (_req: Request, _res: Response) => {
+    throw new Error('Sentry test error!');
+  });
 }
 
 // API versioning enforcement — reject unsupported versions
 app.all('/api/v:version/*path', (req: Request, res: Response) => {
-    const version = req.params.version;
-    if (version !== '1') {
-        res.status(400).json({
-            success: false,
-            error: { message: `API version v${version} is not supported. Use /api/v1/`, code: 'UNSUPPORTED_API_VERSION' },
-        });
-        return;
-    }
-    res.status(404).json({ success: false, error: { message: 'API route not found', code: 'ROUTE_NOT_FOUND' } });
+  const version = req.params.version;
+  if (version !== '1') {
+    res.status(400).json({
+      success: false,
+      error: {
+        message: `API version v${version} is not supported. Use /api/v1/`,
+        code: 'UNSUPPORTED_API_VERSION',
+      },
+    });
+    return;
+  }
+  res
+    .status(404)
+    .json({ success: false, error: { message: 'API route not found', code: 'ROUTE_NOT_FOUND' } });
 });
 
 // 404 handler for undefined API routes
 app.all('/api/*path', (_req: Request, res: Response) => {
-    res.status(404).json({ success: false, error: { message: 'API route not found', code: 'ROUTE_NOT_FOUND' } });
+  res
+    .status(404)
+    .json({ success: false, error: { message: 'API route not found', code: 'ROUTE_NOT_FOUND' } });
 });
 
 // Sentry error handler
