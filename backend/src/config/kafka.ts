@@ -22,8 +22,10 @@ try {
   if (env.KAFKA_USERNAME && env.KAFKA_PASSWORD) {
     // Load Aiven CA certificate for TLS — env var takes priority over file
     const caPath = path.resolve(__dirname, '../../certs/aiven-ca.pem');
-    const caCert =
+    const rawCert =
       env.KAFKA_CA_CERT || (fs.existsSync(caPath) ? fs.readFileSync(caPath, 'utf-8') : null);
+    // Env-var UIs often store PEM certs with literal \n — convert to real newlines
+    const caCert = rawCert ? rawCert.replace(/\\n/g, '\n') : null;
 
     kafkaConfig.ssl = caCert ? { ca: [caCert] } : { rejectUnauthorized: false };
 
