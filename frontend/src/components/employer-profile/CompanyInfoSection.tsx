@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Building2, Globe, Briefcase, Calendar, Users as UsersIcon, Plus, TrendingUp } from 'lucide-react';
+import { Building2, Globe, Briefcase, Calendar, Users as UsersIcon, Plus, TrendingUp, MapPin } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
@@ -54,9 +54,12 @@ export default function CompanyInfoSection({ form, updateField, addToArray, remo
                 )}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
                 <Select label="Company Size" options={companySizeOptions} value={form.companySize || ''} onChange={(v) => updateField('companySize', v)} placeholder="Select size" />
                 <Input label="Employee Count" type="number" placeholder="e.g. 250" value={form.employeeCount?.toString() || ''} onChange={(e) => updateField('employeeCount', e.target.value ? Number(e.target.value) : undefined)} leftIcon={<UsersIcon className="h-4 w-4" />} />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+                <Input label="Number of Offices" type="number" placeholder="e.g. 5" value={form.numberOfOffices?.toString() || ''} onChange={(e) => updateField('numberOfOffices', e.target.value ? Number(e.target.value) : undefined)} leftIcon={<MapPin className="h-4 w-4" />} />
                 <Input label="Founded Year" type="number" placeholder="e.g. 2015" value={form.foundedYear?.toString() || ''} onChange={(e) => updateField('foundedYear', e.target.value ? Number(e.target.value) : undefined)} leftIcon={<Calendar className="h-4 w-4" />} />
             </div>
             <Input label="Website" type="url" placeholder="https://www.company.com" leftIcon={<Globe className="h-4 w-4" />} value={form.website || ''} onChange={(e) => updateField('website', e.target.value)} />

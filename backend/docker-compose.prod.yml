@@ -57,8 +57,43 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - talent_bridge_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ===========================================
+  # OpenSearch (Search Engine)
+  # ===========================================
+  opensearch:
+    image: opensearchproject/opensearch:2.18.0
+    container_name: talent_bridge_opensearch
+    restart: always
+    environment:
+      - cluster.name=talentbridge
+      - node.name=opensearch-node1
+      - discovery.type=single-node
+      - OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g
+      - DISABLE_SECURITY_PLUGIN=true
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    networks:
+      - talent_bridge_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     logging:
       driver: "json-file"
       options:
@@ -85,4 +120,5 @@ networks:
     driver: bridge
 
 volumes:
+  opensearch_data:
   redis_data:

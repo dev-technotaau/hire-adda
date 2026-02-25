@@ -24,6 +24,7 @@ export const APPLICATION_STATUS_LABELS: Record<string, string> = {
     APPLIED: 'Applied',
     VIEWED: 'Viewed',
     SHORTLISTED: 'Shortlisted',
+    SELECTED: 'Selected',
     INTERVIEW_SCHEDULED: 'Interview Scheduled',
     REJECTED: 'Rejected',
     OFFERED: 'Offered',
@@ -35,6 +36,7 @@ export const APPLICATION_STATUS_COLORS: Record<string, string> = {
     APPLIED: 'info',
     VIEWED: 'info',
     SHORTLISTED: 'success',
+    SELECTED: 'success',
     INTERVIEW_SCHEDULED: 'warning',
     REJECTED: 'error',
     OFFERED: 'success',
@@ -256,6 +258,114 @@ export const BROAD_REGION_PRESETS: Record<string, { label: string; special?: 'cl
     'east_india': { label: 'East India', cities: ['Kolkata', 'Bhubaneswar', 'Patna', 'Guwahati', 'Ranchi'] },
     'west_india': { label: 'West India', cities: ['Mumbai', 'Pune', 'Ahmedabad', 'Surat', 'Goa', 'Vadodara'] },
 };
+
+// Enterprise job posting enums
+export const NOTICE_PERIOD_PREFERENCE_LABELS: Record<string, string> = {
+    IMMEDIATE: 'Immediate',
+    FIFTEEN_DAYS: '15 Days',
+    ONE_MONTH: '1 Month',
+    TWO_MONTHS: '2 Months',
+    THREE_MONTHS: '3 Months',
+    NEGOTIABLE: 'Negotiable',
+};
+
+export const FUNCTIONAL_AREA_LABELS: Record<string, string> = {
+    IT_SOFTWARE: 'IT / Software',
+    IT_HARDWARE: 'IT / Hardware',
+    SALES: 'Sales',
+    MARKETING: 'Marketing',
+    HR: 'Human Resources',
+    FINANCE: 'Finance / Accounting',
+    ITES_BPO: 'ITES / BPO',
+    ENGINEERING: 'Engineering',
+    PRODUCTION: 'Production / Manufacturing',
+    PHARMA: 'Pharma / Biotech',
+    BANKING: 'Banking / Insurance',
+    LEGAL: 'Legal',
+    MEDIA: 'Media / Entertainment',
+    HOSPITALITY: 'Hospitality / Travel',
+    RETAIL: 'Retail',
+    LOGISTICS: 'Logistics / Supply Chain',
+    EDUCATION: 'Education / Training',
+    HEALTHCARE: 'Healthcare',
+    REAL_ESTATE: 'Real Estate',
+    OTHER: 'Other',
+};
+
+export const SPECIFIC_DEGREE_LABELS: Record<string, string> = {
+    BTECH_BE: 'B.Tech / B.E.',
+    BCA: 'BCA',
+    BSC: 'B.Sc',
+    BCOM: 'B.Com',
+    BA: 'B.A.',
+    BBA: 'BBA',
+    MBBS: 'MBBS',
+    LLB: 'LLB',
+    BARCH: 'B.Arch',
+    BDES: 'B.Des',
+    BPHARM: 'B.Pharm',
+    DIPLOMA_ENGINEERING: 'Diploma (Engineering)',
+    MCA: 'MCA',
+    MSC: 'M.Sc',
+    MCOM: 'M.Com',
+    MA: 'M.A.',
+    MBA_PGDM: 'MBA / PGDM',
+    MTECH_ME: 'M.Tech / M.E.',
+    MS: 'M.S.',
+    LLM: 'LLM',
+    MD: 'MD',
+    CA: 'CA',
+    CS: 'CS',
+    ICWA: 'ICWA',
+    PHD: 'Ph.D',
+    ANY_GRADUATE: 'Any Graduate',
+    ANY_POSTGRADUATE: 'Any Post Graduate',
+};
+
+export const GENDER_PREFERENCE_LABELS: Record<string, string> = {
+    ANY: 'Any',
+    MALE: 'Male',
+    FEMALE: 'Female',
+    OTHER: 'Other',
+};
+
+export const DRIVING_LICENSE_TYPE_LABELS: Record<string, string> = {
+    NONE: 'Not Required',
+    TWO_WHEELER: 'Two Wheeler',
+    FOUR_WHEELER: 'Four Wheeler',
+    BOTH: 'Two & Four Wheeler',
+    HEAVY_VEHICLE: 'Heavy Vehicle',
+};
+
+export const POSTING_VISIBILITY_LABELS: Record<string, string> = {
+    PUBLIC: 'Public',
+    INTERNAL: 'Internal Only',
+    BOTH: 'Public & Internal',
+};
+
+export const APPLY_METHOD_LABELS: Record<string, string> = {
+    IN_PLATFORM: 'Apply on Platform',
+    EXTERNAL_URL: 'External URL',
+    EMAIL: 'Email',
+    WALK_IN: 'Walk-in',
+};
+
+export const SCREENING_QUESTION_TYPE_LABELS: Record<string, string> = {
+    TEXT: 'Text Answer',
+    YES_NO: 'Yes / No',
+    MULTIPLE_CHOICE: 'Multiple Choice',
+    NUMERIC: 'Numeric',
+};
+
+export const DIVERSITY_TAG_OPTIONS: string[] = [
+    'Women Encouraged',
+    'PwD Friendly',
+    'LGBTQ+ Inclusive',
+    'Veterans Preferred',
+    'Career Returners Welcome',
+    'Diversity Hire',
+    'Equal Opportunity',
+];
 
 export const INDIAN_REGION_PRESETS: Record<string, string[]> = {
     'NCR / Delhi': ['Delhi', 'Noida', 'Gurugram', 'Ghaziabad', 'Faridabad', 'Greater Noida'],

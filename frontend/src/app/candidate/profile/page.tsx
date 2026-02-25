@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import {
-    User, Briefcase, GraduationCap, Code, FileText,
+    User, Briefcase, GraduationCap, Code, FileText, FileCheck,
     Globe, Save, Upload, Languages, Settings,
     Download, Eye, Sparkles, Calendar, Loader2,
-    FolderKanban, Brain, CheckCircle2, ChevronDown,
+    FolderKanban, Brain, CheckCircle2,
     Award, BookOpen, Trophy, Users, Heart, Palette,
+    XCircle, AlertTriangle, Lightbulb, ChevronRight, Check, X,
 } from 'lucide-react';
 import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -18,12 +20,15 @@ import FileUpload from '@/components/ui/FileUpload';
 import Skeleton from '@/components/ui/Skeleton';
 import { showToast } from '@/components/ui/Toast';
 import { candidateService } from '@/services/candidate.service';
+import { formatFileSize } from '@/lib/utils';
+import { getFileTypeBadge } from '@/utils/format';
 import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/use-auth';
-import type { UpdateCandidateRequest } from '@/types/candidate';
+import type { UpdateCandidateRequest, ResumeReadinessItem } from '@/types/candidate';
 import type { ApiError } from '@/types/api';
-import type { ParsedResumeData } from '@/types/resume-parse';
+import type { ParsedResumeData, ApplyableResumeFields } from '@/types/resume-parse';
+import ResumeParseReview from '@/components/common/ResumeParseReview';
 
 import PersonalSection from '@/components/profile/PersonalSection';
 import ExperienceSection from '@/components/profile/ExperienceSection';
@@ -65,9 +70,18 @@ const sections: { key: Section; label: string; icon: React.ElementType }[] = [
 export default function CandidateProfilePage() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
+    const searchParams = useSearchParams();
     const [activeSection, setActiveSection] = useState<Section>('personal');
     const [form, setForm] = useState<UpdateCandidateRequest>({});
     const [resumeFile, setResumeFile] = useState<File[]>([]);
+    const [resumeUploaded, setResumeUploaded] = useState(false);
+    const [resumeParsing, setResumeParsing] = useState(false);
+    const [resumeParsePolling, setResumeParsePolling] = useState(false);
+    const [parsedResumeData, setParsedResumeData] = useState<ParsedResumeData | null>(null);
+    const [resumeParseApplied, setResumeParseApplied] = useState(false);
+    const [showUploadedResumePreview, setShowUploadedResumePreview] = useState(false);
+    const [showResumePreview, setShowResumePreview] = useState(false);
+    const [showActiveResumePreview, setShowActiveResumePreview] = useState(false);
 
     const { data: profileData, isLoading } = useQuery({
         queryKey: QUERY_KEYS.CANDIDATES.PROFILE,
@@ -77,6 +91,12 @@ export default function CandidateProfilePage() {
     const { data: completenessData } = useQuery({
         queryKey: QUERY_KEYS.CANDIDATES.COMPLETENESS,
         queryFn: () => candidateService.getCompleteness(),
+    });
+
+    const { data: readinessData } = useQuery({
+        queryKey: [...QUERY_KEYS.CANDIDATES.PROFILE, 'resume-readiness'],
+        queryFn: () => candidateService.getResumeReadiness(),
+        enabled: activeSection === 'resume',
     });
 
     const profile = profileData?.data;
@@ -108,6 +128,7 @@ export default function CandidateProfilePage() {
                 alternateEmail: profile.alternateEmail || '',
                 experienceYears: profile.experienceYears || 0,
                 totalExperienceMonths: profile.totalExperienceMonths || undefined,
+                experienceLevel: profile.experienceLevel || undefined,
                 currentCompany: profile.currentCompany || '',
                 currentRole: profile.currentRole || '',
                 currentIndustry: profile.currentIndustry || '',
@@ -132,11 +153,14 @@ export default function CandidateProfilePage() {
                 dateOfAvailability: profile.dateOfAvailability || '',
                 willingToRelocate: profile.willingToRelocate || false,
                 travelWillingnessPercent: profile.travelWillingnessPercent || undefined,
+                highestEducationLevel: profile.highestEducationLevel || undefined,
+                highestDegree: profile.highestDegree || undefined,
                 visaStatus: profile.visaStatus || '',
                 workPermitStatus: profile.workPermitStatus || '',
                 passportNumber: profile.passportNumber || '',
                 passportExpiryDate: profile.passportExpiryDate || '',
                 hasDrivingLicense: profile.hasDrivingLicense || false,
+                drivingLicenseType: profile.drivingLicenseType || undefined,
                 ownVehicle: profile.ownVehicle || false,
                 isVeteran: profile.isVeteran || false,
                 blockedCompanies: profile.blockedCompanies || [],
@@ -175,6 +199,25 @@ export default function CandidateProfilePage() {
         }
     }, [profile]);
 
+    // Deep-link: read ?section= and ?focus= query params
+    useEffect(() => {
+        const section = searchParams.get('section');
+        if (section && sections.some(s => s.key === section)) {
+            setActiveSection(section as Section);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        const focus = searchParams.get('focus');
+        if (focus) {
+            const timer = setTimeout(() => {
+                const el = document.getElementById(focus);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [searchParams, activeSection]);
+
     const updateMutation = useMutation({
         mutationFn: (data: UpdateCandidateRequest) => candidateService.updateProfile(data),
         onSuccess: () => {
@@ -192,8 +235,6 @@ export default function CandidateProfilePage() {
         mutationFn: (file: File) => candidateService.uploadResume(file),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
-            showToast.success('Resume uploaded!');
-            setResumeFile([]);
         },
         onError: (err) => {
             const error = err as unknown as ApiError;
@@ -203,22 +244,85 @@ export default function CandidateProfilePage() {
 
     const generateResumeMutation = useMutation({
         mutationFn: () => candidateService.generateResume(),
-        onSuccess: (blob) => {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${user?.firstName || 'candidate'}_${user?.lastName || ''}_resume.pdf`.replace(/\s+/g, '_');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            showToast.success('Resume generated and downloaded!');
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
+            setShowResumePreview(true);
+            showToast.success('Resume generated and saved!');
         },
         onError: (err) => {
             const error = err as unknown as ApiError;
             showToast.error(error.message || 'Failed to generate resume');
         },
     });
+
+    const useGeneratedResumeMutation = useMutation({
+        mutationFn: () => candidateService.useGeneratedResume(),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
+            showToast.success('Generated resume set as your profile resume!');
+        },
+        onError: (err) => {
+            const error = err as unknown as ApiError;
+            showToast.error(error.message || 'Failed to set resume');
+        },
+    });
+
+    const deleteResumeMutation = useMutation({
+        mutationFn: (type: 'uploaded' | 'generated' | 'both' = 'both') => candidateService.deleteResume(type),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
+            setShowUploadedResumePreview(false);
+            setShowResumePreview(false);
+            setShowActiveResumePreview(false);
+            showToast.success('Resume deleted successfully!');
+        },
+        onError: (err) => {
+            const error = err as unknown as ApiError;
+            showToast.error(error.message || 'Failed to delete resume');
+        },
+    });
+
+    const parseResumeMutation = useMutation({
+        mutationFn: () => candidateService.parseResume(),
+        onSuccess: () => {
+            setResumeParsePolling(true);
+        },
+        onError: () => {
+            showToast.error('Resume parsing failed. Please try again.');
+            setResumeParsing(false);
+        },
+    });
+
+    const { data: polledParsedData } = useQuery({
+        queryKey: [...QUERY_KEYS.CANDIDATES.PARSED_RESUME, 'upload-polling'],
+        queryFn: () => candidateService.getParsedResumeData(),
+        refetchInterval: resumeParsePolling ? 3000 : false,
+        enabled: resumeParsePolling,
+    });
+
+    // Stop polling when parsed data arrives
+    useEffect(() => {
+        if (polledParsedData?.data && resumeParsePolling) {
+            setParsedResumeData(polledParsedData.data);
+            setResumeParsePolling(false);
+            setResumeParsing(false);
+        }
+    }, [polledParsedData, resumeParsePolling]);
+
+    // 60-second polling timeout
+    useEffect(() => {
+        if (!resumeParsePolling) return;
+        const timeout = setTimeout(() => {
+            setResumeParsePolling(false);
+            setResumeParsing(false);
+            showToast.error('Resume parsing is taking longer than expected. Try again from the AI Parser section.');
+        }, 60000);
+        return () => clearTimeout(timeout);
+    }, [resumeParsePolling]);
+
+    const updateField = <K extends keyof UpdateCandidateRequest>(key: K, value: UpdateCandidateRequest[K]) => {
+        setForm(prev => ({ ...prev, [key]: value }));
+    };
 
     const handleSave = () => {
         const payload = {
@@ -230,15 +334,69 @@ export default function CandidateProfilePage() {
         updateMutation.mutate(payload);
     };
 
-    const handleUploadResume = () => {
-        if (resumeFile.length > 0) {
-            resumeMutation.mutate(resumeFile[0]);
+    const handleUploadOnly = useCallback(async () => {
+        if (resumeFile.length === 0) return;
+        try {
+            await resumeMutation.mutateAsync(resumeFile[0]);
+            setResumeUploaded(true);
+            showToast.success('Resume uploaded successfully!');
+        } catch {
+            // Error handled by mutation onError
         }
-    };
+    }, [resumeFile, resumeMutation]);
 
-    const updateField = <K extends keyof UpdateCandidateRequest>(key: K, value: UpdateCandidateRequest[K]) => {
-        setForm(prev => ({ ...prev, [key]: value }));
-    };
+    const handleUploadAndParse = useCallback(async () => {
+        if (resumeFile.length === 0) return;
+        setResumeParsing(true);
+        setParsedResumeData(null);
+        setResumeParseApplied(false);
+        try {
+            await resumeMutation.mutateAsync(resumeFile[0]);
+            setResumeUploaded(true);
+            parseResumeMutation.mutate();
+        } catch {
+            setResumeParsing(false);
+        }
+    }, [resumeFile, resumeMutation, parseResumeMutation]);
+
+    const handleParseOnly = useCallback(() => {
+        setResumeParsing(true);
+        setParsedResumeData(null);
+        setResumeParseApplied(false);
+        parseResumeMutation.mutate();
+    }, [parseResumeMutation]);
+
+    const handleApplyParsedFields = useCallback((fields: Partial<ApplyableResumeFields>) => {
+        if (fields.bio !== undefined) updateField('bio', fields.bio);
+        if (fields.phone !== undefined) updateField('phone', fields.phone);
+        if (fields.skills !== undefined) updateField('skills', fields.skills);
+        if (fields.experience !== undefined) {
+            updateField('experience', fields.experience.map(exp => ({
+                company: exp.company,
+                role: exp.role,
+                startDate: exp.startDate || '',
+                endDate: exp.endDate || undefined,
+                description: exp.description || undefined,
+            })));
+        }
+        if (fields.education !== undefined) {
+            updateField('education', fields.education.map(edu => ({
+                institution: edu.institution,
+                degree: edu.degree,
+                field: edu.field || '',
+                startDate: edu.startDate || '',
+                endDate: edu.endDate || undefined,
+            })));
+        }
+        if (fields.certifications !== undefined) {
+            updateField('certifications', fields.certifications.map(cert => ({
+                name: cert.name,
+                issuer: cert.issuer || '',
+            })));
+        }
+        setResumeParseApplied(true);
+        showToast.success('Parsed data applied to profile! Don\'t forget to save your changes.');
+    }, [updateField]);
 
     if (isLoading) {
         return (
@@ -374,65 +532,135 @@ export default function CandidateProfilePage() {
 
                         {activeSection === 'resume' && (
                             <div className="space-y-6">
-                                {/* Current Resume Preview */}
-                                <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">Current Resume</h2>}>
-                                    {profile?.resume ? (
-                                        <div className="space-y-4">
-                                            <div className="flex items-start gap-4 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-                                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                                    <FileText className="h-6 w-6 text-primary" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="truncate text-sm font-semibold text-[var(--text)]">
-                                                        {(() => {
-                                                            try {
-                                                                const url = new URL(profile.resume);
-                                                                const segments = url.pathname.split('/');
-                                                                const filename = segments[segments.length - 1];
-                                                                return decodeURIComponent(filename) || 'Resume';
-                                                            } catch {
-                                                                return 'Resume';
-                                                            }
-                                                        })()}
-                                                    </p>
-                                                    <div className="mt-1 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-                                                        <Calendar className="h-3.5 w-3.5" />
-                                                        <span>
-                                                            Uploaded {profile.updatedAt
-                                                                ? new Date(profile.updatedAt).toLocaleDateString('en-IN', {
-                                                                    day: 'numeric',
-                                                                    month: 'short',
-                                                                    year: 'numeric',
-                                                                })
-                                                                : 'N/A'}
-                                                        </span>
+                                {/* Active Profile Resume */}
+                                <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">Active Profile Resume</h2>}>
+                                    {profile?.resume ? (() => {
+                                        const isGenerated = profile.resume === profile.generatedResumeUrl;
+                                        const isPdf = profile.resume.toLowerCase().endsWith('.pdf') || profile.resumeOriginalName?.toLowerCase().endsWith('.pdf');
+                                        return (
+                                            <div className="space-y-4">
+                                                <div className="flex items-start gap-4 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                                        {isGenerated ? (
+                                                            <Sparkles className="h-6 w-6 text-primary" />
+                                                        ) : (
+                                                            <FileText className="h-6 w-6 text-primary" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <p className="truncate text-sm font-semibold text-[var(--text)]">
+                                                                {profile.resumeOriginalName || 'Resume'}
+                                                            </p>
+                                                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                                                isGenerated
+                                                                    ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                                                    : 'bg-green-50 text-green-700 border border-green-200'
+                                                            }`}>
+                                                                {isGenerated ? 'Generated' : 'Uploaded'}
+                                                            </span>
+                                                            {(() => {
+                                                                const badge = getFileTypeBadge(null, profile.resumeMimeType, profile.resumeOriginalName);
+                                                                return (
+                                                                    <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${badge.color}`}>
+                                                                        {badge.label}
+                                                                    </span>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                        <div className="mt-1 flex items-center gap-2 flex-wrap text-xs text-[var(--text-muted)]">
+                                                            {profile.resumeSize != null && (
+                                                                <>
+                                                                    <span>{formatFileSize(profile.resumeSize)}</span>
+                                                                    <span className="text-[var(--border)]">|</span>
+                                                                </>
+                                                            )}
+                                                            <div className="flex items-center gap-1">
+                                                                <Calendar className="h-3.5 w-3.5" />
+                                                                <span>
+                                                                    {isGenerated ? 'Generated' : 'Uploaded'}{' '}
+                                                                    {(() => {
+                                                                        const dateStr = isGenerated
+                                                                            ? profile.generatedResumeAt
+                                                                            : (profile.resumeUploadedAt || profile.updatedAt);
+                                                                        return dateStr
+                                                                            ? new Date(dateStr).toLocaleDateString('en-IN', {
+                                                                                day: 'numeric',
+                                                                                month: 'short',
+                                                                                year: 'numeric',
+                                                                            })
+                                                                            : 'N/A';
+                                                                    })()}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex shrink-0 gap-2">
+                                                        {isPdf ? (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => setShowActiveResumePreview(prev => !prev)}
+                                                            >
+                                                                <Eye className="mr-1.5 h-4 w-4" /> {showActiveResumePreview ? 'Hide Preview' : 'Preview'}
+                                                            </Button>
+                                                        ) : (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => window.open(profile.resume!, '_blank', 'noopener,noreferrer')}
+                                                            >
+                                                                <Eye className="mr-1.5 h-4 w-4" /> Preview
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                const link = document.createElement('a');
+                                                                link.href = profile.resume!;
+                                                                link.target = '_blank';
+                                                                link.rel = 'noopener noreferrer';
+                                                                link.click();
+                                                            }}
+                                                        >
+                                                            <Download className="mr-1.5 h-4 w-4" /> Download
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => {
+                                                                const confirmed = window.confirm(
+                                                                    isGenerated
+                                                                        ? 'Are you sure you want to delete your generated resume? This action cannot be undone.'
+                                                                        : 'Are you sure you want to delete your resume? This action cannot be undone.'
+                                                                );
+                                                                if (confirmed) {
+                                                                    deleteResumeMutation.mutate(isGenerated ? 'generated' : 'uploaded');
+                                                                }
+                                                            }}
+                                                            disabled={deleteResumeMutation.isPending}
+                                                            className="text-[var(--error)] hover:text-[var(--error)] hover:bg-red-50"
+                                                        >
+                                                            <XCircle className="mr-1.5 h-4 w-4" /> Delete
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                                <div className="flex shrink-0 gap-2">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => window.open(profile.resume!, '_blank', 'noopener,noreferrer')}
-                                                    >
-                                                        <Eye className="mr-1.5 h-4 w-4" /> Preview
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => {
-                                                            const link = document.createElement('a');
-                                                            link.href = profile.resume!;
-                                                            link.target = '_blank';
-                                                            link.rel = 'noopener noreferrer';
-                                                            link.click();
-                                                        }}
-                                                    >
-                                                        <Download className="mr-1.5 h-4 w-4" /> Download
-                                                    </Button>
-                                                </div>
+
+                                                {/* Inline PDF Preview */}
+                                                {isPdf && showActiveResumePreview && (
+                                                    <div className="rounded-lg border border-[var(--border)] overflow-hidden">
+                                                        <iframe
+                                                            src={profile.resume}
+                                                            title="Active Resume Preview"
+                                                            className="w-full border-0"
+                                                            style={{ height: '600px' }}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    ) : (
+                                        );
+                                    })() : (
                                         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] py-10">
                                             <FileText className="mb-3 h-10 w-10 text-[var(--text-muted)]" />
                                             <p className="text-sm font-medium text-[var(--text)]">No resume uploaded yet</p>
@@ -443,49 +671,432 @@ export default function CandidateProfilePage() {
                                     )}
                                 </Card>
 
-                                {/* AI Resume Parser */}
-                                {profile?.resume && (
-                                    <ResumeParserSection form={form} updateField={updateField} />
-                                )}
-
-                                {/* Upload Resume */}
-                                <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">Upload Resume</h2>}>
+                                {/* Upload / Replace Resume — 3-state UI */}
+                                <Card id="upload-resume" header={
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-light">
+                                            <Upload className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-semibold text-[var(--text)]">Upload Resume</h2>
+                                            <p className="text-sm text-[var(--text-muted)]">
+                                                Upload your resume and optionally let AI extract your details
+                                            </p>
+                                        </div>
+                                    </div>
+                                }>
                                     <div className="space-y-4">
-                                        <FileUpload
-                                            label="Select a file to upload"
-                                            accept={{
-                                                'application/pdf': ['.pdf'],
-                                                'application/msword': ['.doc'],
-                                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-                                            }}
-                                            maxSize={FILE_LIMITS.RESUME_MAX_SIZE}
-                                            onDrop={setResumeFile}
-                                            files={resumeFile}
-                                            onRemove={() => setResumeFile([])}
-                                            disabled={resumeMutation.isPending}
-                                        />
-                                        <p className="text-xs text-[var(--text-muted)]">
-                                            Accepted formats: PDF, DOC, DOCX
-                                        </p>
-                                        {resumeFile.length > 0 && (
-                                            <Button onClick={handleUploadResume} isLoading={resumeMutation.isPending}>
-                                                <Upload className="mr-1.5 h-4 w-4" /> Upload Resume
-                                            </Button>
+                                        {/* State A: No file selected, not just uploaded */}
+                                        {!resumeUploaded && resumeFile.length === 0 && (
+                                            <>
+                                                <FileUpload
+                                                    label="Resume (PDF, DOC, DOCX)"
+                                                    accept={{
+                                                        'application/pdf': ['.pdf'],
+                                                        'application/msword': ['.doc'],
+                                                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+                                                    }}
+                                                    maxSize={FILE_LIMITS.RESUME_MAX_SIZE}
+                                                    onDrop={(files) => {
+                                                        setResumeFile(files);
+                                                        setResumeUploaded(false);
+                                                        setParsedResumeData(null);
+                                                        setResumeParseApplied(false);
+                                                        setShowUploadedResumePreview(false);
+                                                    }}
+                                                    files={resumeFile}
+                                                    onRemove={() => {
+                                                        setResumeFile([]);
+                                                        setResumeUploaded(false);
+                                                        setParsedResumeData(null);
+                                                        setResumeParseApplied(false);
+                                                        setShowUploadedResumePreview(false);
+                                                    }}
+                                                    disabled={resumeMutation.isPending}
+                                                />
+                                                <p className="text-xs text-[var(--text-muted)]">
+                                                    Max 5MB. Accepted formats: PDF, DOC, DOCX
+                                                </p>
+                                            </>
                                         )}
+
+                                        {/* State B: File selected, not yet uploaded */}
+                                        {!resumeUploaded && resumeFile.length > 0 && (() => {
+                                            const selectedFile = resumeFile[0];
+                                            const typeBadge = getFileTypeBadge(selectedFile);
+                                            return (
+                                                <>
+                                                    {/* File info card */}
+                                                    <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                                                        <FileText className="h-5 w-5 shrink-0 text-[var(--text-muted)]" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="truncate text-sm font-medium text-[var(--text)]">{selectedFile.name}</p>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <span className="text-xs text-[var(--text-muted)]">{formatFileSize(selectedFile.size)}</span>
+                                                                <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${typeBadge.color}`}>
+                                                                    {typeBadge.label}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => {
+                                                                setResumeFile([]);
+                                                                setParsedResumeData(null);
+                                                                setResumeParseApplied(false);
+                                                            }}
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </div>
+
+                                                    {/* Action buttons */}
+                                                    <div className="flex flex-wrap items-center gap-3">
+                                                        <Button
+                                                            onClick={handleUploadOnly}
+                                                            isLoading={resumeMutation.isPending && !resumeParsing}
+                                                            disabled={resumeParsing || resumeMutation.isPending}
+                                                        >
+                                                            <Upload className="mr-1.5 h-4 w-4" />
+                                                            Upload Resume
+                                                        </Button>
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={handleUploadAndParse}
+                                                            isLoading={resumeMutation.isPending && resumeParsing}
+                                                            disabled={resumeParsing || resumeMutation.isPending}
+                                                        >
+                                                            <Sparkles className="mr-1.5 h-4 w-4" />
+                                                            Upload & Parse with AI
+                                                        </Button>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
+
+                                        {/* State C: File uploaded */}
+                                        {resumeUploaded && (() => {
+                                            const selectedFile = resumeFile[0] ?? null;
+                                            const isPdf = selectedFile?.type === 'application/pdf';
+                                            const typeBadge = selectedFile ? getFileTypeBadge(selectedFile) : null;
+                                            return (
+                                                <>
+                                                    {/* Green success card */}
+                                                    <div className="flex items-start gap-4 rounded-lg border border-green-200 bg-green-50/50 p-4">
+                                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100">
+                                                            <FileCheck className="h-5 w-5 text-green-600" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <p className="truncate text-sm font-semibold text-[var(--text)]">
+                                                                    {selectedFile?.name || 'Resume'}
+                                                                </p>
+                                                                <span className="inline-flex items-center rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                                                                    Uploaded
+                                                                </span>
+                                                                {typeBadge && (
+                                                                    <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${typeBadge.color}`}>
+                                                                        {typeBadge.label}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {selectedFile && (
+                                                                <p className="mt-0.5 text-xs text-[var(--text-muted)]">{formatFileSize(selectedFile.size)}</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex shrink-0 gap-2">
+                                                            {isPdf && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => setShowUploadedResumePreview(prev => !prev)}
+                                                                >
+                                                                    <Eye className="mr-1.5 h-4 w-4" />
+                                                                    {showUploadedResumePreview ? 'Hide' : 'Preview'}
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => {
+                                                                    setResumeFile([]);
+                                                                    setResumeUploaded(false);
+                                                                    setParsedResumeData(null);
+                                                                    setResumeParseApplied(false);
+                                                                    setResumeParsing(false);
+                                                                    setShowUploadedResumePreview(false);
+                                                                }}
+                                                            >
+                                                                Replace
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Inline PDF preview */}
+                                                    {isPdf && showUploadedResumePreview && selectedFile && (
+                                                        <div className="rounded-lg border border-[var(--border)] overflow-hidden">
+                                                            <iframe
+                                                                src={URL.createObjectURL(selectedFile)}
+                                                                title="Resume Preview"
+                                                                className="w-full border-0"
+                                                                style={{ height: '500px' }}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Parse with AI button (only if not yet parsed/applied) */}
+                                                    {!resumeParsing && !parsedResumeData && !resumeParseApplied && (
+                                                        <Button variant="secondary" onClick={handleParseOnly}>
+                                                            <Sparkles className="mr-1.5 h-4 w-4" />
+                                                            Parse with AI
+                                                        </Button>
+                                                    )}
+
+                                                    {/* Parsing spinner */}
+                                                    {resumeParsing && !parsedResumeData && (
+                                                        <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                                                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                                                            <div>
+                                                                <p className="text-sm font-medium text-[var(--text)]">AI is analyzing your resume...</p>
+                                                                <p className="text-xs text-[var(--text-muted)]">This usually takes 10-30 seconds</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Parsed data review */}
+                                                    {parsedResumeData && !resumeParseApplied && (
+                                                        <ResumeParseReview
+                                                            parsedData={parsedResumeData}
+                                                            onApplyFields={handleApplyParsedFields}
+                                                            onCancel={() => setParsedResumeData(null)}
+                                                        />
+                                                    )}
+
+                                                    {/* Applied confirmation */}
+                                                    {resumeParseApplied && (
+                                                        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-4">
+                                                            <Sparkles className="h-5 w-5 text-green-600" />
+                                                            <div>
+                                                                <p className="text-sm font-medium text-green-800">Resume data applied!</p>
+                                                                <p className="text-xs text-green-600">
+                                                                    The extracted data has been applied to your profile fields. Don&apos;t forget to save your changes.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </Card>
 
+                                {/* AI Resume Parser — for parsing existing (already uploaded) resume */}
+                                {profile?.resume && !resumeUploaded && (
+                                    <div id="parse-resume">
+                                        <ResumeParserSection updateField={updateField} />
+                                    </div>
+                                )}
+
+                                {/* Last Generated Resume */}
+                                {profile?.generatedResumeUrl && (() => {
+                                    const isAlreadyActive = profile.resume === profile.generatedResumeUrl;
+                                    const hasUploadedResume = profile.resume && !isAlreadyActive;
+
+                                    return (
+                                        <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">Generated Resume</h2>}>
+                                            <div className="space-y-4">
+                                                <div className="flex items-start gap-4 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                                        <Sparkles className="h-6 w-6 text-primary" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-semibold text-[var(--text)]">Generated Resume</p>
+                                                            {isAlreadyActive && (
+                                                                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                                                                    <Check className="h-3 w-3" /> Active
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="mt-1 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                                                            <Calendar className="h-3.5 w-3.5" />
+                                                            <span>
+                                                                Generated {profile.generatedResumeAt
+                                                                    ? new Date(profile.generatedResumeAt).toLocaleDateString('en-IN', {
+                                                                        day: 'numeric',
+                                                                        month: 'short',
+                                                                        year: 'numeric',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit',
+                                                                    })
+                                                                    : 'N/A'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex shrink-0 gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => setShowResumePreview(prev => !prev)}
+                                                        >
+                                                            <Eye className="mr-1.5 h-4 w-4" /> {showResumePreview ? 'Hide Preview' : 'Preview'}
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                const link = document.createElement('a');
+                                                                link.href = profile.generatedResumeUrl!;
+                                                                link.download = `${user?.firstName || 'candidate'}_resume.pdf`;
+                                                                link.target = '_blank';
+                                                                link.rel = 'noopener noreferrer';
+                                                                link.click();
+                                                            }}
+                                                        >
+                                                            <Download className="mr-1.5 h-4 w-4" /> Download
+                                                        </Button>
+                                                        {!isAlreadyActive && (
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    if (hasUploadedResume) {
+                                                                        const confirmed = window.confirm(
+                                                                            'This will replace your currently uploaded resume as the active profile resume. The uploaded file will still exist but won\'t be your active resume. Continue?'
+                                                                        );
+                                                                        if (!confirmed) return;
+                                                                    }
+                                                                    useGeneratedResumeMutation.mutate();
+                                                                }}
+                                                                isLoading={useGeneratedResumeMutation.isPending}
+                                                            >
+                                                                <Upload className="mr-1.5 h-4 w-4" /> Use as Profile Resume
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => {
+                                                                const message = isAlreadyActive
+                                                                    ? 'This is your active profile resume. Deleting it will remove it from your profile. Continue?'
+                                                                    : 'Are you sure you want to delete this generated resume? This action cannot be undone.';
+                                                                const confirmed = window.confirm(message);
+                                                                if (confirmed) {
+                                                                    deleteResumeMutation.mutate('generated');
+                                                                }
+                                                            }}
+                                                            disabled={deleteResumeMutation.isPending}
+                                                            className="text-[var(--error)] hover:text-[var(--error)] hover:bg-red-50"
+                                                        >
+                                                            <X className="mr-1.5 h-4 w-4" /> Delete
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Inline PDF Preview */}
+                                                {showResumePreview && (
+                                                    <div className="rounded-lg border border-[var(--border)] overflow-hidden">
+                                                        <iframe
+                                                            src={profile.generatedResumeUrl}
+                                                            title="Generated Resume Preview"
+                                                            className="w-full border-0"
+                                                            style={{ height: '600px' }}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </Card>
+                                    );
+                                })()}
+
                                 {/* Generate Resume from Profile */}
-                                <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">Generate Resume</h2>}>
+                                <Card id="generate-resume" header={<h2 className="text-lg font-semibold text-[var(--text)]">Generate Resume</h2>}>
                                     <div className="space-y-4">
                                         <p className="text-sm text-[var(--text-secondary)]">
                                             Generate a professionally formatted PDF resume from your profile information.
-                                            Make sure your profile details (experience, education, skills) are up to date before generating.
                                         </p>
+
+                                        {/* Readiness Status */}
+                                        {readinessData?.data && (() => {
+                                            const r = readinessData.data;
+                                            const sectionMap = Object.fromEntries(sections.map(s => [s.key, s]));
+
+                                            const renderChips = (items: ResumeReadinessItem[], color: 'red' | 'amber' | 'blue') => {
+                                                const colorClasses = {
+                                                    red: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100',
+                                                    amber: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
+                                                    blue: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
+                                                }[color];
+                                                return (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {items.map((item) => {
+                                                            const sec = sectionMap[item.section];
+                                                            const Icon = sec?.icon || FileText;
+                                                            return (
+                                                                <button
+                                                                    key={item.field}
+                                                                    onClick={() => setActiveSection(item.section as Section)}
+                                                                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors ${colorClasses}`}
+                                                                >
+                                                                    <Icon className="h-3.5 w-3.5" />
+                                                                    {item.message}
+                                                                    <ChevronRight className="h-3 w-3 opacity-50" />
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                );
+                                            };
+
+                                            return (
+                                                <div className="space-y-3">
+                                                    {/* Status Banner */}
+                                                    {r.canGenerate && r.warnings.length === 0 && r.suggestions.length === 0 ? (
+                                                        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                                                            <CheckCircle2 className="h-4 w-4" /> Your profile is ready for resume generation!
+                                                        </div>
+                                                    ) : r.canGenerate ? (
+                                                        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+                                                            <AlertTriangle className="h-4 w-4" /> Resume can be generated, but could be improved
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                                                            <XCircle className="h-4 w-4" /> Complete required fields before generating
+                                                        </div>
+                                                    )}
+
+                                                    {/* Errors */}
+                                                    {r.errors.length > 0 && (
+                                                        <div className="space-y-2 border-l-2 border-red-300 pl-4">
+                                                            <p className="text-xs font-semibold uppercase tracking-wide text-red-600">Required Information Missing</p>
+                                                            {renderChips(r.errors, 'red')}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Warnings */}
+                                                    {r.warnings.length > 0 && (
+                                                        <div className="space-y-2 border-l-2 border-amber-300 pl-4">
+                                                            <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Recommended for Better Resume</p>
+                                                            {renderChips(r.warnings, 'amber')}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Suggestions */}
+                                                    {r.suggestions.length > 0 && (
+                                                        <div className="space-y-2 border-l-2 border-blue-300 pl-4">
+                                                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Suggestions to Stand Out</p>
+                                                            {renderChips(r.suggestions, 'blue')}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+
                                         <Button
                                             variant="outline"
                                             onClick={() => generateResumeMutation.mutate()}
                                             isLoading={generateResumeMutation.isPending}
+                                            disabled={readinessData?.data && !readinessData.data.canGenerate}
                                         >
                                             {generateResumeMutation.isPending ? (
                                                 <>
@@ -497,6 +1108,11 @@ export default function CandidateProfilePage() {
                                                 </>
                                             )}
                                         </Button>
+                                        {readinessData?.data && !readinessData.data.canGenerate && (
+                                            <p className="text-xs text-red-500">
+                                                Add the required fields above to enable resume generation.
+                                            </p>
+                                        )}
                                     </div>
                                 </Card>
                             </div>
@@ -524,18 +1140,26 @@ export default function CandidateProfilePage() {
 }
 
 function ResumeParserSection({
-    form,
     updateField,
 }: {
-    form: UpdateCandidateRequest;
     updateField: <K extends keyof UpdateCandidateRequest>(key: K, value: UpdateCandidateRequest[K]) => void;
 }) {
+    const [polling, setPolling] = useState(false);
     const [parsedData, setParsedData] = useState<ParsedResumeData | null>(null);
-    const [showParsed, setShowParsed] = useState(false);
+    const [showReview, setShowReview] = useState(false);
 
+    // Fetch existing parsed data on mount
     const { data: existingParsed } = useQuery({
-        queryKey: ['candidate', 'parsed-resume'],
+        queryKey: QUERY_KEYS.CANDIDATES.PARSED_RESUME,
         queryFn: () => candidateService.getParsedResumeData(),
+    });
+
+    // Poll for parsed data after triggering parse
+    const { data: polledParsed } = useQuery({
+        queryKey: [...QUERY_KEYS.CANDIDATES.PARSED_RESUME, 'polling'],
+        queryFn: () => candidateService.getParsedResumeData(),
+        refetchInterval: 3000,
+        enabled: polling,
     });
 
     useEffect(() => {
@@ -544,14 +1168,31 @@ function ResumeParserSection({
         }
     }, [existingParsed]);
 
+    // Stop polling when data arrives
+    useEffect(() => {
+        if (polling && polledParsed?.data) {
+            setParsedData(polledParsed.data);
+            setPolling(false);
+            setShowReview(true);
+            showToast.success('Resume parsed successfully!');
+        }
+    }, [polling, polledParsed]);
+
+    // 60-second polling timeout
+    useEffect(() => {
+        if (!polling) return;
+        const timer = setTimeout(() => {
+            setPolling(false);
+            showToast.error('Resume parsing timed out. Please try again.');
+        }, 60000);
+        return () => clearTimeout(timer);
+    }, [polling]);
+
     const parseMutation = useMutation({
         mutationFn: () => candidateService.parseResume(),
         onSuccess: () => {
             showToast.success('Resume parsing started! This may take a moment.');
-            setTimeout(() => {
-                setParsedData(null);
-                setShowParsed(true);
-            }, 2000);
+            setPolling(true);
         },
         onError: (err) => {
             const error = err as unknown as ApiError;
@@ -559,49 +1200,36 @@ function ResumeParserSection({
         },
     });
 
-    const applyField = (field: string, value: unknown) => {
-        switch (field) {
-            case 'skills':
-                updateField('skills', value as string[]);
-                showToast.success('Skills applied to profile');
-                break;
-            case 'experience':
-                updateField('experience', (value as ParsedResumeData['experience']).map(exp => ({
-                    company: exp.company,
-                    role: exp.role,
-                    startDate: exp.startDate || '',
-                    endDate: exp.endDate || undefined,
-                    description: exp.description || undefined,
-                })));
-                showToast.success('Experience applied to profile');
-                break;
-            case 'education':
-                updateField('education', (value as ParsedResumeData['education']).map(edu => ({
-                    institution: edu.institution,
-                    degree: edu.degree,
-                    field: edu.field || '',
-                    startDate: edu.startDate || '',
-                    endDate: edu.endDate || undefined,
-                })));
-                showToast.success('Education applied to profile');
-                break;
-            case 'certifications':
-                updateField('certifications', (value as string[]).map(name => ({
-                    name,
-                    issuer: '',
-                })));
-                showToast.success('Certifications applied to profile');
-                break;
+    const handleApplyFields = (fields: Partial<ApplyableResumeFields>) => {
+        if (fields.bio !== undefined) updateField('bio', fields.bio);
+        if (fields.phone !== undefined) updateField('phone', fields.phone);
+        if (fields.skills !== undefined) updateField('skills', fields.skills);
+        if (fields.experience !== undefined) {
+            updateField('experience', fields.experience.map(exp => ({
+                company: exp.company,
+                role: exp.role,
+                startDate: exp.startDate || '',
+                endDate: exp.endDate || undefined,
+                description: exp.description || undefined,
+            })));
         }
-    };
-
-    const applyAll = () => {
-        if (!parsedData) return;
-        if (parsedData.skills.length) applyField('skills', parsedData.skills);
-        if (parsedData.experience.length) applyField('experience', parsedData.experience);
-        if (parsedData.education.length) applyField('education', parsedData.education);
-        if (parsedData.certifications.length) applyField('certifications', parsedData.certifications);
-        showToast.success('All parsed data applied to profile!');
+        if (fields.education !== undefined) {
+            updateField('education', fields.education.map(edu => ({
+                institution: edu.institution,
+                degree: edu.degree,
+                field: edu.field || '',
+                startDate: edu.startDate || '',
+                endDate: edu.endDate || undefined,
+            })));
+        }
+        if (fields.certifications !== undefined) {
+            updateField('certifications', fields.certifications.map(cert => ({
+                name: cert.name,
+                issuer: cert.issuer || '',
+            })));
+        }
+        showToast.success('Parsed data applied to profile!');
+        setShowReview(false);
     };
 
     return (
@@ -620,158 +1248,36 @@ function ResumeParserSection({
                     <Button
                         variant="outline"
                         onClick={() => parseMutation.mutate()}
-                        isLoading={parseMutation.isPending}
+                        isLoading={parseMutation.isPending || polling}
+                        disabled={polling}
                     >
                         <Brain className="mr-1.5 h-4 w-4" />
-                        {parsedData ? 'Re-parse Resume' : 'Parse with AI'}
+                        {polling ? 'Analyzing...' : parsedData ? 'Re-parse Resume' : 'Parse with AI'}
                     </Button>
 
-                    {parsedData && (
-                        <Button onClick={applyAll}>
-                            <CheckCircle2 className="mr-1.5 h-4 w-4" /> Apply All to Profile
+                    {parsedData && !showReview && !polling && (
+                        <Button variant="outline" onClick={() => setShowReview(true)}>
+                            <Eye className="mr-1.5 h-4 w-4" /> Review Parsed Data
                         </Button>
                     )}
                 </div>
 
-                {parsedData && (
-                    <div className="space-y-3">
-                        <button
-                            type="button"
-                            onClick={() => setShowParsed(!showParsed)}
-                            className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                        >
-                            <ChevronDown className={`h-4 w-4 transition-transform ${showParsed ? 'rotate-180' : ''}`} />
-                            {showParsed ? 'Hide' : 'Show'} Parsed Results
-                        </button>
-
-                        {showParsed && (
-                            <div className="space-y-4 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-                                {parsedData.name && (
-                                    <div>
-                                        <p className="text-xs font-medium uppercase text-[var(--text-muted)]">Name</p>
-                                        <p className="text-sm text-[var(--text)]">{parsedData.name}</p>
-                                    </div>
-                                )}
-
-                                {parsedData.email && (
-                                    <div>
-                                        <p className="text-xs font-medium uppercase text-[var(--text-muted)]">Email</p>
-                                        <p className="text-sm text-[var(--text)]">{parsedData.email}</p>
-                                    </div>
-                                )}
-
-                                {parsedData.summary && (
-                                    <div>
-                                        <p className="text-xs font-medium uppercase text-[var(--text-muted)]">Summary</p>
-                                        <p className="text-sm text-[var(--text)]">{parsedData.summary}</p>
-                                    </div>
-                                )}
-
-                                {parsedData.skills.length > 0 && (
-                                    <div>
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-xs font-medium uppercase text-[var(--text-muted)]">
-                                                Skills ({parsedData.skills.length})
-                                            </p>
-                                            <button
-                                                type="button"
-                                                onClick={() => applyField('skills', parsedData.skills)}
-                                                className="text-xs font-medium text-primary hover:underline"
-                                            >
-                                                Apply
-                                            </button>
-                                        </div>
-                                        <div className="mt-1 flex flex-wrap gap-1.5">
-                                            {parsedData.skills.map((skill) => (
-                                                <span key={skill} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                                                    {skill}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {parsedData.experience.length > 0 && (
-                                    <div>
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-xs font-medium uppercase text-[var(--text-muted)]">
-                                                Experience ({parsedData.experience.length})
-                                            </p>
-                                            <button
-                                                type="button"
-                                                onClick={() => applyField('experience', parsedData.experience)}
-                                                className="text-xs font-medium text-primary hover:underline"
-                                            >
-                                                Apply
-                                            </button>
-                                        </div>
-                                        <div className="mt-1 space-y-2">
-                                            {parsedData.experience.map((exp, i) => (
-                                                <div key={i} className="rounded border border-[var(--border)] bg-white p-2">
-                                                    <p className="text-sm font-medium text-[var(--text)]">{exp.role}</p>
-                                                    <p className="text-xs text-[var(--text-muted)]">
-                                                        {exp.company}
-                                                        {exp.startDate && ` | ${exp.startDate}`}
-                                                        {exp.endDate && ` - ${exp.endDate}`}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {parsedData.education.length > 0 && (
-                                    <div>
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-xs font-medium uppercase text-[var(--text-muted)]">
-                                                Education ({parsedData.education.length})
-                                            </p>
-                                            <button
-                                                type="button"
-                                                onClick={() => applyField('education', parsedData.education)}
-                                                className="text-xs font-medium text-primary hover:underline"
-                                            >
-                                                Apply
-                                            </button>
-                                        </div>
-                                        <div className="mt-1 space-y-2">
-                                            {parsedData.education.map((edu, i) => (
-                                                <div key={i} className="rounded border border-[var(--border)] bg-white p-2">
-                                                    <p className="text-sm font-medium text-[var(--text)]">{edu.degree}</p>
-                                                    <p className="text-xs text-[var(--text-muted)]">
-                                                        {edu.institution}
-                                                        {edu.field && ` - ${edu.field}`}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {parsedData.certifications.length > 0 && (
-                                    <div>
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-xs font-medium uppercase text-[var(--text-muted)]">
-                                                Certifications ({parsedData.certifications.length})
-                                            </p>
-                                            <button
-                                                type="button"
-                                                onClick={() => applyField('certifications', parsedData.certifications)}
-                                                className="text-xs font-medium text-primary hover:underline"
-                                            >
-                                                Apply
-                                            </button>
-                                        </div>
-                                        <ul className="mt-1 space-y-1">
-                                            {parsedData.certifications.map((cert, i) => (
-                                                <li key={i} className="text-sm text-[var(--text)]">• {cert}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                {polling && (
+                    <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <div>
+                            <p className="text-sm font-medium text-[var(--text)]">AI is analyzing your resume...</p>
+                            <p className="text-xs text-[var(--text-muted)]">This usually takes 10-30 seconds.</p>
+                        </div>
                     </div>
+                )}
+
+                {showReview && parsedData && (
+                    <ResumeParseReview
+                        parsedData={parsedData}
+                        onApplyFields={handleApplyFields}
+                        onCancel={() => setShowReview(false)}
+                    />
                 )}
             </div>
         </Card>

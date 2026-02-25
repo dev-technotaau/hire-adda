@@ -63,6 +63,17 @@ export const deleteImage = async (publicId: string): Promise<void> => {
   await cloudinary.uploader.destroy(publicId);
 };
 
+/**
+ * Extracts the Cloudinary public ID from a secure_url.
+ * e.g. "https://res.cloudinary.com/xxx/image/upload/v123/talent_bridge/profiles/abc.jpg"
+ *    → "talent_bridge/profiles/abc"
+ * Returns null if the URL doesn't look like a Cloudinary URL.
+ */
+export const extractPublicId = (url: string): string | null => {
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
+  return match ? match[1] : null;
+};
+
 // Generate optimized URL with transformations
 export const getOptimizedUrl = (
   publicId: string,

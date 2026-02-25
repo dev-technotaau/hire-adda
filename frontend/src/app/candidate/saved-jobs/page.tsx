@@ -17,8 +17,9 @@ import EmptyState from '@/components/ui/EmptyState';
 import { showToast } from '@/components/ui/Toast';
 import { useSavedJobs, useToggleSaveJob } from '@/hooks/use-jobs';
 import { ROUTES } from '@/constants/routes';
-import { JOB_TYPE_LABELS, WORK_MODE_LABELS } from '@/constants/enums';
+import { JOB_TYPE_LABELS, WORK_MODE_LABELS, FUNCTIONAL_AREA_LABELS } from '@/constants/enums';
 import { formatSalaryRange, formatRelativeDate } from '@/lib/utils';
+import { formatSalaryAsLPA } from '@/utils/format';
 import { PAGINATION } from '@/constants/config';
 
 export default function SavedJobsPage() {
@@ -59,7 +60,9 @@ export default function SavedJobsPage() {
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                     <div className="flex gap-3 min-w-0 flex-1">
                                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
-                                            {job.company?.logo ? (
+                                            {job.isConfidential ? (
+                                                <Briefcase className="h-5 w-5 text-[var(--text-muted)]" />
+                                            ) : job.company?.logo ? (
                                                 <img src={job.company.logo} alt={job.company?.companyName || 'Company logo'} className="h-9 w-9 rounded-md object-contain" />
                                             ) : (
                                                 <Building2 className="h-5 w-5 text-[var(--text-muted)]" />
@@ -72,16 +75,24 @@ export default function SavedJobsPage() {
                                             >
                                                 {job.title}
                                             </Link>
-                                            <p className="text-sm text-[var(--text-muted)]">{job.company?.companyName}</p>
+                                            <p className="text-sm text-[var(--text-muted)]">{job.isConfidential ? 'Confidential Company' : job.company?.companyName}</p>
                                             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
                                                 <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {job.location}</span>
                                                 <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> {job.experienceMin}-{job.experienceMax || job.experienceMin}+ yrs</span>
-                                                <span>{formatSalaryRange(job.salaryMin, job.salaryMax, job.currency)}</span>
+                                                <span>
+                                                    {(job.currency || 'INR').toUpperCase() === 'INR' && job.salaryType === 'ANNUAL'
+                                                        ? formatSalaryAsLPA(job.salaryMin, job.salaryMax)
+                                                        : formatSalaryRange(job.salaryMin, job.salaryMax, job.currency)}
+                                                    {job.salaryNegotiable && <span className="ml-1 text-[var(--success)]">(Negotiable)</span>}
+                                                </span>
                                                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatRelativeDate(job.createdAt)}</span>
                                             </div>
                                             <div className="mt-2 flex flex-wrap gap-1.5">
                                                 {job.type && <Badge variant="info" size="sm">{JOB_TYPE_LABELS[job.type]}</Badge>}
                                                 {job.workMode && <Badge variant="neutral" size="sm">{WORK_MODE_LABELS[job.workMode]}</Badge>}
+                                                {job.isFeatured && <Badge variant="success" size="sm">Featured</Badge>}
+                                                {job.isPwdFriendly && <Badge variant="success" size="sm">PwD Friendly</Badge>}
+                                                {job.visaSponsorshipAvailable && <Badge variant="info" size="sm">Visa Sponsorship</Badge>}
                                             </div>
                                             {(job.skillsRequired?.length ?? 0) > 0 && (
                                                 <div className="mt-2 flex flex-wrap gap-1">

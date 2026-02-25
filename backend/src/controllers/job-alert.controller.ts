@@ -51,7 +51,19 @@ export const getAlertMatches = async (req: Request, res: Response, next: NextFun
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 20;
         const result = await jobAlertService.getAlertMatches(req.user.id, alertId, page, limit);
-        res.status(200).json({ status: 'success', data: result });
+        const total = result.pagination?.total ?? 0;
+        const totalPages = result.pagination?.pages ?? 1;
+        res.status(200).json({
+            status: 'success',
+            data: {
+                items: result.jobs || [],
+                total,
+                page: result.pagination?.page ?? page,
+                limit: result.pagination?.limit ?? limit,
+                totalPages,
+                hasMore: page < totalPages,
+            },
+        });
     } catch (error) {
         next(error);
     }

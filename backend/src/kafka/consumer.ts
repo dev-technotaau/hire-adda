@@ -1,18 +1,93 @@
-import { consumer } from '../config/kafka';
+import { consumer, producer } from '../config/kafka';
 import logger from '../config/logger';
 import { ConsolidatedTopics, KafkaTopics } from './producer';
+import { isFeatureEnabled } from '../config/feature-flags';
+
+const DLQ_TOPIC = 'talent-bridge.dlq';
+
+/**
+ * Publish a failed message to the Dead Letter Queue topic.
+ */
+async function publishToDlq(
+    originalTopic: string,
+    partition: number,
+    offset: string,
+    key: string | null,
+    value: string | null,
+    error: Error
+): Promise<void> {
+    if (!producer) {
+        logger.warn('Kafka producer not available - cannot publish to DLQ');
+        return;
+    }
+
+    try {
+        await producer.send({
+            topic: DLQ_TOPIC,
+            messages: [{
+                key: key || undefined,
+                value: JSON.stringify({
+                    originalTopic,
+                    partition,
+                    offset,
+                    originalValue: value,
+                    error: error.message,
+                    stack: error.stack,
+                    timestamp: new Date().toISOString(),
+                }),
+            }],
+        });
+        logger.info(`Failed message published to DLQ from ${originalTopic}[${partition}]:${offset}`);
+    } catch (dlqError) {
+        logger.error('Failed to publish message to DLQ:', dlqError);
+    }
+}
 
 // Handler functions use dynamic imports to avoid circular dependencies
 
 async function handleUserRegistered(data: any): Promise<void> {
     const { notificationService } = await import('../services/notification.service');
+    const prisma = (await import('../config/prisma')).default;
+    const user = await prisma.user.findUnique({
+        where: { id: data.userId },
+        select: { firstName: true, email: true, role: true, isEmailVerified: true, mobileNumber: true, whatsappNumber: true, isWhatsappVerified: true, companyProfile: { select: { companyName: true } } },
+    });
+
+    const channels: ('in_app' | 'fcm' | 'web_push' | 'email' | 'whatsapp')[] = ['in_app', 'fcm', 'web_push'];
+    let emailOptions;
+    let whatsappOptions;
+
+    if (user?.isEmailVerified && user.email) {
+        channels.push('email');
+
+        if (user.role === 'EMPLOYER' && user.companyProfile?.companyName) {
+            const { onboardingWelcomeEmployer } = await import('../templates/email/onboarding');
+            const tmpl = onboardingWelcomeEmployer(user.firstName || 'Hiring Manager', user.companyProfile.companyName);
+            emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
+        } else {
+            const { welcomeEmail } = await import('../templates/email/auth');
+            const tmpl = welcomeEmail(user.firstName || 'there');
+            emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
+        }
+    }
+
+    const whatsappTarget = user?.whatsappNumber || user?.mobileNumber;
+    if (user?.isWhatsappVerified && whatsappTarget) {
+        channels.push('whatsapp');
+        const { welcomeWhatsapp } = await import('../templates/whatsapp');
+        const tmpl = welcomeWhatsapp(user.firstName || 'there');
+        whatsappOptions = { to: whatsappTarget, templateName: tmpl.templateName, components: tmpl.components };
+    }
+
     await notificationService.send({
         userId: data.userId,
         title: 'Welcome to Talent Bridge!',
         message: 'Complete your profile to get started and find your perfect match.',
         type: 'INFO',
         category: 'onboarding',
-        channels: ['in_app'],
+        channels,
+        emailOptions,
+        whatsappOptions,
     });
     logger.info(`Welcome notification sent for user ${data.userId}`);
 }
@@ -27,7 +102,7 @@ async function handleUserLogin(data: any): Promise<void> {
 
 async function handleJobPosted(data: any): Promise<void> {
     const { matchingQueue } = await import('../jobs/matching.queue');
-    await matchingQueue.add('match-candidates-for-job', {
+    await matchingQueue.add('match-candidates', {
         jobId: data.jobId,
         companyId: data.companyId,
     });
@@ -54,51 +129,17 @@ async function handleJobClosed(data: any): Promise<void> {
 }
 
 async function handleApplicationSubmitted(data: any): Promise<void> {
-    const prisma = (await import('../config/prisma')).default;
-    const application = await prisma.jobApplication.findUnique({
-        where: { id: data.applicationId },
-        include: {
-            job: { include: { company: true } },
-            candidate: { include: { user: { select: { firstName: true, lastName: true } } } },
-        },
-    });
-    if (!application) return;
-
-    const { notificationService } = await import('../services/notification.service');
-    await notificationService.send({
-        userId: application.job.company.userId,
-        title: 'New Application Received',
-        message: `${application.candidate.user.firstName} ${application.candidate.user.lastName} applied for "${application.job.title}".`,
-        type: 'INFO',
-        category: 'application',
-        link: `/employer/applications/${application.id}`,
-        channels: ['in_app'],
-    });
-    logger.info(`Employer notified about application ${data.applicationId}`);
+    // Notification is already sent via notificationService.notifyNewApplication()
+    // in job.service.ts (multi-channel: in_app, fcm, web_push, email).
+    // This handler only logs; webhooks/BigQuery are dispatched by routeByEventType.
+    logger.info(`Application submitted event processed: ${data.applicationId}`);
 }
 
 async function handleApplicationStatusChanged(data: any): Promise<void> {
-    const prisma = (await import('../config/prisma')).default;
-    const application = await prisma.jobApplication.findUnique({
-        where: { id: data.applicationId },
-        include: {
-            job: { select: { title: true } },
-            candidate: { select: { userId: true } },
-        },
-    });
-    if (!application) return;
-
-    const { notificationService } = await import('../services/notification.service');
-    await notificationService.send({
-        userId: application.candidate.userId,
-        title: 'Application Status Updated',
-        message: `Your application for "${application.job.title}" has been updated to ${data.newStatus}.`,
-        type: 'INFO',
-        category: 'application',
-        link: `/candidate/applications/${application.id}`,
-        channels: ['in_app'],
-    });
-    logger.info(`Candidate notified about status change for application ${data.applicationId}`);
+    // Notification is already sent via notificationService.notifyApplicationStatusChange()
+    // in job.service.ts (multi-channel: in_app, fcm, web_push, email, whatsapp).
+    // This handler only logs; webhooks/BigQuery are dispatched by routeByEventType.
+    logger.info(`Application status changed event processed: ${data.applicationId} → ${data.status}`);
 }
 
 async function handleProfileUpdated(data: any): Promise<void> {
@@ -225,6 +266,11 @@ async function routeByEventType(eventType: string, data: any): Promise<void> {
 }
 
 export const startKafkaConsumer = async (): Promise<void> => {
+    if (!await isFeatureEnabled('enableKafka')) {
+        logger.info('Kafka disabled via feature flag — skipping consumer start');
+        return;
+    }
+
     if (!consumer) {
         logger.warn('Kafka consumer not available - skipping consumer start');
         return;
@@ -240,30 +286,74 @@ export const startKafkaConsumer = async (): Promise<void> => {
         }
 
         await consumer.run({
-            eachMessage: async ({ topic, partition, message }) => {
-                try {
-                    const value = message.value?.toString();
-                    if (!value) return;
+            autoCommit: false,
+            eachMessage: async ({ topic, partition, message, heartbeat }) => {
+                const rawValue = message.value?.toString() || null;
+                const rawKey = message.key?.toString() || null;
 
-                    const data = JSON.parse(value);
+                try {
+                    if (!rawValue) {
+                        // Commit offset for empty messages so we don't get stuck
+                        await consumer!.commitOffsets([{
+                            topic,
+                            partition,
+                            offset: (Number(message.offset) + 1).toString(),
+                        }]);
+                        return;
+                    }
+
+                    const data = JSON.parse(rawValue);
                     const eventType = data.eventType;
 
                     logger.debug(`Kafka message received: ${topic} → ${eventType} [partition: ${partition}]`, {
-                        key: message.key?.toString(),
+                        key: rawKey,
                         timestamp: data.timestamp,
                     });
 
                     if (!eventType) {
                         logger.warn(`Kafka message on ${topic} missing eventType field, skipping`);
+                        await consumer!.commitOffsets([{
+                            topic,
+                            partition,
+                            offset: (Number(message.offset) + 1).toString(),
+                        }]);
                         return;
                     }
 
                     // Push to event buffer for admin viewer
-                    pushToEventBuffer(eventType, topic, message.key?.toString() || null);
+                    pushToEventBuffer(eventType, topic, rawKey);
 
                     await routeByEventType(eventType, data);
+
+                    // Commit offset after successful processing
+                    await consumer!.commitOffsets([{
+                        topic,
+                        partition,
+                        offset: (Number(message.offset) + 1).toString(),
+                    }]);
+
+                    await heartbeat();
                 } catch (error) {
                     logger.error(`Error processing Kafka message on topic ${topic}:`, error);
+
+                    // Publish failed message to DLQ
+                    await publishToDlq(
+                        topic,
+                        partition,
+                        message.offset,
+                        rawKey,
+                        rawValue,
+                        error instanceof Error ? error : new Error(String(error))
+                    );
+
+                    // Commit offset so we don't re-process the same failed message forever
+                    await consumer!.commitOffsets([{
+                        topic,
+                        partition,
+                        offset: (Number(message.offset) + 1).toString(),
+                    }]).catch((commitErr) => {
+                        logger.error('Failed to commit offset after DLQ publish:', commitErr);
+                    });
                 }
             },
         });

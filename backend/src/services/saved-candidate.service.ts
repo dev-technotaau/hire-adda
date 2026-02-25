@@ -62,6 +62,10 @@ class SavedCandidateService {
                             lastName: true,
                             email: true,
                             avatar: true,
+                            isEmailVerified: true,
+                            isMobileVerified: true,
+                            isWhatsappVerified: true,
+                            lastActiveAt: true,
                             candidateProfile: true,
                         },
                     },
@@ -73,15 +77,8 @@ class SavedCandidateService {
             prisma.savedCandidate.count({ where: { employerId } }),
         ]);
 
-        return {
-            savedCandidates,
-            pagination: {
-                total,
-                page,
-                limit,
-                pages: Math.ceil(total / limit),
-            },
-        };
+        const totalPages = Math.ceil(total / limit) || 1;
+        return { savedCandidates, total, page, limit, totalPages, hasMore: page < totalPages };
     }
 
     /**

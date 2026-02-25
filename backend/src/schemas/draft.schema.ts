@@ -9,7 +9,7 @@ export const saveDraftSchema = z.object({
         formType: z.nativeEnum(FormDraftType, {
             error: 'Invalid form draft type',
         }),
-        data: z.any(),
+        data: z.record(z.string(), z.unknown()),
         name: z.string().optional(),
     }),
 });

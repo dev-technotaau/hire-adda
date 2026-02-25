@@ -3,12 +3,22 @@ import { getAllFlags, getFlag } from '../config/feature-flags';
 
 // Public subset of flags exposed to frontend
 const CLIENT_VISIBLE_FLAGS = [
-    'enableNewJobSearch',
-    'enableAIMatching',
-    'enableVideoInterviews',
     'maintenanceMode',
-    'maxUploadSizeMB',
     'enableBetaFeatures',
+    'enableElasticsearch',
+    'enableAIMatching',
+    'enableCloudTalent',
+    'enableEmailNotifications',
+    'enableSMS',
+    'enableWhatsApp',
+    'enableFCM',
+    'enableWebhooks',
+    'enableDocumentAI',
+    'enableBigQuery',
+    'enableKafka',
+    'enablePresence',
+    'enableFirestoreCounters',
+    'maxUploadSizeMB',
 ];
 
 /**
@@ -67,7 +77,7 @@ export const getFlagByKey = async (
 ) => {
     try {
         const key = req.params.key as string;
-        const value = await getFlag(key, null as any);
+        const value = await getFlag(key, null);
 
         res.status(200).json({
             status: 'success',

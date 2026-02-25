@@ -11,7 +11,7 @@ import OtpInput from '@/components/auth/OtpInput';
 import { showToast } from '@/components/ui/Toast';
 import { authService } from '@/services/auth.service';
 import { ROUTES } from '@/constants/routes';
-import { OTP_CONFIG } from '@/constants/config';
+import { useOtpConfig } from '@/hooks/use-otp-config';
 import type { ApiError } from '@/types/api';
 
 type Status = 'pending' | 'verifying' | 'success' | 'error';
@@ -19,6 +19,7 @@ type Status = 'pending' | 'verifying' | 'success' | 'error';
 export default function VerifyEmailPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const otpConfig = useOtpConfig();
     const token = searchParams.get('token');
     const email = searchParams.get('email') || '';
 
@@ -58,7 +59,7 @@ export default function VerifyEmailPage() {
     }, [resendTimer]);
 
     const handleOtpSubmit = async () => {
-        if (otp.length !== OTP_CONFIG.LENGTH) return;
+        if (otp.length !== otpConfig.LENGTH) return;
         setStatus('verifying');
         try {
             await authService.verifyEmail({ token: otp });
@@ -80,7 +81,7 @@ export default function VerifyEmailPage() {
         try {
             await authService.resendEmailVerification(email);
             showToast.success('Verification code resent!');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setStatus('pending');
             setOtp('');
             setErrorMessage('');
@@ -154,13 +155,13 @@ export default function VerifyEmailPage() {
                                     value={otp}
                                     onChange={setOtp}
                                     onComplete={handleOtpSubmit}
-                                    length={OTP_CONFIG.LENGTH}
+                                    length={otpConfig.LENGTH}
                                 />
 
                                 <Button
                                     type="submit"
                                     fullWidth
-                                    disabled={otp.length !== OTP_CONFIG.LENGTH}
+                                    disabled={otp.length !== otpConfig.LENGTH}
                                 >
                                     Verify Email
                                 </Button>

@@ -11,6 +11,7 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import DatePicker from '@/components/ui/DatePicker';
 import Select from '@/components/ui/Select';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
@@ -604,12 +605,13 @@ export default function AdminVerificationsPage() {
                                 <span className="font-medium">Type:</span> {slaTarget?.type && typeLabels[slaTarget.type]}
                             </p>
                         </div>
-                        <Input
+                        <DatePicker
                             label="Deadline"
-                            type="datetime-local"
+                            mode="datetime"
                             value={slaDeadline}
-                            onChange={(e) => setSlaDeadline(e.target.value)}
+                            onChange={(v) => setSlaDeadline(v)}
                             required
+                            minDate={new Date()}
                         />
                     </div>
                 </Modal>

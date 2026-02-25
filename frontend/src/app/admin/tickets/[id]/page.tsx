@@ -16,6 +16,7 @@ import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
 import Spinner from '@/components/ui/Spinner';
 import Checkbox from '@/components/ui/Checkbox';
+import RichTextEditor from '@/components/ui/RichTextEditor';
 import { showToast } from '@/components/ui/Toast';
 import { ticketService } from '@/services/ticket.service';
 import { adminService } from '@/services/admin.service';
@@ -56,6 +57,7 @@ export default function AdminTicketDetailPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const [replyBody, setReplyBody] = useState('');
+    const [replySubject, setReplySubject] = useState('');
     const [isInternal, setIsInternal] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState('');
     const [assigneeId, setAssigneeId] = useState('');
@@ -82,13 +84,17 @@ export default function AdminTicketDetailPage() {
         })),
     ];
 
-    // Sync status + assignee when ticket loads
+    // Sync status + assignee + subject when ticket loads
     useEffect(() => {
         if (ticket) {
             setSelectedStatus(ticket.status);
             setAssigneeId(ticket.assignedToId || '');
+            // Auto-generate subject for replies
+            if (!replySubject) {
+                setReplySubject(`Re: ${ticket.subject}`);
+            }
         }
-    }, [ticket]);
+    }, [ticket, replySubject]);
 
     // Scroll to bottom of messages
     useEffect(() => {
@@ -97,11 +103,15 @@ export default function AdminTicketDetailPage() {
 
     // ── Mutations ──
     const addMessageMutation = useMutation({
-        mutationFn: () => ticketService.addMessage(id, replyBody, isInternal),
+        mutationFn: () => ticketService.addMessage(id, replyBody, isInternal, isInternal ? undefined : replySubject),
         onSuccess: () => {
             showToast.success(isInternal ? 'Internal note added' : 'Reply sent');
             setReplyBody('');
             setIsInternal(false);
+            // Re-generate subject for next reply
+            if (ticket) {
+                setReplySubject(`Re: ${ticket.subject}`);
+            }
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.TICKETS.DETAIL(id) });
         },
         onError: (err) => {
@@ -182,7 +192,7 @@ export default function AdminTicketDetailPage() {
                         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-[var(--text)]">
                             <div className="flex items-start gap-2">
                                 <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-                                <p className="whitespace-pre-wrap">{msg.body}</p>
+                                <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: msg.body }} />
                             </div>
                         </div>
                         <p className="text-right text-xs text-[var(--text-muted)]">
@@ -211,7 +221,10 @@ export default function AdminTicketDetailPage() {
                                 : 'bg-[var(--bg-secondary)] text-[var(--text)]'
                         }`}
                     >
-                        <p className="whitespace-pre-wrap">{msg.body}</p>
+                        {msg.subject && (
+                            <p className="mb-2 text-xs font-semibold opacity-80">Re: {msg.subject}</p>
+                        )}
+                        <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1" dangerouslySetInnerHTML={{ __html: msg.body }} />
                     </div>
                     <p className={`text-xs text-[var(--text-muted)] ${isAdmin ? 'text-right' : 'text-left'}`}>
                         {formatRelativeDate(msg.createdAt)}
@@ -351,12 +364,24 @@ export default function AdminTicketDetailPage() {
                                         This note will only be visible to admin staff.
                                     </div>
                                 )}
-                                <textarea
+                                {!isInternal && (
+                                    <div>
+                                        <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                                            Subject
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={replySubject}
+                                            onChange={(e) => setReplySubject(e.target.value)}
+                                            placeholder="Email subject line"
+                                            className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] transition-colors duration-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                        />
+                                    </div>
+                                )}
+                                <RichTextEditor
                                     value={replyBody}
-                                    onChange={(e) => setReplyBody(e.target.value)}
+                                    onChange={setReplyBody}
                                     placeholder={isInternal ? 'Write an internal note...' : 'Type your reply...'}
-                                    rows={4}
-                                    className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] transition-colors duration-200 resize-vertical focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                                 />
                                 <div className="flex justify-end">
                                     <Button

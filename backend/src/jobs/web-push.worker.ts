@@ -16,10 +16,17 @@ interface WebPushJobData {
 export const webPushWorker = new Worker<WebPushJobData>(
     WEB_PUSH_QUEUE_NAME,
     async (job: Job<WebPushJobData>) => {
-        logger.info(`Processing Web Push job ${job.id}`);
-
+        const TIMEOUT_MS = 30_000;
+        const timeoutId = setTimeout(() => { /* safety net */ }, TIMEOUT_MS);
         try {
-            await sendWebPushNotification(job.data.subscription, job.data.payload);
+            logger.info(`Processing Web Push job ${job.id}`);
+
+            await Promise.race([
+                sendWebPushNotification(job.data.subscription, job.data.payload),
+                new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('Web Push worker timeout after 30s')), TIMEOUT_MS)
+                ),
+            ]);
             logger.info(`Web Push notification sent`);
             return { sent: true };
         } catch (error: any) {
@@ -31,11 +38,14 @@ export const webPushWorker = new Worker<WebPushJobData>(
             }
             logger.error(`Failed to send Web Push notification:`, error);
             throw error;
+        } finally {
+            clearTimeout(timeoutId);
         }
     },
     {
         connection: createBullMQConnection(),
         concurrency: 5,
+        lockDuration: 60000,
         limiter: {
             max: 20,
             duration: 1000,

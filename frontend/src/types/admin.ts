@@ -11,6 +11,25 @@ export interface AdminStats {
     newUsersThisWeek: number;
     newUsersThisMonth: number;
     pendingVerifications: number;
+    // Comprehensive stats (from getComprehensiveStats)
+    totalAdmins?: number;
+    activeThisWeek?: number;
+    expiredJobs?: number;
+    newJobsThisWeek?: number;
+    newJobsThisMonth?: number;
+    applicationsThisWeek?: number;
+    applicationConversionRate?: number;
+    verificationsApproved?: number;
+    verificationsRejected?: number;
+    topSkills?: Array<{ skill: string; count: number }>;
+    topLocations?: Array<{ location: string; count: number }>;
+    registrationTrends?: Array<{ date: string; count: number }>;
+}
+
+export interface RecentActivity {
+    users: Array<{ id: string; email: string; role: Role; createdAt: string; firstName: string | null }>;
+    jobs: Array<{ id: string; title: string; company: { companyName: string } | null; createdAt: string }>;
+    applications: Array<{ id: string; status: string; job: { title: string } | null; candidate: { user: { email: string } } | null }>;
 }
 
 export interface UserListItem {
@@ -22,6 +41,7 @@ export interface UserListItem {
     isActive: boolean;
     isSuspended: boolean;
     isEmailVerified: boolean;
+    mfaEnabled: boolean;
     createdAt: string;
     lastLoginAt: string | null;
 }
@@ -30,7 +50,8 @@ export interface UserDetail extends UserListItem {
     avatar: string | null;
     mobileNumber: string | null;
     isMobileVerified: boolean;
-    mfaEnabled: boolean;
+    whatsappNumber: string | null;
+    isWhatsappVerified: boolean;
     loginAttempts: number;
     updatedAt: string;
 }
@@ -102,6 +123,10 @@ export interface UpdateUserProfileRequest {
     firstName?: string;
     lastName?: string;
     email?: string;
+    mobileNumber?: string | null;
+    whatsappNumber?: string | null;
+    isMobileVerified?: boolean;
+    isWhatsappVerified?: boolean;
 }
 
 export interface AdminResetPasswordRequest {

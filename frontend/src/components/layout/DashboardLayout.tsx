@@ -6,7 +6,10 @@ import DashboardHeader from './DashboardHeader';
 import MobileSidebar from './MobileSidebar';
 import Sidebar from './Sidebar';
 import { useAuth } from '@/hooks/use-auth';
+import { useSessionTimeout } from '@/hooks/use-session-timeout';
 import Spinner from '@/components/ui/Spinner';
+import AdminMfaRequired from '@/components/auth/AdminMfaRequired';
+import SuperAdminMfaSetup from '@/components/auth/SuperAdminMfaSetup';
 import { ROUTES } from '@/constants/routes';
 
 interface DashboardLayoutProps {
@@ -18,6 +21,8 @@ export default function DashboardLayout({ children, requiredRole }: DashboardLay
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+
+    useSessionTimeout();
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -45,6 +50,12 @@ export default function DashboardLayout({ children, requiredRole }: DashboardLay
 
     if (!isAuthenticated || !user) {
         return null;
+    }
+
+    const isAdminRoute = requiredRole?.some(r => r === 'ADMIN' || r === 'SUPER_ADMIN');
+    if (isAdminRoute && !user.mfaEnabled) {
+        if (user.role === 'ADMIN') return <AdminMfaRequired />;
+        if (user.role === 'SUPER_ADMIN') return <SuperAdminMfaSetup />;
     }
 
     return (

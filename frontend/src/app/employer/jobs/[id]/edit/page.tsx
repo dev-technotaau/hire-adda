@@ -17,6 +17,8 @@ import Select, { type SelectOption } from '@/components/ui/Select';
 import Switch from '@/components/ui/Switch';
 import Tag from '@/components/ui/Tag';
 import Skeleton from '@/components/ui/Skeleton';
+import RichTextEditor from '@/components/ui/RichTextEditor';
+import ScreeningQuestionBuilder from '@/components/ui/ScreeningQuestionBuilder';
 import { showToast } from '@/components/ui/Toast';
 import { jobService } from '@/services/job.service';
 import { ROUTES } from '@/constants/routes';
@@ -25,8 +27,13 @@ import {
     JOB_TYPE_LABELS, WORK_MODE_LABELS, SHIFT_TYPE_LABELS,
     EXPERIENCE_LEVEL_LABELS, EDUCATION_LEVEL_LABELS,
     SALARY_TYPE_LABELS, URGENCY_LEVEL_LABELS,
+    FUNCTIONAL_AREA_LABELS, NOTICE_PERIOD_PREFERENCE_LABELS,
+    GENDER_PREFERENCE_LABELS, DRIVING_LICENSE_TYPE_LABELS,
+    POSTING_VISIBILITY_LABELS, APPLY_METHOD_LABELS,
+    SPECIFIC_DEGREE_LABELS, DIVERSITY_TAG_OPTIONS,
 } from '@/constants/enums';
-import type { UpdateJobRequest } from '@/types/job';
+import { formatSalaryAsLPA } from '@/utils/format';
+import type { UpdateJobRequest, ScreeningQuestionInput } from '@/types/job';
 import type { ApiError } from '@/types/api';
 
 function toSelectOptions(labels: Record<string, string>): SelectOption[] {
@@ -40,6 +47,12 @@ const experienceLevelOptions = toSelectOptions(EXPERIENCE_LEVEL_LABELS);
 const educationLevelOptions = toSelectOptions(EDUCATION_LEVEL_LABELS);
 const salaryTypeOptions = toSelectOptions(SALARY_TYPE_LABELS);
 const urgencyLevelOptions = toSelectOptions(URGENCY_LEVEL_LABELS);
+const functionalAreaOptions = toSelectOptions(FUNCTIONAL_AREA_LABELS);
+const genderPreferenceOptions = toSelectOptions(GENDER_PREFERENCE_LABELS);
+const drivingLicenseOptions = toSelectOptions(DRIVING_LICENSE_TYPE_LABELS);
+const postingVisibilityOptions = toSelectOptions(POSTING_VISIBILITY_LABELS);
+const applyMethodOptions = toSelectOptions(APPLY_METHOD_LABELS);
+const specificDegreeOptions = toSelectOptions(SPECIFIC_DEGREE_LABELS);
 
 export default function EditJobPage() {
     const params = useParams();
@@ -53,6 +66,10 @@ export default function EditJobPage() {
     const [certInput, setCertInput] = useState('');
     const [tagInput, setTagInput] = useState('');
     const [perkInput, setPerkInput] = useState('');
+    const [langInput, setLangInput] = useState('');
+    const [addLocInput, setAddLocInput] = useState('');
+    const [degreeSpecInput, setDegreeSpecInput] = useState('');
+    const [screeningQuestions, setScreeningQuestions] = useState<ScreeningQuestionInput[]>([]);
     const [initialized, setInitialized] = useState(false);
 
     const { data: jobData, isLoading } = useQuery({
@@ -97,6 +114,8 @@ export default function EditJobPage() {
                 experienceMax: job.experienceMax ?? undefined,
                 experienceLevel: job.experienceLevel || undefined,
                 educationRequired: job.educationRequired || undefined,
+                preferredEducationField: job.preferredEducationField || '',
+                roleCategory: job.roleCategory || '',
                 numberOfOpenings: job.numberOfOpenings ?? undefined,
                 salaryMin: job.salaryMin ?? undefined,
                 salaryMax: job.salaryMax ?? undefined,
@@ -112,12 +131,57 @@ export default function EditJobPage() {
                 skillsRequired: job.skillsRequired || [],
                 niceToHaveSkills: job.niceToHaveSkills || [],
                 certificationsRequired: job.certificationsRequired || [],
+                languagesRequired: job.languagesRequired || [],
                 tags: job.tags || [],
                 jobPerks: job.jobPerks || [],
                 urgencyLevel: job.urgencyLevel || undefined,
                 applicationDeadline: job.applicationDeadline ? job.applicationDeadline.split('T')[0] : '',
                 isFeatured: job.isFeatured ?? false,
+                // Enterprise fields
+                functionalArea: job.functionalArea || undefined,
+                referenceCode: job.referenceCode || '',
+                ugRequired: job.ugRequired || undefined,
+                pgRequired: job.pgRequired || undefined,
+                specificDegrees: job.specificDegrees || [],
+                degreeSpecializations: job.degreeSpecializations || [],
+                salaryNegotiable: job.salaryNegotiable ?? false,
+                noticePeriodPreference: job.noticePeriodPreference || [],
+                isConfidential: job.isConfidential ?? false,
+                additionalLocations: job.additionalLocations || [],
+                accommodationProvided: job.accommodationProvided ?? false,
+                walkInStartDate: job.walkInStartDate ? job.walkInStartDate.split('T')[0] : '',
+                walkInEndDate: job.walkInEndDate ? job.walkInEndDate.split('T')[0] : '',
+                walkInTime: job.walkInTime || '',
+                walkInVenue: job.walkInVenue || '',
+                walkInContactPerson: job.walkInContactPerson || '',
+                walkInContactPhone: job.walkInContactPhone || '',
+                walkInInstructions: job.walkInInstructions || '',
+                diversityTags: job.diversityTags || [],
+                visaSponsorshipAvailable: job.visaSponsorshipAvailable ?? false,
+                backgroundCheckRequired: job.backgroundCheckRequired ?? false,
+                isPwdFriendly: job.isPwdFriendly ?? false,
+                passportRequired: job.passportRequired ?? false,
+                bondDetails: job.bondDetails || '',
+                drivingLicenseRequired: job.drivingLicenseRequired || undefined,
+                ageMin: job.ageMin ?? undefined,
+                ageMax: job.ageMax ?? undefined,
+                genderPreference: job.genderPreference || undefined,
+                postingVisibility: job.postingVisibility || 'PUBLIC',
+                applyMethod: job.applyMethod || 'IN_PLATFORM',
+                externalApplyUrl: job.externalApplyUrl || '',
+                scheduledPublishAt: job.scheduledPublishAt ? job.scheduledPublishAt.split('T')[0] : '',
             });
+            setScreeningQuestions(
+                (job.screeningQuestions || []).map(q => ({
+                    question: q.question,
+                    questionType: q.questionType,
+                    isRequired: q.isRequired,
+                    isDealBreaker: q.isDealBreaker,
+                    options: q.options || undefined,
+                    idealAnswer: q.idealAnswer || undefined,
+                    displayOrder: q.displayOrder,
+                }))
+            );
             setInitialized(true);
         }
     }, [job, initialized]);
@@ -126,16 +190,19 @@ export default function EditJobPage() {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
 
-    const addToArray = (key: 'skillsRequired' | 'niceToHaveSkills' | 'certificationsRequired' | 'tags' | 'jobPerks', value: string, clearFn: (v: string) => void) => {
+    type ArrayFieldKey = 'skillsRequired' | 'niceToHaveSkills' | 'certificationsRequired' | 'tags' | 'jobPerks' | 'languagesRequired' | 'additionalLocations' | 'degreeSpecializations' | 'diversityTags' | 'specificDegrees' | 'noticePeriodPreference';
+
+    const addToArray = (key: ArrayFieldKey, value: string, clearFn: (v: string) => void) => {
         const trimmed = value.trim();
-        if (trimmed && !(form[key] || []).includes(trimmed)) {
-            handleChange(key, [...(form[key] || []), trimmed]);
+        const arr = (form[key] || []) as string[];
+        if (trimmed && !arr.includes(trimmed)) {
+            handleChange(key, [...arr, trimmed]);
             clearFn('');
         }
     };
 
-    const removeFromArray = (key: 'skillsRequired' | 'niceToHaveSkills' | 'certificationsRequired' | 'tags' | 'jobPerks', value: string) => {
-        handleChange(key, (form[key] || []).filter((v) => v !== value));
+    const removeFromArray = (key: ArrayFieldKey, value: string) => {
+        handleChange(key, ((form[key] || []) as string[]).filter((v) => v !== value));
     };
 
     const handleAddSkill = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -180,6 +247,10 @@ export default function EditJobPage() {
         const payload = {
             ...form,
             applicationDeadline: form.applicationDeadline ? new Date(form.applicationDeadline).toISOString() : undefined,
+            walkInStartDate: form.walkInStartDate ? new Date(form.walkInStartDate).toISOString() : undefined,
+            walkInEndDate: form.walkInEndDate ? new Date(form.walkInEndDate).toISOString() : undefined,
+            scheduledPublishAt: form.scheduledPublishAt ? new Date(form.scheduledPublishAt).toISOString() : undefined,
+            screeningQuestions: screeningQuestions.length > 0 ? screeningQuestions : undefined,
         };
         updateMutation.mutate(payload);
     };
@@ -267,6 +338,20 @@ export default function EditJobPage() {
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
                             <Input
+                                label="Preferred Education Field"
+                                placeholder="e.g. Computer Science, MBA"
+                                value={form.preferredEducationField || ''}
+                                onChange={(e) => handleChange('preferredEducationField', e.target.value)}
+                            />
+                            <Input
+                                label="Role Category"
+                                placeholder="e.g. Engineering, Marketing"
+                                value={form.roleCategory || ''}
+                                onChange={(e) => handleChange('roleCategory', e.target.value)}
+                            />
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <Input
                                 label="Industry"
                                 placeholder="e.g. Information Technology"
                                 value={form.industry || ''}
@@ -279,14 +364,90 @@ export default function EditJobPage() {
                                 onChange={(e) => handleChange('department', e.target.value)}
                             />
                         </div>
-                        <Input
-                            label="Number of Openings"
-                            type="number"
-                            placeholder="1"
-                            value={form.numberOfOpenings?.toString() || ''}
-                            onChange={(e) => handleChange('numberOfOpenings', e.target.value ? Number(e.target.value) : undefined)}
-                            min={1}
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <Input
+                                label="Number of Openings"
+                                type="number"
+                                placeholder="1"
+                                value={form.numberOfOpenings?.toString() || ''}
+                                onChange={(e) => handleChange('numberOfOpenings', e.target.value ? Number(e.target.value) : undefined)}
+                                min={1}
+                            />
+                            <Input
+                                label="Reference Code"
+                                placeholder="e.g. JOB-2026-001"
+                                value={form.referenceCode || ''}
+                                onChange={(e) => handleChange('referenceCode', e.target.value)}
+                            />
+                        </div>
+                        <Select
+                            label="Functional Area"
+                            options={functionalAreaOptions}
+                            value={form.functionalArea || ''}
+                            onChange={(val) => handleChange('functionalArea', val || undefined)}
+                            placeholder="Select functional area"
                         />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <Select
+                                label="UG Required"
+                                options={educationLevelOptions}
+                                value={form.ugRequired || ''}
+                                onChange={(val) => handleChange('ugRequired', val || undefined)}
+                                placeholder="Select UG level"
+                            />
+                            <Select
+                                label="PG Required"
+                                options={educationLevelOptions}
+                                value={form.pgRequired || ''}
+                                onChange={(val) => handleChange('pgRequired', val || undefined)}
+                                placeholder="Select PG level"
+                            />
+                        </div>
+                        {/* Specific Degrees */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Specific Degrees</label>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {specificDegreeOptions.map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => {
+                                            const arr = form.specificDegrees || [];
+                                            if (arr.includes(opt.value as never)) {
+                                                handleChange('specificDegrees', arr.filter(d => d !== opt.value));
+                                            } else {
+                                                handleChange('specificDegrees', [...arr, opt.value]);
+                                            }
+                                        }}
+                                        className={`rounded-full px-3 py-1 text-xs border transition-colors ${(form.specificDegrees || []).includes(opt.value as never) ? 'bg-primary text-white border-primary' : 'border-[var(--border)] text-[var(--text-muted)] hover:border-primary'}`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        {/* Degree Specializations */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Degree Specializations</label>
+                            <div className="flex gap-2 mb-2">
+                                <Input
+                                    value={degreeSpecInput}
+                                    onChange={(e) => setDegreeSpecInput(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('degreeSpecializations', degreeSpecInput, setDegreeSpecInput); } }}
+                                    placeholder="e.g. Computer Science"
+                                />
+                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('degreeSpecializations', degreeSpecInput, setDegreeSpecInput)}>
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            {(form.degreeSpecializations || []).length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {(form.degreeSpecializations || []).map(s => (
+                                        <Tag key={s} label={s} size="md" onRemove={() => removeFromArray('degreeSpecializations', s)} />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </Card>
 
@@ -294,36 +455,30 @@ export default function EditJobPage() {
                 <Card>
                     <h2 className="text-base font-semibold text-[var(--text)] mb-4">Description & Details</h2>
                     <div className="space-y-4">
-                        <Textarea
+                        <RichTextEditor
                             label="Description"
                             required
                             value={form.description || ''}
-                            onChange={(e) => handleChange('description', e.target.value)}
+                            onChange={(v) => handleChange('description', v)}
                             placeholder="Describe the role and what the candidate will be doing..."
-                            rows={6}
-                            maxLength={10000}
-                            showCount
                         />
-                        <Textarea
+                        <RichTextEditor
                             label="Key Responsibilities"
                             value={form.keyResponsibilities || ''}
-                            onChange={(e) => handleChange('keyResponsibilities', e.target.value)}
+                            onChange={(v) => handleChange('keyResponsibilities', v)}
                             placeholder="List the key responsibilities for this role..."
-                            rows={4}
                         />
-                        <Textarea
+                        <RichTextEditor
                             label="Requirements"
                             value={form.requirements || ''}
-                            onChange={(e) => handleChange('requirements', e.target.value)}
+                            onChange={(v) => handleChange('requirements', v)}
                             placeholder="List the qualifications and requirements..."
-                            rows={4}
                         />
-                        <Textarea
+                        <RichTextEditor
                             label="Benefits"
                             value={form.benefits || ''}
-                            onChange={(e) => handleChange('benefits', e.target.value)}
+                            onChange={(v) => handleChange('benefits', v)}
                             placeholder="List the benefits and perks..."
-                            rows={4}
                         />
                         <Textarea
                             label="Interview Process"
@@ -390,11 +545,54 @@ export default function EditJobPage() {
                             min={0}
                             max={100}
                         />
+                        {/* Additional Locations */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Additional Locations</label>
+                            <div className="flex gap-2 mb-2">
+                                <Input
+                                    value={addLocInput}
+                                    onChange={(e) => setAddLocInput(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('additionalLocations', addLocInput, setAddLocInput); } }}
+                                    placeholder="e.g. Pune, India"
+                                />
+                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('additionalLocations', addLocInput, setAddLocInput)}>
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            {(form.additionalLocations || []).length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {(form.additionalLocations || []).map(loc => (
+                                        <Tag key={loc} label={loc} size="md" onRemove={() => removeFromArray('additionalLocations', loc)} />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <Switch
+                            label="Accommodation provided"
+                            checked={form.accommodationProvided || false}
+                            onChange={() => handleChange('accommodationProvided', !form.accommodationProvided)}
+                        />
                         <Switch
                             label="Walk-in interview"
                             checked={form.isWalkIn || false}
                             onChange={() => handleChange('isWalkIn', !form.isWalkIn)}
                         />
+                        {form.isWalkIn && (
+                            <div className="space-y-4 rounded-lg border border-[var(--border)] p-4">
+                                <p className="text-sm font-medium text-[var(--text)]">Walk-in Details</p>
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <DatePicker label="Start Date" value={form.walkInStartDate || ''} onChange={(v) => handleChange('walkInStartDate', v)} />
+                                    <DatePicker label="End Date" value={form.walkInEndDate || ''} onChange={(v) => handleChange('walkInEndDate', v)} />
+                                </div>
+                                <Input label="Time" placeholder="e.g. 10:00 AM - 4:00 PM" value={form.walkInTime || ''} onChange={(e) => handleChange('walkInTime', e.target.value)} />
+                                <Input label="Venue" placeholder="Full address of walk-in venue" value={form.walkInVenue || ''} onChange={(e) => handleChange('walkInVenue', e.target.value)} />
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <Input label="Contact Person" placeholder="HR Manager Name" value={form.walkInContactPerson || ''} onChange={(e) => handleChange('walkInContactPerson', e.target.value)} />
+                                    <Input label="Contact Phone" placeholder="+91 98765 43210" value={form.walkInContactPhone || ''} onChange={(e) => handleChange('walkInContactPhone', e.target.value)} />
+                                </div>
+                                <Textarea label="Walk-in Instructions" placeholder="Any special instructions for candidates..." value={form.walkInInstructions || ''} onChange={(e) => handleChange('walkInInstructions', e.target.value)} rows={3} />
+                            </div>
+                        )}
                         <div className="grid gap-4 sm:grid-cols-2">
                             <Input
                                 label="Contact Person"
@@ -475,6 +673,16 @@ export default function EditJobPage() {
                                 />
                             </div>
                         </div>
+                        <Switch
+                            label="Salary is negotiable"
+                            checked={form.salaryNegotiable || false}
+                            onChange={() => handleChange('salaryNegotiable', !form.salaryNegotiable)}
+                        />
+                        {(form.currency || 'INR').toUpperCase() === 'INR' && form.salaryType === 'ANNUAL' && (form.salaryMin || form.salaryMax) && (
+                            <p className="text-xs text-[var(--text-muted)]">
+                                CTC: {formatSalaryAsLPA(form.salaryMin, form.salaryMax)}
+                            </p>
+                        )}
                     </div>
                 </Card>
 
@@ -546,6 +754,29 @@ export default function EditJobPage() {
                                 <div className="flex flex-wrap gap-1.5">
                                     {(form.certificationsRequired || []).map((cert) => (
                                         <Tag key={cert} label={cert} size="md" onRemove={() => removeFromArray('certificationsRequired', cert)} />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Languages Required */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Languages Required</label>
+                            <div className="flex gap-2 mb-2">
+                                <Input
+                                    value={langInput}
+                                    onChange={(e) => setLangInput(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('languagesRequired', langInput, setLangInput); } }}
+                                    placeholder="e.g. English, Hindi"
+                                />
+                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('languagesRequired', langInput, setLangInput)}>
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            {(form.languagesRequired || []).length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {(form.languagesRequired || []).map((lang) => (
+                                        <Tag key={lang} label={lang} size="md" onRemove={() => removeFromArray('languagesRequired', lang)} />
                                     ))}
                                 </div>
                             )}
@@ -623,6 +854,100 @@ export default function EditJobPage() {
                             checked={form.isFeatured || false}
                             onChange={() => handleChange('isFeatured', !form.isFeatured)}
                         />
+                        {/* Notice Period Preference */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Notice Period Preference</label>
+                            <div className="flex flex-wrap gap-2">
+                                {Object.entries(NOTICE_PERIOD_PREFERENCE_LABELS).map(([val, lbl]) => (
+                                    <button
+                                        key={val}
+                                        type="button"
+                                        onClick={() => {
+                                            const arr = (form.noticePeriodPreference || []) as string[];
+                                            if (arr.includes(val)) {
+                                                handleChange('noticePeriodPreference', arr.filter(v => v !== val));
+                                            } else {
+                                                handleChange('noticePeriodPreference', [...arr, val]);
+                                            }
+                                        }}
+                                        className={`rounded-full px-3 py-1 text-xs border transition-colors ${((form.noticePeriodPreference || []) as string[]).includes(val) ? 'bg-primary text-white border-primary' : 'border-[var(--border)] text-[var(--text-muted)] hover:border-primary'}`}
+                                    >
+                                        {lbl}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+
+                {/* Requirements & Inclusion */}
+                <Card>
+                    <h2 className="text-base font-semibold text-[var(--text)] mb-4">Requirements & Inclusion</h2>
+                    <div className="space-y-4">
+                        {/* Diversity Tags */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Diversity & Inclusion Tags</label>
+                            <div className="flex flex-wrap gap-2">
+                                {DIVERSITY_TAG_OPTIONS.map(tag => (
+                                    <button
+                                        key={tag}
+                                        type="button"
+                                        onClick={() => {
+                                            const arr = form.diversityTags || [];
+                                            if (arr.includes(tag)) {
+                                                handleChange('diversityTags', arr.filter(t => t !== tag));
+                                            } else {
+                                                handleChange('diversityTags', [...arr, tag]);
+                                            }
+                                        }}
+                                        className={`rounded-full px-3 py-1 text-xs border transition-colors ${(form.diversityTags || []).includes(tag) ? 'bg-primary text-white border-primary' : 'border-[var(--border)] text-[var(--text-muted)] hover:border-primary'}`}
+                                    >
+                                        {tag}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <Switch label="PwD Friendly" checked={form.isPwdFriendly || false} onChange={() => handleChange('isPwdFriendly', !form.isPwdFriendly)} />
+                            <Switch label="Visa Sponsorship Available" checked={form.visaSponsorshipAvailable || false} onChange={() => handleChange('visaSponsorshipAvailable', !form.visaSponsorshipAvailable)} />
+                            <Switch label="Background Check Required" checked={form.backgroundCheckRequired || false} onChange={() => handleChange('backgroundCheckRequired', !form.backgroundCheckRequired)} />
+                            <Switch label="Passport Required" checked={form.passportRequired || false} onChange={() => handleChange('passportRequired', !form.passportRequired)} />
+                            <Switch label="Confidential Posting" checked={form.isConfidential || false} onChange={() => handleChange('isConfidential', !form.isConfidential)} />
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <Select label="Gender Preference" options={genderPreferenceOptions} value={form.genderPreference || ''} onChange={(val) => handleChange('genderPreference', val || undefined)} placeholder="Any" />
+                            <Select label="Driving License Required" options={drivingLicenseOptions} value={form.drivingLicenseRequired || ''} onChange={(val) => handleChange('drivingLicenseRequired', val || undefined)} placeholder="None" />
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <Input label="Minimum Age" type="number" placeholder="18" value={form.ageMin?.toString() || ''} onChange={(e) => handleChange('ageMin', e.target.value ? Number(e.target.value) : undefined)} min={14} max={70} />
+                            <Input label="Maximum Age" type="number" placeholder="60" value={form.ageMax?.toString() || ''} onChange={(e) => handleChange('ageMax', e.target.value ? Number(e.target.value) : undefined)} min={14} max={70} />
+                        </div>
+                        <Textarea
+                            label="Bond / Service Agreement Details"
+                            placeholder="e.g. 2-year service bond required..."
+                            value={form.bondDetails || ''}
+                            onChange={(e) => handleChange('bondDetails', e.target.value)}
+                            rows={2}
+                        />
+                    </div>
+                </Card>
+
+                {/* Screening & Posting */}
+                <Card>
+                    <h2 className="text-base font-semibold text-[var(--text)] mb-4">Screening & Posting</h2>
+                    <div className="space-y-4">
+                        <ScreeningQuestionBuilder
+                            questions={screeningQuestions}
+                            onChange={setScreeningQuestions}
+                        />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <Select label="Posting Visibility" options={postingVisibilityOptions} value={form.postingVisibility || 'PUBLIC'} onChange={(val) => handleChange('postingVisibility', val || 'PUBLIC')} />
+                            <Select label="Apply Method" options={applyMethodOptions} value={form.applyMethod || 'IN_PLATFORM'} onChange={(val) => handleChange('applyMethod', val || 'IN_PLATFORM')} />
+                        </div>
+                        {form.applyMethod === 'EXTERNAL_URL' && (
+                            <Input label="External Apply URL" type="url" placeholder="https://careers.company.com/apply" value={form.externalApplyUrl || ''} onChange={(e) => handleChange('externalApplyUrl', e.target.value)} />
+                        )}
+                        <DatePicker label="Scheduled Publish Date" value={form.scheduledPublishAt || ''} onChange={(v) => handleChange('scheduledPublishAt', v)} />
                     </div>
                 </Card>
 

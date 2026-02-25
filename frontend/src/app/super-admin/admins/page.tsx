@@ -16,13 +16,14 @@ import EmptyState from '@/components/ui/EmptyState';
 import OtpInput from '@/components/auth/OtpInput';
 import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
-import { OTP_CONFIG } from '@/constants/config';
+import { useOtpConfig } from '@/hooks/use-otp-config';
 import { formatRelativeDate } from '@/lib/utils';
 import type { ApiError } from '@/types/api';
 import type { UserListItem } from '@/types/admin';
 
 export default function ManageAdminsPage() {
     const queryClient = useQueryClient();
+    const otpConfig = useOtpConfig();
     const [showCreate, setShowCreate] = useState(false);
     const [removeTarget, setRemoveTarget] = useState<{ id: string; email: string } | null>(null);
     const [newAdmin, setNewAdmin] = useState({ email: '', firstName: '', lastName: '', password: '' });
@@ -32,7 +33,7 @@ export default function ManageAdminsPage() {
         queryFn: () => adminService.listAdmins(),
     });
 
-    const admins: UserListItem[] = data?.data || [];
+    const admins: UserListItem[] = data?.data?.items || [];
 
     const createMutation = useMutation({
         mutationFn: () => adminService.createAdmin(newAdmin),
@@ -84,7 +85,7 @@ export default function ManageAdminsPage() {
             await adminService.sendPasswordResetOtp(resetTarget.id);
             showToast.success(`Verification code sent to ${resetTarget.email}`);
             setResetStep('verify');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
         } catch (err) {
             const error = err as unknown as ApiError;
             showToast.error(error.message || 'Failed to send verification code');
@@ -99,7 +100,7 @@ export default function ManageAdminsPage() {
         try {
             await adminService.sendPasswordResetOtp(resetTarget.id);
             showToast.success('New verification code sent!');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setResetOtp('');
         } catch (err) {
             const error = err as unknown as ApiError;
@@ -110,7 +111,7 @@ export default function ManageAdminsPage() {
     };
 
     const handleConfirmReset = async () => {
-        if (!resetTarget || resetOtp.length !== OTP_CONFIG.LENGTH || !resetPassword) return;
+        if (!resetTarget || resetOtp.length !== otpConfig.LENGTH || !resetPassword) return;
         setIsResettingPassword(true);
         try {
             await adminService.resetUserPassword(resetTarget.id, { newPassword: resetPassword, otp: resetOtp });
@@ -316,7 +317,7 @@ export default function ManageAdminsPage() {
                                 <Button
                                     onClick={handleConfirmReset}
                                     isLoading={isResettingPassword}
-                                    disabled={resetOtp.length !== OTP_CONFIG.LENGTH || !resetPassword}
+                                    disabled={resetOtp.length !== otpConfig.LENGTH || !resetPassword}
                                 >
                                     Reset Password
                                 </Button>
@@ -343,7 +344,7 @@ export default function ManageAdminsPage() {
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-[var(--text)]">Verification Code</label>
-                                <OtpInput value={resetOtp} onChange={setResetOtp} length={OTP_CONFIG.LENGTH} />
+                                <OtpInput value={resetOtp} onChange={setResetOtp} length={otpConfig.LENGTH} />
                             </div>
 
                             <div className="text-center">

@@ -1,29 +1,81 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
     Briefcase, Users, Eye, UserCheck,
     ArrowRight, Clock, Building2, TrendingUp, Plus, HelpCircle,
-    Timer, Target, Zap,
+    Timer, Target, Zap, Search, Bookmark, BarChart3, Settings, FileText,
+    Award, ArrowUpRight, ArrowDownRight, Trophy, AlertTriangle,
+    Info, CheckCircle, XCircle, Activity, Bell,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import ProgressBar from '@/components/ui/ProgressBar';
 import Skeleton from '@/components/ui/Skeleton';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import BarChart from '@/components/charts/BarChart';
+import AreaChart from '@/components/charts/AreaChart';
+import PieChart from '@/components/charts/PieChart';
 import { employerService } from '@/services/employer.service';
 import { QUERY_KEYS } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '@/constants/enums';
-import { formatRelativeDate, getGreeting, getDashboardSubtitle } from '@/lib/utils';
+import { formatRelativeDate, getGreeting, getDashboardSubtitle, formatSalaryRange } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useNotifications } from '@/hooks/use-notifications';
 import { wasOnboardingSkipped } from '@/hooks/use-onboarding';
+
+// Maps backend completeness field names → employer profile ?section= values
+const COMPLETENESS_SECTION_MAP: Record<string, string> = {
+    'Company Basics': 'company',
+    'Company Description': 'about',
+    'Logo & Branding': 'company',
+    'Website & Links': 'company',
+    'Contact Info': 'contact',
+    'Office Location': 'address',
+    'Why Work For Us': 'about',
+    'Benefits & Perks': 'benefits',
+    'Culture & Values': 'culture',
+    'Social Profiles': 'social',
+    'Tech Stack / Products': 'tech',
+    'Registration (GST/CIN)': 'legal',
+    'Team & Testimonials': 'people',
+    'Media & Photos': 'company',
+};
+
+// Map activity status to timeline dot color
+const activityDotColor = (status: string) => {
+    const map: Record<string, string> = {
+        APPLIED: 'bg-[#3B82F6]', VIEWED: 'bg-[#6366F1]', SHORTLISTED: 'bg-[#10B981]',
+        INTERVIEW_SCHEDULED: 'bg-[#F59E0B]', OFFERED: 'bg-[#059669]', HIRED: 'bg-[#059669]',
+        REJECTED: 'bg-[#EF4444]', WITHDRAWN: 'bg-[#6B7280]',
+    };
+    return map[status] || 'bg-[#6B7280]';
+};
+
+const notificationTypeIcon = (type: string) => {
+    switch (type) {
+        case 'SUCCESS': return CheckCircle;
+        case 'WARNING': return AlertTriangle;
+        case 'ERROR': return XCircle;
+        default: return Info;
+    }
+};
+
+const notificationTypeColor = (type: string) => {
+    switch (type) {
+        case 'SUCCESS': return 'text-[var(--success)]';
+        case 'WARNING': return 'text-[var(--warning)]';
+        case 'ERROR': return 'text-[var(--error)]';
+        default: return 'text-[var(--info)]';
+    }
+};
 
 type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 const statusColorMap: Record<string, BadgeVariant> = {
@@ -45,6 +97,11 @@ export default function EmployerDashboard() {
         queryFn: () => employerService.getCompany(),
     });
 
+    const { data: completeness, isLoading: compLoading } = useQuery({
+        queryKey: QUERY_KEYS.EMPLOYERS.COMPLETENESS,
+        queryFn: () => employerService.getCompleteness(),
+    });
+
     const needsOnboarding = !companyLoading && companyData?.data
         && !companyData.data.description && !companyData.data.industry
         && !wasOnboardingSkipped('tb_employer_onboarding');
@@ -61,14 +118,141 @@ export default function EmployerDashboard() {
     });
     const metrics = metricsData?.data;
 
+    const { data: analyticsData } = useQuery({
+        queryKey: QUERY_KEYS.EMPLOYERS.ANALYTICS({ groupBy: 'week' }),
+        queryFn: () => employerService.getAnalytics({ groupBy: 'week' }),
+    });
+    const analytics = analyticsData?.data;
+
+    // Fetch recent notifications for preview card
+    const { data: notificationsData } = useNotifications({ limit: 5 });
+    const notifications = notificationsData?.data?.items || [];
+
     const stats = dashboard?.data;
+
+    // Week-over-week change deltas for stat cards
+    const weekDeltas = useMemo(() => {
+        if (!analytics?.trends || analytics.trends.length < 2) return null;
+        const curr = analytics.trends[analytics.trends.length - 1];
+        const prev = analytics.trends[analytics.trends.length - 2];
+        const delta = (c: number, p: number) => p > 0 ? Math.round(((c - p) / p) * 100) : c > 0 ? 100 : 0;
+        return {
+            applications: delta(curr.applications, prev.applications),
+            profileViews: delta(curr.profileViews, prev.profileViews),
+        };
+    }, [analytics?.trends]);
+
+    // Top performing job (highest conversion rate)
+    const topJob = useMemo(() => {
+        if (!analytics?.jobPerformance?.length) return null;
+        return [...analytics.jobPerformance].sort((a, b) => b.conversionRate - a.conversionRate)[0];
+    }, [analytics?.jobPerformance]);
+
+    // Pipeline bottleneck detector
+    const bottleneck = useMemo(() => {
+        if (!metrics?.conversions) return null;
+        const stages = [
+            { from: 'Applied', to: 'Viewed', rate: metrics.conversions.appliedToViewed },
+            { from: 'Viewed', to: 'Shortlisted', rate: metrics.conversions.viewedToShortlisted },
+            { from: 'Shortlisted', to: 'Interview', rate: metrics.conversions.shortlistedToInterview },
+            { from: 'Interview', to: 'Offered', rate: metrics.conversions.interviewToOffered },
+            { from: 'Offered', to: 'Hired', rate: metrics.conversions.offeredToHired },
+        ];
+        return stages.reduce((min, s) => s.rate < min.rate ? s : min, stages[0]);
+    }, [metrics?.conversions]);
 
     const statCards = [
         { label: 'Active Jobs', value: stats?.activeJobsCount ?? 0, icon: Briefcase, color: 'text-primary bg-primary-light', href: ROUTES.EMPLOYER.MY_JOBS },
-        { label: 'Total Applications', value: stats?.totalApplications ?? 0, icon: Users, color: 'text-[var(--success)] bg-[var(--success-light)]', href: ROUTES.EMPLOYER.MY_JOBS },
+        { label: 'Total Applications', value: stats?.totalApplications ?? 0, icon: Users, color: 'text-[var(--success)] bg-[var(--success-light)]', href: ROUTES.EMPLOYER.MY_JOBS, deltaKey: 'applications' as const },
         { label: 'Shortlisted', value: stats?.shortlistedCount ?? 0, icon: UserCheck, color: 'text-[var(--warning)] bg-[var(--warning-light)]', href: ROUTES.EMPLOYER.MY_JOBS },
-        { label: 'Profile Views', value: stats?.profileViews ?? 0, icon: Eye, color: 'text-[var(--info)] bg-[var(--info-light)]', href: ROUTES.EMPLOYER.PROFILE },
+        { label: 'Profile Views', value: stats?.profileViews ?? 0, icon: Eye, color: 'text-[var(--info)] bg-[var(--info-light)]', href: ROUTES.EMPLOYER.PROFILE, deltaKey: 'profileViews' as const },
     ];
+
+    // Sparkline points from trends data
+    const sparkline = useMemo(() => {
+        if (!analytics?.trends?.length) return null;
+        const recent = analytics.trends.slice(-6);
+        const appValues = recent.map(t => t.applications);
+        const viewValues = recent.map(t => t.profileViews);
+        const toPoints = (vals: number[], w: number, h: number) => {
+            const max = Math.max(...vals, 1);
+            return vals.map((v, i) => `${(i / (vals.length - 1)) * w},${h - (v / max) * h}`).join(' ');
+        };
+        return { applications: toPoints(appValues, 60, 20), views: toPoints(viewValues, 60, 20) };
+    }, [analytics?.trends]);
+
+    // KPI insight cards
+    const kpiCards = useMemo(() => {
+        if (!analytics?.summary) return [];
+        return [
+            {
+                label: 'Total Jobs Posted',
+                value: `${analytics.summary.totalJobsPosted ?? 0}`,
+                icon: Briefcase,
+                color: 'text-primary bg-primary-light',
+                description: 'jobs posted on platform',
+            },
+            {
+                label: 'Avg Time to Hire',
+                value: analytics.summary.avgTimeToHireDays != null ? `${analytics.summary.avgTimeToHireDays}d` : '—',
+                icon: Clock,
+                color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+                description: 'average days from post to hire',
+            },
+            {
+                label: 'Hire Rate',
+                value: `${analytics.summary.overallHireRate ?? 0}%`,
+                icon: Award,
+                color: 'text-[var(--success)] bg-[var(--success-light)]',
+                description: 'of applications result in hires',
+            },
+            {
+                label: 'Hiring Velocity',
+                value: `${analytics.summary.hiringVelocity ?? 0}/mo`,
+                icon: Zap,
+                color: 'text-[var(--info)] bg-[var(--info-light)]',
+                description: 'hires per month',
+            },
+        ];
+    }, [analytics?.summary]);
+
+    // Source distribution pie
+    const sourcePieData = useMemo(() => {
+        if (!analytics?.sourceDistribution?.length) return [];
+        const sourceColors: Record<string, string> = {
+            SEARCH: '#3B82F6', RECOMMENDATION: '#10B981', DIRECT: '#F59E0B',
+            JOB_ALERT: '#8B5CF6', REFERRAL: '#EC4899',
+        };
+        return analytics.sourceDistribution.map(s => ({
+            name: s.source.replace(/_/g, ' '),
+            value: s.count,
+            color: sourceColors[s.source] || '#6B7280',
+        }));
+    }, [analytics?.sourceDistribution]);
+
+    // Status distribution pie
+    const statusPieData = useMemo(() => {
+        if (!analytics?.statusDistribution?.length) return [];
+        const sc: Record<string, string> = {
+            APPLIED: '#3B82F6', VIEWED: '#8B5CF6', SHORTLISTED: '#F59E0B',
+            INTERVIEW_SCHEDULED: '#6366F1', OFFERED: '#10B981', HIRED: '#059669',
+            REJECTED: '#EF4444', WITHDRAWN: '#6B7280',
+        };
+        return analytics.statusDistribution.map(s => ({
+            name: APPLICATION_STATUS_LABELS[s.status] || s.status,
+            value: s.count,
+            color: sc[s.status] || '#6B7280',
+        }));
+    }, [analytics?.statusDistribution]);
+
+    // Top skills bar data
+    const skillsBarData = useMemo(() => {
+        if (!analytics?.topSkillsInDemand?.length) return [];
+        return analytics.topSkillsInDemand.slice(0, 10).map(s => ({
+            skill: s.skill.length > 15 ? `${s.skill.slice(0, 15)}...` : s.skill,
+            count: s.count,
+        }));
+    }, [analytics?.topSkillsInDemand]);
 
     // Block rendering until onboarding check completes to prevent dashboard flash
     if (companyLoading || needsOnboarding) {
@@ -100,6 +284,52 @@ export default function EmployerDashboard() {
                     </Link>
                 </div>
 
+                {/* Profile Completeness */}
+                {!compLoading && completeness?.data && completeness.data.score < 100 && (
+                    <Card className="border-primary/20 bg-primary-50/30">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                    <TrendingUp className="h-5 w-5 text-primary" />
+                                    <h3 className="font-semibold text-[var(--text)]">
+                                        Complete Your Company Profile
+                                    </h3>
+                                </div>
+                                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                    A complete company profile attracts 5x more qualified candidates.
+                                </p>
+                                <ProgressBar
+                                    value={completeness.data.score}
+                                    color={completeness.data.score >= 80 ? 'success' : completeness.data.score >= 50 ? 'warning' : 'error'}
+                                    className="mt-3"
+                                />
+                                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                                    {completeness.data.score}% complete
+                                </p>
+                                {completeness.data.sections.filter(s => !s.completed).length > 0 && (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {completeness.data.sections.filter(s => !s.completed).map(s => (
+                                            <Link
+                                                key={s.name}
+                                                href={`${ROUTES.EMPLOYER.PROFILE}?section=${COMPLETENESS_SECTION_MAP[s.name] || 'company'}`}
+                                            >
+                                                <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-white px-3 py-1 text-xs font-medium text-primary hover:bg-primary hover:text-white transition-colors cursor-pointer">
+                                                    + {s.name}
+                                                </span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <Link href={ROUTES.EMPLOYER.PROFILE} className="shrink-0 self-start">
+                                <Button size="sm">
+                                    Update Profile
+                                </Button>
+                            </Link>
+                        </div>
+                    </Card>
+                )}
+
                 {/* Stats */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {isLoading ? (
@@ -110,20 +340,274 @@ export default function EmployerDashboard() {
                         statCards.map((stat) => (
                             <Link key={stat.label} href={stat.href}>
                                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${stat.color}`}>
-                                            <stat.icon className="h-6 w-6" />
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${stat.color}`}>
+                                                <stat.icon className="h-6 w-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-2xl font-bold text-[var(--text)]">{stat.value}</p>
+                                                <p className="text-sm text-[var(--text-muted)]">{stat.label}</p>
+                                                {weekDeltas && stat.deltaKey && weekDeltas[stat.deltaKey] !== undefined && (
+                                                    <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium mt-0.5 ${weekDeltas[stat.deltaKey] >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+                                                        {weekDeltas[stat.deltaKey] >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                                                        {Math.abs(weekDeltas[stat.deltaKey])}% vs last week
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-2xl font-bold text-[var(--text)]">{stat.value}</p>
-                                            <p className="text-sm text-[var(--text-muted)]">{stat.label}</p>
-                                        </div>
+                                        {sparkline && (stat.label === 'Total Applications' || stat.label === 'Profile Views') && (
+                                            <svg width="60" height="20" className="shrink-0 opacity-60">
+                                                <polyline
+                                                    points={stat.label === 'Total Applications' ? sparkline.applications : sparkline.views}
+                                                    fill="none"
+                                                    stroke={stat.label === 'Total Applications' ? '#10B981' : '#3B82F6'}
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                            </svg>
+                                        )}
                                     </div>
                                 </Card>
                             </Link>
                         ))
                     )}
                 </div>
+
+                {/* KPI Insights Row */}
+                {analytics?.summary && kpiCards.length > 0 && (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {kpiCards.map((kpi) => (
+                            <Card key={kpi.label} className="relative overflow-hidden">
+                                <div className="flex items-center gap-3">
+                                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${kpi.color}`}>
+                                        <kpi.icon className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xl font-bold text-[var(--text)]">{kpi.value}</p>
+                                        <p className="text-xs text-[var(--text-muted)]">{kpi.label}</p>
+                                    </div>
+                                </div>
+                                <p className="mt-2 text-[10px] text-[var(--text-muted)]">{kpi.description}</p>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+
+                {/* Top Performing Job Highlight */}
+                {topJob && (
+                    <Card className="border-[var(--success)]/20 bg-[var(--success-light)]/20">
+                        <div className="flex items-start gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--success-light)]">
+                                <Trophy className="h-6 w-6 text-[var(--success)]" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--success)]">Best Performing</span>
+                                </div>
+                                <Link href={ROUTES.EMPLOYER.JOB_DETAIL(topJob.jobId)} className="text-lg font-semibold text-[var(--text)] hover:text-primary transition-colors">
+                                    {topJob.title}
+                                </Link>
+                                <div className="mt-3 grid grid-cols-4 gap-4">
+                                    <div>
+                                        <p className="text-xs text-[var(--text-muted)]">Views</p>
+                                        <p className="text-lg font-bold text-[var(--text)]">{topJob.views}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-[var(--text-muted)]">Applications</p>
+                                        <p className="text-lg font-bold text-[var(--text)]">{topJob.applications}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-[var(--text-muted)]">Hired</p>
+                                        <p className="text-lg font-bold text-[var(--success)]">{topJob.hiredCount}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-[var(--text-muted)]">Conversion</p>
+                                        <p className="text-lg font-bold text-primary">{topJob.conversionRate}%</p>
+                                    </div>
+                                </div>
+                                <div className="mt-3 h-2 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full bg-[var(--success)] transition-all"
+                                        style={{ width: `${Math.min(topJob.conversionRate, 100)}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                )}
+
+                {/* Hiring Trends Chart */}
+                {analytics?.trends && analytics.trends.length > 1 && (
+                    <Card
+                        header={
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <BarChart3 className="h-5 w-5 text-primary" />
+                                    <h2 className="text-lg font-semibold text-[var(--text)]">Hiring Trends</h2>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
+                                    <span className="flex items-center gap-1">
+                                        <span className="inline-block h-2 w-2 rounded-full bg-[#3B82F6]" /> Applications
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                        <span className="inline-block h-2 w-2 rounded-full bg-[#8B5CF6]" /> Profile Views
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                    >
+                        <AreaChart
+                            data={analytics.trends as unknown as Record<string, unknown>[]}
+                            xKey="period"
+                            yKey="applications"
+                            yKey2="profileViews"
+                            color="#3B82F6"
+                            color2="#8B5CF6"
+                            height={280}
+                        />
+                    </Card>
+                )}
+
+                {/* Source Distribution + Status Distribution */}
+                {analytics && (sourcePieData.length > 0 || statusPieData.length > 0) && (
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        {sourcePieData.length > 0 && (
+                            <Card
+                                header={<h2 className="text-lg font-semibold text-[var(--text)]">Application Sources</h2>}
+                            >
+                                <PieChart
+                                    data={sourcePieData}
+                                    height={250}
+                                    innerRadius={45}
+                                />
+                            </Card>
+                        )}
+                        {statusPieData.length > 0 && (
+                            <Card
+                                header={<h2 className="text-lg font-semibold text-[var(--text)]">Status Distribution</h2>}
+                            >
+                                <PieChart
+                                    data={statusPieData}
+                                    height={250}
+                                    innerRadius={45}
+                                />
+                            </Card>
+                        )}
+                    </div>
+                )}
+
+                {/* Top Skills in Jobs */}
+                {skillsBarData.length > 0 && (
+                    <Card
+                        header={
+                            <div className="flex items-center gap-2">
+                                <Target className="h-5 w-5 text-primary" />
+                                <h2 className="text-lg font-semibold text-[var(--text)]">Top Skills in Your Jobs</h2>
+                            </div>
+                        }
+                    >
+                        <BarChart
+                            data={skillsBarData as unknown as Record<string, unknown>[]}
+                            xKey="skill"
+                            bars={[{ key: 'count', color: '#3B82F6', name: 'Jobs Requiring' }]}
+                            height={280}
+                        />
+                    </Card>
+                )}
+
+                {/* Salary Competitiveness */}
+                {analytics?.salaryCompetitiveness && (
+                    <Card
+                        header={
+                            <div className="flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5 text-primary" />
+                                <h2 className="text-lg font-semibold text-[var(--text)]">Salary Competitiveness</h2>
+                            </div>
+                        }
+                    >
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="rounded-xl bg-[var(--bg-secondary)] p-5">
+                                <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Your Avg Offered</p>
+                                <p className="text-xl font-bold text-[var(--text)]">
+                                    {formatSalaryRange(analytics.salaryCompetitiveness.yourAvg?.min, analytics.salaryCompetitiveness.yourAvg?.max)}
+                                </p>
+                            </div>
+                            <div className="rounded-xl bg-[var(--bg-secondary)] p-5">
+                                <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Platform Average</p>
+                                <p className="text-xl font-bold text-primary">
+                                    {formatSalaryRange(analytics.salaryCompetitiveness.platformAvg?.min, analytics.salaryCompetitiveness.platformAvg?.max)}
+                                </p>
+                            </div>
+                        </div>
+                        {analytics.salaryCompetitiveness.yourAvg?.min > 0 && analytics.salaryCompetitiveness.platformAvg?.min > 0 && (() => {
+                            const yourMid = (analytics.salaryCompetitiveness.yourAvg.min + analytics.salaryCompetitiveness.yourAvg.max) / 2;
+                            const platMid = (analytics.salaryCompetitiveness.platformAvg.min + analytics.salaryCompetitiveness.platformAvg.max) / 2;
+                            const ratio = platMid > 0 ? ((yourMid / platMid) * 100) : 0;
+                            const isCompetitive = ratio >= 100;
+                            return (
+                                <div className="mt-4 flex items-center gap-3">
+                                    <div className="flex-1 h-3 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
+                                        <div
+                                            className={`h-full rounded-full transition-all ${isCompetitive ? 'bg-[#10B981]' : 'bg-[#F59E0B]'}`}
+                                            style={{ width: `${Math.min(ratio, 100)}%` }}
+                                        />
+                                    </div>
+                                    <span className={`text-sm font-medium ${isCompetitive ? 'text-[var(--success)]' : 'text-[var(--warning)]'}`}>
+                                        {Math.round(ratio)}%
+                                    </span>
+                                </div>
+                            );
+                        })()}
+                    </Card>
+                )}
+
+                {/* Recruitment Tools */}
+                <Card
+                    header={
+                        <div className="flex items-center gap-2">
+                            <Users className="h-5 w-5 text-primary" />
+                            <h2 className="text-lg font-semibold text-[var(--text)]">Recruitment Tools</h2>
+                        </div>
+                    }
+                >
+                    <div className="grid gap-3 sm:grid-cols-3">
+                        <Link href={ROUTES.EMPLOYER.CANDIDATES}>
+                            <div className="group flex items-center gap-3 rounded-lg border border-[var(--border)] p-4 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-light">
+                                    <Search className="h-5 w-5 text-primary" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-[var(--text)] group-hover:text-primary transition-colors">Search Candidates</p>
+                                    <p className="text-xs text-[var(--text-muted)]">Browse the talent pool</p>
+                                </div>
+                            </div>
+                        </Link>
+                        <Link href={ROUTES.EMPLOYER.SAVED_CANDIDATES}>
+                            <div className="group flex items-center gap-3 rounded-lg border border-[var(--border)] p-4 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
+                                    <Bookmark className="h-5 w-5 text-[var(--warning)]" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-[var(--text)] group-hover:text-primary transition-colors">Saved Candidates</p>
+                                    <p className="text-xs text-[var(--text-muted)]">Review your shortlisted talent</p>
+                                </div>
+                            </div>
+                        </Link>
+                        <Link href={ROUTES.EMPLOYER.APPLICATIONS}>
+                            <div className="group flex items-center gap-3 rounded-lg border border-primary/20 bg-primary-50/20 p-4 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--success-light)]">
+                                    <FileText className="h-5 w-5 text-[var(--success)]" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-[var(--text)] group-hover:text-primary transition-colors">All Applications</p>
+                                    <p className="text-xs text-[var(--text-muted)]">Manage applications across all jobs</p>
+                                </div>
+                            </div>
+                        </Link>
+                    </div>
+                </Card>
 
                 <div className="grid gap-6 lg:grid-cols-2">
                     {/* Recent Applications */}
@@ -210,7 +694,7 @@ export default function EmployerDashboard() {
                     </Card>
                 </div>
 
-                {/* Job Performance Chart */}
+                {/* Job Performance Chart (enhanced with hired + conversion) */}
                 {!isLoading && stats?.jobPerformance && stats.jobPerformance.length > 0 && (
                     <Card
                         header={
@@ -233,6 +717,57 @@ export default function EmployerDashboard() {
                             ]}
                             height={300}
                         />
+                    </Card>
+                )}
+
+                {/* Enhanced Job Performance Table (from analytics) */}
+                {analytics?.jobPerformance && analytics.jobPerformance.length > 0 && (
+                    <Card
+                        header={
+                            <div className="flex items-center gap-2">
+                                <Target className="h-5 w-5 text-primary" />
+                                <h2 className="text-lg font-semibold text-[var(--text)]">Hiring Performance by Job</h2>
+                            </div>
+                        }
+                    >
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-[var(--border)]">
+                                        <th className="pb-3 text-left font-medium text-[var(--text-secondary)]">Job Title</th>
+                                        <th className="pb-3 text-right font-medium text-[var(--text-secondary)]">Views</th>
+                                        <th className="pb-3 text-right font-medium text-[var(--text-secondary)]">Applications</th>
+                                        <th className="pb-3 text-right font-medium text-[var(--text-secondary)]">Hired</th>
+                                        <th className="pb-3 text-right font-medium text-[var(--text-secondary)]">Conversion</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[var(--border)]">
+                                    {analytics.jobPerformance.slice(0, 10).map((job) => (
+                                        <tr key={job.jobId} className="hover:bg-[var(--bg-secondary)] transition-colors">
+                                            <td className="py-3 pr-4">
+                                                <Link href={ROUTES.EMPLOYER.JOB_DETAIL(job.jobId)} className="font-medium text-[var(--text)] hover:text-primary truncate block max-w-[200px]">
+                                                    {job.title}
+                                                </Link>
+                                            </td>
+                                            <td className="py-3 text-right text-[var(--text-muted)]">{job.views}</td>
+                                            <td className="py-3 text-right text-[var(--text-muted)]">{job.applications}</td>
+                                            <td className="py-3 text-right">
+                                                <span className="font-medium text-[var(--success)]">{job.hiredCount}</span>
+                                            </td>
+                                            <td className="py-3 text-right">
+                                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                                    job.conversionRate >= 10 ? 'bg-[var(--success-light)] text-[var(--success)]' :
+                                                    job.conversionRate >= 5 ? 'bg-[var(--warning-light)] text-[var(--warning)]' :
+                                                    'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
+                                                }`}>
+                                                    {job.conversionRate}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </Card>
                 )}
 
@@ -328,47 +863,187 @@ export default function EmployerDashboard() {
                     )}
                 </Card>
 
+                {/* Pipeline Bottleneck Alert */}
+                {bottleneck && bottleneck.rate < 100 && (
+                    <Card className="border-[var(--warning)]/20 bg-[var(--warning-light)]/20">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
+                                <AlertTriangle className="h-5 w-5 text-[var(--warning)]" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-semibold text-[var(--text)]">Pipeline Bottleneck Detected</h3>
+                                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                    Biggest drop-off: <span className="font-semibold">{bottleneck.rate}%</span> conversion from{' '}
+                                    <span className="font-medium">{bottleneck.from}</span> → <span className="font-medium">{bottleneck.to}</span>.
+                                    Consider reviewing your {bottleneck.to.toLowerCase()} process to improve throughput.
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
+                )}
+
+                {/* Recent Activity Timeline */}
+                {analytics?.recentActivity && analytics.recentActivity.length > 0 && (
+                    <Card
+                        header={
+                            <div className="flex items-center gap-2">
+                                <Activity className="h-5 w-5 text-primary" />
+                                <h2 className="text-lg font-semibold text-[var(--text)]">Recent Activity</h2>
+                            </div>
+                        }
+                    >
+                        <div className="space-y-0">
+                            {analytics.recentActivity.slice(0, 5).map((activity, i) => {
+                                const badgeColor = statusColorMap[APPLICATION_STATUS_COLORS[activity.status] || 'neutral'] || 'neutral';
+                                return (
+                                    <div key={i} className="flex gap-3 py-3 border-b border-[var(--border)] last:border-0">
+                                        <div className="relative flex flex-col items-center">
+                                            <div className={`h-2.5 w-2.5 rounded-full mt-1.5 ${activityDotColor(activity.status)}`} />
+                                            {i < Math.min(analytics.recentActivity.length, 5) - 1 && (
+                                                <div className="flex-1 w-px bg-[var(--border)] mt-1" />
+                                            )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm text-[var(--text)]">
+                                                <span className="font-medium">{activity.candidateName}</span> — <span className="font-medium">{activity.jobTitle}</span>
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <Badge variant={badgeColor} size="sm">
+                                                    {APPLICATION_STATUS_LABELS[activity.status] || activity.status}
+                                                </Badge>
+                                                <span className="text-xs text-[var(--text-muted)]">{formatRelativeDate(activity.date)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+                )}
+
+                {/* Notifications Preview */}
+                {notifications.length > 0 && (
+                    <Card
+                        header={
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Bell className="h-5 w-5 text-primary" />
+                                    <h2 className="text-lg font-semibold text-[var(--text)]">Notifications</h2>
+                                </div>
+                                <Link href={ROUTES.NOTIFICATIONS} className="text-sm text-primary hover:underline">
+                                    View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
+                                </Link>
+                            </div>
+                        }
+                    >
+                        <div className="divide-y divide-[var(--border)]">
+                            {notifications.slice(0, 5).map(n => {
+                                const NIcon = notificationTypeIcon(n.type);
+                                return (
+                                    <div key={n.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                                        <div className={`mt-0.5 shrink-0 ${notificationTypeColor(n.type)}`}>
+                                            <NIcon className="h-4 w-4" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <p className="text-sm font-medium text-[var(--text)]">{n.title}</p>
+                                                {!n.isRead && (
+                                                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-[var(--text-muted)] line-clamp-1">{n.message}</p>
+                                            <span className="text-[10px] text-[var(--text-muted)]">{formatRelativeDate(n.createdAt)}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+                )}
+
                 {/* Quick Actions */}
-                <div className="grid gap-4 sm:grid-cols-3">
-                    <Link href={ROUTES.EMPLOYER.POST_JOB}>
-                        <Card className="group hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-light">
-                                    <Plus className="h-5 w-5 text-primary" />
+                <div>
+                    <h2 className="mb-3 text-lg font-semibold text-[var(--text)]">Quick Actions</h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <Link href={ROUTES.EMPLOYER.POST_JOB}>
+                            <Card className="group hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-light">
+                                        <Plus className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-[var(--text)] group-hover:text-primary transition-colors">Post a Job</p>
+                                        <p className="text-xs text-[var(--text-muted)]">Create a new listing</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="font-medium text-[var(--text)] group-hover:text-primary transition-colors">Post a Job</p>
-                                    <p className="text-xs text-[var(--text-muted)]">Create a new listing</p>
+                            </Card>
+                        </Link>
+                        <Link href={ROUTES.EMPLOYER.CANDIDATES}>
+                            <Card className="group hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--success-light)]">
+                                        <Users className="h-5 w-5 text-[var(--success)]" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-[var(--text)] group-hover:text-primary transition-colors">Find Candidates</p>
+                                        <p className="text-xs text-[var(--text-muted)]">Search talent pool</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
-                    </Link>
-                    <Link href={ROUTES.EMPLOYER.CANDIDATES}>
-                        <Card className="group hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--success-light)]">
-                                    <Users className="h-5 w-5 text-[var(--success)]" />
+                            </Card>
+                        </Link>
+                        <Link href={ROUTES.EMPLOYER.SAVED_CANDIDATES}>
+                            <Card className="group hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">
+                                        <Bookmark className="h-5 w-5 text-[var(--warning)]" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-[var(--text)] group-hover:text-primary transition-colors">Saved Candidates</p>
+                                        <p className="text-xs text-[var(--text-muted)]">Review your shortlisted talent</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="font-medium text-[var(--text)] group-hover:text-primary transition-colors">Find Candidates</p>
-                                    <p className="text-xs text-[var(--text-muted)]">Search talent pool</p>
+                            </Card>
+                        </Link>
+                        <Link href={ROUTES.EMPLOYER.ANALYTICS}>
+                            <Card className="group hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--info-light)]">
+                                        <BarChart3 className="h-5 w-5 text-[var(--info)]" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-[var(--text)] group-hover:text-primary transition-colors">Analytics</p>
+                                        <p className="text-xs text-[var(--text-muted)]">Track your hiring performance</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
-                    </Link>
-                    <Link href={ROUTES.EMPLOYER.HELP}>
-                        <Card className="group hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">
-                                    <HelpCircle className="h-5 w-5 text-[var(--warning)]" />
+                            </Card>
+                        </Link>
+                        <Link href={ROUTES.EMPLOYER.SETTINGS}>
+                            <Card className="group hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
+                                        <Settings className="h-5 w-5 text-[var(--text-muted)]" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-[var(--text)] group-hover:text-primary transition-colors">Settings</p>
+                                        <p className="text-xs text-[var(--text-muted)]">Account, security & preferences</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="font-medium text-[var(--text)] group-hover:text-primary transition-colors">Help & Support</p>
-                                    <p className="text-xs text-[var(--text-muted)]">FAQs and support tickets</p>
+                            </Card>
+                        </Link>
+                        <Link href={ROUTES.EMPLOYER.HELP}>
+                            <Card className="group hover:border-primary/30 hover:shadow-md transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">
+                                        <HelpCircle className="h-5 w-5 text-[var(--warning)]" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-[var(--text)] group-hover:text-primary transition-colors">Help & Support</p>
+                                        <p className="text-xs text-[var(--text-muted)]">FAQs and support tickets</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
-                    </Link>
+                            </Card>
+                        </Link>
+                    </div>
                 </div>
             </div>
         </DashboardLayout>

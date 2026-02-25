@@ -33,11 +33,11 @@
   "license": "MIT",
   "lint-staged": {
     "backend/src/**/*.{ts,js}": [
-      "node backend/node_modules/eslint/bin/eslint.js --fix --config backend/eslint.config.mjs",
+      "node --max-old-space-size=8192 backend/node_modules/eslint/bin/eslint.js --fix --config backend/eslint.config.mjs",
       "prettier --write"
     ],
     "frontend/src/**/*.{ts,tsx,js,jsx}": [
-      "node frontend/node_modules/eslint/bin/eslint.js --fix --config frontend/eslint.config.mjs",
+      "node --max-old-space-size=4096 frontend/node_modules/eslint/bin/eslint.js --fix --config frontend/eslint.config.mjs",
       "prettier --write"
     ],
     "*.{md,yml,yaml}": [

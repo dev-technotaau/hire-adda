@@ -44,8 +44,8 @@ export const ticketService = {
         return res.data;
     },
 
-    async addMessage(ticketId: string, body: string, isInternal = false): Promise<ApiResponse<TicketMessage>> {
-        const res = await api.post(API.TICKETS.MESSAGES(ticketId), { body, isInternal });
+    async addMessage(ticketId: string, body: string, isInternal = false, subject?: string): Promise<ApiResponse<TicketMessage>> {
+        const res = await api.post(API.TICKETS.MESSAGES(ticketId), { body, isInternal, subject });
         return res.data;
     },
 

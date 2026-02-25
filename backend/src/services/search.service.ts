@@ -5,6 +5,7 @@ import { redis } from '../config/redis';
 import { prisma } from '../config/prisma';
 import { JobStatus } from '@prisma/client';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { isFeatureEnabled } from '../config/feature-flags';
 
 const tracer = trace.getTracer('search-service');
 
@@ -165,7 +166,7 @@ interface FacetBucket {
     count: number;
 }
 
-interface SearchFacets {
+export interface SearchFacets {
     [field: string]: FacetBucket[];
 }
 
@@ -261,6 +262,41 @@ class SearchService {
                         createdAt: { type: 'date' },
                         status: { type: 'keyword' },
                         location_geo: { type: 'geo_point' },
+                        // Enterprise fields
+                        functionalArea: { type: 'keyword' },
+                        ugRequired: { type: 'keyword' },
+                        pgRequired: { type: 'keyword' },
+                        specificDegrees: { type: 'keyword' },
+                        degreeSpecializations: { type: 'keyword' },
+                        salaryNegotiable: { type: 'boolean' },
+                        noticePeriodPreference: { type: 'keyword' },
+                        isConfidential: { type: 'boolean' },
+                        referenceCode: { type: 'keyword' },
+                        additionalLocations: { type: 'text', fields: { keyword: { type: 'keyword' } } },
+                        accommodationProvided: { type: 'boolean' },
+                        walkInStartDate: { type: 'date' },
+                        walkInEndDate: { type: 'date' },
+                        diversityTags: { type: 'keyword' },
+                        visaSponsorshipAvailable: { type: 'boolean' },
+                        backgroundCheckRequired: { type: 'boolean' },
+                        isPwdFriendly: { type: 'boolean' },
+                        passportRequired: { type: 'boolean' },
+                        drivingLicenseRequired: { type: 'keyword' },
+                        ageMin: { type: 'integer' },
+                        ageMax: { type: 'integer' },
+                        genderPreference: { type: 'keyword' },
+                        postingVisibility: { type: 'keyword' },
+                        applyMethod: { type: 'keyword' },
+                        scheduledPublishAt: { type: 'date' },
+                        // Display fields (already indexed but previously unmapped)
+                        companyLogo: { type: 'keyword' },
+                        companyIndustry: { type: 'keyword' },
+                        companyIsVerified: { type: 'boolean' },
+                        // Additional searchable fields
+                        benefits: { type: 'text', analyzer: 'job_analyzer' },
+                        interviewProcess: { type: 'text' },
+                        expiresAt: { type: 'date' },
+                        bondDetails: { type: 'text' },
                     },
                 },
             });
@@ -345,6 +381,7 @@ class SearchService {
                         hasResume: { type: 'boolean' },
                         isEmailVerified: { type: 'boolean' },
                         isMobileVerified: { type: 'boolean' },
+                        isWhatsappVerified: { type: 'boolean' },
                         dateOfAvailability: { type: 'date' },
                         pronouns: { type: 'keyword' },
                         category: { type: 'keyword' },
@@ -370,6 +407,20 @@ class SearchService {
                         createdAt: { type: 'date' },
                         updatedAt: { type: 'date' },
                         location_geo: { type: 'geo_point' },
+                        // New structured fields for matching
+                        experienceLevel: { type: 'keyword' },
+                        highestEducationLevel: { type: 'keyword' },
+                        highestDegree: { type: 'keyword' },
+                        drivingLicenseType: { type: 'keyword' },
+                        isPhysicallyChallenged: { type: 'boolean' },
+                        disabilityPercentage: { type: 'integer' },
+                        travelWillingnessPercent: { type: 'integer' },
+                        ownVehicle: { type: 'boolean' },
+                        nationality: { type: 'keyword' },
+                        maritalStatus: { type: 'keyword' },
+                        hasVideoResume: { type: 'boolean' },
+                        languageProficiency: { type: 'nested', properties: { language: { type: 'keyword' }, proficiency: { type: 'keyword' } } },
+                        awards: { type: 'nested', properties: { title: { type: 'text' }, issuer: { type: 'text' } } },
                     },
                 },
             });
@@ -420,6 +471,14 @@ class SearchService {
                         careersPageUrl: { type: 'keyword' },
                         blogUrl: { type: 'keyword' },
                         location_geo: { type: 'geo_point' },
+                        // Additional employer fields
+                        benefits: { type: 'keyword' },
+                        numberOfOffices: { type: 'integer' },
+                        totalFundingRaised: { type: 'keyword' },
+                        companyCulture: { type: 'text' },
+                        diversityStatement: { type: 'text' },
+                        stockTicker: { type: 'keyword' },
+                        missionStatement: { type: 'text' },
                     },
                 },
             });
@@ -438,7 +497,7 @@ class SearchService {
             companyIndustry: job.company?.industry || null,
             companyIsVerified: job.company?.isVerified || false,
             location: job.location, type: job.type, industry: job.industry, department: job.department,
-            roleCategory: job.roleCategory, salaryMin: job.salaryMin, salaryMax: job.salaryMax,
+            roleCategory: job.roleCategory, salaryMin: job.salaryMin != null ? Number(job.salaryMin) : null, salaryMax: job.salaryMax != null ? Number(job.salaryMax) : null,
             salaryType: job.salaryType, salaryDisclosed: job.salaryDisclosed,
             experienceMin: job.experienceMin, experienceMax: job.experienceMax,
             experienceLevel: job.experienceLevel, educationRequired: job.educationRequired,
@@ -453,6 +512,22 @@ class SearchService {
             languagesRequired: job.languagesRequired, companyType: job.company?.companyType,
             companySize: job.company?.companySize, createdAt: job.createdAt, status: job.status,
             location_geo: job.latitude && job.longitude ? { lat: job.latitude, lon: job.longitude } : undefined,
+            // Enterprise fields
+            functionalArea: job.functionalArea, ugRequired: job.ugRequired, pgRequired: job.pgRequired,
+            specificDegrees: job.specificDegrees || [], degreeSpecializations: job.degreeSpecializations || [],
+            salaryNegotiable: job.salaryNegotiable, noticePeriodPreference: job.noticePeriodPreference || [],
+            isConfidential: job.isConfidential, referenceCode: job.referenceCode,
+            additionalLocations: job.additionalLocations || [], accommodationProvided: job.accommodationProvided,
+            walkInStartDate: job.walkInStartDate, walkInEndDate: job.walkInEndDate,
+            diversityTags: job.diversityTags || [], visaSponsorshipAvailable: job.visaSponsorshipAvailable,
+            backgroundCheckRequired: job.backgroundCheckRequired, isPwdFriendly: job.isPwdFriendly,
+            passportRequired: job.passportRequired, drivingLicenseRequired: job.drivingLicenseRequired,
+            ageMin: job.ageMin, ageMax: job.ageMax, genderPreference: job.genderPreference,
+            postingVisibility: job.postingVisibility, applyMethod: job.applyMethod,
+            scheduledPublishAt: job.scheduledPublishAt,
+            // Additional searchable fields
+            benefits: job.benefits, interviewProcess: job.interviewProcess,
+            expiresAt: job.expiresAt, bondDetails: job.bondDetails,
         };
         await (elasticClient.index as any)({ index: ELASTIC_INDICES.JOBS, id: job.id, document });
     }
@@ -470,8 +545,8 @@ class SearchService {
             experienceYears: profile.experienceYears, totalExperienceMonths: profile.totalExperienceMonths,
             currentRole: profile.currentRole, currentCompany: profile.currentCompany,
             currentIndustry: profile.currentIndustry, currentDepartment: profile.currentDepartment,
-            functionalArea: profile.functionalArea, currSalary: profile.currSalary,
-            expectedSalaryMin: profile.expectedSalaryMin, expectedSalaryMax: profile.expectedSalaryMax,
+            functionalArea: profile.functionalArea, currSalary: profile.currSalary != null ? Number(profile.currSalary) : null,
+            expectedSalaryMin: profile.expectedSalaryMin != null ? Number(profile.expectedSalaryMin) : null, expectedSalaryMax: profile.expectedSalaryMax != null ? Number(profile.expectedSalaryMax) : null,
             salaryCurrency: profile.salaryCurrency, languages: profile.languages,
             education: profile.education, experience: profile.experience,
             gender: profile.gender, noticePeriod: profile.noticePeriod,
@@ -483,7 +558,8 @@ class SearchService {
             certifications: profile.certifications, skillsWithProficiency: profile.skillsWithProficiency,
             servingNoticePeriod: profile.servingNoticePeriod, dob: profile.dob,
             hasResume: !!profile.resume, isEmailVerified: profile.user?.isEmailVerified,
-            isMobileVerified: profile.user?.isMobileVerified, dateOfAvailability: profile.dateOfAvailability,
+            isMobileVerified: profile.user?.isMobileVerified, isWhatsappVerified: profile.user?.isWhatsappVerified,
+            dateOfAvailability: profile.dateOfAvailability,
             pronouns: profile.pronouns, category: profile.category,
             alternateEmail: profile.alternateEmail, openToWork: profile.openToWork,
             careerBreakType: profile.careerBreakType, isVeteran: profile.isVeteran || false,
@@ -498,6 +574,15 @@ class SearchService {
             lastActiveAt: profile.user?.lastActiveAt, createdAt: profile.createdAt,
             updatedAt: profile.updatedAt,
             location_geo: profile.latitude && profile.longitude ? { lat: profile.latitude, lon: profile.longitude } : undefined,
+            // New structured fields for matching
+            experienceLevel: profile.experienceLevel, highestEducationLevel: profile.highestEducationLevel,
+            highestDegree: profile.highestDegree, drivingLicenseType: profile.drivingLicenseType,
+            isPhysicallyChallenged: profile.isPhysicallyChallenged || false,
+            disabilityPercentage: profile.disabilityPercentage,
+            travelWillingnessPercent: profile.travelWillingnessPercent,
+            ownVehicle: profile.ownVehicle || false, nationality: profile.nationality,
+            maritalStatus: profile.maritalStatus, hasVideoResume: !!profile.videoResumeUrl,
+            languageProficiency: profile.languageProficiency, awards: profile.awards,
         };
         await (elasticClient.index as any)({ index: ELASTIC_INDICES.CANDIDATES, id: profile.id, document });
     }
@@ -521,6 +606,11 @@ class SearchService {
             parentCompany: company.parentCompany, whyWorkForUs: company.whyWorkForUs,
             careersPageUrl: company.careersPageUrl, blogUrl: company.blogUrl,
             location_geo: company.latitude && company.longitude ? { lat: company.latitude, lon: company.longitude } : undefined,
+            // Additional employer fields
+            benefits: company.benefits || [], numberOfOffices: company.numberOfOffices,
+            totalFundingRaised: company.totalFundingRaised, companyCulture: company.companyCulture,
+            diversityStatement: company.diversityStatement, stockTicker: company.stockTicker,
+            missionStatement: company.missionStatement,
         };
         await (elasticClient.index as any)({ index: ELASTIC_INDICES.EMPLOYERS, id: company.id, document });
     }
@@ -954,17 +1044,33 @@ class SearchService {
     // ─── Search Jobs (with aggregations + highlighting) ─────────────────
 
     async searchJobs(query: any, filters: any = {}) {
+        if (!await isFeatureEnabled('enableElasticsearch')) {
+            logger.debug('Elasticsearch disabled via feature flag — returning empty search results');
+            return { hits: [], total: 0, facets: {} };
+        }
+
         const must: any[] = [];
         const filter: any[] = [];
 
         if (query) {
-            must.push({
-                multi_match: {
-                    query,
-                    fields: ['title^3', 'title.autocomplete', 'description', 'requirements', 'keyResponsibilities', 'companyName^2', 'skills^2', 'skills.text^2', 'tags'],
-                    fuzziness: 'AUTO', prefix_length: 1, max_expansions: 50, type: 'best_fields',
-                },
-            });
+            const BOOLEAN_OPS_RE = /\b(AND|OR|NOT)\b|[+\-"()]/;
+            if (BOOLEAN_OPS_RE.test(query)) {
+                must.push({
+                    simple_query_string: {
+                        query,
+                        fields: ['title^3', 'title.autocomplete', 'description', 'requirements', 'keyResponsibilities', 'companyName^2', 'skills^2', 'skills.text^2', 'tags'],
+                        default_operator: 'AND',
+                    },
+                });
+            } else {
+                must.push({
+                    multi_match: {
+                        query,
+                        fields: ['title^3', 'title.autocomplete', 'description', 'requirements', 'keyResponsibilities', 'companyName^2', 'skills^2', 'skills.text^2', 'tags'],
+                        fuzziness: 'AUTO', prefix_length: 1, max_expansions: 50, type: 'best_fields',
+                    },
+                });
+            }
         }
 
         if (filters.location) filter.push({ term: { 'location.keyword': filters.location } });
@@ -992,8 +1098,24 @@ class SearchService {
         if (filters.urgencyLevel) filter.push({ term: { urgencyLevel: filters.urgencyLevel } });
         if (filters.isFeatured !== undefined) filter.push({ term: { isFeatured: filters.isFeatured } });
         if (filters.isWalkIn !== undefined) filter.push({ term: { isWalkIn: filters.isWalkIn } });
+        if (filters.roleCategory) filter.push({ term: { roleCategory: filters.roleCategory } });
+        if (filters.salaryType) filter.push({ term: { salaryType: filters.salaryType } });
+        if (filters.expiresWithinDays) filter.push({ range: { expiresAt: { gte: 'now', lte: `now+${filters.expiresWithinDays}d` } } });
         if (filters.latitude && filters.longitude && filters.radiusKm) {
             filter.push({ geo_distance: { distance: `${filters.radiusKm}km`, location_geo: { lat: filters.latitude, lon: filters.longitude } } });
+        }
+        // Enterprise filters
+        if (filters.functionalArea) filter.push({ term: { functionalArea: filters.functionalArea } });
+        if (filters.noticePeriodPreference?.length > 0) filter.push({ terms: { noticePeriodPreference: filters.noticePeriodPreference } });
+        if (filters.isPwdFriendly !== undefined) filter.push({ term: { isPwdFriendly: filters.isPwdFriendly } });
+        if (filters.visaSponsorshipAvailable !== undefined) filter.push({ term: { visaSponsorshipAvailable: filters.visaSponsorshipAvailable } });
+        if (filters.genderPreference) filter.push({ term: { genderPreference: filters.genderPreference } });
+        if (filters.diversityTags?.length > 0) filter.push({ terms: { diversityTags: filters.diversityTags } });
+        // Filter out INTERNAL-only postings for candidate searches (default to PUBLIC + BOTH)
+        if (filters.postingVisibility) {
+            filter.push({ term: { postingVisibility: filters.postingVisibility } });
+        } else {
+            filter.push({ terms: { postingVisibility: ['PUBLIC', 'BOTH'] } });
         }
         filter.push({ term: { status: JOB_STATUS.OPEN } });
 
@@ -1012,6 +1134,7 @@ class SearchService {
         if (filters.sortBy === 'distance' && filters.latitude && filters.longitude) sort.push({ _geo_distance: { location_geo: { lat: filters.latitude, lon: filters.longitude }, order: 'asc', unit: 'km' } });
         else if (filters.sortBy === 'date') sort.push({ createdAt: 'desc' });
         else if (filters.sortBy === 'salary') sort.push({ salaryMax: 'desc' });
+        else if (filters.sortBy === 'salary_asc') sort.push({ salaryMin: 'asc' });
 
         const aggs: any = {
             workMode: { terms: { field: 'workMode', size: 10 } },
@@ -1042,6 +1165,11 @@ class SearchService {
                 { key: 'Last 7 days', from: 'now-7d/d' }, { key: 'Last 14 days', from: 'now-14d/d' },
                 { key: 'Last 30 days', from: 'now-30d/d' },
             ] } },
+            // Enterprise aggregations
+            functionalArea: { terms: { field: 'functionalArea', size: 25 } },
+            noticePeriodPreference: { terms: { field: 'noticePeriodPreference', size: 10 } },
+            diversityTags: { terms: { field: 'diversityTags', size: 20 } },
+            postingVisibility: { terms: { field: 'postingVisibility', size: 5 } },
         };
 
         const searchParams: any = {
@@ -1112,6 +1240,11 @@ class SearchService {
     // ─── Search Candidates (with aggregations + highlighting) ───────────
 
     async searchCandidates(query: any, filters: any = {}) {
+        if (!await isFeatureEnabled('enableElasticsearch')) {
+            logger.debug('Elasticsearch disabled via feature flag — returning empty search results');
+            return { hits: [], total: 0, facets: {} };
+        }
+
         const must: any[] = [];
         const filter: any[] = [];
 
@@ -1123,7 +1256,33 @@ class SearchService {
                 designation: ['currentRole^3', 'headline^2'],
                 company: ['currentCompany^3'],
             };
-            must.push({ multi_match: { query, fields: scopeFieldMap[filters.keywordScope] || scopeFieldMap.all, fuzziness: 'AUTO', prefix_length: 1, max_expansions: 50, type: 'best_fields', operator: filters.keywordOperator === 'and' ? 'and' : 'or' } });
+
+            // Parse query for NOT operators
+            const terms = query.split(/\s+/);
+            const mustTerms: string[] = [];
+            const mustNotTerms: string[] = [];
+
+            for (const term of terms) {
+                if (term.startsWith('NOT ') || term.startsWith('-')) {
+                    // Extract the actual term (remove NOT or -)
+                    const negTerm = term.replace(/^(NOT |-)/i, '').trim();
+                    if (negTerm) mustNotTerms.push(negTerm);
+                } else if (term.trim()) {
+                    mustTerms.push(term);
+                }
+            }
+
+            const fields = scopeFieldMap[filters.keywordScope] || scopeFieldMap.all;
+
+            // Add positive terms to must clause
+            if (mustTerms.length > 0) {
+                must.push({ multi_match: { query: mustTerms.join(' '), fields, fuzziness: 'AUTO', prefix_length: 1, max_expansions: 50, type: 'best_fields', operator: filters.keywordOperator === 'and' ? 'and' : 'or' } });
+            }
+
+            // Add negative terms to must_not clause
+            if (mustNotTerms.length > 0) {
+                filter.push({ bool: { must_not: mustNotTerms.map(term => ({ multi_match: { query: term, fields } })) } });
+            }
         }
 
         if (filters.skills?.length > 0) filter.push({ terms: { skills: filters.skills } });
@@ -1188,6 +1347,14 @@ class SearchService {
         if (filters.category) filter.push({ term: { category: filters.category } });
         if (filters.isVeteran === 'true') filter.push({ term: { isVeteran: true } });
         if (filters.careerBreakType) filter.push({ term: { careerBreakType: filters.careerBreakType } });
+        if (filters.experienceLevel) filter.push({ term: { experienceLevel: filters.experienceLevel } });
+        if (filters.highestEducationLevel) filter.push({ term: { highestEducationLevel: filters.highestEducationLevel } });
+        if (filters.highestDegree) filter.push({ term: { highestDegree: filters.highestDegree } });
+        if (filters.functionalArea) filter.push({ term: { functionalArea: filters.functionalArea } });
+        if (filters.drivingLicenseType) filter.push({ term: { drivingLicenseType: filters.drivingLicenseType } });
+        if (filters.isPhysicallyChallenged !== undefined) filter.push({ term: { isPhysicallyChallenged: filters.isPhysicallyChallenged } });
+        if (filters.nationality) filter.push({ term: { nationality: filters.nationality } });
+        if (filters.travelWillingnessMin) filter.push({ range: { travelWillingnessPercent: { gte: filters.travelWillingnessMin } } });
         if (filters.itSkill) filter.push({ nested: { path: 'itSkills', query: { bool: { should: [{ term: { 'itSkills.technology': filters.itSkill } }, { match: { 'itSkills.technology.text': filters.itSkill } }] } } } });
         if (filters.workPermit) filter.push({ bool: { should: [{ wildcard: { visaStatus: { value: `*${filters.workPermit}*`, case_insensitive: true } } }, { wildcard: { workPermitStatus: { value: `*${filters.workPermit}*`, case_insensitive: true } } }] } });
         if (filters.educationLevel) {
@@ -1209,7 +1376,37 @@ class SearchService {
             : { bool: { must, filter } };
 
         const candidateSort: any[] = [];
-        if (filters.sortBy === 'distance' && filters.latitude && filters.longitude) candidateSort.push({ _geo_distance: { location_geo: { lat: filters.latitude, lon: filters.longitude }, order: 'asc', unit: 'km' } });
+
+        // Sorting support
+        switch (filters.sortBy) {
+            case 'experience':
+                candidateSort.push({ experienceYears: { order: 'desc' } });
+                break;
+            case 'experience_asc':
+                candidateSort.push({ experienceYears: { order: 'asc' } });
+                break;
+            case 'salary':
+                candidateSort.push({ expectedSalaryMax: { order: 'desc', missing: '_last' } });
+                break;
+            case 'salary_asc':
+                candidateSort.push({ expectedSalaryMin: { order: 'asc', missing: '_last' } });
+                break;
+            case 'profileUpdated':
+                candidateSort.push({ updatedAt: { order: 'desc' } });
+                break;
+            case 'lastActive':
+                candidateSort.push({ lastActiveAt: { order: 'desc', missing: '_last' } });
+                break;
+            case 'distance':
+                if (filters.latitude && filters.longitude) {
+                    candidateSort.push({ _geo_distance: { location_geo: { lat: filters.latitude, lon: filters.longitude }, order: 'asc', unit: 'km' } });
+                }
+                break;
+            case 'relevance':
+            default:
+                // ES default _score sorting (most relevant first)
+                break;
+        }
 
         const aggs: any = {
             workStatus: { terms: { field: 'workStatus', size: 10 } },
@@ -1237,6 +1434,10 @@ class SearchService {
             ] } },
             openToWork: { terms: { field: 'openToWork', size: 5 } },
             category: { terms: { field: 'category', size: 10 } },
+            experienceLevel: { terms: { field: 'experienceLevel', size: 10 } },
+            highestEducationLevel: { terms: { field: 'highestEducationLevel', size: 10 } },
+            functionalArea: { terms: { field: 'functionalArea', size: 25 } },
+            drivingLicenseType: { terms: { field: 'drivingLicenseType', size: 10 } },
         };
 
         const params: any = {
@@ -1296,6 +1497,8 @@ class SearchService {
                         avatar: null,
                         isEmailVerified: s.isEmailVerified || false,
                         isMobileVerified: s.isMobileVerified || false,
+                        isWhatsappVerified: s.isWhatsappVerified || false,
+                        lastActiveAt: s.lastActiveAt || null,
                     },
                     _score: hit._score,
                     _highlight: hit.highlight || {},
@@ -1318,12 +1521,31 @@ class SearchService {
         if (filters.companyType) filter.push({ term: { companyType: filters.companyType } });
         if (filters.isVerified !== undefined) filter.push({ term: { isVerified: filters.isVerified } });
         if (filters.location) filter.push({ bool: { should: [{ term: { 'headquarters.keyword': filters.location } }, { term: { locations: filters.location } }, { term: { city: filters.location } }] } });
+        if (filters.fundingStage) filter.push({ term: { fundingStage: filters.fundingStage } });
+        if (filters.subIndustry) filter.push({ term: { subIndustry: filters.subIndustry } });
+        if (filters.latitude && filters.longitude && filters.radiusKm) filter.push({ geo_distance: { distance: `${filters.radiusKm}km`, location_geo: { lat: filters.latitude, lon: filters.longitude } } });
 
-        const result = await (elasticClient.search as any)({ index: ELASTIC_INDICES.EMPLOYERS, query: { bool: { must, filter } }, from: filters.from || 0, size: filters.size || 20 });
+        const aggs: any = {
+            industry: { terms: { field: 'industry', size: 20 } },
+            companyType: { terms: { field: 'companyType', size: 10 } },
+            companySize: { terms: { field: 'companySize', size: 10 } },
+            fundingStage: { terms: { field: 'fundingStage', size: 10 } },
+            subIndustry: { terms: { field: 'subIndustry', size: 20 } },
+            topLocations: { terms: { field: 'city', size: 20 } },
+        };
+
+        const result = await (elasticClient.search as any)({ index: ELASTIC_INDICES.EMPLOYERS, query: { bool: { must, filter } }, aggs, from: filters.from || 0, size: filters.size || 20 });
+
+        const facets: SearchFacets = {};
+        for (const [key, agg] of Object.entries(result.aggregations || {})) {
+            const d = agg as any;
+            if (d.buckets) facets[key] = d.buckets.map((b: any) => ({ key: b.key_as_string || b.key, count: b.doc_count }));
+        }
 
         return {
             hits: result.hits.hits.map((hit: any) => ({ ...hit._source, _score: hit._score })),
             total: result.hits.total.value,
+            facets,
         };
     }
 
@@ -1378,7 +1600,7 @@ class SearchService {
 
             // Backfill candidates
             const candidates = await prisma.candidateProfile.findMany({
-                include: { user: { select: { firstName: true, lastName: true, isEmailVerified: true, isMobileVerified: true, lastActiveAt: true } } },
+                include: { user: { select: { firstName: true, lastName: true, isEmailVerified: true, isMobileVerified: true, isWhatsappVerified: true, lastActiveAt: true } } },
             });
             let candidateCount = 0;
             for (const candidate of candidates) {

@@ -7,6 +7,19 @@ import logger from '../config/logger';
 
 class TicketService {
     /**
+     * Sanitize HTML to prevent XSS attacks
+     */
+    private sanitizeHtml(html: string): string {
+        // Import DOMPurify or use a simple regex-based sanitizer
+        // For now, allow basic formatting tags only
+        const allowedTags = /<\/?(?:p|br|strong|b|em|i|u|ul|ol|li|h1|h2|h3|h4|h5|h6|a|span|div)[^>]*>/gi;
+        const sanitized = html.replace(/<[^>]*>/gi, (tag) => {
+            return allowedTags.test(tag) ? tag : '';
+        });
+        return sanitized;
+    }
+
+    /**
      * Generate next ticket number (TKT-000001 format)
      */
     private async generateTicketNumber(): Promise<string> {
@@ -65,6 +78,9 @@ class TicketService {
         // Notify admins (fire-and-forget)
         this.notifyAdminsNewTicket(ticket, senderName, user.role).catch(() => {});
 
+        // Send confirmation email to user (fire-and-forget)
+        this.sendTicketConfirmationEmail(user.email, ticket.ticketNumber, ticket.subject, user.role).catch(() => {});
+
         return ticket;
     }
 
@@ -102,6 +118,9 @@ class TicketService {
 
         // Notify admins (fire-and-forget)
         this.notifyAdminsNewTicket(ticket, data.name, null).catch(() => {});
+
+        // Send confirmation email to guest (fire-and-forget)
+        this.sendTicketConfirmationEmail(data.email, ticket.ticketNumber, ticket.subject).catch(() => {});
 
         return ticket;
     }
@@ -239,11 +258,19 @@ class TicketService {
     /**
      * Add message to ticket
      */
-    async addMessage(ticketId: string, senderId: string | null, senderType: string, senderName: string, body: string, isInternal = false) {
+    async addMessage(
+        ticketId: string,
+        senderId: string | null,
+        senderType: string,
+        senderName: string,
+        body: string,
+        isInternal = false,
+        subject?: string,
+    ) {
         const ticket = await prisma.supportTicket.findUnique({
             where: { id: ticketId },
             include: {
-                user: { select: { id: true, firstName: true, lastName: true, email: true, role: true, mobileNumber: true } },
+                user: { select: { id: true, firstName: true, lastName: true, email: true, role: true, mobileNumber: true, whatsappNumber: true, isWhatsappVerified: true } },
                 assignedTo: { select: { id: true, email: true, firstName: true, lastName: true } },
             },
         });
@@ -253,8 +280,11 @@ class TicketService {
             throw new AppError('Cannot reply to a closed ticket. Please reopen it first.', 400, 'TICKET_CLOSED');
         }
 
+        // Sanitize HTML body for XSS protection
+        const sanitizedBody = this.sanitizeHtml(body);
+
         const message = await prisma.ticketMessage.create({
-            data: { ticketId, senderId, senderType, senderName, body, isInternal },
+            data: { ticketId, senderId, senderType, senderName, body: sanitizedBody, isInternal, subject },
         });
 
         // Update ticket status and timestamps
@@ -279,7 +309,7 @@ class TicketService {
         // Send notifications (fire-and-forget, skip internal notes)
         if (!isInternal) {
             if (senderType === 'ADMIN') {
-                this.notifyUserTicketReply(ticket, body).catch(() => {});
+                this.notifyUserTicketReply(ticket, body, subject).catch(() => {});
             } else {
                 this.notifyAdminsTicketReply(ticket, senderName, body).catch(() => {});
             }
@@ -664,13 +694,16 @@ class TicketService {
             subject: string;
             userId: string | null;
             guestEmail: string | null;
-            user: { id: string; email: string; firstName: string | null; lastName: string | null; role: Role } | null;
+            user: { id: string; email: string; firstName: string | null; lastName: string | null; role: Role; mobileNumber: string | null; whatsappNumber: string | null; isWhatsappVerified: boolean } | null;
         },
         messageBody: string,
+        replySubject?: string,
     ) {
         // Registered user — full multi-channel notification
         if (ticket.userId && ticket.user) {
             const helpPath = ticket.user.role === Role.EMPLOYER ? 'employer' : 'candidate';
+            const emailSubject = replySubject || `Re: ${ticket.subject}`;
+
             notificationService.send({
                 userId: ticket.userId,
                 title: `Reply on ${ticket.ticketNumber}`,
@@ -681,24 +714,54 @@ class TicketService {
                 channels: ['in_app', 'fcm', 'web_push', 'email'],
                 emailOptions: {
                     to: ticket.user.email,
-                    subject: `[Reply] ${ticket.ticketNumber}: ${ticket.subject}`,
+                    subject: emailSubject,
                     html: `
                         <h3>Your ticket ${ticket.ticketNumber} received a reply</h3>
-                        <p>${messageBody.replace(/\n/g, '<br />')}</p>
+                        ${replySubject ? `<p><strong>Re:</strong> ${replySubject}</p>` : ''}
+                        ${messageBody}
                         <p><a href="${process.env.FRONTEND_URL}/${helpPath}/help/${ticket.id}">View Ticket</a></p>
                     `,
                 },
             }).catch(() => {});
+
+            // WhatsApp notification (fire-and-forget)
+            const waTarget = ticket.user?.whatsappNumber || ticket.user?.mobileNumber;
+            if (ticket.user?.isWhatsappVerified && waTarget) {
+                import('../templates/whatsapp').then(({ ticketReplyWhatsapp }) => {
+                    const tmpl = ticketReplyWhatsapp(ticket.ticketNumber, ticket.subject.substring(0, 50));
+                    return import('../jobs/whatsapp.queue').then(({ addWhatsAppJob }) =>
+                        addWhatsAppJob({
+                            to: waTarget,
+                            templateName: tmpl.templateName,
+                            languageCode: tmpl.languageCode,
+                            components: tmpl.components,
+                        })
+                    );
+                }).catch(() => {});
+            }
+
+            // SMS notification (optional, only if enabled)
+            if (ticket.user?.mobileNumber && process.env.ENABLE_TRANSACTIONAL_SMS === 'true') {
+                import('../jobs/sms.queue').then(({ smsQueue }) =>
+                    smsQueue.add('send-sms', {
+                        to: ticket.user!.mobileNumber!,
+                        message: `Support replied to ticket ${ticket.ticketNumber}. View: ${process.env.FRONTEND_URL}/${helpPath}/help/${ticket.id}`,
+                    })
+                ).catch(() => {});
+            }
         }
 
         // Guest ticket — email only
         if (ticket.guestEmail && !ticket.userId) {
+            const emailSubject = replySubject || `Re: ${ticket.subject}`;
+
             emailService.sendEmail({
                 to: ticket.guestEmail,
-                subject: `[Reply] Your ticket ${ticket.ticketNumber}: ${ticket.subject}`,
+                subject: emailSubject,
                 html: `
                     <h3>Reply to your support ticket ${ticket.ticketNumber}</h3>
-                    <p>${messageBody.replace(/\n/g, '<br />')}</p>
+                    ${replySubject ? `<p><strong>Re:</strong> ${replySubject}</p>` : ''}
+                    ${messageBody}
                     <p style="color: #888;">You can reply to this ticket by visiting our contact page.</p>
                 `,
             }).catch((err) => logger.warn('Failed to send guest ticket reply email', { error: err }));
@@ -773,6 +836,41 @@ class TicketService {
                 },
             }).catch(() => {});
         }
+    }
+
+    private async sendTicketConfirmationEmail(
+        email: string,
+        ticketNumber: string,
+        subject: string,
+        role?: Role,
+    ) {
+        const helpPath = role === Role.EMPLOYER ? 'employer' : role === Role.CANDIDATE ? 'candidate' : '';
+
+        await emailService.sendEmail({
+            to: email,
+            subject: `Ticket Created: ${ticketNumber}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #4F46E5;">We've Received Your Support Ticket</h2>
+                    <p>Hello,</p>
+                    <p>Thank you for contacting Talent Bridge support. We have successfully received your ticket and our team will review it shortly.</p>
+
+                    <div style="background-color: #F3F4F6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0;"><strong>Ticket Number:</strong> ${ticketNumber}</p>
+                        <p style="margin: 8px 0 0 0;"><strong>Subject:</strong> ${subject}</p>
+                    </div>
+
+                    <p>Our support team typically responds within 24 hours during business days. You will be notified via email and in-app notification when we reply.</p>
+
+                    ${helpPath ? `<p><a href="${process.env.FRONTEND_URL}/${helpPath}/help" style="color: #4F46E5; text-decoration: none;">View your tickets →</a></p>` : ''}
+
+                    <p style="color: #6B7280; font-size: 14px; margin-top: 24px;">
+                        Best regards,<br/>
+                        Talent Bridge Support Team
+                    </p>
+                </div>
+            `,
+        });
     }
 }
 

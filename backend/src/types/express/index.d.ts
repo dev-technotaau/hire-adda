@@ -5,7 +5,7 @@ declare global {
         interface User {
             id: string;
             email: string;
-            role: string; // Using string to match Prisma Role enum value
+            role: Role;
             firstName?: string | null;
             lastName?: string | null;
             isEmailVerified?: boolean;

@@ -2,7 +2,7 @@ import prisma from '../config/prisma';
 import { AlertFrequency } from '@prisma/client';
 import { AppError } from '../middleware/error';
 import { jobService } from './job.service';
-import { notificationService } from './notification.service';
+import { notificationService, type NotificationChannel } from './notification.service';
 import logger from '../config/logger';
 import type { Prisma } from '@prisma/client';
 
@@ -112,7 +112,7 @@ export const jobAlertService = {
                 frequency: { not: 'OFF' },
             },
             include: {
-                user: { select: { id: true, firstName: true, email: true } },
+                user: { select: { id: true, firstName: true, email: true, isEmailVerified: true, mobileNumber: true, isWhatsappVerified: true, whatsappNumber: true } },
             },
         });
 
@@ -134,15 +134,59 @@ export const jobAlertService = {
                 const matchCount = result.pagination?.total || 0;
 
                 if (matchCount > 0) {
-                    // Send notification
+                    const alertTitle = `${matchCount} new job${matchCount > 1 ? 's' : ''} matching "${alert.name}"`;
+                    const alertMessage = `Your job alert "${alert.name}" found ${matchCount} new matching job${matchCount > 1 ? 's' : ''}.`;
+                    const channels: NotificationChannel[] = ['in_app', 'fcm', 'web_push'];
+                    let emailOptions;
+                    let smsOptions;
+                    let whatsappOptions;
+
+                    const frontendUrl = process.env.FRONTEND_URL || 'https://talentbridge.com';
+
+                    if (alert.user.isEmailVerified && alert.user.email) {
+                        channels.push('email');
+                        const { jobAlert: jobAlertTemplate } = await import('../templates/email/job');
+                        const jobs = (result.jobs || []).slice(0, 5).map((j: any) => ({
+                            title: j.title,
+                            company: j.company?.companyName || 'Unknown',
+                            location: j.location || undefined,
+                            link: `${frontendUrl}/candidate/jobs/${j.id}`,
+                        }));
+                        const tmpl = jobAlertTemplate(alert.user.firstName || 'Candidate', jobs);
+                        emailOptions = { to: alert.user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
+                    }
+
+                    if (alert.user.mobileNumber) {
+                        channels.push('sms');
+                        smsOptions = { to: alert.user.mobileNumber, body: `${alertTitle}. Check them at ${frontendUrl}/candidate/job-alerts` };
+                    }
+
+                    const whatsappTarget = alert.user.whatsappNumber || alert.user.mobileNumber;
+                    if (alert.user.isWhatsappVerified && whatsappTarget) {
+                        channels.push('whatsapp');
+                        const topJob = (result.jobs || [])[0];
+                        whatsappOptions = {
+                            to: whatsappTarget,
+                            templateName: 'job_alert',
+                            components: [{ type: 'body' as const, parameters: [
+                                { type: 'text' as const, text: topJob?.title || 'New Job' },
+                                { type: 'text' as const, text: topJob?.company?.companyName || 'a company' },
+                                { type: 'text' as const, text: `${frontendUrl}/candidate/job-alerts` },
+                            ] }],
+                        };
+                    }
+
                     await notificationService.send({
                         userId: alert.userId,
-                        title: `${matchCount} new job${matchCount > 1 ? 's' : ''} matching "${alert.name}"`,
-                        message: `Your job alert "${alert.name}" found ${matchCount} new matching job${matchCount > 1 ? 's' : ''}.`,
+                        title: alertTitle,
+                        message: alertMessage,
                         type: 'INFO',
                         category: 'job_alert',
                         link: '/candidate/job-alerts',
-                        channels: ['in_app', 'fcm', 'web_push'],
+                        channels,
+                        emailOptions,
+                        smsOptions,
+                        whatsappOptions,
                     }).catch(() => { /* best effort */ });
                 }
 

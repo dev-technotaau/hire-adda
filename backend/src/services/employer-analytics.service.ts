@@ -18,6 +18,7 @@ interface EmployerAnalytics {
         savedCandidates: number;
         hiringVelocity: number;
     };
+    previousPeriodSummary: { totalJobsPosted: number; totalApplications: number; profileViews: number } | null;
     funnel: Record<string, number>;
     trends: Array<{ period: string; applications: number; profileViews: number; jobsPosted: number }>;
     statusDistribution: Array<{ status: string; count: number }>;
@@ -41,6 +42,11 @@ interface EmployerAnalytics {
         status: string;
         date: string;
     }>;
+    dayOfWeekDistribution: Array<{ day: string; count: number }>;
+    responseTimeDistribution: Array<{ bucket: string; count: number }>;
+    sourceEffectiveness: Array<{ source: string; total: number; interviews: number; offers: number; hires: number; interviewRate: number }>;
+    locationDistribution: Array<{ location: string; count: number }>;
+    timeToHireDistribution: Array<{ bucket: string; count: number }>;
 }
 
 function emptyAnalytics(): EmployerAnalytics {
@@ -50,6 +56,7 @@ function emptyAnalytics(): EmployerAnalytics {
             avgTimeToHireDays: null, overallHireRate: 0, profileViews: 0,
             savedCandidates: 0, hiringVelocity: 0,
         },
+        previousPeriodSummary: null,
         funnel: { applied: 0, viewed: 0, shortlisted: 0, interviewScheduled: 0, offered: 0, hired: 0, rejected: 0, withdrawn: 0 },
         trends: [],
         statusDistribution: [],
@@ -58,6 +65,11 @@ function emptyAnalytics(): EmployerAnalytics {
         salaryCompetitiveness: { yourAvg: { min: 0, max: 0 }, platformAvg: { min: 0, max: 0 } },
         jobPerformance: [],
         recentActivity: [],
+        dayOfWeekDistribution: [],
+        responseTimeDistribution: [],
+        sourceEffectiveness: [],
+        locationDistribution: [],
+        timeToHireDistribution: [],
     };
 }
 
@@ -78,6 +90,16 @@ export const employerAnalyticsService = {
         if (endDate) dateFilter.lte = new Date(endDate);
         const appliedAtFilter = Object.keys(dateFilter).length > 0 ? { appliedAt: dateFilter } : {};
 
+        // Compute previous period date range for comparison
+        const hasDates = dateFilter.gte && dateFilter.lte;
+        const rangeDays = hasDates
+            ? Math.ceil((dateFilter.lte!.getTime() - dateFilter.gte!.getTime()) / (1000 * 60 * 60 * 24))
+            : 30;
+        const prevEnd = new Date((dateFilter.gte || new Date()).getTime());
+        prevEnd.setDate(prevEnd.getDate() - 1);
+        const prevStart = new Date(prevEnd.getTime() - rangeDays * 24 * 60 * 60 * 1000);
+        const prevDateFilter = { gte: prevStart, lte: prevEnd };
+
         const [
             totalJobsPosted,
             activeJobs,
@@ -89,6 +111,11 @@ export const employerAnalyticsService = {
             jobPosts,
             recentApps,
             platformSalaryAvg,
+            allApplications,
+            viewedApps,
+            prevApplicationsCount,
+            prevProfileViewsCount,
+            prevJobsPostedCount,
         ] = await Promise.all([
             prisma.jobPost.count({ where: { companyId } }),
             prisma.jobPost.count({ where: { companyId, status: 'OPEN' } }),
@@ -116,7 +143,7 @@ export const employerAnalyticsService = {
             prisma.jobPost.findMany({
                 where: { companyId },
                 select: {
-                    id: true, title: true, views: true,
+                    id: true, title: true, views: true, location: true,
                     skillsRequired: true, salaryMin: true, salaryMax: true,
                     _count: { select: { applications: true } },
                 },
@@ -137,6 +164,33 @@ export const employerAnalyticsService = {
             prisma.jobPost.aggregate({
                 _avg: { salaryMin: true, salaryMax: true },
                 where: { salaryMin: { not: null }, status: 'OPEN' },
+            }),
+
+            // All applications with source+status (for source effectiveness & day-of-week)
+            prisma.jobApplication.findMany({
+                where: { job: { companyId }, ...appliedAtFilter },
+                select: { status: true, source: true, appliedAt: true },
+            }),
+
+            // Viewed applications (for response time distribution)
+            prisma.jobApplication.findMany({
+                where: { job: { companyId }, viewedAt: { not: null }, ...appliedAtFilter },
+                select: { appliedAt: true, viewedAt: true },
+            }),
+
+            // Previous period: application count
+            prisma.jobApplication.count({
+                where: { job: { companyId }, appliedAt: prevDateFilter },
+            }),
+
+            // Previous period: profile views count
+            prisma.profileView.count({
+                where: { profileUserId: userId, createdAt: prevDateFilter },
+            }),
+
+            // Previous period: jobs posted count
+            prisma.jobPost.count({
+                where: { companyId, createdAt: prevDateFilter },
             }),
         ]);
 
@@ -210,10 +264,10 @@ export const employerAnalyticsService = {
         const employerSalaries = jobPosts.filter(j => j.salaryMin != null);
         const yourAvg = {
             min: employerSalaries.length > 0
-                ? Math.round(employerSalaries.reduce((s, j) => s + j.salaryMin!, 0) / employerSalaries.length)
+                ? Math.round(employerSalaries.reduce((s, j) => s + Number(j.salaryMin!), 0) / employerSalaries.length)
                 : 0,
             max: employerSalaries.length > 0
-                ? Math.round(employerSalaries.reduce((s, j) => s + (j.salaryMax || j.salaryMin!), 0) / employerSalaries.length)
+                ? Math.round(employerSalaries.reduce((s, j) => s + Number(j.salaryMax || j.salaryMin!), 0) / employerSalaries.length)
                 : 0,
         };
 
@@ -253,6 +307,85 @@ export const employerAnalyticsService = {
             date: app.updatedAt.toISOString(),
         }));
 
+        // --- Previous period comparison ---
+        const previousPeriodSummary = {
+            totalJobsPosted: prevJobsPostedCount,
+            totalApplications: prevApplicationsCount,
+            profileViews: prevProfileViewsCount,
+        };
+
+        // --- Day of week distribution ---
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayCounts = Array(7).fill(0) as number[];
+        for (const app of allApplications) {
+            dayCounts[new Date(app.appliedAt).getDay()]++;
+        }
+        const dayOfWeekDistribution = dayNames.map((day, i) => ({ day, count: dayCounts[i] }));
+
+        // --- Response time distribution ---
+        const rtBuckets: Record<string, number> = {
+            'Same Day': 0, '1-3 Days': 0, '4-7 Days': 0, '1-2 Weeks': 0, '2+ Weeks': 0,
+        };
+        for (const app of viewedApps) {
+            const days = (new Date(app.viewedAt!).getTime() - new Date(app.appliedAt).getTime()) / (1000 * 60 * 60 * 24);
+            if (days < 1) rtBuckets['Same Day']++;
+            else if (days <= 3) rtBuckets['1-3 Days']++;
+            else if (days <= 7) rtBuckets['4-7 Days']++;
+            else if (days <= 14) rtBuckets['1-2 Weeks']++;
+            else rtBuckets['2+ Weeks']++;
+        }
+        const responseTimeDistribution = Object.entries(rtBuckets).map(([bucket, count]) => ({ bucket, count }));
+
+        // --- Source effectiveness ---
+        const INTERVIEW_STATUSES = new Set(['INTERVIEW_SCHEDULED', 'OFFERED', 'HIRED']);
+        const OFFER_STATUSES = new Set(['OFFERED', 'HIRED']);
+        const sourceStats = new Map<string, { total: number; interviews: number; offers: number; hires: number }>();
+        for (const app of allApplications) {
+            const src = app.source || 'DIRECT';
+            const s = sourceStats.get(src) || { total: 0, interviews: 0, offers: 0, hires: 0 };
+            s.total++;
+            if (INTERVIEW_STATUSES.has(app.status)) s.interviews++;
+            if (OFFER_STATUSES.has(app.status)) s.offers++;
+            if (app.status === 'HIRED') s.hires++;
+            sourceStats.set(src, s);
+        }
+        const sourceEffectiveness = Array.from(sourceStats.entries()).map(([source, s]) => ({
+            source,
+            total: s.total,
+            interviews: s.interviews,
+            offers: s.offers,
+            hires: s.hires,
+            interviewRate: s.total > 0 ? Math.round((s.interviews / s.total) * 100) : 0,
+        }));
+
+        // --- Location distribution ---
+        const locationMap = new Map<string, number>();
+        for (const job of jobPosts) {
+            const loc = job.location || 'Remote';
+            const appCount = job._count.applications;
+            locationMap.set(loc, (locationMap.get(loc) || 0) + appCount);
+        }
+        const locationDistribution = Array.from(locationMap.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([location, count]) => ({ location, count }));
+
+        // --- Time-to-hire distribution ---
+        const tthBuckets: Record<string, number> = {
+            '< 1 Week': 0, '1-2 Weeks': 0, '2-4 Weeks': 0,
+            '1-2 Months': 0, '2-3 Months': 0, '3+ Months': 0,
+        };
+        for (const app of hiredApplications) {
+            const days = (app.hiredAt!.getTime() - app.appliedAt.getTime()) / (1000 * 60 * 60 * 24);
+            if (days < 7) tthBuckets['< 1 Week']++;
+            else if (days <= 14) tthBuckets['1-2 Weeks']++;
+            else if (days <= 28) tthBuckets['2-4 Weeks']++;
+            else if (days <= 60) tthBuckets['1-2 Months']++;
+            else if (days <= 90) tthBuckets['2-3 Months']++;
+            else tthBuckets['3+ Months']++;
+        }
+        const timeToHireDistribution = Object.entries(tthBuckets).map(([bucket, count]) => ({ bucket, count }));
+
         return {
             summary: {
                 totalJobsPosted,
@@ -264,6 +397,7 @@ export const employerAnalyticsService = {
                 savedCandidates: savedCandidatesCount,
                 hiringVelocity,
             },
+            previousPeriodSummary,
             funnel,
             trends: await buildTrends(companyId, userId, groupBy, dateFilter),
             statusDistribution,
@@ -272,12 +406,17 @@ export const employerAnalyticsService = {
             salaryCompetitiveness: {
                 yourAvg,
                 platformAvg: {
-                    min: Math.round(platformSalaryAvg._avg.salaryMin || 0),
-                    max: Math.round(platformSalaryAvg._avg.salaryMax || 0),
+                    min: Math.round(Number(platformSalaryAvg._avg.salaryMin || 0)),
+                    max: Math.round(Number(platformSalaryAvg._avg.salaryMax || 0)),
                 },
             },
             jobPerformance,
             recentActivity,
+            dayOfWeekDistribution,
+            responseTimeDistribution,
+            sourceEffectiveness,
+            locationDistribution,
+            timeToHireDistribution,
         };
     },
 
@@ -323,6 +462,41 @@ export const employerAnalyticsService = {
         rows.push('Job Title,Views,Applications,Hired,Conversion Rate');
         for (const j of analytics.jobPerformance) {
             rows.push(`"${j.title}",${j.views},${j.applications},${j.hiredCount},${j.conversionRate}%`);
+        }
+        rows.push('');
+
+        // Day of week distribution
+        rows.push('Day,Applications');
+        for (const d of analytics.dayOfWeekDistribution) {
+            rows.push(`${d.day},${d.count}`);
+        }
+        rows.push('');
+
+        // Response time distribution
+        rows.push('Response Time,Count');
+        for (const r of analytics.responseTimeDistribution) {
+            rows.push(`"${r.bucket}",${r.count}`);
+        }
+        rows.push('');
+
+        // Source effectiveness
+        rows.push('Source,Total,Interviews,Offers,Hires,Interview Rate');
+        for (const s of analytics.sourceEffectiveness) {
+            rows.push(`${s.source},${s.total},${s.interviews},${s.offers},${s.hires},${s.interviewRate}%`);
+        }
+        rows.push('');
+
+        // Location distribution
+        rows.push('Location,Applications');
+        for (const l of analytics.locationDistribution) {
+            rows.push(`"${l.location}",${l.count}`);
+        }
+        rows.push('');
+
+        // Time-to-hire distribution
+        rows.push('Time to Hire,Count');
+        for (const t of analytics.timeToHireDistribution) {
+            rows.push(`"${t.bucket}",${t.count}`);
         }
 
         return rows.join('\n');

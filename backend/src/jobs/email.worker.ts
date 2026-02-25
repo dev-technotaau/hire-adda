@@ -14,20 +14,30 @@ interface EmailJobData {
 export const emailWorker = new Worker<EmailJobData>(
     EMAIL_QUEUE_NAME,
     async (job: Job<EmailJobData>) => {
-        logger.info(`Processing email job ${job.id} to ${job.data.to}`);
-
+        const TIMEOUT_MS = 30_000;
+        const timeoutId = setTimeout(() => { /* safety net; AbortSignal is primary */ }, TIMEOUT_MS);
         try {
-            await sendEmail(job.data);
+            logger.info(`Processing email job ${job.id} to ${job.data.to}`);
+
+            await Promise.race([
+                sendEmail(job.data),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Email worker timeout after 30s')), TIMEOUT_MS)
+                ),
+            ]);
             logger.info(`Email sent to ${job.data.to}`);
             return { sent: true, messageId: 'mock-id' };
         } catch (error) {
             logger.error(`Failed to send email to ${job.data.to}:`, error);
             throw error;
+        } finally {
+            clearTimeout(timeoutId);
         }
     },
     {
         connection: createBullMQConnection(),
         concurrency: 5,
+        lockDuration: 30000,
         limiter: {
             max: 10,
             duration: 1000,

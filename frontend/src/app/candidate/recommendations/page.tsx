@@ -12,6 +12,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
 import Badge from '@/components/ui/Badge';
+import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import { recommendationService } from '@/services/recommendation.service';
@@ -85,7 +86,6 @@ export default function RecommendationsPage() {
     const feedData = data?.data;
     const jobs: any[] = feedData?.items ?? [];
     const totalPages = feedData?.totalPages || 1;
-    const hasMore = feedData?.hasMore || false;
 
     const dismissMutation = useMutation({
         mutationFn: (jobId: string) => recommendationService.dismissRecommendation(jobId),
@@ -211,7 +211,7 @@ export default function RecommendationsPage() {
                                                     </h3>
                                                     <p className="mt-0.5 flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
                                                         <Building2 className="h-3.5 w-3.5" />
-                                                        {job.company?.companyName || 'Company'}
+                                                        {job.isConfidential ? 'Confidential Company' : (job.company?.companyName || 'Company')}
                                                     </p>
                                                 </div>
                                                 {/* Match Score */}
@@ -240,12 +240,16 @@ export default function RecommendationsPage() {
                                             {job.workMode && (
                                                 <Badge variant="info" size="sm">{job.workMode}</Badge>
                                             )}
+                                            {(job.experienceMin != null) && (
+                                                <span>{job.experienceMin}-{job.experienceMax || job.experienceMin}+ yrs</span>
+                                            )}
                                             {(job.salaryMin || job.salaryMax) && (
                                                 <span className="flex items-center gap-1">
                                                     <DollarSign className="h-3 w-3" />
-                                                    {job.salaryMin ? formatSalary(job.salaryMin) : ''}
-                                                    {job.salaryMin && job.salaryMax ? ' - ' : ''}
-                                                    {job.salaryMax ? formatSalary(job.salaryMax) : ''}
+                                                    {(job.currency || 'INR').toUpperCase() === 'INR' && job.salaryType === 'ANNUAL'
+                                                        ? `${job.salaryMin ? formatSalary(job.salaryMin) : ''}${job.salaryMin && job.salaryMax ? ' - ' : ''}${job.salaryMax ? formatSalary(job.salaryMax) : ''} LPA`
+                                                        : `${job.salaryMin ? formatSalary(job.salaryMin) : ''}${job.salaryMin && job.salaryMax ? ' - ' : ''}${job.salaryMax ? formatSalary(job.salaryMax) : ''}`}
+                                                    {job.salaryNegotiable && <span className="text-[var(--success)]">(Negotiable)</span>}
                                                 </span>
                                             )}
                                             {job.createdAt && (
@@ -255,6 +259,14 @@ export default function RecommendationsPage() {
                                                 </span>
                                             )}
                                         </div>
+                                        {/* Enterprise badges */}
+                                        {(job.isFeatured || job.isPwdFriendly || job.visaSponsorshipAvailable) && (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {job.isFeatured && <Badge variant="success" size="sm">Featured</Badge>}
+                                                {job.isPwdFriendly && <Badge variant="success" size="sm">PwD Friendly</Badge>}
+                                                {job.visaSponsorshipAvailable && <Badge variant="info" size="sm">Visa Sponsorship</Badge>}
+                                            </div>
+                                        )}
 
                                         {/* Skills */}
                                         {job.skillsRequired && job.skillsRequired.length > 0 && (
@@ -292,27 +304,13 @@ export default function RecommendationsPage() {
 
                         {/* Pagination */}
                         {totalPages > 1 && (
-                            <div className="flex items-center justify-between">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={page <= 1}
-                                    onClick={() => setPage(p => p - 1)}
-                                >
-                                    Previous
-                                </Button>
-                                <span className="text-sm text-[var(--text-muted)]">
-                                    Page {page} of {totalPages}
-                                </span>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={!hasMore}
-                                    onClick={() => setPage(p => p + 1)}
-                                >
-                                    Next
-                                </Button>
-                            </div>
+                            <Pagination
+                                currentPage={page}
+                                totalPages={totalPages}
+                                onPageChange={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                totalItems={feedData?.total}
+                                pageSize={20}
+                            />
                         )}
                     </>
                 )}

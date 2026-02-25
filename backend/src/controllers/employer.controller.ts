@@ -266,3 +266,127 @@ export const exportAnalytics = async (req: Request, res: Response, next: NextFun
         res.send(csv);
     } catch (error) { next(error); }
 };
+
+/**
+ * Get Company Profile Completeness
+ */
+export const getProfileCompleteness = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        const completeness = await employerService.getProfileCompleteness(req.user.id);
+        res.status(200).json({ status: 'success', data: completeness });
+    } catch (error) { next(error); }
+};
+
+/**
+ * Bulk Export Candidates (CSV/Excel)
+ */
+export const bulkExportCandidates = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+
+        const { candidateIds, format = 'xlsx' } = req.body;
+
+        if (!candidateIds || !Array.isArray(candidateIds) || candidateIds.length === 0) {
+            throw new AppError('candidateIds array is required', 400, 'INVALID_INPUT');
+        }
+
+        if (candidateIds.length > 1000) {
+            throw new AppError('Maximum 1000 candidates per export', 400, 'LIMIT_EXCEEDED');
+        }
+
+        if (!['csv', 'xlsx'].includes(format)) {
+            throw new AppError('Format must be csv or xlsx', 400, 'INVALID_FORMAT');
+        }
+
+        // Queue the export job
+        const { addDataExportJob } = await import('../jobs/data-export.queue');
+        const job = await addDataExportJob({
+            userId: req.user.id,
+            exportType: 'CANDIDATE_EXPORT',
+            format,
+            candidateIds,
+        });
+
+        res.status(202).json({
+            status: 'success',
+            message: 'Export queued successfully. You will receive an email when ready.',
+            data: { jobId: job.id },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get match score between a candidate and job (13-dimension scoring)
+ */
+export const getCandidateMatchScore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+
+        const candidateId = req.params.candidateId as string;
+        const jobId = req.params.jobId as string;
+
+        if (!candidateId || !jobId) {
+            throw new AppError('candidateId and jobId are required', 400, 'INVALID_INPUT');
+        }
+
+        const { matchingService } = await import('../services/matching.service');
+        const matchScore = await matchingService.calculateCandidateJobMatchScore(candidateId, jobId);
+
+        res.json({
+            status: 'success',
+            data: matchScore,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get similar candidates using Elasticsearch More Like This
+ */
+export const getSimilarCandidates = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+
+        const { candidateId } = req.params;
+        const limit = Math.min(Number(req.query.limit) || 5, 10);
+
+        if (!candidateId) {
+            throw new AppError('candidateId is required', 400, 'INVALID_INPUT');
+        }
+
+        const elasticClient = (await import('../config/elasticsearch')).default;
+        const { ELASTIC_INDICES } = await import('../constants');
+
+        const result = await (elasticClient.search as any)({
+            index: ELASTIC_INDICES.CANDIDATES,
+            size: limit,
+            query: {
+                more_like_this: {
+                    fields: ['skills', 'currentRole', 'headline', 'currentIndustry', 'currentLocation', 'currentCompany'],
+                    like: [
+                        {
+                            _index: ELASTIC_INDICES.CANDIDATES,
+                            _id: candidateId,
+                        },
+                    ],
+                    min_term_freq: 1,
+                    max_query_terms: 25,
+                    min_doc_freq: 1,
+                },
+            },
+        });
+
+        const candidates = result.hits.hits.map((hit: any) => hit._source);
+
+        res.json({
+            status: 'success',
+            data: candidates,
+        });
+    } catch (error) {
+        next(error);
+    }
+};

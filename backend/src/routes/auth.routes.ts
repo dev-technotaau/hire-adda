@@ -4,9 +4,10 @@ import * as authController from '../controllers/auth.controller';
 import * as firebaseAuthController from '../controllers/firebase-auth.controller';
 import { validate } from '../validators/validate';
 import { protect } from '../middleware/auth';
-import { authLimiter } from '../middleware/rate-limit';
+import { authLimiter, mfaLimiter } from '../middleware/rate-limit';
 import { audit } from '../middleware/audit';
 import { verifyTurnstile } from '../middleware/turnstile';
+import { blockAdminSelfMfa } from '../middleware/require-mfa';
 import passport from 'passport';
 import {
     registerSchema,
@@ -23,7 +24,15 @@ import {
     resendMobileOtpSchema,
     verifyWhatsappSchema,
     verifyWhatsappOtpSchema,
-    changeEmailSchema,
+    initiateChangeEmailSchema,
+    confirmChangeEmailSchema,
+    initiateChangeMobileSchema,
+    confirmChangeMobileSchema,
+    changeWhatsappNumberSchema,
+    resendEmailVerificationSchema,
+    firebaseLoginSchema,
+    giveConsentSchema,
+    mfaRegenerateBackupSchema,
 } from '../schemas/auth.schema';
 
 const router = Router();
@@ -165,38 +174,14 @@ router.post('/change-password/confirm', protect, validate(confirmChangePasswordS
 router.post('/logout-everywhere', protect, authController.logoutEverywhere);
 
 // ===============================
-// MFA Routes
+// MFA Routes (rate-limited, admins blocked from self-service)
 // ===============================
 
-/**
- * @openapi
- * /api/v1/auth/mfa/setup:
- *   post:
- *     tags: [Auth - MFA]
- *     summary: Generate MFA secret and QR code
- *     security: [{ bearerAuth: [] }]
- */
-router.post('/mfa/setup', protect, authController.mfaSetup);
-
-/**
- * @openapi
- * /api/v1/auth/mfa/enable:
- *   post:
- *     tags: [Auth - MFA]
- *     summary: Enable MFA after verifying token
- *     security: [{ bearerAuth: [] }]
- */
-router.post('/mfa/enable', protect, validate(mfaVerifySchema), authController.mfaEnable);
-
-/**
- * @openapi
- * /api/v1/auth/mfa/disable:
- *   post:
- *     tags: [Auth - MFA]
- *     summary: Disable MFA (requires password and token)
- *     security: [{ bearerAuth: [] }]
- */
-router.post('/mfa/disable', protect, validate(mfaDisableSchema), authController.mfaDisable);
+router.post('/mfa/setup', protect, mfaLimiter, blockAdminSelfMfa, authController.mfaSetup);
+router.post('/mfa/enable', protect, mfaLimiter, blockAdminSelfMfa, validate(mfaVerifySchema), authController.mfaEnable);
+router.post('/mfa/disable', protect, mfaLimiter, blockAdminSelfMfa, validate(mfaDisableSchema), authController.mfaDisable);
+router.post('/mfa/backup-codes', protect, mfaLimiter, blockAdminSelfMfa, validate(mfaRegenerateBackupSchema), authController.mfaRegenerateBackup);
+router.get('/mfa/backup-codes/count', protect, authController.mfaBackupCodeCount);
 
 router.post(
     '/verify-mobile',
@@ -225,22 +210,32 @@ router.post(
 );
 
 // Public — accepts { email } in body (no auth required for pre-login resend)
-router.post('/resend-email-verification', authController.resendEmailVerification);
+router.post('/resend-email-verification', validate(resendEmailVerificationSchema), authController.resendEmailVerification);
 
-/**
- * @openapi
- * /api/v1/auth/change-email:
- *   post:
- *     tags: [Auth]
- *     summary: Change email address (requires password verification)
- *     security: [{ bearerAuth: [] }]
- */
-router.post('/change-email', protect, validate(changeEmailSchema), authController.changeEmail);
+// ===============================
+// Change Email (2-step)
+// ===============================
+router.post('/change-email/initiate', protect, validate(initiateChangeEmailSchema), authController.initiateChangeEmail);
+router.post('/change-email/confirm', protect, validate(confirmChangeEmailSchema), authController.confirmChangeEmail);
+router.post('/change-email/resend-otp', protect, authController.resendChangeEmailOtp);
+
+// ===============================
+// Change Mobile (2-step)
+// ===============================
+router.post('/change-mobile/initiate', protect, validate(initiateChangeMobileSchema), authController.initiateChangeMobile);
+router.post('/change-mobile/confirm', protect, validate(confirmChangeMobileSchema), authController.confirmChangeMobile);
+router.post('/change-mobile/resend-otp', protect, authController.resendChangeMobileOtp);
+
+// ===============================
+// Change/Remove WhatsApp Number
+// ===============================
+router.post('/change-whatsapp-number', protect, validate(changeWhatsappNumberSchema), authController.changeWhatsappNumber);
+router.delete('/whatsapp-number', protect, authController.removeWhatsappNumber);
 
 // ===============================
 // Firebase Auth Login
 // ===============================
-router.post('/firebase-login', firebaseAuthController.firebaseLogin);
+router.post('/firebase-login', validate(firebaseLoginSchema), firebaseAuthController.firebaseLogin);
 
 // ===============================
 // Social Auth Routes
@@ -277,7 +272,7 @@ router.delete('/me', protect, audit('REQUEST_ACCOUNT_DELETION', 'User'), authCon
 // Consent Management (GDPR)
 // ===============================
 router.get('/me/consents', protect, authController.getConsents);
-router.post('/me/consents', protect, authController.giveConsent);
+router.post('/me/consents', protect, validate(giveConsentSchema), authController.giveConsent);
 router.delete('/me/consents/:type', protect, authController.revokeConsent);
 
 // ===============================

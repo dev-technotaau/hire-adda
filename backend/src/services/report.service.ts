@@ -60,7 +60,7 @@ class ReportService {
         const headers = ['ID', 'Title', 'Company', 'Location', 'Type', 'Status', 'Salary Range', 'Experience', 'Applications', 'Views', 'Created At', 'Expires At'];
         const rows = jobs.map(j => [
             j.id, j.title, j.company.companyName, j.location, j.type, j.status,
-            `${j.salaryMin || 0} - ${j.salaryMax || 0} ${j.currency}`,
+            `${Number(j.salaryMin || 0)} - ${Number(j.salaryMax || 0)} ${j.currency}`,
             `${j.experienceMin} - ${j.experienceMax || 'Any'} yrs`,
             j._count.applications, j.views,
             j.createdAt.toISOString(), j.expiresAt?.toISOString() || 'None',

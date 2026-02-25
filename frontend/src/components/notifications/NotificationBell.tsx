@@ -37,7 +37,11 @@ export default function NotificationBell() {
             >
                 <Bell className="h-5 w-5" />
                 {count > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--error)] px-1 text-xs font-medium text-white">
+                    <span
+                        role="status"
+                        aria-label={`${count} unread notification${count === 1 ? '' : 's'}`}
+                        className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--error)] px-1 text-xs font-medium text-white"
+                    >
                         {count > 99 ? '99+' : count}
                     </span>
                 )}

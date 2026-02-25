@@ -26,7 +26,7 @@ class DraftService {
                 userId_formType_name: {
                     userId,
                     formType,
-                    name: name ?? null as any,
+                    name: (name ?? null) as string,
                 },
             },
         });
@@ -43,7 +43,7 @@ class DraftService {
                 userId_formType_name: {
                     userId,
                     formType,
-                    name: name ?? null as any,
+                    name: (name ?? null) as string,
                 },
             },
             create: {

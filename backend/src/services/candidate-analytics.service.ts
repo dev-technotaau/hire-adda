@@ -19,6 +19,7 @@ interface CandidateAnalytics {
         savedJobs: number;
         avgResponseDays: number | null;
     };
+    previousPeriodSummary: { totalApplications: number; profileViews: number } | null;
     funnel: Record<string, number>;
     trends: Array<{ period: string; applications: number; profileViews: number }>;
     statusDistribution: Array<{ status: string; count: number }>;
@@ -35,6 +36,10 @@ interface CandidateAnalytics {
         status: string;
         date: string;
     }>;
+    dayOfWeekDistribution: Array<{ day: string; count: number }>;
+    responseTimeDistribution: Array<{ bucket: string; count: number }>;
+    sourceEffectiveness: Array<{ source: string; total: number; interviews: number; offers: number; hires: number; interviewRate: number }>;
+    locationDistribution: Array<{ location: string; count: number }>;
 }
 
 const TERMINAL_STATUSES: ApplicationStatus[] = ['REJECTED', 'WITHDRAWN', 'HIRED'];
@@ -64,6 +69,16 @@ export const candidateAnalyticsService = {
 
         const appliedAtFilter = Object.keys(dateFilter).length > 0 ? { appliedAt: dateFilter } : {};
 
+        // Compute previous period date range for comparison
+        const hasDates = dateFilter.gte && dateFilter.lte;
+        const rangeDays = hasDates
+            ? Math.ceil((dateFilter.lte!.getTime() - dateFilter.gte!.getTime()) / (1000 * 60 * 60 * 24))
+            : 30;
+        const prevEnd = new Date((dateFilter.gte || new Date()).getTime());
+        prevEnd.setDate(prevEnd.getDate() - 1);
+        const prevStart = new Date(prevEnd.getTime() - rangeDays * 24 * 60 * 60 * 1000);
+        const prevDateFilter = { gte: prevStart, lte: prevEnd };
+
         // Run all queries in parallel
         const [
             applications,
@@ -74,6 +89,8 @@ export const candidateAnalyticsService = {
             recentApps,
             appliedJobDetails,
             viewedApps,
+            prevApplicationsCount,
+            prevProfileViewsCount,
         ] = await Promise.all([
             // All applications for this candidate
             prisma.jobApplication.findMany({
@@ -140,7 +157,7 @@ export const candidateAnalyticsService = {
                 take: 10,
             }),
 
-            // Jobs applied to (for salary & skills analysis)
+            // Jobs applied to (for salary, skills, location analysis)
             prisma.jobApplication.findMany({
                 where: { candidateId: profile.id, ...appliedAtFilter },
                 select: {
@@ -149,6 +166,7 @@ export const candidateAnalyticsService = {
                             skillsRequired: true,
                             salaryMin: true,
                             salaryMax: true,
+                            location: true,
                         },
                     },
                 },
@@ -162,6 +180,16 @@ export const candidateAnalyticsService = {
                     ...appliedAtFilter,
                 },
                 select: { appliedAt: true, viewedAt: true },
+            }),
+
+            // Previous period: application count
+            prisma.jobApplication.count({
+                where: { candidateId: profile.id, appliedAt: prevDateFilter },
+            }),
+
+            // Previous period: profile views count
+            prisma.profileView.count({
+                where: { profileUserId: userId, createdAt: prevDateFilter },
             }),
         ]);
 
@@ -237,12 +265,12 @@ export const candidateAnalyticsService = {
         // Salary insights
         const jobSalaries = appliedJobDetails
             .filter(a => a.job.salaryMin != null)
-            .map(a => ({ min: a.job.salaryMin!, max: a.job.salaryMax || a.job.salaryMin! }));
+            .map(a => ({ min: Number(a.job.salaryMin!), max: Number(a.job.salaryMax || a.job.salaryMin!) }));
 
         const salaryInsights = {
             yourExpected: {
-                min: profile.expectedSalaryMin || 0,
-                max: profile.expectedSalaryMax || 0,
+                min: Number(profile.expectedSalaryMin || 0),
+                max: Number(profile.expectedSalaryMax || 0),
             },
             appliedJobsAvg: {
                 min: jobSalaries.length > 0
@@ -263,6 +291,67 @@ export const candidateAnalyticsService = {
             date: app.updatedAt.toISOString(),
         }));
 
+        // Previous period comparison
+        const previousPeriodSummary = {
+            totalApplications: prevApplicationsCount,
+            profileViews: prevProfileViewsCount,
+        };
+
+        // Day of week distribution
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayCounts = Array(7).fill(0) as number[];
+        for (const app of applications) {
+            dayCounts[new Date(app.appliedAt).getDay()]++;
+        }
+        const dayOfWeekDistribution = dayNames.map((day, i) => ({ day, count: dayCounts[i] }));
+
+        // Response time distribution
+        const rtBuckets: Record<string, number> = {
+            'Same Day': 0, '1-3 Days': 0, '4-7 Days': 0, '1-2 Weeks': 0, '2+ Weeks': 0,
+        };
+        for (const app of viewedApps) {
+            const days = (new Date(app.viewedAt!).getTime() - new Date(app.appliedAt).getTime()) / (1000 * 60 * 60 * 24);
+            if (days < 1) rtBuckets['Same Day']++;
+            else if (days <= 3) rtBuckets['1-3 Days']++;
+            else if (days <= 7) rtBuckets['4-7 Days']++;
+            else if (days <= 14) rtBuckets['1-2 Weeks']++;
+            else rtBuckets['2+ Weeks']++;
+        }
+        const responseTimeDistribution = Object.entries(rtBuckets).map(([bucket, count]) => ({ bucket, count }));
+
+        // Source effectiveness (cross-tabulation: source × outcome)
+        const INTERVIEW_STATUSES = new Set(['INTERVIEW_SCHEDULED', 'OFFERED', 'HIRED']);
+        const OFFER_STATUSES = new Set(['OFFERED', 'HIRED']);
+        const sourceStats = new Map<string, { total: number; interviews: number; offers: number; hires: number }>();
+        for (const app of applications) {
+            const src = app.source || 'DIRECT';
+            const s = sourceStats.get(src) || { total: 0, interviews: 0, offers: 0, hires: 0 };
+            s.total++;
+            if (INTERVIEW_STATUSES.has(app.status)) s.interviews++;
+            if (OFFER_STATUSES.has(app.status)) s.offers++;
+            if (app.status === 'HIRED') s.hires++;
+            sourceStats.set(src, s);
+        }
+        const sourceEffectiveness = Array.from(sourceStats.entries()).map(([source, s]) => ({
+            source,
+            total: s.total,
+            interviews: s.interviews,
+            offers: s.offers,
+            hires: s.hires,
+            interviewRate: s.total > 0 ? Math.round((s.interviews / s.total) * 100) : 0,
+        }));
+
+        // Location distribution
+        const locationMap = new Map<string, number>();
+        for (const app of appliedJobDetails) {
+            const loc = app.job.location || 'Remote';
+            locationMap.set(loc, (locationMap.get(loc) || 0) + 1);
+        }
+        const locationDistribution = Array.from(locationMap.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([location, count]) => ({ location, count }));
+
         return {
             summary: {
                 totalApplications: total,
@@ -274,6 +363,7 @@ export const candidateAnalyticsService = {
                 savedJobs: savedJobsCount,
                 avgResponseDays,
             },
+            previousPeriodSummary,
             funnel,
             trends: await buildTrendsAsync(profile.id, groupBy, dateFilter, userId),
             statusDistribution,
@@ -281,6 +371,10 @@ export const candidateAnalyticsService = {
             topSkillsInDemand,
             salaryInsights,
             recentActivity,
+            dayOfWeekDistribution,
+            responseTimeDistribution,
+            sourceEffectiveness,
+            locationDistribution,
         };
     },
 
@@ -319,6 +413,34 @@ export const candidateAnalyticsService = {
         for (const s of analytics.topSkillsInDemand) {
             rows.push(`"${s.skill}",${s.count},${s.youHave ? 'Yes' : 'No'}`);
         }
+        rows.push('');
+
+        // Day of week distribution
+        rows.push('Day,Applications');
+        for (const d of analytics.dayOfWeekDistribution) {
+            rows.push(`${d.day},${d.count}`);
+        }
+        rows.push('');
+
+        // Response time distribution
+        rows.push('Response Time,Count');
+        for (const r of analytics.responseTimeDistribution) {
+            rows.push(`"${r.bucket}",${r.count}`);
+        }
+        rows.push('');
+
+        // Source effectiveness
+        rows.push('Source,Total,Interviews,Offers,Hires,Interview Rate');
+        for (const s of analytics.sourceEffectiveness) {
+            rows.push(`${s.source},${s.total},${s.interviews},${s.offers},${s.hires},${s.interviewRate}%`);
+        }
+        rows.push('');
+
+        // Location distribution
+        rows.push('Location,Applications');
+        for (const l of analytics.locationDistribution) {
+            rows.push(`"${l.location}",${l.count}`);
+        }
 
         return rows.join('\n');
     },
@@ -332,6 +454,7 @@ function emptyAnalytics(): CandidateAnalytics {
             profileViews: 0, profileScore: 0,
             savedJobs: 0, avgResponseDays: null,
         },
+        previousPeriodSummary: null,
         funnel: { applied: 0, viewed: 0, shortlisted: 0, interviewScheduled: 0, offered: 0, hired: 0, rejected: 0, withdrawn: 0 },
         trends: [],
         statusDistribution: [],
@@ -339,6 +462,10 @@ function emptyAnalytics(): CandidateAnalytics {
         topSkillsInDemand: [],
         salaryInsights: { yourExpected: { min: 0, max: 0 }, appliedJobsAvg: { min: 0, max: 0 }, offeredAvg: null },
         recentActivity: [],
+        dayOfWeekDistribution: [],
+        responseTimeDistribution: [],
+        sourceEffectiveness: [],
+        locationDistribution: [],
     };
 }
 

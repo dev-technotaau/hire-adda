@@ -1,6 +1,7 @@
 import { bigqueryClient } from '../config/bigquery';
 import { env } from '../config/env';
 import logger from '../config/logger';
+import { isFeatureEnabled } from '../config/feature-flags';
 
 const DATASET_ID = 'talent_bridge_analytics';
 
@@ -14,6 +15,7 @@ export const bigqueryService = {
      * Insert an analytics event row (fire-and-forget).
      */
     async insertEvent(table: string, data: Record<string, unknown>): Promise<void> {
+        if (!await isFeatureEnabled('enableBigQuery')) return;
         const dataset = getDataset();
         if (!dataset) return;
 
@@ -32,6 +34,7 @@ export const bigqueryService = {
      * Query user registration growth over time.
      */
     async queryUserGrowth(startDate: string, endDate: string): Promise<any[]> {
+        if (!await isFeatureEnabled('enableBigQuery')) return [];
         if (!bigqueryClient || !env.GOOGLE_CLOUD_PROJECT_ID) return [];
 
         try {
@@ -61,6 +64,7 @@ export const bigqueryService = {
      * Query application funnel — status transitions.
      */
     async queryApplicationFunnel(startDate: string, endDate: string): Promise<any[]> {
+        if (!await isFeatureEnabled('enableBigQuery')) return [];
         if (!bigqueryClient || !env.GOOGLE_CLOUD_PROJECT_ID) return [];
 
         try {
@@ -89,6 +93,7 @@ export const bigqueryService = {
      * Query most popular/in-demand skills.
      */
     async queryPopularSkills(limit: number = 20): Promise<any[]> {
+        if (!await isFeatureEnabled('enableBigQuery')) return [];
         if (!bigqueryClient || !env.GOOGLE_CLOUD_PROJECT_ID) return [];
 
         try {
@@ -119,6 +124,7 @@ export const bigqueryService = {
      * Query salary trends by industry/location.
      */
     async querySalaryTrends(industry?: string, location?: string): Promise<any[]> {
+        if (!await isFeatureEnabled('enableBigQuery')) return [];
         if (!bigqueryClient || !env.GOOGLE_CLOUD_PROJECT_ID) return [];
 
         try {
@@ -158,6 +164,7 @@ export const bigqueryService = {
      * Query job posting trends over time.
      */
     async queryJobPostingTrends(startDate: string, endDate: string): Promise<any[]> {
+        if (!await isFeatureEnabled('enableBigQuery')) return [];
         if (!bigqueryClient || !env.GOOGLE_CLOUD_PROJECT_ID) return [];
 
         try {

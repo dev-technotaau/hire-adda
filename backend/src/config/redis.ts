@@ -1,5 +1,6 @@
 import Redis, { RedisOptions } from 'ioredis';
 import { env } from './env';
+import logger from './logger';
 
 // Check if Redis is enabled (optional for development)
 const isRedisEnabled = env.REDIS_ENABLED !== 'false';
@@ -65,7 +66,7 @@ const redisConfig = buildRedisConfig();
 // Create Redis connection
 const createConnection = (): Redis => {
   if (!isRedisEnabled) {
-    console.log('⚠️ Redis is disabled (REDIS_ENABLED=false)');
+    logger.warn('Redis is disabled (REDIS_ENABLED=false)');
     return createMockRedis();
   }
 
@@ -95,15 +96,15 @@ export const bullmqDefaultJobOptions = {
 // Event handlers (only if Redis is enabled)
 if (isRedisEnabled) {
   redis.on('connect', () => {
-    console.log('✅ Redis connected');
+    logger.info('✅ Redis connected');
   });
 
   redis.on('error', (err) => {
-    console.error('❌ Redis connection error:', err.message);
+    logger.error('❌ Redis connection error:', err.message);
   });
 
   redis.on('close', () => {
-    console.log('⚠️ Redis connection closed');
+    logger.warn('Redis connection closed');
   });
 }
 

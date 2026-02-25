@@ -3,7 +3,9 @@ import { Router } from 'express';
 import * as adminController from '../controllers/admin.controller';
 import * as emailPreviewController from '../controllers/email-preview.controller';
 import { audit } from '../middleware/audit';
-import { protect, restrictTo } from '../middleware/auth';
+import { protect } from '../middleware/auth';
+import { restrictTo } from '../middleware/rbac';
+import { requireMfaEnabled } from '../middleware/require-mfa';
 import { analyticsQuerySchema, auditLogQuerySchema, flagJobSchema, suspendUserSchema, updateUserRoleSchema } from '../schemas/admin.schema';
 import { firestoreCountersService } from '../services/firestore-counters.service';
 import { kafkaEventsService } from '../services/kafka-events.service';
@@ -14,6 +16,7 @@ const router = Router();
 // Protect all admin routes
 router.use(protect);
 router.use(restrictTo(Role.ADMIN, Role.SUPER_ADMIN));
+router.use(requireMfaEnabled);
 
 router.get('/stats', adminController.getDashboardStats);
 router.get('/activity', adminController.getRecentActivity);

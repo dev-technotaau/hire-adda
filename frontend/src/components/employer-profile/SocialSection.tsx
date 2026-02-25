@@ -1,4 +1,4 @@
-import { Linkedin, Twitter, Facebook, Instagram, Youtube, Globe, ExternalLink, BookOpen } from 'lucide-react';
+import { Linkedin, Twitter, Facebook, Instagram, Youtube, Globe, ExternalLink, BookOpen, Camera } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import type { UpdateCompanyRequest } from '@/types/employer';
 
@@ -23,6 +23,9 @@ export default function SocialSection({ form, updateField }: SocialSectionProps)
                     <Input label="Careers Page URL" placeholder="https://company.com/careers" leftIcon={<ExternalLink className="h-4 w-4" />} value={form.careersPageUrl || ''} onChange={(e) => updateField('careersPageUrl', e.target.value)} />
                     <Input label="Blog URL" placeholder="https://company.com/blog" leftIcon={<BookOpen className="h-4 w-4" />} value={form.blogUrl || ''} onChange={(e) => updateField('blogUrl', e.target.value)} />
                 </div>
+            </div>
+            <div className="border-t border-[var(--border)] pt-4">
+                <Input label="Company Video URL" type="url" placeholder="https://youtube.com/watch?v=..." leftIcon={<Camera className="h-4 w-4" />} value={form.companyVideoUrl || ''} onChange={(e) => updateField('companyVideoUrl', e.target.value)} helperText="Intro video, office tour, or culture video" />
             </div>
         </div>
     );

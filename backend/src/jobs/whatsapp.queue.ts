@@ -22,3 +22,7 @@ whatsappQueue.on('error', (err) => {
 });
 
 logger.info(`WhatsApp Queue initialized: ${WHATSAPP_QUEUE_NAME}`);
+
+export async function addWhatsAppJob(data: { to: string; templateName: string; params?: string[]; languageCode?: string; components?: any[] }) {
+    return whatsappQueue.add('send-whatsapp', data);
+}

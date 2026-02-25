@@ -2,8 +2,9 @@ import api from '@/lib/api';
 import { API } from '@/constants/api';
 import { buildQueryString } from '@/lib/utils';
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
-import type { CompanyProfile, EmployerDashboard, UpdateCompanyRequest, EngagementMetrics, EmployerAnalytics } from '@/types/employer';
+import type { CompanyProfile, CompanyProfileCompleteness, EmployerDashboard, UpdateCompanyRequest, EngagementMetrics, EmployerAnalytics } from '@/types/employer';
 import type { CandidateProfile, CandidateSearchFilters } from '@/types/candidate';
+import type { JobApplication, ApplicationStatus } from '@/types/job';
 
 export const employerService = {
     async getDashboard(): Promise<ApiResponse<EmployerDashboard>> {
@@ -27,6 +28,23 @@ export const employerService = {
                     appliedAt: app.appliedAt as string,
                 })),
                 jobPerformance: d?.jobPerformance ?? [],
+            },
+        };
+    },
+
+    async getCompleteness(): Promise<ApiResponse<CompanyProfileCompleteness>> {
+        const res = await api.get(API.EMPLOYERS.COMPLETENESS);
+        const body = res.data;
+        const d = body.data;
+        return {
+            ...body,
+            data: {
+                score: d?.percentage ?? d?.score ?? 0,
+                sections: [
+                    ...(d?.completed ?? []).map((name: string) => ({ name, completed: true, weight: 1 })),
+                    ...(d?.missing ?? []).map((name: string) => ({ name, completed: false, weight: 1 })),
+                    ...(d?.sections ?? []),
+                ],
             },
         };
     },
@@ -100,6 +118,62 @@ export const employerService = {
         const res = await api.get(`${API.EMPLOYERS.ANALYTICS_EXPORT}${qs}`, {
             responseType: 'blob',
         });
+        return res.data;
+    },
+
+    async shortlistCandidateForJob(candidateId: string, jobId: string): Promise<ApiResponse<JobApplication>> {
+        const res = await api.post(API.EMPLOYERS.SHORTLIST_CANDIDATE(candidateId), { jobId });
+        return res.data;
+    },
+
+    async selectCandidateForJob(candidateId: string, jobId: string): Promise<ApiResponse<JobApplication>> {
+        const res = await api.post(API.EMPLOYERS.SELECT_CANDIDATE(candidateId), { jobId });
+        return res.data;
+    },
+
+    async bulkExportCandidates(data: { candidateIds: string[]; format: 'csv' | 'xlsx' }): Promise<ApiResponse<{ jobId: string }>> {
+        const res = await api.post(API.EMPLOYERS.BULK_EXPORT_CANDIDATES, data);
+        return res.data;
+    },
+
+    async getCandidateMatchScore(candidateId: string, jobId: string): Promise<ApiResponse<{
+        overall: number;
+        dimensions: {
+            skills: number;
+            experience: number;
+            salary: number;
+            location: number;
+            industry: number;
+            workMode: number;
+            education: number;
+            noticePeriod: number;
+            experienceLevel: number;
+            functionalArea: number;
+            jobType: number;
+            educationLevel: number;
+            drivingLicense: number;
+        };
+    }>> {
+        const res = await api.get(API.EMPLOYERS.CANDIDATE_MATCH_SCORE(candidateId, jobId));
+        return res.data;
+    },
+
+    async getSimilarCandidates(candidateId: string, limit = 5): Promise<ApiResponse<CandidateProfile[]>> {
+        const res = await api.get(`${API.EMPLOYERS.SIMILAR_CANDIDATES(candidateId)}?limit=${limit}`);
+        return res.data;
+    },
+
+    async getAllApplications(filters?: {
+        status?: ApplicationStatus;
+        jobId?: string;
+        candidateId?: string;
+        search?: string;
+        sortBy?: 'newest' | 'oldest' | 'matchScore';
+        page?: number;
+        limit?: number;
+    }): Promise<PaginatedResponse<JobApplication>> {
+        const qs = filters ? buildQueryString(filters as Record<string, string | undefined>) : '';
+        const res = await api.get(`${API.EMPLOYERS.APPLICATIONS}${qs}`);
         return res.data;
     },
 };

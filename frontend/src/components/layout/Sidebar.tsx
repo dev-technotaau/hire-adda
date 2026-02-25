@@ -29,6 +29,7 @@ const candidateNav: NavItem[] = [
     { label: 'Applications', href: ROUTES.CANDIDATE.APPLICATIONS, icon: FileText },
     { label: 'Saved Jobs', href: ROUTES.CANDIDATE.SAVED_JOBS, icon: Bookmark },
     { label: 'Job Alerts', href: ROUTES.CANDIDATE.JOB_ALERTS, icon: Bell },
+    { label: 'Verification', href: ROUTES.CANDIDATE.VERIFICATION, icon: ShieldCheck },
     { label: 'Help & Support', href: ROUTES.CANDIDATE.HELP, icon: HelpCircle },
     { label: 'Settings', href: ROUTES.CANDIDATE.SETTINGS, icon: Settings },
 ];
@@ -38,7 +39,9 @@ const employerNav: NavItem[] = [
     { label: 'Company Profile', href: ROUTES.EMPLOYER.PROFILE, icon: Building2 },
     { label: 'Post Job', href: ROUTES.EMPLOYER.POST_JOB, icon: PlusCircle },
     { label: 'My Jobs', href: ROUTES.EMPLOYER.MY_JOBS, icon: Briefcase },
+    { label: 'Applications', href: ROUTES.EMPLOYER.APPLICATIONS, icon: ClipboardList },
     { label: 'Find Candidates', href: ROUTES.EMPLOYER.CANDIDATES, icon: Users },
+    { label: 'Saved Candidates', href: ROUTES.EMPLOYER.SAVED_CANDIDATES, icon: Bookmark },
     { label: 'Analytics', href: ROUTES.EMPLOYER.ANALYTICS, icon: BarChart3 },
     { label: 'Verification', href: ROUTES.EMPLOYER.VERIFICATION, icon: ShieldCheck },
     { label: 'Help & Support', href: ROUTES.EMPLOYER.HELP, icon: HelpCircle },
@@ -63,9 +66,11 @@ const superAdminNav: NavItem[] = [
     { label: 'Dashboard', href: ROUTES.SUPER_ADMIN.DASHBOARD, icon: LayoutDashboard },
     { label: 'Manage Users', href: ROUTES.SUPER_ADMIN.USERS, icon: Users },
     { label: 'Manage Admins', href: ROUTES.SUPER_ADMIN.ADMINS, icon: Shield },
+    { label: 'Platform Analytics', href: ROUTES.SUPER_ADMIN.ANALYTICS, icon: BarChart3 },
     { label: 'Feature Flags', href: ROUTES.SUPER_ADMIN.FEATURE_FLAGS, icon: ToggleLeft },
     { label: 'Ticket Analytics', href: ROUTES.SUPER_ADMIN.TICKETS, icon: BarChart3 },
     { label: 'System Config', href: ROUTES.SUPER_ADMIN.CONFIG, icon: Settings },
+    { label: 'Security', href: ROUTES.SUPER_ADMIN.SETTINGS, icon: Shield },
 ];
 
 export function getNavItems(role: string | undefined): NavItem[] {

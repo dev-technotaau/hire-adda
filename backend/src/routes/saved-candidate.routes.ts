@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { protect, restrictTo } from '../middleware/auth';
+import { protect } from '../middleware/auth';
+import { restrictTo } from '../middleware/rbac';
 import * as savedCandidateController from '../controllers/saved-candidate.controller';
 import { Role } from '@prisma/client';
 

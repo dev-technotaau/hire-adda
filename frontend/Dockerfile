@@ -1,5 +1,5 @@
 # Build Stage
-FROM node:20-alpine AS builder
+FROM node:20.18-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Production Stage
-FROM node:20-alpine AS runner
+FROM node:20.18-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV production
 
@@ -24,5 +24,8 @@ USER nextjs
 EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME 0.0.0.0
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30s \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
 CMD ["node", "server.js"]

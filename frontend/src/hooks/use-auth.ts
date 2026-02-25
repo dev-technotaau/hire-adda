@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { authService } from '@/services/auth.service';
 import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
-import type { LoginRequest, RegisterRequest } from '@/types/auth';
-import type { Role } from '@/types/auth';
+import type { LoginRequest, RegisterRequest, Role, User } from '@/types/auth';
 
 const ADMIN_ROLES: Role[] = ['ADMIN', 'SUPER_ADMIN'];
 
@@ -33,20 +32,30 @@ export function useAuth() {
     }, [isHydrated, hydrate]);
 
     // Verify token on mount by fetching current user.
-    // Skip if login just happened (within 10s) — token is guaranteed fresh.
+    // Skip if login just happened (within 60s) — token is guaranteed fresh.
     useEffect(() => {
         if (isHydrated && isAuthenticated) {
-            const freshLogin = lastLoginAt > 0 && Date.now() - lastLoginAt < 10_000;
+            const freshLogin = lastLoginAt > 0 && Date.now() - lastLoginAt < 60_000;
             if (freshLogin) {
                 setLoading(false);
                 return;
             }
             authService.getMe()
                 .then((res) => {
-                    const userData = (res.data as any)?.user ?? res.data;
+                    // Backend may wrap user in {user: ...} or return directly
+                    const payload = res.data as unknown as Record<string, unknown>;
+                    const userData = (payload?.user ?? res.data) as User;
                     setUser(userData);
                 })
-                .catch(() => storeLogout())
+                .catch((err) => {
+                    // Only logout on 401 (invalid/expired token), not on network errors
+                    if (err?.statusCode === 401) {
+                        storeLogout();
+                    } else {
+                        // For other errors (network, 500, etc), keep user logged in but stop loading
+                        setLoading(false);
+                    }
+                })
                 .finally(() => setLoading(false));
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps

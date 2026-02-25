@@ -1,7 +1,8 @@
 import { prisma } from '../config/prisma';
+import logger from '../config/logger';
 import { AppError } from '../middleware/error';
 import { CompanyProfile } from '@prisma/client';
-import { uploadImage, uploadOptions } from '../config/cloudinary';
+import { uploadImage, uploadOptions, deleteImage, extractPublicId } from '../config/cloudinary';
 import { searchService } from './search.service';
 
 export class EmployerService {
@@ -42,7 +43,7 @@ export class EmployerService {
         const {
             id: _id, userId: _uid, createdAt: _ca, updatedAt: _ua,
             socialLinks, structuredPerks, workplacePolicies, awardsRecognitions,
-            leadershipTeam, employeeTestimonials, officePhotos,
+            leadershipTeam, employeeTestimonials, officePhotos, notificationPreferences,
             ...rest
         } = data;
         const safeData = {
@@ -54,6 +55,7 @@ export class EmployerService {
             ...(leadershipTeam !== undefined ? { leadershipTeam: leadershipTeam ?? undefined } : {}),
             ...(employeeTestimonials !== undefined ? { employeeTestimonials: employeeTestimonials ?? undefined } : {}),
             ...(officePhotos !== undefined ? { officePhotos: officePhotos ?? undefined } : {}),
+            ...(notificationPreferences !== undefined ? { notificationPreferences: notificationPreferences ?? undefined } : {}),
         };
 
         const profile = await prisma.companyProfile.upsert({
@@ -67,7 +69,7 @@ export class EmployerService {
         });
 
         // Index in Elasticsearch
-        searchService.indexEmployer(profile).catch(err => console.error('Failed to index employer', err));
+        searchService.indexEmployer(profile).catch(err => logger.error('Failed to index employer', err));
 
         // Trigger geocoding if address fields changed
         const geoAddress = [data.city, data.state, data.country, data.headquarters].filter(Boolean).join(', ');
@@ -210,7 +212,19 @@ export class EmployerService {
      * Upload Company Logo
      */
     async uploadLogo(userId: string, file: Express.Multer.File) {
+        // Fetch old logo URL for cleanup
+        const existing = await prisma.companyProfile.findUnique({
+            where: { userId },
+            select: { logo: true },
+        });
+
         const uploadResult = await uploadImage(profileImageBufferOrPath(file), uploadOptions.companyLogo);
+
+        // Delete old logo from Cloudinary
+        if (existing?.logo) {
+            const oldPublicId = extractPublicId(existing.logo);
+            if (oldPublicId) deleteImage(oldPublicId).catch(() => {});
+        }
 
         const profile = await prisma.companyProfile.upsert({
             where: { userId },
@@ -231,10 +245,95 @@ export class EmployerService {
      * Remove Company Logo
      */
     async removeLogo(userId: string) {
+        // Fetch current logo URL for cleanup
+        const existing = await prisma.companyProfile.findUnique({
+            where: { userId },
+            select: { logo: true },
+        });
+
         await prisma.companyProfile.update({
             where: { userId },
             data: { logo: null },
         });
+
+        // Delete from Cloudinary
+        if (existing?.logo) {
+            const publicId = extractPublicId(existing.logo);
+            if (publicId) deleteImage(publicId).catch(() => {});
+        }
+    }
+
+    /**
+     * Get company profile completeness percentage
+     */
+    async getProfileCompleteness(userId: string) {
+        const profile = await prisma.companyProfile.findUnique({
+            where: { userId },
+            select: {
+                companyName: true,
+                companyType: true,
+                tagline: true,
+                logo: true,
+                coverImage: true,
+                industry: true,
+                companySize: true,
+                description: true,
+                whyWorkForUs: true,
+                website: true,
+                foundedYear: true,
+                gstNumber: true,
+                cinNumber: true,
+                benefits: true,
+                techStack: true,
+                productsServices: true,
+                specialties: true,
+                companyCulture: true,
+                missionStatement: true,
+                coreValues: true,
+                socialLinks: true,
+                contactEmail: true,
+                contactPhone: true,
+                contactPersonName: true,
+                headquarters: true,
+                locations: true,
+                addressLine1: true,
+                city: true,
+                state: true,
+                pincode: true,
+                leadershipTeam: true,
+                employeeTestimonials: true,
+                officePhotos: true,
+                interviewProcess: true,
+                awardsRecognitions: true,
+                companyVideoUrl: true,
+                careersPageUrl: true,
+                diversityStatement: true,
+            },
+        });
+        if (!profile) return { percentage: 0, completed: [], missing: ['Create your company profile'] };
+
+        const checks = [
+            { field: 'Company Basics', weight: 15, check: !!(profile.companyName && profile.industry && profile.companyType && profile.companySize) },
+            { field: 'Company Description', weight: 12, check: !!(profile.description && profile.description.length >= 50) },
+            { field: 'Logo & Branding', weight: 8, check: !!profile.logo },
+            { field: 'Website & Links', weight: 8, check: !!profile.website },
+            { field: 'Contact Info', weight: 10, check: !!(profile.contactEmail && profile.contactPhone && profile.contactPersonName) },
+            { field: 'Office Location', weight: 8, check: !!(profile.headquarters || (profile.addressLine1 && profile.city && profile.state)) },
+            { field: 'Why Work For Us', weight: 8, check: !!(profile.whyWorkForUs && profile.whyWorkForUs.length >= 30) },
+            { field: 'Benefits & Perks', weight: 7, check: profile.benefits.length > 0 },
+            { field: 'Culture & Values', weight: 6, check: !!(profile.companyCulture || profile.missionStatement || profile.coreValues.length > 0) },
+            { field: 'Social Profiles', weight: 5, check: !!(profile.socialLinks && Object.values(profile.socialLinks as Record<string, string>).some(v => !!v)) },
+            { field: 'Tech Stack / Products', weight: 4, check: !!(profile.techStack.length > 0 || profile.productsServices.length > 0) },
+            { field: 'Registration (GST/CIN)', weight: 3, check: !!(profile.gstNumber || profile.cinNumber) },
+            { field: 'Team & Testimonials', weight: 3, check: !!((profile.leadershipTeam as any[])?.length > 0 || (profile.employeeTestimonials as any[])?.length > 0) },
+            { field: 'Media & Photos', weight: 3, check: !!(profile.coverImage || (profile.officePhotos as any[])?.length > 0 || profile.companyVideoUrl) },
+        ];
+
+        const completed = checks.filter(c => c.check).map(c => c.field);
+        const missing = checks.filter(c => !c.check).map(c => c.field);
+        const percentage = checks.reduce((acc, c) => acc + (c.check ? c.weight : 0), 0);
+
+        return { percentage, completed, missing };
     }
 }
 

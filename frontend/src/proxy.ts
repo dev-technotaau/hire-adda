@@ -13,7 +13,7 @@ function nextWithCsp(): NextResponse {
 
     const csp = [
         "default-src 'self'",
-        `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://challenges.cloudflare.com`,
+        `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://challenges.cloudflare.com`,
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src 'self' data: blob: https://res.cloudinary.com https://assets.talentbridge.com https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com",
         "font-src 'self' https://fonts.gstatic.com",

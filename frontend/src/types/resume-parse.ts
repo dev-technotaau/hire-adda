@@ -20,3 +20,21 @@ export interface ParsedResumeData {
     certifications: string[];
     summary: string | null;
 }
+
+export interface ApplyableResumeFields {
+    bio?: string;
+    phone?: string;
+    skills?: string[];
+    experience?: Array<{
+        company: string; role: string; location: string;
+        startDate: string; endDate: string; isCurrent: boolean; description: string;
+    }>;
+    education?: Array<{
+        institution: string; degree: string; field: string;
+        startDate: string; endDate: string; grade: string;
+    }>;
+    certifications?: Array<{
+        name: string; issuer: string; issueDate: string;
+        expiryDate: string; credentialId: string; url: string;
+    }>;
+}

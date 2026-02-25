@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { protect, restrictTo } from '../middleware/auth';
+import { protect } from '../middleware/auth';
+import { restrictTo } from '../middleware/rbac';
 import { validate } from '../validators/validate';
 import { submitContactSchema } from '../schemas/contact.schema';
 import * as contactController from '../controllers/contact.controller';

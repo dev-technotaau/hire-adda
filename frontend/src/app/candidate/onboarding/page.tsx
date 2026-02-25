@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     User, Briefcase, GraduationCap, Code, FileText,
     MapPin, Globe, Award, Languages, Settings,
@@ -22,7 +22,10 @@ import DatePicker from '@/components/ui/DatePicker';
 import FileUpload from '@/components/ui/FileUpload';
 import ImageCropper from '@/components/ui/ImageCropper';
 import { showToast } from '@/components/ui/Toast';
+import ResumeParseReview from '@/components/common/ResumeParseReview';
 import { candidateService } from '@/services/candidate.service';
+import { formatFileSize } from '@/lib/utils';
+import { getFileTypeBadge } from '@/utils/format';
 import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
 import {
@@ -32,6 +35,8 @@ import {
     CAREER_BREAK_TYPE_LABELS, RESERVATION_CATEGORY_LABELS,
     COURSE_TYPE_LABELS, OPEN_TO_WORK_LABELS, PATENT_STATUS_LABELS,
     GRADE_TYPE_LABELS, PRONOUN_OPTIONS,
+    EXPERIENCE_LEVEL_LABELS, EDUCATION_LEVEL_LABELS,
+    SPECIFIC_DEGREE_LABELS, DRIVING_LICENSE_TYPE_LABELS,
 } from '@/constants/enums';
 import {
     SKILL_SUGGESTIONS, INDUSTRY_SUGGESTIONS, DEPARTMENT_SUGGESTIONS,
@@ -51,6 +56,7 @@ import type {
     MembershipEntry, CourseCompletionEntry, TestScoreEntry, ReferenceEntry,
 } from '@/types/candidate';
 import type { ApiError } from '@/types/api';
+import type { ParsedResumeData, ApplyableResumeFields } from '@/types/resume-parse';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -90,6 +96,7 @@ interface CandidateOnboardingData {
     bio: string;
     experienceYears: number;
     totalExperienceMonths: number;
+    experienceLevel: string;
     workStatus: string;
     hasCareerBreak: boolean;
     careerBreakType: string;
@@ -107,6 +114,8 @@ interface CandidateOnboardingData {
     // Step: Work Experience
     experience: ExperienceEntry[];
     // Step: Education
+    highestEducationLevel: string;
+    highestDegree: string;
     education: EducationEntry[];
     // Step: Skills
     skills: string[];
@@ -143,9 +152,14 @@ interface CandidateOnboardingData {
     // Step: Documents & Misc
     passportNumber: string;
     passportExpiryDate: string;
+    workPermitStatus: string;
     hasDrivingLicense: boolean;
+    drivingLicenseType: string;
     ownVehicle: boolean;
     isVeteran: boolean;
+    isPhysicallyChallenged: boolean;
+    disabilityType: string;
+    disabilityPercentage: number | undefined;
     videoResumeUrl: string;
     blockedCompanies: string[];
     // Step: Interests
@@ -171,6 +185,7 @@ interface CandidateOnboardingData {
 const STEPS: OnboardingStep[] = [
     { key: 'welcome', label: 'Welcome' },
     { key: 'avatar', label: 'Profile Photo', optional: true },
+    { key: 'resume', label: 'Resume Upload', optional: true },
     { key: 'basics', label: 'Profile Basics' },
     { key: 'personal', label: 'Personal Details', optional: true },
     { key: 'professional', label: 'Professional Summary' },
@@ -210,6 +225,7 @@ const INITIAL_DATA: CandidateOnboardingData = {
     bio: '',
     experienceYears: 0,
     totalExperienceMonths: 0,
+    experienceLevel: '',
     workStatus: '',
     hasCareerBreak: false,
     careerBreakType: '',
@@ -224,6 +240,8 @@ const INITIAL_DATA: CandidateOnboardingData = {
     noticePeriod: '',
     servingNoticePeriod: false,
     experience: [],
+    highestEducationLevel: '',
+    highestDegree: '',
     education: [],
     skills: [],
     skillsWithProficiency: [],
@@ -253,9 +271,14 @@ const INITIAL_DATA: CandidateOnboardingData = {
     visaStatus: '',
     passportNumber: '',
     passportExpiryDate: '',
+    workPermitStatus: '',
     hasDrivingLicense: false,
+    drivingLicenseType: '',
     ownVehicle: false,
     isVeteran: false,
+    isPhysicallyChallenged: false,
+    disabilityType: '',
+    disabilityPercentage: undefined,
     videoResumeUrl: '',
     blockedCompanies: [],
     hobbies: [],
@@ -307,6 +330,11 @@ const SKILL_PROFICIENCY_OPTIONS: SelectOption[] = [
     { value: 'EXPERT', label: 'Expert' },
 ];
 
+const EXPERIENCE_LEVEL_OPTIONS = toSelectOptions(EXPERIENCE_LEVEL_LABELS);
+const EDUCATION_LEVEL_OPTIONS = toSelectOptions(EDUCATION_LEVEL_LABELS);
+const SPECIFIC_DEGREE_OPTIONS = toSelectOptions(SPECIFIC_DEGREE_LABELS);
+const DRIVING_LICENSE_OPTIONS = toSelectOptions(DRIVING_LICENSE_TYPE_LABELS);
+const DISABILITY_TYPE_OPTIONS = toSelectOptions(DISABILITY_TYPE_LABELS);
 const CAREER_BREAK_OPTIONS = toSelectOptions(CAREER_BREAK_TYPE_LABELS);
 const CATEGORY_OPTIONS = toSelectOptions(RESERVATION_CATEGORY_LABELS);
 const COURSE_TYPE_OPTIONS = toSelectOptions(COURSE_TYPE_LABELS);
@@ -427,20 +455,100 @@ export default function CandidateOnboardingPage() {
         mutationFn: (file: File) => candidateService.uploadAvatar(file),
     });
 
+    const [resumeUploaded, setResumeUploaded] = useState(false);
     const [resumeParsing, setResumeParsing] = useState(false);
-    const [resumeParsed, setResumeParsed] = useState(false);
+    const [resumeParsePolling, setResumeParsePolling] = useState(false);
+    const [parsedResumeData, setParsedResumeData] = useState<ParsedResumeData | null>(null);
+    const [resumeParseApplied, setResumeParseApplied] = useState(false);
+    const [showOnboardingResumePreview, setShowOnboardingResumePreview] = useState(false);
+    const [showReviewResumePreview, setShowReviewResumePreview] = useState(false);
+
+    // Poll for parsed resume data after triggering parse
+    const { data: polledParsedData } = useQuery({
+        queryKey: QUERY_KEYS.CANDIDATES.PARSED_RESUME,
+        queryFn: () => candidateService.getParsedResumeData(),
+        refetchInterval: resumeParsePolling ? 3000 : false,
+        enabled: resumeParsePolling,
+    });
+
+    // Stop polling when parsed data arrives
+    useEffect(() => {
+        if (polledParsedData?.data && resumeParsePolling) {
+            setParsedResumeData(polledParsedData.data);
+            setResumeParsePolling(false);
+            setResumeParsing(false);
+        }
+    }, [polledParsedData, resumeParsePolling]);
+
+    // Timeout polling after 60 seconds
+    useEffect(() => {
+        if (!resumeParsePolling) return;
+        const timeout = setTimeout(() => {
+            setResumeParsePolling(false);
+            setResumeParsing(false);
+            showToast.error('Resume parsing is taking longer than expected. Check back on your profile page.');
+        }, 60000);
+        return () => clearTimeout(timeout);
+    }, [resumeParsePolling]);
 
     const parseResumeMutation = useMutation({
         mutationFn: () => candidateService.parseResume(),
         onSuccess: () => {
-            setResumeParsed(true);
-            showToast.success('Resume parsed! You can review the extracted data on your profile page after onboarding.');
+            setResumeParsePolling(true);
         },
         onError: () => {
             showToast.error('Resume parsing failed. You can try again from your profile page.');
+            setResumeParsing(false);
         },
-        onSettled: () => setResumeParsing(false),
     });
+
+    const handleUploadAndParse = useCallback(async () => {
+        if (resumeFile.length === 0) return;
+        setResumeParsing(true);
+        setParsedResumeData(null);
+        setResumeParseApplied(false);
+        try {
+            await resumeMutation.mutateAsync(resumeFile[0]);
+            setResumeUploaded(true);
+            parseResumeMutation.mutate();
+        } catch {
+            setResumeParsing(false);
+            showToast.error('Resume upload failed. Please try again.');
+        }
+    }, [resumeFile, resumeMutation, parseResumeMutation]);
+
+    const handleUploadOnly = useCallback(async () => {
+        if (resumeFile.length === 0) return;
+        try {
+            await resumeMutation.mutateAsync(resumeFile[0]);
+            setResumeUploaded(true);
+            showToast.success('Resume uploaded successfully!');
+        } catch {
+            showToast.error('Resume upload failed. Please try again.');
+        }
+    }, [resumeFile, resumeMutation]);
+
+    const handleParseOnly = useCallback(() => {
+        setResumeParsing(true);
+        setParsedResumeData(null);
+        setResumeParseApplied(false);
+        parseResumeMutation.mutate();
+    }, [parseResumeMutation]);
+
+    const handleApplyParsedFields = useCallback((fields: Partial<ApplyableResumeFields>) => {
+        const updates: Partial<CandidateOnboardingData> = {};
+        if (fields.bio) updates.bio = fields.bio;
+        if (fields.phone) updates.phone = fields.phone;
+        if (fields.skills) updates.skills = fields.skills;
+        if (fields.experience) updates.experience = fields.experience;
+        if (fields.education) updates.education = fields.education;
+        if (fields.certifications) {
+            updates.certifications = fields.certifications as CertificationEntry[];
+        }
+        updateData(updates);
+        setResumeParseApplied(true);
+        showToast.success('Parsed data applied! Fields will be pre-filled in upcoming steps.');
+    }, [updateData]);
 
     // -----------------------------------------------------------------------
     // Validation
@@ -553,9 +661,17 @@ export default function CandidateOnboardingPage() {
                     visaStatus: data.visaStatus || undefined,
                     passportNumber: data.passportNumber || undefined,
                     passportExpiryDate: data.passportExpiryDate ? new Date(data.passportExpiryDate).toISOString() : undefined,
+                    experienceLevel: (data.experienceLevel as any) || undefined,
+                    highestEducationLevel: (data.highestEducationLevel as any) || undefined,
+                    highestDegree: (data.highestDegree as any) || undefined,
+                    workPermitStatus: data.workPermitStatus || undefined,
                     hasDrivingLicense: data.hasDrivingLicense,
+                    drivingLicenseType: (data.drivingLicenseType as any) || undefined,
                     ownVehicle: data.ownVehicle,
                     isVeteran: data.isVeteran,
+                    isPhysicallyChallenged: data.isPhysicallyChallenged,
+                    disabilityType: data.isPhysicallyChallenged ? (data.disabilityType as any) || undefined : undefined,
+                    disabilityPercentage: data.isPhysicallyChallenged ? data.disabilityPercentage || undefined : undefined,
                     videoResumeUrl: data.videoResumeUrl || undefined,
                     blockedCompanies: data.blockedCompanies.length > 0 ? data.blockedCompanies : undefined,
                     hobbies: data.hobbies.length > 0 ? data.hobbies : undefined,
@@ -574,7 +690,8 @@ export default function CandidateOnboardingPage() {
 
                 await saveMutation.mutateAsync(payload);
 
-                if (resumeFile.length > 0) {
+                // Upload resume if selected but not yet uploaded in resume step
+                if (resumeFile.length > 0 && !resumeUploaded) {
                     await resumeMutation.mutateAsync(resumeFile[0]);
                 }
 
@@ -594,7 +711,7 @@ export default function CandidateOnboardingPage() {
         }
 
         nextStep();
-    }, [validateStep, isLastStep, data, resumeFile, avatarFile, nextStep, saveMutation, resumeMutation, avatarMutation, clearSavedData, router]);
+    }, [validateStep, isLastStep, data, resumeFile, resumeUploaded, avatarFile, nextStep, saveMutation, resumeMutation, avatarMutation, clearSavedData, router]);
 
     const handleSkip = () => {
         markOnboardingComplete('tb_candidate_onboarding');
@@ -950,7 +1067,213 @@ export default function CandidateOnboardingPage() {
         }
 
         // ===================================================================
-        // Step 2 - Profile Basics
+        // Step 2 - Resume Upload & AI Parse
+        // ===================================================================
+        if (currentKey === 'resume') {
+            const selectedFile = resumeFile[0] ?? null;
+            const isPdf = selectedFile?.type === 'application/pdf';
+            const typeBadge = selectedFile ? getFileTypeBadge(selectedFile) : null;
+
+            return (
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-light">
+                            <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-semibold text-[var(--text)]">Upload Resume</h2>
+                            <p className="text-sm text-[var(--text-muted)]">
+                                Upload your resume and optionally let AI extract your details
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* ===== File drop zone (visible when not uploaded) ===== */}
+                    {!resumeUploaded && (
+                        <>
+                            <FileUpload
+                                label="Resume (PDF, DOC, DOCX)"
+                                accept={{
+                                    'application/pdf': ['.pdf'],
+                                    'application/msword': ['.doc'],
+                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+                                }}
+                                maxSize={FILE_LIMITS.RESUME_MAX_SIZE}
+                                onDrop={(files) => {
+                                    setResumeFile(files);
+                                    setResumeUploaded(false);
+                                    setParsedResumeData(null);
+                                    setResumeParseApplied(false);
+                                    setShowOnboardingResumePreview(false);
+                                }}
+                                files={resumeFile}
+                                onRemove={() => {
+                                    setResumeFile([]);
+                                    setResumeUploaded(false);
+                                    setParsedResumeData(null);
+                                    setResumeParseApplied(false);
+                                    setShowOnboardingResumePreview(false);
+                                }}
+                            />
+                            <p className="text-xs text-[var(--text-muted)]">
+                                Max 5MB. Accepted formats: PDF, DOC, DOCX
+                            </p>
+                        </>
+                    )}
+
+                    {/* ===== File selected, not yet uploaded — info card + action buttons ===== */}
+                    {selectedFile && !resumeUploaded && (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                                <FileText className="h-5 w-5 shrink-0 text-[var(--text-muted)]" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="truncate text-sm font-medium text-[var(--text)]">{selectedFile.name}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-xs text-[var(--text-muted)]">{formatFileSize(selectedFile.size)}</span>
+                                        {typeBadge && (
+                                            <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${typeBadge.color}`}>
+                                                {typeBadge.label}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    onClick={handleUploadOnly}
+                                    isLoading={resumeMutation.isPending && !resumeParsing}
+                                    disabled={resumeParsing || resumeMutation.isPending}
+                                >
+                                    <Upload className="mr-1.5 h-4 w-4" />
+                                    Upload Resume
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleUploadAndParse}
+                                    isLoading={resumeMutation.isPending && resumeParsing}
+                                    disabled={resumeParsing || resumeMutation.isPending}
+                                >
+                                    <Sparkles className="mr-1.5 h-4 w-4" />
+                                    Upload & Parse with AI
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ===== Uploaded — resume info card with preview + actions ===== */}
+                    {resumeUploaded && (
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-4 rounded-lg border border-green-200 bg-green-50/50 p-4">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100">
+                                    <FileCheck className="h-5 w-5 text-green-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="truncate text-sm font-semibold text-[var(--text)]">
+                                            {selectedFile?.name || 'Resume'}
+                                        </p>
+                                        <span className="inline-flex items-center rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                                            Uploaded
+                                        </span>
+                                        {typeBadge && (
+                                            <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${typeBadge.color}`}>
+                                                {typeBadge.label}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {selectedFile && (
+                                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{formatFileSize(selectedFile.size)}</p>
+                                    )}
+                                </div>
+                                <div className="flex shrink-0 gap-2">
+                                    {isPdf && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => setShowOnboardingResumePreview(prev => !prev)}
+                                        >
+                                            <Eye className="mr-1.5 h-4 w-4" />
+                                            {showOnboardingResumePreview ? 'Hide' : 'Preview'}
+                                        </Button>
+                                    )}
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            setResumeFile([]);
+                                            setResumeUploaded(false);
+                                            setParsedResumeData(null);
+                                            setResumeParseApplied(false);
+                                            setResumeParsing(false);
+                                            setShowOnboardingResumePreview(false);
+                                        }}
+                                    >
+                                        Replace
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Inline PDF preview */}
+                            {isPdf && showOnboardingResumePreview && selectedFile && (
+                                <div className="rounded-lg border border-[var(--border)] overflow-hidden">
+                                    <iframe
+                                        src={URL.createObjectURL(selectedFile)}
+                                        title="Resume Preview"
+                                        className="w-full border-0"
+                                        style={{ height: '500px' }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Parse with AI (only if not already parsing/parsed) */}
+                            {!resumeParsing && !parsedResumeData && !resumeParseApplied && (
+                                <Button variant="secondary" onClick={handleParseOnly}>
+                                    <Sparkles className="mr-1.5 h-4 w-4" />
+                                    Parse with AI
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ===== Parsing in progress ===== */}
+                    {resumeUploaded && resumeParsing && !parsedResumeData && (
+                        <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                            <div>
+                                <p className="text-sm font-medium text-[var(--text)]">AI is analyzing your resume...</p>
+                                <p className="text-xs text-[var(--text-muted)]">This usually takes 10-30 seconds</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ===== Parsed data review ===== */}
+                    {parsedResumeData && !resumeParseApplied && (
+                        <ResumeParseReview
+                            parsedData={parsedResumeData}
+                            onApplyFields={handleApplyParsedFields}
+                            onCancel={() => setParsedResumeData(null)}
+                        />
+                    )}
+
+                    {/* ===== Applied confirmation ===== */}
+                    {resumeParseApplied && (
+                        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-4">
+                            <Sparkles className="h-5 w-5 text-green-600" />
+                            <div>
+                                <p className="text-sm font-medium text-green-800">Resume data applied!</p>
+                                <p className="text-xs text-green-600">
+                                    The extracted data has been pre-filled into your profile. You can customize each field in the upcoming steps.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // ===================================================================
+        // Step 3 - Profile Basics
         // ===================================================================
         if (currentKey === 'basics') {
             return (
@@ -1171,7 +1494,7 @@ export default function CandidateOnboardingPage() {
                         required
                     />
 
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-3">
                         <Input
                             label="Total Experience (Years)"
                             type="number"
@@ -1190,6 +1513,13 @@ export default function CandidateOnboardingPage() {
                             onChange={(e) => updateData({ totalExperienceMonths: Number(e.target.value) || 0 })}
                             placeholder="e.g. 6"
                             helperText="Additional months beyond full years"
+                        />
+                        <Select
+                            label="Experience Level"
+                            options={EXPERIENCE_LEVEL_OPTIONS}
+                            value={data.experienceLevel}
+                            onChange={(val) => updateData({ experienceLevel: val })}
+                            placeholder="Select level"
                         />
                     </div>
 
@@ -1518,6 +1848,23 @@ export default function CandidateOnboardingPage() {
                             <h2 className="text-lg font-semibold text-[var(--text)]">Education</h2>
                             <p className="text-sm text-[var(--text-muted)]">Add your educational qualifications</p>
                         </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <Select
+                            label="Highest Education Level"
+                            options={EDUCATION_LEVEL_OPTIONS}
+                            value={data.highestEducationLevel}
+                            onChange={(val) => updateData({ highestEducationLevel: val })}
+                            placeholder="Select level"
+                        />
+                        <Select
+                            label="Highest Degree"
+                            options={SPECIFIC_DEGREE_OPTIONS}
+                            value={data.highestDegree}
+                            onChange={(val) => updateData({ highestDegree: val })}
+                            placeholder="Select degree"
+                        />
                     </div>
 
                     {data.education.length === 0 && (
@@ -2919,16 +3266,25 @@ export default function CandidateOnboardingPage() {
                         />
                     </div>
 
+                    <Input
+                        label="Work Permit Status"
+                        placeholder="e.g. H1B, Work Visa"
+                        value={data.workPermitStatus}
+                        onChange={(e) => updateData({ workPermitStatus: e.target.value })}
+                    />
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <Select
+                            label="Driving License Type"
+                            options={DRIVING_LICENSE_OPTIONS}
+                            value={data.drivingLicenseType}
+                            onChange={(val) => updateData({ drivingLicenseType: val, hasDrivingLicense: val !== '' && val !== 'NONE' })}
+                            placeholder="Select license type"
+                        />
+                        <div />
+                    </div>
+
                     <div className="space-y-3">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={data.hasDrivingLicense}
-                                onChange={(e) => updateData({ hasDrivingLicense: e.target.checked })}
-                                className="h-4 w-4 rounded border-[var(--border)] text-primary focus:ring-primary/20"
-                            />
-                            <span className="text-sm text-[var(--text)]">I have a driving license</span>
-                        </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"
@@ -2947,6 +3303,35 @@ export default function CandidateOnboardingPage() {
                             />
                             <span className="text-sm text-[var(--text)]">I am a veteran</span>
                         </label>
+                        <div>
+                            <label className="flex items-center gap-2 cursor-pointer mb-3">
+                                <input
+                                    type="checkbox"
+                                    checked={data.isPhysicallyChallenged}
+                                    onChange={(e) => updateData({ isPhysicallyChallenged: e.target.checked })}
+                                    className="h-4 w-4 rounded border-[var(--border)] text-primary focus:ring-primary/20"
+                                />
+                                <span className="text-sm text-[var(--text)]">Person with Disability</span>
+                            </label>
+                            {data.isPhysicallyChallenged && (
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <Select
+                                        label="Disability Type"
+                                        options={DISABILITY_TYPE_OPTIONS}
+                                        value={data.disabilityType}
+                                        onChange={(val) => updateData({ disabilityType: val })}
+                                        placeholder="Select type"
+                                    />
+                                    <Input
+                                        label="Disability Percentage"
+                                        type="number"
+                                        placeholder="e.g. 40"
+                                        value={data.disabilityPercentage?.toString() || ''}
+                                        onChange={(e) => updateData({ disabilityPercentage: parseInt(e.target.value) || undefined })}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <Input
@@ -3206,9 +3591,82 @@ export default function CandidateOnboardingPage() {
                         </div>
                     </div>
 
+                    {/* Profile Photo */}
+                    {avatarPreview && (
+                        <div className={sectionClass}>
+                            <button type="button" onClick={() => goToStep(1)} className={sectionTitle}>
+                                Profile Photo
+                            </button>
+                            <div className="mt-2 flex items-center gap-3">
+                                <img src={avatarPreview} alt="Profile photo" className="h-16 w-16 rounded-full object-cover border border-[var(--border)]" />
+                                <span className="text-sm text-green-600 font-medium">Photo uploaded</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Resume */}
+                    {(resumeUploaded || resumeFile.length > 0) && (() => {
+                        const reviewFile = resumeFile[0] ?? null;
+                        const isReviewPdf = reviewFile?.type === 'application/pdf';
+                        const reviewBadge = reviewFile ? getFileTypeBadge(reviewFile) : null;
+                        return (
+                            <div className={sectionClass}>
+                                <button type="button" onClick={() => goToStep(2)} className={sectionTitle}>
+                                    Resume
+                                </button>
+                                <div className="mt-2 space-y-3">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <FileText className="h-4 w-4 text-[var(--text-muted)]" />
+                                        <span className="text-sm text-[var(--text)] truncate max-w-[200px]">
+                                            {reviewFile?.name || 'Resume uploaded'}
+                                        </span>
+                                        {reviewFile && (
+                                            <span className="text-xs text-[var(--text-muted)]">
+                                                ({formatFileSize(reviewFile.size)})
+                                            </span>
+                                        )}
+                                        {reviewBadge && (
+                                            <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${reviewBadge.color}`}>
+                                                {reviewBadge.label}
+                                            </span>
+                                        )}
+                                        {resumeUploaded && (
+                                            <span className="text-xs text-green-600 font-medium">Uploaded</span>
+                                        )}
+                                        {resumeParseApplied && (
+                                            <span className="text-xs text-primary font-medium">AI data applied</span>
+                                        )}
+                                    </div>
+                                    {isReviewPdf && resumeUploaded && reviewFile && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowReviewResumePreview(prev => !prev)}
+                                                className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                                            >
+                                                <Eye className="h-3.5 w-3.5" />
+                                                {showReviewResumePreview ? 'Hide preview' : 'Show preview'}
+                                            </button>
+                                            {showReviewResumePreview && (
+                                                <div className="rounded-lg border border-[var(--border)] overflow-hidden">
+                                                    <iframe
+                                                        src={URL.createObjectURL(reviewFile)}
+                                                        title="Resume Preview"
+                                                        className="w-full border-0"
+                                                        style={{ height: '400px' }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* Profile Basics */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(1)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(3)} className={sectionTitle}>
                             Profile Basics
                         </button>
                         <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -3233,7 +3691,7 @@ export default function CandidateOnboardingPage() {
 
                     {/* Personal Details */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(2)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(4)} className={sectionTitle}>
                             Personal Details
                         </button>
                         <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -3246,16 +3704,40 @@ export default function CandidateOnboardingPage() {
                                 <p className={fieldValue}>{data.gender ? GENDER_LABELS[data.gender] || data.gender : '--'}</p>
                             </div>
                             <div>
+                                <p className={fieldLabel}>Marital Status</p>
+                                <p className={fieldValue}>{data.maritalStatus ? MARITAL_STATUS_LABELS[data.maritalStatus] || data.maritalStatus : '--'}</p>
+                            </div>
+                            <div>
                                 <p className={fieldLabel}>Nationality</p>
                                 <p className={fieldValue}>{data.nationality || '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Hometown</p>
+                                <p className={fieldValue}>{data.hometown || '--'}</p>
                             </div>
                             <div>
                                 <p className={fieldLabel}>Category</p>
                                 <p className={fieldValue}>{data.category ? RESERVATION_CATEGORY_LABELS[data.category] || data.category : '--'}</p>
                             </div>
                             <div>
+                                <p className={fieldLabel}>Alternate Phone</p>
+                                <p className={fieldValue}>{data.alternatePhone || '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Alternate Email</p>
+                                <p className={fieldValue}>{data.alternateEmail || '--'}</p>
+                            </div>
+                            <div>
                                 <p className={fieldLabel}>City</p>
                                 <p className={fieldValue}>{data.city || '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>State</p>
+                                <p className={fieldValue}>{data.state || '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Pincode</p>
+                                <p className={fieldValue}>{data.pincode || '--'}</p>
                             </div>
                             <div>
                                 <p className={fieldLabel}>Country</p>
@@ -3266,7 +3748,7 @@ export default function CandidateOnboardingPage() {
 
                     {/* Professional Summary */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(3)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(5)} className={sectionTitle}>
                             Professional Summary
                         </button>
                         <div className="mt-2 space-y-2">
@@ -3278,6 +3760,10 @@ export default function CandidateOnboardingPage() {
                                 <div>
                                     <p className={fieldLabel}>Experience</p>
                                     <p className={fieldValue}>{data.experienceYears}y {data.totalExperienceMonths}m</p>
+                                </div>
+                                <div>
+                                    <p className={fieldLabel}>Experience Level</p>
+                                    <p className={fieldValue}>{data.experienceLevel ? EXPERIENCE_LEVEL_LABELS[data.experienceLevel] || data.experienceLevel : '--'}</p>
                                 </div>
                                 <div>
                                     <p className={fieldLabel}>Work Status</p>
@@ -3297,7 +3783,7 @@ export default function CandidateOnboardingPage() {
 
                     {/* Current Employment */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(4)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(6)} className={sectionTitle}>
                             Current Employment
                         </button>
                         <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -3314,15 +3800,30 @@ export default function CandidateOnboardingPage() {
                                 <p className={fieldValue}>{data.currentIndustry || '--'}</p>
                             </div>
                             <div>
+                                <p className={fieldLabel}>Department</p>
+                                <p className={fieldValue}>{data.currentDepartment || '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Functional Area</p>
+                                <p className={fieldValue}>{data.functionalArea || '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Current Salary</p>
+                                <p className={fieldValue}>{data.currSalary ? `₹${data.currSalary.toLocaleString()}` : '--'}</p>
+                            </div>
+                            <div>
                                 <p className={fieldLabel}>Notice Period</p>
-                                <p className={fieldValue}>{data.noticePeriod ? NOTICE_PERIOD_LABELS[data.noticePeriod] || data.noticePeriod : '--'}</p>
+                                <p className={fieldValue}>
+                                    {data.noticePeriod ? NOTICE_PERIOD_LABELS[data.noticePeriod] || data.noticePeriod : '--'}
+                                    {data.servingNoticePeriod && ' (Serving)'}
+                                </p>
                             </div>
                         </div>
                     </div>
 
                     {/* Experience */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(5)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(7)} className={sectionTitle}>
                             Work Experience
                         </button>
                         <p className="mt-2 text-sm text-[var(--text)]">
@@ -3343,9 +3844,19 @@ export default function CandidateOnboardingPage() {
 
                     {/* Education */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(6)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(8)} className={sectionTitle}>
                             Education
                         </button>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            <div>
+                                <p className={fieldLabel}>Highest Education Level</p>
+                                <p className={fieldValue}>{data.highestEducationLevel ? EDUCATION_LEVEL_LABELS[data.highestEducationLevel] || data.highestEducationLevel : '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Highest Degree</p>
+                                <p className={fieldValue}>{data.highestDegree ? SPECIFIC_DEGREE_LABELS[data.highestDegree] || data.highestDegree : '--'}</p>
+                            </div>
+                        </div>
                         <p className="mt-2 text-sm text-[var(--text)]">
                             {data.education.length === 0
                                 ? 'No education entries added'
@@ -3364,13 +3875,17 @@ export default function CandidateOnboardingPage() {
 
                     {/* Skills */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(7)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(9)} className={sectionTitle}>
                             Skills
                         </button>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
                             <div>
                                 <p className={fieldLabel}>Skills</p>
                                 <p className={fieldValue}>{data.skills.length > 0 ? `${data.skills.length} added` : '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Skills with Proficiency</p>
+                                <p className={fieldValue}>{data.skillsWithProficiency.length > 0 ? `${data.skillsWithProficiency.length} added` : '--'}</p>
                             </div>
                             <div>
                                 <p className={fieldLabel}>IT Skills</p>
@@ -3388,7 +3903,7 @@ export default function CandidateOnboardingPage() {
 
                     {/* Certifications */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(8)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(10)} className={sectionTitle}>
                             Certifications, Courses & Tests
                         </button>
                         <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -3417,7 +3932,7 @@ export default function CandidateOnboardingPage() {
 
                     {/* Publications & Memberships */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(9)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(11)} className={sectionTitle}>
                             Publications & Memberships
                         </button>
                         <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -3438,7 +3953,7 @@ export default function CandidateOnboardingPage() {
 
                     {/* Volunteering & References */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(10)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(12)} className={sectionTitle}>
                             Volunteering & References
                         </button>
                         <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -3455,7 +3970,7 @@ export default function CandidateOnboardingPage() {
 
                     {/* Preferences */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(11)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(13)} className={sectionTitle}>
                             Job Preferences
                         </button>
                         <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -3476,6 +3991,10 @@ export default function CandidateOnboardingPage() {
                                 </p>
                             </div>
                             <div>
+                                <p className={fieldLabel}>Preferred Shift</p>
+                                <p className={fieldValue}>{data.preferredShift ? SHIFT_TYPE_LABELS[data.preferredShift] || data.preferredShift : '--'}</p>
+                            </div>
+                            <div>
                                 <p className={fieldLabel}>Salary Range</p>
                                 <p className={fieldValue}>
                                     {data.expectedSalaryMin || data.expectedSalaryMax
@@ -3488,8 +4007,24 @@ export default function CandidateOnboardingPage() {
                                 <p className={fieldValue}>{data.preferredLocations.length > 0 ? data.preferredLocations.join(', ') : '--'}</p>
                             </div>
                             <div>
+                                <p className={fieldLabel}>Preferred Industries</p>
+                                <p className={fieldValue}>{data.preferredIndustries.length > 0 ? data.preferredIndustries.join(', ') : '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Preferred Roles</p>
+                                <p className={fieldValue}>{data.preferredRoleCategories.length > 0 ? data.preferredRoleCategories.join(', ') : '--'}</p>
+                            </div>
+                            <div>
                                 <p className={fieldLabel}>Relocate</p>
                                 <p className={fieldValue}>{data.willingToRelocate ? 'Yes' : 'No'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Travel Willingness</p>
+                                <p className={fieldValue}>{data.travelWillingnessPercent}%</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Availability</p>
+                                <p className={fieldValue}>{data.dateOfAvailability || '--'}</p>
                             </div>
                             <div>
                                 <p className={fieldLabel}>Visa Status</p>
@@ -3500,7 +4035,7 @@ export default function CandidateOnboardingPage() {
 
                     {/* Documents */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(12)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(14)} className={sectionTitle}>
                             Documents & Miscellaneous
                         </button>
                         <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -3509,19 +4044,49 @@ export default function CandidateOnboardingPage() {
                                 <p className={fieldValue}>{data.passportNumber || '--'}</p>
                             </div>
                             <div>
+                                <p className={fieldLabel}>Passport Expiry</p>
+                                <p className={fieldValue}>{data.passportExpiryDate || '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Work Permit</p>
+                                <p className={fieldValue}>{data.workPermitStatus || '--'}</p>
+                            </div>
+                            <div>
                                 <p className={fieldLabel}>Driving License</p>
-                                <p className={fieldValue}>{data.hasDrivingLicense ? 'Yes' : 'No'}</p>
+                                <p className={fieldValue}>{data.drivingLicenseType ? DRIVING_LICENSE_TYPE_LABELS[data.drivingLicenseType] || data.drivingLicenseType : '--'}</p>
+                            </div>
+                            <div>
+                                <p className={fieldLabel}>Own Vehicle</p>
+                                <p className={fieldValue}>{data.ownVehicle ? 'Yes' : 'No'}</p>
                             </div>
                             <div>
                                 <p className={fieldLabel}>Veteran</p>
                                 <p className={fieldValue}>{data.isVeteran ? 'Yes' : 'No'}</p>
                             </div>
+                            {data.isPhysicallyChallenged && (
+                                <div>
+                                    <p className={fieldLabel}>Disability</p>
+                                    <p className={fieldValue}>{data.disabilityType ? DISABILITY_TYPE_LABELS[data.disabilityType] || data.disabilityType : 'Yes'}{data.disabilityPercentage ? ` (${data.disabilityPercentage}%)` : ''}</p>
+                                </div>
+                            )}
+                            {data.videoResumeUrl && (
+                                <div>
+                                    <p className={fieldLabel}>Video Resume</p>
+                                    <p className={`${fieldValue} truncate`}>{data.videoResumeUrl}</p>
+                                </div>
+                            )}
+                            {data.blockedCompanies.length > 0 && (
+                                <div className="col-span-3">
+                                    <p className={fieldLabel}>Blocked Companies</p>
+                                    <p className={fieldValue}>{data.blockedCompanies.join(', ')}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     {/* Interests */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(13)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(15)} className={sectionTitle}>
                             Interests & Hobbies
                         </button>
                         <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -3538,7 +4103,7 @@ export default function CandidateOnboardingPage() {
 
                     {/* Social Links */}
                     <div className={sectionClass}>
-                        <button type="button" onClick={() => goToStep(14)} className={sectionTitle}>
+                        <button type="button" onClick={() => goToStep(16)} className={sectionTitle}>
                             Social Links
                         </button>
                         <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -3567,52 +4132,6 @@ export default function CandidateOnboardingPage() {
                         </div>
                     </div>
 
-                    {/* Resume Upload */}
-                    <div className="border-t border-[var(--border)] pt-4">
-                        <h3 className="text-sm font-semibold text-[var(--text)] mb-3">Upload Resume</h3>
-                        <FileUpload
-                            label="Resume (PDF, DOC, DOCX)"
-                            accept={{
-                                'application/pdf': ['.pdf'],
-                                'application/msword': ['.doc'],
-                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-                            }}
-                            maxSize={FILE_LIMITS.RESUME_MAX_SIZE}
-                            onDrop={(files) => setResumeFile(files)}
-                            files={resumeFile}
-                            onRemove={() => setResumeFile([])}
-                        />
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">
-                            Max 5MB. Accepted formats: PDF, DOC, DOCX
-                        </p>
-                        {resumeFile.length > 0 && (
-                            <div className="mt-3 flex items-center gap-3">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                        setResumeParsing(true);
-                                        resumeMutation.mutateAsync(resumeFile[0]).then(() => {
-                                            parseResumeMutation.mutate();
-                                        }).catch(() => {
-                                            setResumeParsing(false);
-                                            showToast.error('Upload failed. Please try again.');
-                                        });
-                                    }}
-                                    isLoading={resumeParsing}
-                                    disabled={resumeParsed || resumeParsing}
-                                >
-                                    <Sparkles className="h-4 w-4 mr-1.5" />
-                                    {resumeParsed ? 'Parsed Successfully' : 'Parse with AI'}
-                                </Button>
-                                {resumeParsed && (
-                                    <span className="text-xs text-green-600">
-                                        AI extracted your resume data — review it on your profile page.
-                                    </span>
-                                )}
-                            </div>
-                        )}
-                    </div>
                 </div>
             );
         }

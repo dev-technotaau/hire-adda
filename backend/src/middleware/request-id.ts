@@ -14,11 +14,8 @@ declare global {
  */
 export const requestId = () => {
     return (req: Request, res: Response, next: NextFunction) => {
-        // Check for existing request ID from load balancer/proxy
-        const existingId = req.headers['x-request-id'] || req.headers['x-correlation-id'];
-
-        // Use existing or generate new UUID
-        req.id = (Array.isArray(existingId) ? existingId[0] : existingId) || uuidv4();
+        // Always generate a new UUID — never trust client-supplied request IDs
+        req.id = uuidv4();
 
         // Set response header for client tracking
         res.setHeader('X-Request-ID', req.id);

@@ -2,7 +2,7 @@ import api from '@/lib/api';
 import { API } from '@/constants/api';
 import { buildQueryString } from '@/lib/utils';
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
-import type { Job, JobApplication, CreateJobRequest, UpdateJobRequest, JobSearchFilters } from '@/types/job';
+import type { Job, JobApplication, CreateJobRequest, UpdateJobRequest, JobSearchFilters, ScreeningAnswerInput } from '@/types/job';
 
 export const jobService = {
     async searchJobs(filters: JobSearchFilters): Promise<PaginatedResponse<Job>> {
@@ -36,7 +36,13 @@ export const jobService = {
         return { ...body, data: body.data?.job ?? body.data };
     },
 
-    async applyToJob(id: string, data?: { coverLetter?: string }): Promise<ApiResponse<JobApplication>> {
+    async cloneJob(id: string): Promise<ApiResponse<Job>> {
+        const res = await api.post(API.JOBS.CLONE(id));
+        const body = res.data;
+        return { ...body, data: body.data?.job ?? body.data };
+    },
+
+    async applyToJob(id: string, data?: { coverLetter?: string; screeningAnswers?: ScreeningAnswerInput[] }): Promise<ApiResponse<JobApplication>> {
         const res = await api.post(API.JOBS.APPLY(id), data);
         const body = res.data;
         return { ...body, data: body.data?.application ?? body.data };
@@ -53,20 +59,25 @@ export const jobService = {
         return res.data;
     },
 
-    async getAppliedJobs(page?: number, limit?: number): Promise<PaginatedResponse<JobApplication>> {
-        const qs = buildQueryString({ page, limit });
+    async getAppliedJobs(page?: number, limit?: number, status?: string): Promise<PaginatedResponse<JobApplication>> {
+        const qs = buildQueryString({ page, limit, status });
         const res = await api.get(`${API.JOBS.APPLIED}${qs}`);
         return res.data;
     },
 
-    async getMyJobs(page?: number, limit?: number): Promise<PaginatedResponse<Job>> {
-        const qs = buildQueryString({ page, limit });
+    async getMyJobs(page?: number, limit?: number, status?: string): Promise<PaginatedResponse<Job>> {
+        const qs = buildQueryString({ page, limit, status });
         const res = await api.get(`${API.JOBS.MY_JOBS}${qs}`);
         return res.data;
     },
 
-    async getJobApplications(jobId: string, page?: number, limit?: number): Promise<PaginatedResponse<JobApplication>> {
-        const qs = buildQueryString({ page, limit });
+    async getApplication(id: string): Promise<ApiResponse<JobApplication>> {
+        const res = await api.get(API.JOBS.APPLICATION_DETAIL(id));
+        return res.data;
+    },
+
+    async getJobApplications(jobId: string, page?: number, limit?: number, status?: string): Promise<PaginatedResponse<JobApplication>> {
+        const qs = buildQueryString({ page, limit, status });
         const res = await api.get(`${API.JOBS.APPLICATIONS(jobId)}${qs}`);
         return res.data;
     },

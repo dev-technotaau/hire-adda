@@ -52,4 +52,6 @@ export const uploadImage = multer({
   fileFilter: fileFilter(ALLOWED_MIME_TYPES.image),
 });
 
-export default multer({ storage, limits: { fileSize: MAX_FILE_SIZE } });
+// Default upload allows both images and documents
+const ALL_ALLOWED_TYPES = [...ALLOWED_MIME_TYPES.image, ...ALLOWED_MIME_TYPES.resume];
+export default multer({ storage, limits: { fileSize: MAX_FILE_SIZE }, fileFilter: fileFilter(ALL_ALLOWED_TYPES) });

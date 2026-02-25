@@ -17,7 +17,7 @@ import { showToast } from '@/components/ui/Toast';
 import { authService } from '@/services/auth.service';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/validators/auth';
 import { ROUTES } from '@/constants/routes';
-import { OTP_CONFIG } from '@/constants/config';
+import { useOtpConfig } from '@/hooks/use-otp-config';
 import type { ApiError } from '@/types/api';
 
 type Step = 'email' | 'otp' | 'success';
@@ -25,6 +25,7 @@ type Step = 'email' | 'otp' | 'success';
 export default function ForgotPasswordPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const otpConfig = useOtpConfig();
     const [step, setStep] = useState<Step>('email');
     const [isLoading, setIsLoading] = useState(false);
     const [submittedEmail, setSubmittedEmail] = useState('');
@@ -58,7 +59,7 @@ export default function ForgotPasswordPage() {
         try {
             await authService.forgotPassword({ email: data.email }, turnstileToken || undefined);
             setSubmittedEmail(data.email);
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setStep('otp');
         } catch (err) {
             const error = err as ApiError;
@@ -73,7 +74,7 @@ export default function ForgotPasswordPage() {
         try {
             await authService.forgotPassword({ email: submittedEmail });
             showToast.success('New verification code sent!');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setOtp('');
         } catch (err) {
             const error = err as ApiError;
@@ -84,7 +85,7 @@ export default function ForgotPasswordPage() {
     };
 
     const handleResetPassword = async () => {
-        if (otp.length !== OTP_CONFIG.LENGTH) {
+        if (otp.length !== otpConfig.LENGTH) {
             showToast.error('Please enter the 6-digit verification code');
             return;
         }
@@ -207,7 +208,7 @@ export default function ForgotPasswordPage() {
                                 <OtpInput
                                     value={otp}
                                     onChange={setOtp}
-                                    length={OTP_CONFIG.LENGTH}
+                                    length={otpConfig.LENGTH}
                                 />
 
                                 {/* Timer + Resend */}
@@ -269,7 +270,7 @@ export default function ForgotPasswordPage() {
                                     type="submit"
                                     fullWidth
                                     isLoading={isLoading}
-                                    disabled={otp.length !== OTP_CONFIG.LENGTH || !newPassword || !confirmPassword}
+                                    disabled={otp.length !== otpConfig.LENGTH || !newPassword || !confirmPassword}
                                 >
                                     Reset Password
                                 </Button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -18,9 +18,10 @@ import { showToast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useAuthStore } from '@/store/auth.store';
 import { authService } from '@/services/auth.service';
-import { registerSchema, type RegisterFormData } from '@/validators/auth';
+import { createRegisterSchema, type RegisterFormData } from '@/validators/auth';
 import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
-import { OTP_CONFIG } from '@/constants/config';
+import { useOtpConfig } from '@/hooks/use-otp-config';
+import { usePasswordRules } from '@/hooks/use-security-config';
 import { cn } from '@/lib/utils';
 import type { Role } from '@/types/auth';
 import type { ApiError } from '@/types/api';
@@ -29,6 +30,8 @@ type Step = 'info' | 'password' | 'verify' | 'success';
 
 export default function RegisterPage() {
     const router = useRouter();
+    const otpConfig = useOtpConfig();
+    const passwordRules = usePasswordRules();
     const { register: registerUser } = useAuth();
     const storeLogin = useAuthStore((s) => s.login);
 
@@ -44,8 +47,10 @@ export default function RegisterPage() {
     const [resendTimer, setResendTimer] = useState(0);
     const [isResending, setIsResending] = useState(false);
 
+    const dynamicSchema = useMemo(() => createRegisterSchema(passwordRules), [passwordRules]);
+
     const { register, formState: { errors }, watch, trigger, setValue } = useForm<RegisterFormData>({
-        resolver: zodResolver(registerSchema),
+        resolver: zodResolver(dynamicSchema),
         defaultValues: {
             firstName: '',
             lastName: '',
@@ -71,7 +76,7 @@ export default function RegisterPage() {
     }, [resendTimer]);
 
     const handleOtpVerify = useCallback(async () => {
-        if (otp.length !== OTP_CONFIG.LENGTH) return;
+        if (otp.length !== otpConfig.LENGTH) return;
         setIsVerifying(true);
         try {
             const res = await authService.verifyEmail({ token: otp });
@@ -100,7 +105,7 @@ export default function RegisterPage() {
         try {
             await authService.resendEmailVerification(email);
             showToast.success('Verification code resent!');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setOtp('');
         } catch (err) {
             const error = err as ApiError;
@@ -143,7 +148,7 @@ export default function RegisterPage() {
             }, turnstileToken || undefined);
             showToast.success('Account created! Please check your email for the verification code.');
             setStep('verify');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
         } catch (err) {
             const error = err as ApiError;
             showToast.error(error.message || 'Registration failed');
@@ -363,14 +368,14 @@ export default function RegisterPage() {
                                         value={otp}
                                         onChange={setOtp}
                                         onComplete={handleOtpVerify}
-                                        length={OTP_CONFIG.LENGTH}
+                                        length={otpConfig.LENGTH}
                                     />
 
                                     <Button
                                         type="submit"
                                         fullWidth
                                         isLoading={isVerifying}
-                                        disabled={otp.length !== OTP_CONFIG.LENGTH}
+                                        disabled={otp.length !== otpConfig.LENGTH}
                                     >
                                         Verify & Continue
                                     </Button>

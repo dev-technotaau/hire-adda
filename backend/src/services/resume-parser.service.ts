@@ -2,6 +2,9 @@ import { documentAIClient } from '../config/document-ai';
 import { env } from '../config/env';
 import logger from '../config/logger';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { preprocessResume } from './resume-preprocessing.service';
+import { postprocessResume } from './resume-postprocessing.service';
+import { isFeatureEnabled } from '../config/feature-flags';
 
 const tracer = trace.getTracer('resume-parser-service');
 
@@ -28,32 +31,68 @@ export interface ParsedResumeData {
     summary: string | null;
 }
 
+export interface ParsedResumeResult {
+    data: ParsedResumeData;
+    confidence: {
+        overall: number;
+        fields: {
+            name?: number;
+            email?: number;
+            phone?: number;
+            skills?: number;
+            experience?: number;
+            education?: number;
+        };
+    };
+    warnings: string[];
+    metadata: {
+        originalSize: number;
+        processedSize: number;
+        mimeType: string;
+        hasImages?: boolean;
+    };
+}
+
 /**
- * Parse a resume using Google Document AI.
+ * Parse a resume using Google Document AI with pre and post processing.
  * Returns null if Document AI is not configured.
  */
 export async function parseResume(
     fileBuffer: Buffer,
     mimeType: string
-): Promise<ParsedResumeData | null> {
+): Promise<ParsedResumeResult | null> {
+    if (!await isFeatureEnabled('enableDocumentAI')) {
+        logger.debug('Document AI disabled via feature flag — skipping resume parse');
+        return null;
+    }
+
     if (!documentAIClient || !env.GOOGLE_CLOUD_PROJECT_ID || !env.DOCUMENT_AI_PROCESSOR_ID) {
         logger.debug('Document AI not configured — skipping resume parse');
         return null;
     }
 
-    const processorName = `projects/${env.GOOGLE_CLOUD_PROJECT_ID}/locations/${env.GOOGLE_CLOUD_LOCATION_ID}/processors/${env.DOCUMENT_AI_PROCESSOR_ID}`;
-
     return tracer.startActiveSpan('documentai.parseResume', async (span) => {
-        span.setAttribute('ai.service', 'document-ai');
-        span.setAttribute('ai.mime_type', mimeType);
         try {
+            // Step 1: Pre-process the resume
+            span.addEvent('preprocessing.start');
+            const preprocessed = await preprocessResume(fileBuffer, mimeType);
+            span.setAttribute('ai.mime_type', preprocessed.mimeType);
+            span.setAttribute('ai.original_size', preprocessed.metadata.originalSize);
+            span.setAttribute('ai.has_images', preprocessed.metadata.hasImages || false);
+            span.addEvent('preprocessing.complete');
+
+            // Step 2: Send to Document AI
+            const processorName = `projects/${env.GOOGLE_CLOUD_PROJECT_ID}/locations/${env.GOOGLE_CLOUD_LOCATION_ID}/processors/${env.DOCUMENT_AI_PROCESSOR_ID}`;
+
+            span.addEvent('documentai.request.start');
             const [result] = await documentAIClient!.processDocument({
                 name: processorName,
                 rawDocument: {
-                    content: fileBuffer.toString('base64'),
-                    mimeType,
+                    content: preprocessed.buffer.toString('base64'),
+                    mimeType: preprocessed.mimeType,
                 },
             });
+            span.addEvent('documentai.request.complete');
 
             const document = result.document;
             if (!document || !document.text) {
@@ -66,7 +105,8 @@ export async function parseResume(
             const text = document.text;
             const entities = document.entities || [];
 
-            const parsed: ParsedResumeData = {
+            // Step 3: Extract raw data from Document AI response
+            const rawParsed: ParsedResumeData = {
                 name: extractEntity(entities, 'person_name') || extractEntity(entities, 'name'),
                 email: extractEntity(entities, 'email') || extractEmailFromText(text),
                 phone: extractEntity(entities, 'phone_number') || extractPhoneFromText(text),
@@ -77,12 +117,39 @@ export async function parseResume(
                 summary: extractEntity(entities, 'summary') || extractEntity(entities, 'objective'),
             };
 
-            span.setAttribute('ai.skills_found', parsed.skills.length);
-            span.setAttribute('ai.experience_entries', parsed.experience.length);
-            logger.info(`Resume parsed: ${parsed.skills.length} skills, ${parsed.experience.length} experience entries`);
+            // Step 4: Post-process the extracted data
+            span.addEvent('postprocessing.start');
+            const postprocessed = await postprocessResume(rawParsed);
+            span.addEvent('postprocessing.complete');
+
+            // Add telemetry attributes
+            span.setAttribute('ai.skills_found', postprocessed.data.skills.length);
+            span.setAttribute('ai.experience_entries', postprocessed.data.experience.length);
+            span.setAttribute('ai.education_entries', postprocessed.data.education.length);
+            span.setAttribute('ai.confidence.overall', postprocessed.confidence.overall);
+            span.setAttribute('ai.warnings', postprocessed.warnings.length);
+
+            logger.info(
+                `Resume parsed: ${postprocessed.data.skills.length} skills, ` +
+                `${postprocessed.data.experience.length} experience, ` +
+                `confidence=${(postprocessed.confidence.overall * 100).toFixed(1)}%, ` +
+                `warnings=${postprocessed.warnings.length}`
+            );
+
             span.setStatus({ code: SpanStatusCode.OK });
             span.end();
-            return parsed;
+
+            return {
+                data: postprocessed.data,
+                confidence: postprocessed.confidence,
+                warnings: postprocessed.warnings,
+                metadata: {
+                    originalSize: preprocessed.metadata.originalSize,
+                    processedSize: preprocessed.metadata.processedSize,
+                    mimeType: preprocessed.mimeType,
+                    hasImages: preprocessed.metadata.hasImages,
+                },
+            };
         } catch (error) {
             span.setStatus({ code: SpanStatusCode.ERROR, message: (error as Error).message });
             span.end();

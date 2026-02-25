@@ -113,6 +113,7 @@ export const webhookWorker = new Worker<WebhookJobData>(
     {
         connection: createBullMQConnection(),
         concurrency: 5,
+        lockDuration: 30000,
         limiter: {
             max: 20,
             duration: 1000,

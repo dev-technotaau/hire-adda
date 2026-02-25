@@ -27,6 +27,21 @@ import type { ApiError } from '@/types/api';
 
 type Step = 'email' | 'password' | 'mfa';
 
+const TRUSTED_DEVICE_COOKIE = 'tb_mfa_trust';
+const TRUSTED_DEVICE_DAYS = 30;
+
+function getTrustedDeviceToken(): string | undefined {
+    if (typeof document === 'undefined') return undefined;
+    const match = document.cookie.match(new RegExp(`(?:^|; )${TRUSTED_DEVICE_COOKIE}=([^;]*)`));
+    return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+function setTrustedDeviceCookie(token: string) {
+    if (typeof document === 'undefined') return;
+    const expires = new Date(Date.now() + TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000).toUTCString();
+    document.cookie = `${TRUSTED_DEVICE_COOKIE}=${encodeURIComponent(token)}; expires=${expires}; path=/; SameSite=Strict; Secure`;
+}
+
 export default function LoginPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -42,6 +57,11 @@ export default function LoginPage() {
     const [mfaRequired, setMfaRequired] = useState(false);
     const [passkeyLoading, setPasskeyLoading] = useState(false);
     const [turnstileToken, setTurnstileToken] = useState('');
+    const [useBackupCode, setUseBackupCode] = useState(false);
+    const [trustDevice, setTrustDevice] = useState(false);
+    // Passkey + MFA flow state
+    const [passkeyCredential, setPasskeyCredential] = useState<unknown>(null);
+    const [passkeyMfaRequired, setPasskeyMfaRequired] = useState(false);
 
     const { register, handleSubmit, formState: { errors }, getValues, trigger } = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
@@ -58,27 +78,43 @@ export default function LoginPage() {
         try {
             const loginData = {
                 ...data,
-                ...(mfaRequired && { mfaCode }),
+                ...(mfaRequired && { mfaCode, trustDevice }),
+                trustDeviceToken: getTrustedDeviceToken(),
             };
             const res = await login(loginData, turnstileToken || undefined);
+
+            // Handle MFA required response (success path, not error)
+            if (res.data.requireMfa) {
+                setMfaRequired(true);
+                setStep('mfa');
+                return;
+            }
+
+            // Store trusted device cookie if returned
+            if (res.data.trustedDeviceToken) {
+                setTrustedDeviceCookie(res.data.trustedDeviceToken);
+            }
+
             showToast.success('Welcome back!');
             const role = res.data.user.role as Role;
             router.push(redirect || ROLE_DASHBOARDS[role]);
         } catch (err) {
             const error = err as ApiError;
-            if (error.message?.includes('MFA') || error.message?.includes('mfa')) {
-                setMfaRequired(true);
-                setStep('mfa');
-            } else {
-                showToast.error(error.message || 'Login failed');
-            }
+            showToast.error(error.message || 'Login failed');
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleMfaSubmit = () => {
-        if (mfaCode.length === 6) {
+        // For passkey MFA flow
+        if (passkeyMfaRequired && passkeyCredential) {
+            handlePasskeyMfaVerify();
+            return;
+        }
+        // For password MFA flow: backup codes are 8-9 chars, TOTP is 6
+        const minLength = useBackupCode ? 8 : 6;
+        if (mfaCode.length >= minLength) {
             handleSubmit(onSubmit)();
         }
     };
@@ -95,6 +131,15 @@ export default function LoginPage() {
             const authData = verifyRes.data;
             if (!authData) throw new Error('Authentication failed');
 
+            // If MFA is required after passkey, show MFA step
+            if (authData.requireMfa) {
+                setPasskeyCredential(credential);
+                setPasskeyMfaRequired(true);
+                setMfaRequired(true);
+                setStep('mfa');
+                return;
+            }
+
             storeLogin(authData.user, authData.accessToken, authData.refreshToken);
             showToast.success('Welcome back!');
             const role = authData.user.role as Role;
@@ -106,6 +151,26 @@ export default function LoginPage() {
             }
         } finally {
             setPasskeyLoading(false);
+        }
+    };
+
+    const handlePasskeyMfaVerify = async () => {
+        if (!passkeyCredential || !mfaCode) return;
+        setIsLoading(true);
+        try {
+            const verifyRes = await webauthnService.verifyAuthentication(passkeyCredential, mfaCode);
+            const authData = verifyRes.data;
+            if (!authData) throw new Error('Authentication failed');
+
+            storeLogin(authData.user, authData.accessToken, authData.refreshToken);
+            showToast.success('Welcome back!');
+            const role = authData.user.role as Role;
+            router.push(redirect || ROLE_DASHBOARDS[role]);
+        } catch (err) {
+            const error = err as ApiError;
+            showToast.error(error.message || 'MFA verification failed');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -259,33 +324,76 @@ export default function LoginPage() {
                                 <div className="mb-6 text-center">
                                     <h3 className="text-lg font-semibold text-[var(--text)]">Two-Factor Authentication</h3>
                                     <p className="mt-1 text-sm text-[var(--text-muted)]">
-                                        Enter the 6-digit code from your authenticator app
+                                        {useBackupCode
+                                            ? 'Enter one of your backup codes (e.g. XXXX-XXXX)'
+                                            : 'Enter the 6-digit code from your authenticator app'
+                                        }
                                     </p>
                                 </div>
 
-                                <OtpInput
-                                    value={mfaCode}
-                                    onChange={setMfaCode}
-                                    onComplete={handleMfaSubmit}
-                                />
+                                {useBackupCode ? (
+                                    <Input
+                                        label="Backup Code"
+                                        type="text"
+                                        placeholder="XXXX-XXXX"
+                                        value={mfaCode}
+                                        onChange={(e) => setMfaCode(e.target.value)}
+                                        maxLength={9}
+                                        autoFocus
+                                    />
+                                ) : (
+                                    <OtpInput
+                                        value={mfaCode}
+                                        onChange={setMfaCode}
+                                        onComplete={handleMfaSubmit}
+                                    />
+                                )}
+
+                                {/* Trust device checkbox */}
+                                {!passkeyMfaRequired && (
+                                    <div className="mt-4">
+                                        <Checkbox
+                                            label="Trust this device for 30 days"
+                                            checked={trustDevice}
+                                            onChange={(e) => setTrustDevice(e.target.checked)}
+                                        />
+                                    </div>
+                                )}
 
                                 <Button
                                     type="submit"
                                     fullWidth
-                                    className="mt-6"
+                                    className="mt-4"
                                     isLoading={isLoading}
-                                    disabled={mfaCode.length !== 6}
+                                    disabled={useBackupCode ? mfaCode.length < 8 : mfaCode.length !== 6}
                                 >
                                     Verify & Sign In
                                 </Button>
 
-                                <button
-                                    type="button"
-                                    onClick={() => { setStep('password'); setMfaRequired(false); setMfaCode(''); }}
-                                    className="mt-3 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-                                >
-                                    Back to login
-                                </button>
+                                <div className="mt-3 flex items-center justify-between">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setUseBackupCode(!useBackupCode); setMfaCode(''); }}
+                                        className="text-sm text-primary hover:text-primary-hover"
+                                    >
+                                        {useBackupCode ? 'Use authenticator code' : 'Use backup code'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setStep('password');
+                                            setMfaRequired(false);
+                                            setMfaCode('');
+                                            setPasskeyMfaRequired(false);
+                                            setPasskeyCredential(null);
+                                            setUseBackupCode(false);
+                                            setTrustDevice(false);
+                                        }}
+                                        className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                                    >
+                                        Back to login
+                                    </button>
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>

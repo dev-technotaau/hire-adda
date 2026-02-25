@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { Building2, Save, Upload, X } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import ProgressBar from '@/components/ui/ProgressBar';
 import Skeleton from '@/components/ui/Skeleton';
 import { showToast } from '@/components/ui/Toast';
 import { employerService } from '@/services/employer.service';
@@ -65,8 +67,28 @@ const SECTION_HEADERS: Record<Section, string> = {
 
 export default function CompanyProfilePage() {
     const queryClient = useQueryClient();
+    const searchParams = useSearchParams();
     const [activeSection, setActiveSection] = useState<Section>('company');
     const [form, setForm] = useState<UpdateCompanyRequest>({});
+
+    // Deep-link: read ?section= and ?focus= query params
+    useEffect(() => {
+        const section = searchParams.get('section');
+        if (section && sections.some(s => s.key === section)) {
+            queueMicrotask(() => setActiveSection(section as Section));
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        const focus = searchParams.get('focus');
+        if (focus) {
+            const timer = setTimeout(() => {
+                const el = document.getElementById(focus);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [searchParams, activeSection]);
 
     // -----------------------------------------------------------------------
     // Data fetching
@@ -77,11 +99,17 @@ export default function CompanyProfilePage() {
         queryFn: () => employerService.getCompany(),
     });
 
+    const { data: completenessData } = useQuery({
+        queryKey: QUERY_KEYS.EMPLOYERS.COMPLETENESS,
+        queryFn: () => employerService.getCompleteness(),
+    });
+
     const company = companyData?.data;
+    const completeness = completenessData?.data;
 
     useEffect(() => {
         if (company) {
-            setForm({
+            queueMicrotask(() => setForm({
                 companyName: company.companyName || '',
                 companyType: company.companyType || undefined,
                 tagline: company.tagline || '',
@@ -90,11 +118,13 @@ export default function CompanyProfilePage() {
                 specialties: company.specialties || [],
                 companySize: company.companySize || '',
                 employeeCount: company.employeeCount || undefined,
+                numberOfOffices: company.numberOfOffices || undefined,
                 description: company.description || '',
                 whyWorkForUs: company.whyWorkForUs || '',
                 website: company.website || '',
                 careersPageUrl: company.careersPageUrl || '',
                 blogUrl: company.blogUrl || '',
+                companyVideoUrl: company.companyVideoUrl || '',
                 foundedYear: company.foundedYear || undefined,
                 parentCompany: company.parentCompany || '',
                 stockTicker: company.stockTicker || '',
@@ -133,7 +163,7 @@ export default function CompanyProfilePage() {
                 country: company.country || 'India',
                 headquarters: company.headquarters || '',
                 locations: company.locations || [],
-            });
+            }));
         }
     }, [company]);
 
@@ -145,6 +175,7 @@ export default function CompanyProfilePage() {
         mutationFn: (data: UpdateCompanyRequest) => employerService.updateCompany(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPANY });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPLETENESS });
             showToast.success('Company profile updated!');
         },
         onError: (err) => {
@@ -294,6 +325,29 @@ export default function CompanyProfilePage() {
                         </div>
                     </div>
                 </Card>
+
+                {/* Completeness */}
+                {completeness && completeness.score < 100 && (
+                    <Card padding="sm">
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-[var(--text)]">Profile Completeness: {completeness.score}%</p>
+                                <ProgressBar
+                                    value={completeness.score}
+                                    color={completeness.score >= 80 ? 'success' : completeness.score >= 50 ? 'warning' : 'error'}
+                                    size="sm"
+                                    className="mt-2"
+                                />
+                                {completeness.sections.filter(s => !s.completed).length > 0 && (
+                                    <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                                        Missing: {completeness.sections.filter(s => !s.completed).slice(0, 3).map(s => s.name).join(', ')}
+                                        {completeness.sections.filter(s => !s.completed).length > 3 && ` +${completeness.sections.filter(s => !s.completed).length - 3} more`}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </Card>
+                )}
 
                 <div className="grid gap-6 lg:grid-cols-4">
                     {/* Sidebar */}

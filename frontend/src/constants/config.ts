@@ -7,6 +7,11 @@ export const APP_CONFIG = {
     supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@talentbridge.com',
 } as const;
 
+/** API base URL without the version prefix (e.g. /api/v1 → /api). Useful for
+ *  endpoints that live outside the versioned namespace such as /csrf-token or
+ *  /config/*.  */
+export const API_BASE_URL = APP_CONFIG.apiUrl.replace(/\/v\d+$/, '');
+
 export const PAGINATION = {
     DEFAULT_PAGE: 1,
     DEFAULT_LIMIT: 20,
@@ -28,7 +33,8 @@ export const FILE_LIMITS = {
     IMAGE_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.webp'],
 } as const;
 
-export const PASSWORD_RULES = {
+/** Fallback defaults — overridden by usePasswordRules() which fetches from backend */
+export const PASSWORD_RULES_DEFAULTS = {
     MIN_LENGTH: 8,
     MAX_LENGTH: 128,
     REQUIRE_UPPERCASE: true,
@@ -37,11 +43,52 @@ export const PASSWORD_RULES = {
     REQUIRE_SPECIAL: true,
 } as const;
 
-export const OTP_CONFIG = {
+export type PasswordRules = {
+    MIN_LENGTH: number;
+    MAX_LENGTH: number;
+    REQUIRE_UPPERCASE: boolean;
+    REQUIRE_LOWERCASE: boolean;
+    REQUIRE_NUMBER: boolean;
+    REQUIRE_SPECIAL: boolean;
+};
+
+export type AccountSecurity = {
+    MAX_LOGIN_ATTEMPTS: number;
+    LOCK_DURATION_MINUTES: number;
+    SESSION_TIMEOUT_HOURS: number;
+    MAX_SESSIONS_PER_USER: number;
+    PASSWORD_RESET_EXPIRY_HOURS: number;
+    PASSWORD_RESET_MAX_ATTEMPTS: number;
+};
+
+export const ACCOUNT_SECURITY_DEFAULTS: AccountSecurity = {
+    MAX_LOGIN_ATTEMPTS: 5,
+    LOCK_DURATION_MINUTES: 15,
+    SESSION_TIMEOUT_HOURS: 24,
+    MAX_SESSIONS_PER_USER: 5,
+    PASSWORD_RESET_EXPIRY_HOURS: 1,
+    PASSWORD_RESET_MAX_ATTEMPTS: 5,
+};
+
+export type SecurityConfig = {
+    password: PasswordRules;
+    account: AccountSecurity;
+};
+
+/** Fallback defaults — overridden by useOtpConfig() which fetches from backend */
+export const OTP_CONFIG_DEFAULTS = {
     LENGTH: 6,
     RESEND_COOLDOWN: 60, // seconds
-    EXPIRY: 300, // 5 minutes
+    EXPIRY: 600, // 10 minutes (matches backend OTP_EXPIRY_MINUTES)
+    MAX_RESEND_ATTEMPTS: 5,
 } as const;
+
+export type OtpConfig = {
+    LENGTH: number;
+    RESEND_COOLDOWN: number;
+    EXPIRY: number;
+    MAX_RESEND_ATTEMPTS: number;
+};
 
 export const QUERY_KEYS = {
     AUTH: {
@@ -55,6 +102,7 @@ export const QUERY_KEYS = {
         SAVED: ['jobs', 'saved'],
         MY_JOBS: ['jobs', 'my-jobs'],
         APPLICATIONS: (jobId: string) => ['jobs', 'applications', jobId],
+        APPLICATION_DETAIL: (id: string) => ['jobs', 'application', id],
     },
     CANDIDATES: {
         PROFILE: ['candidates', 'profile'],
@@ -66,12 +114,15 @@ export const QUERY_KEYS = {
         ANALYTICS: (filters: Record<string, unknown>) => ['candidates', 'analytics', filters],
         JOB_ALERTS: ['candidates', 'job-alerts'],
         JOB_ALERT_MATCHES: (id: string) => ['candidates', 'job-alert-matches', id],
+        PARSED_RESUME: ['candidates', 'parsed-resume'],
     },
     EMPLOYERS: {
         DASHBOARD: ['employers', 'dashboard'],
         COMPANY: ['employers', 'company'],
+        COMPLETENESS: ['employers', 'completeness'],
         PROFILE_VIEWS: ['employers', 'profile-views'],
         SAVED_CANDIDATES: ['employers', 'saved-candidates'],
+        APPLICATIONS: ['employers', 'applications'],
         ANALYTICS: (filters: Record<string, unknown>) => ['employers', 'analytics', filters],
     },
     NOTIFICATIONS: {
@@ -106,10 +157,19 @@ export const QUERY_KEYS = {
     WEBAUTHN: {
         CREDENTIALS: ['webauthn', 'credentials'],
     },
+    WEBHOOKS: {
+        LIST: ['webhooks', 'list'],
+        DETAIL: (id: string) => ['webhooks', 'detail', id],
+        DELIVERIES: (id: string) => ['webhooks', id, 'deliveries'],
+    },
     RECOMMENDATIONS: {
         JOBS: ['recommendations', 'jobs'],
         CANDIDATES: (jobId: string) => ['recommendations', 'candidates', jobId],
         FEED: (filters: Record<string, unknown>) => ['recommendations', 'feed', filters],
+    },
+    CONFIG: {
+        OTP: ['config', 'otp'],
+        SECURITY: ['config', 'security'],
     },
     FEATURE_FLAGS: {
         CLIENT: ['feature-flags', 'client'],

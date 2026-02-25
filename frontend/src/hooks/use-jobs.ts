@@ -21,10 +21,10 @@ export function useJob(id: string) {
     });
 }
 
-export function useAppliedJobs(page?: number, limit?: number) {
+export function useAppliedJobs(page?: number, limit?: number, status?: string) {
     return useQuery({
-        queryKey: [...QUERY_KEYS.JOBS.APPLIED, page, limit],
-        queryFn: () => jobService.getAppliedJobs(page, limit),
+        queryKey: [...QUERY_KEYS.JOBS.APPLIED, page, limit, status],
+        queryFn: () => jobService.getAppliedJobs(page, limit, status),
     });
 }
 
@@ -35,26 +35,34 @@ export function useSavedJobs(page?: number, limit?: number) {
     });
 }
 
-export function useMyJobs(page?: number, limit?: number) {
+export function useMyJobs(page?: number, limit?: number, status?: string) {
     return useQuery({
-        queryKey: [...QUERY_KEYS.JOBS.MY_JOBS, page, limit],
-        queryFn: () => jobService.getMyJobs(page, limit),
+        queryKey: [...QUERY_KEYS.JOBS.MY_JOBS, page, limit, status],
+        queryFn: () => jobService.getMyJobs(page, limit, status),
     });
 }
 
-export function useJobApplications(jobId: string, page?: number, limit?: number) {
+export function useJobApplications(jobId: string, page?: number, limit?: number, status?: string) {
     return useQuery({
-        queryKey: [...QUERY_KEYS.JOBS.APPLICATIONS(jobId), page, limit],
-        queryFn: () => jobService.getJobApplications(jobId, page, limit),
+        queryKey: [...QUERY_KEYS.JOBS.APPLICATIONS(jobId), page, limit, status],
+        queryFn: () => jobService.getJobApplications(jobId, page, limit, status),
         enabled: !!jobId,
+    });
+}
+
+export function useApplication(id: string) {
+    return useQuery({
+        queryKey: QUERY_KEYS.JOBS.APPLICATION_DETAIL(id),
+        queryFn: () => jobService.getApplication(id),
+        enabled: !!id,
     });
 }
 
 export function useApplyJob() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ jobId, coverLetter }: { jobId: string; coverLetter?: string }) =>
-            jobService.applyToJob(jobId, { coverLetter }),
+        mutationFn: ({ jobId, coverLetter, screeningAnswers }: { jobId: string; coverLetter?: string; screeningAnswers?: { questionId: string; answer: string }[] }) =>
+            jobService.applyToJob(jobId, { coverLetter, screeningAnswers }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS.APPLIED });
         },

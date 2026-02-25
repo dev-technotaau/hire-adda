@@ -112,11 +112,41 @@ jobs:
 
       - name: Audit backend
         working-directory: ./backend
-        run: npm audit --audit-level=high || true
+        run: npm audit --audit-level=high
 
       - name: Audit frontend
         working-directory: ./frontend
-        run: npm audit --audit-level=high || true
+        run: npm audit --audit-level=high
+
+  # ─── Container Security ────────────────────────────────
+  container-security:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t talent-bridge-backend:scan ./backend
+
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: talent-bridge-backend:scan
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
+
+      - name: Build frontend image
+        run: docker build -t talent-bridge-frontend:scan ./frontend
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: talent-bridge-frontend:scan
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
 
   # ─── Commitlint ────────────────────────────────────────
   commitlint:

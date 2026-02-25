@@ -9,7 +9,7 @@ import Tag from '@/components/ui/Tag';
 import DatePicker from '@/components/ui/DatePicker';
 import {
     JOB_TYPE_LABELS, WORK_MODE_LABELS, SHIFT_TYPE_LABELS,
-    DISABILITY_TYPE_LABELS,
+    DISABILITY_TYPE_LABELS, DRIVING_LICENSE_TYPE_LABELS,
 } from '@/constants/enums';
 import {
     LOCATION_SUGGESTIONS, INDUSTRY_SUGGESTIONS,
@@ -176,11 +176,17 @@ export default function PreferencesSection({ form, updateField }: ProfileSection
                         onChange={(e) => updateField('videoResumeUrl', e.target.value)}
                         placeholder="https://youtube.com/..."
                     />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <Select
+                            label="Driving License Type"
+                            options={toSelectOptions(DRIVING_LICENSE_TYPE_LABELS)}
+                            value={form.drivingLicenseType || ''}
+                            onChange={(v) => updateField('drivingLicenseType', v as UpdateCandidateRequest['drivingLicenseType'])}
+                            placeholder="Select license type"
+                        />
+                        <div />
+                    </div>
                     <div className="space-y-3">
-                        <label className="flex items-center gap-3">
-                            <input type="checkbox" checked={form.hasDrivingLicense || false} onChange={(e) => updateField('hasDrivingLicense', e.target.checked)} className="h-4 w-4 rounded border-[var(--border)] text-primary" />
-                            <span className="text-sm text-[var(--text)]">Has Driving License</span>
-                        </label>
                         <label className="flex items-center gap-3">
                             <input type="checkbox" checked={form.ownVehicle || false} onChange={(e) => updateField('ownVehicle', e.target.checked)} className="h-4 w-4 rounded border-[var(--border)] text-primary" />
                             <span className="text-sm text-[var(--text)]">Own Vehicle</span>
@@ -195,13 +201,22 @@ export default function PreferencesSection({ form, updateField }: ProfileSection
                                 <span className="text-sm text-[var(--text)]">Person with Disability</span>
                             </label>
                             {form.isPhysicallyChallenged && (
-                                <Select
-                                    label="Disability Type"
-                                    options={toSelectOptions(DISABILITY_TYPE_LABELS)}
-                                    value={form.disabilityType || ''}
-                                    onChange={(v) => updateField('disabilityType', v as UpdateCandidateRequest['disabilityType'])}
-                                    placeholder="Select type"
-                                />
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <Select
+                                        label="Disability Type"
+                                        options={toSelectOptions(DISABILITY_TYPE_LABELS)}
+                                        value={form.disabilityType || ''}
+                                        onChange={(v) => updateField('disabilityType', v as UpdateCandidateRequest['disabilityType'])}
+                                        placeholder="Select type"
+                                    />
+                                    <Input
+                                        label="Disability Percentage"
+                                        type="number"
+                                        placeholder="e.g. 40"
+                                        value={form.disabilityPercentage?.toString() || ''}
+                                        onChange={(e) => updateField('disabilityPercentage', parseInt(e.target.value) || undefined)}
+                                    />
+                                </div>
                             )}
                         </div>
                     </div>

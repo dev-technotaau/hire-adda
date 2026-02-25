@@ -1,4 +1,4 @@
-import type { WorkMode, ShiftType, JobType, ExperienceLevel } from './job';
+import type { WorkMode, ShiftType, JobType, ExperienceLevel, EducationLevel, SpecificDegree, DrivingLicenseType } from './job';
 
 export type Gender = 'MALE' | 'FEMALE' | 'NON_BINARY' | 'PREFER_NOT_TO_SAY' | 'OTHER';
 export type WorkStatus = 'EMPLOYED' | 'UNEMPLOYED' | 'STUDENT' | 'FREELANCER' | 'ACTIVELY_LOOKING';
@@ -25,7 +25,12 @@ export interface CandidateProfile {
     bio: string | null;
     resume: string | null;
     resumeOriginalName: string | null;
+    resumeSize: number | null;
+    resumeMimeType: string | null;
+    resumeUploadedAt: string | null;
     additionalResumes: ResumeEntry[] | null;
+    generatedResumeUrl: string | null;
+    generatedResumeAt: string | null;
     videoResumeUrl: string | null;
     profileImage: string | null;
     addressLine1: string | null;
@@ -43,6 +48,7 @@ export interface CandidateProfile {
     longitude: number | null;
     experienceYears: number;
     totalExperienceMonths: number | null;
+    experienceLevel: ExperienceLevel | null;
     currentCompany: string | null;
     currentRole: string | null;
     currentIndustry: string | null;
@@ -67,11 +73,14 @@ export interface CandidateProfile {
     dateOfAvailability: string | null;
     willingToRelocate: boolean;
     travelWillingnessPercent: number | null;
+    highestEducationLevel: EducationLevel | null;
+    highestDegree: SpecificDegree | null;
     visaStatus: string | null;
     workPermitStatus: string | null;
     passportNumber: string | null;
     passportExpiryDate: string | null;
     hasDrivingLicense: boolean;
+    drivingLicenseType: DrivingLicenseType | null;
     ownVehicle: boolean;
     isVeteran: boolean;
     blockedCompanies: string[];
@@ -118,6 +127,10 @@ export interface CandidateProfile {
         avatar: string | null;
         isEmailVerified: boolean;
         isMobileVerified: boolean;
+        isWhatsappVerified?: boolean;
+        mobileNumber?: string | null;
+        whatsappNumber?: string | null;
+        lastActiveAt?: string | null;
     };
 }
 
@@ -299,6 +312,7 @@ export interface UpdateCandidateRequest {
     alternateEmail?: string;
     experienceYears?: number;
     totalExperienceMonths?: number;
+    experienceLevel?: ExperienceLevel;
     currentCompany?: string;
     currentRole?: string;
     currentIndustry?: string;
@@ -323,11 +337,14 @@ export interface UpdateCandidateRequest {
     dateOfAvailability?: string;
     willingToRelocate?: boolean;
     travelWillingnessPercent?: number;
+    highestEducationLevel?: EducationLevel;
+    highestDegree?: SpecificDegree;
     visaStatus?: string;
     workPermitStatus?: string;
     passportNumber?: string;
     passportExpiryDate?: string;
     hasDrivingLicense?: boolean;
+    drivingLicenseType?: DrivingLicenseType;
     ownVehicle?: boolean;
     isVeteran?: boolean;
     blockedCompanies?: string[];
@@ -367,7 +384,9 @@ export interface UpdateCandidateRequest {
         emailNotifications?: boolean;
         smsNotifications?: boolean;
         whatsappNotifications?: boolean;
-        pushNotifications?: boolean;
+        inAppNotifications?: boolean;
+        fcmNotifications?: boolean;
+        webPushNotifications?: boolean;
     };
     profileVisibility?: 'public' | 'registered' | 'private';
     resumeSearchable?: boolean;
@@ -380,6 +399,19 @@ export interface ProfileCompleteness {
         completed: boolean;
         weight: number;
     }[];
+}
+
+export interface ResumeReadinessItem {
+    field: string;
+    message: string;
+    section: string;
+}
+
+export interface ResumeReadiness {
+    canGenerate: boolean;
+    errors: ResumeReadinessItem[];
+    warnings: ResumeReadinessItem[];
+    suggestions: ResumeReadinessItem[];
 }
 
 export interface CandidateDashboard {
@@ -407,6 +439,7 @@ export interface CandidateAnalytics {
         savedJobs: number;
         avgResponseDays: number | null;
     };
+    previousPeriodSummary?: { totalApplications: number; profileViews: number } | null;
     funnel: Record<string, number>;
     trends: Array<{ period: string; applications: number; profileViews: number }>;
     statusDistribution: Array<{ status: string; count: number }>;
@@ -423,6 +456,10 @@ export interface CandidateAnalytics {
         status: string;
         date: string;
     }>;
+    dayOfWeekDistribution?: Array<{ day: string; count: number }>;
+    responseTimeDistribution?: Array<{ bucket: string; count: number }>;
+    sourceEffectiveness?: Array<{ source: string; total: number; interviews: number; offers: number; hires: number; interviewRate: number }>;
+    locationDistribution?: Array<{ location: string; count: number }>;
 }
 
 export type AlertFrequency = 'INSTANT' | 'DAILY' | 'WEEKLY' | 'OFF';
@@ -503,4 +540,12 @@ export interface CandidateSearchFilters {
     sortBy?: 'relevance' | 'distance';
     page?: string;
     limit?: string;
+}
+
+export interface ResumeUploadResponse {
+    resume: string;
+    resumeOriginalName: string;
+    resumeSize: number;
+    resumeMimeType: string;
+    resumeUploadedAt: string;
 }

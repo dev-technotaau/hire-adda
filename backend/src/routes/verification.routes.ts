@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { protect, restrictTo } from '../middleware/auth';
+import { protect } from '../middleware/auth';
+import { restrictTo } from '../middleware/rbac';
 import * as verificationController from '../controllers/verification.controller';
 import { Role } from '@prisma/client';
 import { validate } from '../validators/validate';
@@ -11,9 +12,20 @@ const router = Router();
 
 // Configure Multer
 const storage = multer.memoryStorage();
+const ALLOWED_DOCUMENT_TYPES = [
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+    'application/pdf',
+];
 const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    fileFilter: (_req, file, cb) => {
+        if (ALLOWED_DOCUMENT_TYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Invalid file type. Allowed: ${ALLOWED_DOCUMENT_TYPES.join(', ')}`));
+        }
+    },
 });
 
 // Public: Employer response to employment verification (no auth required)

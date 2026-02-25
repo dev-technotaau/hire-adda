@@ -23,7 +23,9 @@ import { webauthnService } from '@/services/webauthn.service';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import type { WebAuthnCredential } from '@/types/webauthn';
 import OtpInput from '@/components/auth/OtpInput';
-import { QUERY_KEYS, OTP_CONFIG } from '@/constants/config';
+import { QUERY_KEYS } from '@/constants/config';
+import { useOtpConfig } from '@/hooks/use-otp-config';
+import { usePasswordRules } from '@/hooks/use-security-config';
 import { ROUTES } from '@/constants/routes';
 import { formatRelativeDate } from '@/lib/utils';
 import type { ApiError } from '@/types/api';
@@ -84,10 +86,21 @@ function AccountTab() {
 
 function ChangeEmailSection() {
     const { user } = useAuth();
+    const otpConfig = useOtpConfig();
+    const [step, setStep] = useState<'form' | 'otp'>('form');
     const [newEmail, setNewEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [otp, setOtp] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [resendTimer, setResendTimer] = useState(0);
+    const [isResending, setIsResending] = useState(false);
+
+    useEffect(() => {
+        if (resendTimer <= 0) return;
+        const interval = setInterval(() => setResendTimer((p) => p - 1), 1000);
+        return () => clearInterval(interval);
+    }, [resendTimer]);
 
     const validate = (): boolean => {
         const newErrors: Record<string, string> = {};
@@ -99,23 +112,63 @@ function ChangeEmailSection() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleInitiate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate()) return;
 
         setIsLoading(true);
         try {
-            await authService.changeEmail({ newEmail, password });
-            showToast.success('Email change initiated. Please check your new email for verification.');
-            setNewEmail('');
-            setPassword('');
+            await authService.initiateChangeEmail({ newEmail, password });
+            showToast.success('Verification code sent to your new email address.');
+            setStep('otp');
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setErrors({});
         } catch (err) {
             const error = err as ApiError;
-            showToast.error(error.message || 'Failed to change email');
+            showToast.error(error.message || 'Failed to initiate email change');
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleConfirm = async () => {
+        if (otp.length !== otpConfig.LENGTH) return;
+        setIsLoading(true);
+        try {
+            await authService.confirmChangeEmail({ otp });
+            showToast.success('Email changed successfully!');
+            setStep('form');
+            setNewEmail('');
+            setPassword('');
+            setOtp('');
+            window.location.reload();
+        } catch (err) {
+            const error = err as ApiError;
+            showToast.error(error.message || 'Invalid or expired verification code');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResend = async () => {
+        setIsResending(true);
+        try {
+            await authService.resendChangeEmailOtp();
+            showToast.success('New verification code sent!');
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
+            setOtp('');
+        } catch (err) {
+            const error = err as ApiError;
+            showToast.error(error.message || 'Failed to resend code');
+        } finally {
+            setIsResending(false);
+        }
+    };
+
+    const handleCancel = () => {
+        setStep('form');
+        setOtp('');
+        setErrors({});
     };
 
     return (
@@ -137,45 +190,89 @@ function ChangeEmailSection() {
                 <p className="text-sm font-medium text-[var(--text)]">{user?.email}</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
-                <Input
-                    label="New Email Address"
-                    type="email"
-                    placeholder="Enter your new email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    error={errors.newEmail}
-                    leftIcon={<Mail className="h-4 w-4" />}
-                    required
-                />
-                <Input
-                    label="Current Password"
-                    type="password"
-                    placeholder="Enter your password to confirm"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    error={errors.password}
-                    leftIcon={<Lock className="h-4 w-4" />}
-                    required
-                />
-                <div className="pt-2">
-                    <Button type="submit" isLoading={isLoading}>
-                        Change Email
-                    </Button>
+            {step === 'form' ? (
+                <form onSubmit={handleInitiate} className="space-y-4 max-w-md">
+                    <Input
+                        label="New Email Address"
+                        type="email"
+                        placeholder="Enter your new email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        error={errors.newEmail}
+                        leftIcon={<Mail className="h-4 w-4" />}
+                        required
+                    />
+                    <Input
+                        label="Current Password"
+                        type="password"
+                        placeholder="Enter your password to confirm"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        error={errors.password}
+                        leftIcon={<Lock className="h-4 w-4" />}
+                        required
+                    />
+                    <div className="pt-2">
+                        <Button type="submit" isLoading={isLoading}>
+                            Change Email
+                        </Button>
+                    </div>
+                </form>
+            ) : (
+                <div className="space-y-4 max-w-md">
+                    <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
+                        <p className="text-sm text-[var(--text-secondary)]">
+                            A verification code has been sent to <span className="font-medium text-[var(--text)]">{newEmail}</span>. Enter it below to confirm your email change.
+                        </p>
+                    </div>
+                    <OtpInput value={otp} onChange={setOtp} length={otpConfig.LENGTH} onComplete={handleConfirm} />
+                    <div className="text-center">
+                        <p className="text-sm text-[var(--text-muted)]">
+                            Didn&apos;t receive the code?{' '}
+                            {resendTimer > 0 ? (
+                                <span className="text-[var(--text-secondary)]">Resend in {resendTimer}s</span>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleResend}
+                                    disabled={isResending}
+                                    className="font-medium text-primary hover:underline disabled:opacity-50"
+                                >
+                                    {isResending ? 'Sending...' : 'Resend Code'}
+                                </button>
+                            )}
+                        </p>
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <Button
+                            isLoading={isLoading}
+                            onClick={handleConfirm}
+                            disabled={otp.length !== otpConfig.LENGTH}
+                        >
+                            Confirm Change
+                        </Button>
+                        <Button variant="outline" onClick={handleCancel}>
+                            Cancel
+                        </Button>
+                    </div>
                 </div>
-            </form>
+            )}
         </Card>
     );
 }
 
 function MobileVerificationSection() {
     const { user } = useAuth();
-    const [step, setStep] = useState<'idle' | 'otp'>('idle');
+    const otpConfig = useOtpConfig();
+    const [step, setStep] = useState<'idle' | 'change' | 'otp'>('idle');
+    const [mode, setMode] = useState<'verify' | 'change'>('verify');
     const [mobileNumber, setMobileNumber] = useState('');
+    const [password, setPassword] = useState('');
     const [otp, setOtp] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
     const [isResending, setIsResending] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (resendTimer <= 0) return;
@@ -183,6 +280,7 @@ function MobileVerificationSection() {
         return () => clearInterval(interval);
     }, [resendTimer]);
 
+    // Verify existing unverified number
     const handleSendOtp = async () => {
         const number = mobileNumber || user?.mobileNumber;
         if (!number) {
@@ -193,8 +291,9 @@ function MobileVerificationSection() {
         try {
             await authService.resendMobileOtp({ mobileNumber: number });
             showToast.success('OTP sent to your mobile number');
+            setMode('verify');
             setStep('otp');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
         } catch (err) {
             const error = err as ApiError;
             showToast.error(error.message || 'Failed to send OTP');
@@ -203,14 +302,44 @@ function MobileVerificationSection() {
         }
     };
 
+    // Initiate mobile number change (with password)
+    const handleInitiateChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const newErrors: Record<string, string> = {};
+        if (!mobileNumber) newErrors.mobileNumber = 'New mobile number is required';
+        else if (mobileNumber === user?.mobileNumber) newErrors.mobileNumber = 'New number must be different from current number';
+        if (!password) newErrors.password = 'Password is required';
+        setErrors(newErrors);
+        if (Object.keys(newErrors).length > 0) return;
+
+        setIsLoading(true);
+        try {
+            await authService.initiateChangeMobile({ newMobileNumber: mobileNumber, password });
+            showToast.success('Verification code sent to your new number');
+            setMode('change');
+            setStep('otp');
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
+            setErrors({});
+        } catch (err) {
+            const error = err as ApiError;
+            showToast.error(error.message || 'Failed to initiate mobile change');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleResend = async () => {
-        const number = mobileNumber || user?.mobileNumber;
-        if (!number) return;
         setIsResending(true);
         try {
-            await authService.resendMobileOtp({ mobileNumber: number });
+            if (mode === 'change') {
+                await authService.resendChangeMobileOtp();
+            } else {
+                const number = mobileNumber || user?.mobileNumber;
+                if (!number) return;
+                await authService.resendMobileOtp({ mobileNumber: number });
+            }
             showToast.success('New OTP sent!');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setOtp('');
         } catch (err) {
             const error = err as ApiError;
@@ -221,13 +350,20 @@ function MobileVerificationSection() {
     };
 
     const handleVerify = async () => {
-        if (otp.length !== OTP_CONFIG.LENGTH) return;
+        if (otp.length !== otpConfig.LENGTH) return;
         setIsLoading(true);
         try {
-            await authService.verifyMobile({ mobileNumber: mobileNumber || user?.mobileNumber || '', otp });
-            showToast.success('Mobile number verified successfully!');
+            if (mode === 'change') {
+                await authService.confirmChangeMobile({ otp });
+                showToast.success('Mobile number changed successfully!');
+            } else {
+                await authService.verifyMobile({ mobileNumber: mobileNumber || user?.mobileNumber || '', otp });
+                showToast.success('Mobile number verified successfully!');
+            }
             setStep('idle');
             setOtp('');
+            setMobileNumber('');
+            setPassword('');
             window.location.reload();
         } catch (err) {
             const error = err as ApiError;
@@ -235,6 +371,14 @@ function MobileVerificationSection() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleCancel = () => {
+        setStep('idle');
+        setOtp('');
+        setMobileNumber('');
+        setPassword('');
+        setErrors({});
     };
 
     const hasMobile = user?.mobileNumber;
@@ -254,7 +398,7 @@ function MobileVerificationSection() {
                 </div>
             </div>
 
-            {hasMobile && (
+            {hasMobile && step !== 'change' && (
                 <div className="mb-4 flex items-center gap-3 rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
                     <div className="flex-1">
                         <p className="text-sm text-[var(--text-muted)]">Current number</p>
@@ -272,7 +416,7 @@ function MobileVerificationSection() {
                 </div>
             )}
 
-            {step === 'idle' ? (
+            {step === 'idle' && (
                 <div className="space-y-4 max-w-md">
                     {!hasMobile && (
                         <Input
@@ -284,8 +428,8 @@ function MobileVerificationSection() {
                             leftIcon={<Phone className="h-4 w-4" />}
                         />
                     )}
-                    {!isVerified && (
-                        <div className="pt-1">
+                    <div className="flex gap-3 pt-1">
+                        {!isVerified && (
                             <Button
                                 isLoading={isLoading}
                                 onClick={handleSendOtp}
@@ -293,17 +437,76 @@ function MobileVerificationSection() {
                             >
                                 {hasMobile ? 'Verify Phone Number' : 'Add & Verify'}
                             </Button>
-                        </div>
-                    )}
+                        )}
+                        {hasMobile && (
+                            <Button
+                                variant={isVerified ? 'primary' : 'outline'}
+                                onClick={() => {
+                                    setStep('change');
+                                    setMobileNumber('');
+                                    setPassword('');
+                                    setErrors({});
+                                }}
+                            >
+                                Change Number
+                            </Button>
+                        )}
+                    </div>
                 </div>
-            ) : (
+            )}
+
+            {step === 'change' && (
+                <form onSubmit={handleInitiateChange} className="space-y-4 max-w-md">
+                    <Input
+                        label="New Mobile Number"
+                        type="tel"
+                        placeholder="+91 9876543210"
+                        value={mobileNumber}
+                        onChange={(e) => setMobileNumber(e.target.value)}
+                        error={errors.mobileNumber}
+                        leftIcon={<Phone className="h-4 w-4" />}
+                        required
+                    />
+                    <Input
+                        label="Current Password"
+                        type="password"
+                        placeholder="Enter your password to confirm"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        error={errors.password}
+                        leftIcon={<Lock className="h-4 w-4" />}
+                        required
+                    />
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+                        <p className="text-sm text-amber-800">
+                            {user?.whatsappNumber
+                                ? 'Your separate WhatsApp number won\'t be affected by this change.'
+                                : 'WhatsApp verification will be reset when you change your mobile number.'}
+                        </p>
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <Button type="submit" isLoading={isLoading}>
+                            Change Number
+                        </Button>
+                        <Button variant="outline" onClick={handleCancel}>
+                            Cancel
+                        </Button>
+                    </div>
+                </form>
+            )}
+
+            {step === 'otp' && (
                 <div className="space-y-4 max-w-md">
                     <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
                         <p className="text-sm text-[var(--text-secondary)]">
-                            Enter the 6-digit verification code sent to your phone.
+                            Enter the verification code sent to {mode === 'change' ? (
+                                <span className="font-medium text-[var(--text)]">{mobileNumber}</span>
+                            ) : (
+                                'your phone'
+                            )}.
                         </p>
                     </div>
-                    <OtpInput value={otp} onChange={setOtp} length={OTP_CONFIG.LENGTH} />
+                    <OtpInput value={otp} onChange={setOtp} length={otpConfig.LENGTH} onComplete={handleVerify} />
                     <div className="text-center">
                         <p className="text-sm text-[var(--text-muted)]">
                             Didn&apos;t receive the code?{' '}
@@ -325,11 +528,11 @@ function MobileVerificationSection() {
                         <Button
                             isLoading={isLoading}
                             onClick={handleVerify}
-                            disabled={otp.length !== OTP_CONFIG.LENGTH}
+                            disabled={otp.length !== otpConfig.LENGTH}
                         >
                             Verify
                         </Button>
-                        <Button variant="outline" onClick={() => { setStep('idle'); setOtp(''); }}>
+                        <Button variant="outline" onClick={handleCancel}>
                             Cancel
                         </Button>
                     </div>
@@ -341,17 +544,25 @@ function MobileVerificationSection() {
 
 function WhatsAppVerificationSection() {
     const { user } = useAuth();
-    const [step, setStep] = useState<'idle' | 'otp'>('idle');
+    const otpConfig = useOtpConfig();
+    const [step, setStep] = useState<'idle' | 'otp' | 'change'>('idle');
     const [otp, setOtp] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
     const [isResending, setIsResending] = useState(false);
+    const [newWhatsappNumber, setNewWhatsappNumber] = useState('');
+    const [password, setPassword] = useState('');
 
     useEffect(() => {
         if (resendTimer <= 0) return;
         const interval = setInterval(() => setResendTimer((p) => p - 1), 1000);
         return () => clearInterval(interval);
     }, [resendTimer]);
+
+    const hasMobile = user?.mobileNumber;
+    const isVerified = user?.isWhatsappVerified;
+    const hasSeparateNumber = !!user?.whatsappNumber;
+    const displayNumber = user?.whatsappNumber || user?.mobileNumber;
 
     const handleSendOtp = async () => {
         if (!user?.mobileNumber) {
@@ -363,10 +574,41 @@ function WhatsAppVerificationSection() {
             await authService.verifyWhatsApp({ mobileNumber: user.mobileNumber });
             showToast.success('OTP sent to your WhatsApp');
             setStep('otp');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
         } catch (err) {
             const error = err as ApiError;
             showToast.error(error.message || 'Failed to send WhatsApp OTP');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleChangeNumber = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newWhatsappNumber || !password) return;
+        setIsLoading(true);
+        try {
+            await authService.changeWhatsappNumber({ newWhatsappNumber, password });
+            showToast.success('OTP sent to your new WhatsApp number');
+            setStep('otp');
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
+        } catch (err) {
+            const error = err as ApiError;
+            showToast.error(error.message || 'Failed to change WhatsApp number');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleRemoveSeparateNumber = async () => {
+        setIsLoading(true);
+        try {
+            await authService.removeWhatsappNumber();
+            showToast.success('Separate WhatsApp number removed. You can re-verify using your mobile number.');
+            window.location.reload();
+        } catch (err) {
+            const error = err as ApiError;
+            showToast.error(error.message || 'Failed to remove WhatsApp number');
         } finally {
             setIsLoading(false);
         }
@@ -376,9 +618,15 @@ function WhatsAppVerificationSection() {
         if (!user?.mobileNumber) return;
         setIsResending(true);
         try {
-            await authService.verifyWhatsApp({ mobileNumber: user.mobileNumber });
+            // If changing number, resend to the new number via changeWhatsappNumber
+            // Otherwise use the standard verify flow
+            if (newWhatsappNumber && password) {
+                await authService.changeWhatsappNumber({ newWhatsappNumber, password });
+            } else {
+                await authService.verifyWhatsApp({ mobileNumber: user.mobileNumber });
+            }
             showToast.success('New OTP sent to WhatsApp!');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setOtp('');
         } catch (err) {
             const error = err as ApiError;
@@ -389,13 +637,15 @@ function WhatsAppVerificationSection() {
     };
 
     const handleVerify = async () => {
-        if (otp.length !== OTP_CONFIG.LENGTH || !user?.mobileNumber) return;
+        if (otp.length !== otpConfig.LENGTH || !user?.mobileNumber) return;
         setIsLoading(true);
         try {
             await authService.verifyWhatsAppOtp({ mobileNumber: user.mobileNumber, otp });
             showToast.success('WhatsApp verified successfully!');
             setStep('idle');
             setOtp('');
+            setNewWhatsappNumber('');
+            setPassword('');
             window.location.reload();
         } catch (err) {
             const error = err as ApiError;
@@ -405,8 +655,12 @@ function WhatsAppVerificationSection() {
         }
     };
 
-    const hasMobile = user?.mobileNumber;
-    const isVerified = user?.isWhatsappVerified;
+    const resetToIdle = () => {
+        setStep('idle');
+        setOtp('');
+        setNewWhatsappNumber('');
+        setPassword('');
+    };
 
     return (
         <Card variant="bordered">
@@ -428,37 +682,86 @@ function WhatsAppVerificationSection() {
                         Please add and verify your phone number first before enabling WhatsApp verification.
                     </p>
                 </div>
-            ) : isVerified ? (
-                <div className="flex items-center gap-3 rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
-                    <div className="flex-1">
-                        <p className="text-sm text-[var(--text-muted)]">WhatsApp number</p>
-                        <p className="text-sm font-medium text-[var(--text)]">{user.mobileNumber}</p>
+            ) : isVerified && step === 'idle' ? (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
+                        <div className="flex-1">
+                            <p className="text-sm text-[var(--text-muted)]">WhatsApp number</p>
+                            <p className="text-sm font-medium text-[var(--text)]">
+                                {displayNumber}
+                                {hasSeparateNumber && (
+                                    <span className="ml-2 text-xs text-[var(--text-muted)]">(different from mobile)</span>
+                                )}
+                            </p>
+                        </div>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--success)]/10 px-3 py-1 text-xs font-medium text-[var(--success)]">
+                            <CheckCircle className="h-3.5 w-3.5" /> Verified
+                        </span>
                     </div>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--success)]/10 px-3 py-1 text-xs font-medium text-[var(--success)]">
-                        <CheckCircle className="h-3.5 w-3.5" /> Verified
-                    </span>
+                    <div className="flex flex-wrap gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setStep('change')}
+                            className="text-sm font-medium text-primary hover:underline"
+                        >
+                            {hasSeparateNumber ? 'Change WhatsApp number' : 'Use a different number for WhatsApp'}
+                        </button>
+                        {hasSeparateNumber && (
+                            <button
+                                type="button"
+                                onClick={handleRemoveSeparateNumber}
+                                disabled={isLoading}
+                                className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] hover:underline disabled:opacity-50"
+                            >
+                                Use mobile number instead
+                            </button>
+                        )}
+                    </div>
                 </div>
-            ) : step === 'idle' ? (
-                <div className="space-y-4 max-w-md">
+            ) : step === 'change' ? (
+                <form onSubmit={handleChangeNumber} className="space-y-4 max-w-md">
                     <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
                         <p className="text-sm text-[var(--text-muted)]">
-                            An OTP will be sent to <span className="font-medium text-[var(--text)]">{user.mobileNumber}</span> via WhatsApp.
+                            Enter a different WhatsApp number. An OTP will be sent to verify it.
                         </p>
                     </div>
-                    <div className="pt-1">
-                        <Button isLoading={isLoading} onClick={handleSendOtp}>
-                            Verify WhatsApp
+                    <Input
+                        label="New WhatsApp Number"
+                        type="tel"
+                        placeholder="+91XXXXXXXXXX"
+                        value={newWhatsappNumber}
+                        onChange={(e) => setNewWhatsappNumber(e.target.value)}
+                        required
+                    />
+                    <Input
+                        label="Current Password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+                    <div className="flex gap-3 pt-1">
+                        <Button type="submit" isLoading={isLoading} disabled={!newWhatsappNumber || !password}>
+                            Continue
+                        </Button>
+                        <Button variant="outline" onClick={resetToIdle}>
+                            Cancel
                         </Button>
                     </div>
-                </div>
-            ) : (
+                </form>
+            ) : step === 'otp' ? (
                 <div className="space-y-4 max-w-md">
                     <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
                         <p className="text-sm text-[var(--text-secondary)]">
-                            Enter the 6-digit code sent to your WhatsApp.
+                            Enter the 6-digit code sent to your WhatsApp
+                            {newWhatsappNumber && (
+                                <span className="font-medium text-[var(--text)]"> ({newWhatsappNumber})</span>
+                            )}
+                            .
                         </p>
                     </div>
-                    <OtpInput value={otp} onChange={setOtp} length={OTP_CONFIG.LENGTH} />
+                    <OtpInput value={otp} onChange={setOtp} length={otpConfig.LENGTH} onComplete={handleVerify} />
                     <div className="text-center">
                         <p className="text-sm text-[var(--text-muted)]">
                             Didn&apos;t receive the code?{' '}
@@ -480,13 +783,35 @@ function WhatsAppVerificationSection() {
                         <Button
                             isLoading={isLoading}
                             onClick={handleVerify}
-                            disabled={otp.length !== OTP_CONFIG.LENGTH}
+                            disabled={otp.length !== otpConfig.LENGTH}
                         >
                             Verify
                         </Button>
-                        <Button variant="outline" onClick={() => { setStep('idle'); setOtp(''); }}>
+                        <Button variant="outline" onClick={resetToIdle}>
                             Cancel
                         </Button>
+                    </div>
+                </div>
+            ) : (
+                /* step === 'idle' && !isVerified */
+                <div className="space-y-4 max-w-md">
+                    <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
+                        <p className="text-sm text-[var(--text-muted)]">
+                            WhatsApp number: <span className="font-medium text-[var(--text)]">{displayNumber || user.mobileNumber}</span>
+                            {!hasSeparateNumber && ' (same as mobile)'}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 pt-1">
+                        <Button isLoading={isLoading} onClick={handleSendOtp}>
+                            Verify WhatsApp
+                        </Button>
+                        <button
+                            type="button"
+                            onClick={() => setStep('change')}
+                            className="text-sm font-medium text-primary hover:underline"
+                        >
+                            Use a different number for WhatsApp
+                        </button>
                     </div>
                 </div>
             )}
@@ -495,6 +820,8 @@ function WhatsAppVerificationSection() {
 }
 
 function ChangePasswordSection() {
+    const otpConfig = useOtpConfig();
+    const passwordRules = usePasswordRules();
     const [step, setStep] = useState<'form' | 'otp'>('form');
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -515,7 +842,7 @@ function ChangePasswordSection() {
         const newErrors: Record<string, string> = {};
         if (!currentPassword) newErrors.currentPassword = 'Current password is required';
         if (!newPassword) newErrors.newPassword = 'New password is required';
-        else if (newPassword.length < 8) newErrors.newPassword = 'Password must be at least 8 characters';
+        else if (newPassword.length < passwordRules.MIN_LENGTH) newErrors.newPassword = `Password must be at least ${passwordRules.MIN_LENGTH} characters`;
         if (!confirmPassword) newErrors.confirmPassword = 'Please confirm your new password';
         else if (newPassword !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
         setErrors(newErrors);
@@ -534,7 +861,7 @@ function ChangePasswordSection() {
             });
             showToast.success('Verification code sent to your email');
             setStep('otp');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setErrors({});
         } catch (err) {
             const error = err as ApiError;
@@ -552,7 +879,7 @@ function ChangePasswordSection() {
                 newPassword,
             });
             showToast.success('New verification code sent!');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setOtp('');
         } catch (err) {
             const error = err as ApiError;
@@ -563,7 +890,7 @@ function ChangePasswordSection() {
     };
 
     const handleConfirm = async () => {
-        if (otp.length !== OTP_CONFIG.LENGTH) {
+        if (otp.length !== otpConfig.LENGTH) {
             setErrors({ otp: 'Please enter the complete 6-digit code' });
             return;
         }
@@ -649,7 +976,7 @@ function ChangePasswordSection() {
                             A verification code has been sent to your email. Enter it below to confirm your password change.
                         </p>
                     </div>
-                    <OtpInput value={otp} onChange={setOtp} length={OTP_CONFIG.LENGTH} />
+                    <OtpInput value={otp} onChange={setOtp} length={otpConfig.LENGTH} />
                     <div className="text-center">
                         <p className="text-sm text-[var(--text-muted)]">
                             Didn&apos;t receive the code?{' '}
@@ -671,7 +998,7 @@ function ChangePasswordSection() {
                         <Button
                             isLoading={isLoading}
                             onClick={handleConfirm}
-                            disabled={otp.length !== OTP_CONFIG.LENGTH}
+                            disabled={otp.length !== otpConfig.LENGTH}
                         >
                             Confirm Change
                         </Button>
@@ -796,6 +1123,7 @@ function SecurityTab({ user }: SecurityTabProps) {
 function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
     const [showEnableModal, setShowEnableModal] = useState(false);
     const [showDisableModal, setShowDisableModal] = useState(false);
+    const [showRegenModal, setShowRegenModal] = useState(false);
 
     // Enable MFA state
     const [mfaSetup, setMfaSetup] = useState<MfaSetupResponse | null>(null);
@@ -809,7 +1137,21 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
     const [disableCode, setDisableCode] = useState('');
     const [disableLoading, setDisableLoading] = useState(false);
 
+    // Regenerate backup codes state
+    const [regenPassword, setRegenPassword] = useState('');
+    const [regenCode, setRegenCode] = useState('');
+    const [regenLoading, setRegenLoading] = useState(false);
+    const [newBackupCodes, setNewBackupCodes] = useState<string[]>([]);
+
     const queryClient = useQueryClient();
+
+    // Fetch backup code count when MFA is enabled
+    const { data: backupCountRes } = useQuery({
+        queryKey: ['mfa', 'backup-count'],
+        queryFn: () => authService.mfaBackupCodeCount(),
+        enabled: mfaEnabled,
+    });
+    const backupCodeCount = backupCountRes?.data?.count ?? 0;
 
     const handleSetupMfa = async () => {
         setSetupLoading(true);
@@ -879,6 +1221,27 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
         }
     }, [mfaSetup?.secret]);
 
+    const handleRegenerateBackupCodes = async () => {
+        if (!regenPassword || !regenCode) {
+            showToast.error('Please enter your password and verification code');
+            return;
+        }
+        setRegenLoading(true);
+        try {
+            const res = await authService.mfaRegenerateBackup({ password: regenPassword, token: regenCode });
+            if (res.data?.backupCodes) {
+                setNewBackupCodes(res.data.backupCodes);
+                showToast.success('Backup codes regenerated');
+                queryClient.invalidateQueries({ queryKey: ['mfa', 'backup-count'] });
+            }
+        } catch (err) {
+            const error = err as ApiError;
+            showToast.error(error.message || 'Failed to regenerate backup codes');
+        } finally {
+            setRegenLoading(false);
+        }
+    };
+
     return (
         <>
             <Card variant="bordered">
@@ -930,12 +1293,35 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                 </div>
 
                 {mfaEnabled && (
-                    <div className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--success)]/10 px-4 py-2">
-                        <Shield className="h-4 w-4 text-[var(--success)]" />
-                        <span className="text-sm text-[var(--success)]">
-                            Your account is protected with two-factor authentication
-                        </span>
-                    </div>
+                    <>
+                        <div className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--success)]/10 px-4 py-2">
+                            <Shield className="h-4 w-4 text-[var(--success)]" />
+                            <span className="text-sm text-[var(--success)]">
+                                Your account is protected with two-factor authentication
+                            </span>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between rounded-lg border border-[var(--border)] p-4">
+                            <div>
+                                <p className="text-sm font-medium text-[var(--text)]">Backup Codes</p>
+                                <p className="text-sm text-[var(--text-secondary)]">
+                                    {backupCodeCount} backup {backupCodeCount === 1 ? 'code' : 'codes'} remaining
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    setShowRegenModal(true);
+                                    setRegenPassword('');
+                                    setRegenCode('');
+                                    setNewBackupCodes([]);
+                                }}
+                            >
+                                Regenerate
+                            </Button>
+                        </div>
+                    </>
                 )}
             </Card>
 
@@ -1089,6 +1475,81 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                         <OtpInput value={disableCode} onChange={setDisableCode} length={6} />
                     </div>
                 </div>
+            </Modal>
+
+            {/* Regenerate Backup Codes Modal */}
+            <Modal
+                isOpen={showRegenModal}
+                onClose={() => {
+                    setShowRegenModal(false);
+                    setRegenPassword('');
+                    setRegenCode('');
+                    setNewBackupCodes([]);
+                }}
+                title={newBackupCodes.length > 0 ? 'New Backup Codes' : 'Regenerate Backup Codes'}
+                size="sm"
+                footer={
+                    newBackupCodes.length > 0 ? (
+                        <div className="flex justify-end">
+                            <Button
+                                variant="primary"
+                                onClick={() => {
+                                    setShowRegenModal(false);
+                                    setNewBackupCodes([]);
+                                }}
+                            >
+                                Done
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="flex justify-end gap-3">
+                            <Button variant="outline" onClick={() => setShowRegenModal(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="primary"
+                                isLoading={regenLoading}
+                                onClick={handleRegenerateBackupCodes}
+                            >
+                                Regenerate
+                            </Button>
+                        </div>
+                    )
+                }
+            >
+                {newBackupCodes.length > 0 ? (
+                    <div className="space-y-4">
+                        <p className="text-sm text-[var(--text-secondary)]">
+                            Save these new codes in a safe place. Your previous backup codes are no longer valid.
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 rounded-lg bg-[var(--bg-secondary)] p-3">
+                            {newBackupCodes.map((code) => (
+                                <code key={code} className="text-sm font-mono text-[var(--text)]">
+                                    {code}
+                                </code>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <p className="text-sm text-[var(--text-secondary)]">
+                            This will invalidate all existing backup codes and generate new ones.
+                            Enter your password and a verification code to confirm.
+                        </p>
+                        <Input
+                            label="Password"
+                            type="password"
+                            value={regenPassword}
+                            onChange={(e) => setRegenPassword(e.target.value)}
+                            leftIcon={<Lock className="h-4 w-4" />}
+                            required
+                        />
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-[var(--text)]">Verification Code</label>
+                            <OtpInput value={regenCode} onChange={setRegenCode} length={6} />
+                        </div>
+                    </div>
+                )}
             </Modal>
         </>
     );
@@ -1399,9 +1860,11 @@ function NotificationsTab() {
 
     const [preferences, setPreferences] = useState({
         emailNotifications: true,
-        smsNotifications: false,
-        whatsappNotifications: false,
-        pushNotifications: true,
+        smsNotifications: true,
+        whatsappNotifications: true,
+        inAppNotifications: true,
+        fcmNotifications: true,
+        webPushNotifications: true,
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -1412,7 +1875,9 @@ function NotificationsTab() {
                 emailNotifications: p.emailNotifications ?? prev.emailNotifications,
                 smsNotifications: p.smsNotifications ?? prev.smsNotifications,
                 whatsappNotifications: p.whatsappNotifications ?? prev.whatsappNotifications,
-                pushNotifications: p.pushNotifications ?? prev.pushNotifications,
+                inAppNotifications: p.inAppNotifications ?? prev.inAppNotifications,
+                fcmNotifications: p.fcmNotifications ?? prev.fcmNotifications,
+                webPushNotifications: p.webPushNotifications ?? prev.webPushNotifications,
             }));
         }
     }, [profileData]);
@@ -1442,25 +1907,37 @@ function NotificationsTab() {
             key: 'emailNotifications' as const,
             label: 'Email Notifications',
             description: 'Receive job alerts, application updates, and messages via email',
-            icon: <Bell className="h-5 w-5" />,
+            icon: <Mail className="h-5 w-5" />,
         },
         {
             key: 'smsNotifications' as const,
             label: 'SMS Notifications',
             description: 'Get important alerts delivered as text messages',
-            icon: <Smartphone className="h-5 w-5" />,
+            icon: <Phone className="h-5 w-5" />,
         },
         {
             key: 'whatsappNotifications' as const,
             label: 'WhatsApp Notifications',
             description: 'Receive notifications through WhatsApp messaging',
+            icon: <MessageCircle className="h-5 w-5" />,
+        },
+        {
+            key: 'inAppNotifications' as const,
+            label: 'In-App Notifications',
+            description: 'See notifications inside the app notification center',
+            icon: <Bell className="h-5 w-5" />,
+        },
+        {
+            key: 'fcmNotifications' as const,
+            label: 'Mobile Push Notifications',
+            description: 'Get push notifications on your mobile device',
             icon: <Smartphone className="h-5 w-5" />,
         },
         {
-            key: 'pushNotifications' as const,
-            label: 'Push Notifications',
-            description: 'Get real-time notifications in your browser',
-            icon: <Bell className="h-5 w-5" />,
+            key: 'webPushNotifications' as const,
+            label: 'Web Push Notifications',
+            description: 'Get real-time push notifications in your browser',
+            icon: <Monitor className="h-5 w-5" />,
         },
     ];
 

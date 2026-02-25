@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { jobService } from '../services/job.service';
 import { AppError } from '../middleware/error';
-import { JobStatus } from '@prisma/client';
+import { JobStatus, ApplicationStatus } from '@prisma/client';
 
 /** Convert service result to standard PaginatedData shape */
 function toPaginatedData<T>(
@@ -28,11 +28,11 @@ export const createJob = async (
             throw new AppError('Not authorized', 401);
         }
 
-        const job = await jobService.createJob(req.user.id, req.body);
+        const result = await jobService.createJob(req.user.id, req.body);
 
         res.status(201).json({
             status: 'success',
-            data: { job },
+            data: result,
         });
     } catch (error) {
         next(error);
@@ -97,13 +97,24 @@ export const searchJobs = async (
             radiusKm: q.radiusKm ? Number(q.radiusKm) : undefined,
             page: q.page ? Number(q.page) : 1,
             limit: q.limit ? Number(q.limit) : 10,
+            // Enterprise filters
+            functionalArea: typeof q.functionalArea === 'string' ? q.functionalArea as any : undefined,
+            noticePeriodPreference: typeof q.noticePeriodPreference === 'string' ? q.noticePeriodPreference.split(',') as any : undefined,
+            isPwdFriendly: q.isPwdFriendly === 'true' ? true : undefined,
+            visaSponsorshipAvailable: q.visaSponsorshipAvailable === 'true' ? true : undefined,
+            genderPreference: typeof q.genderPreference === 'string' ? q.genderPreference as any : undefined,
+            diversityTags: typeof q.diversityTags === 'string' ? q.diversityTags.split(',') : undefined,
+            postingVisibility: typeof q.postingVisibility === 'string' ? q.postingVisibility as any : undefined,
         };
 
         const result = await jobService.searchJobs(filters);
 
         res.status(200).json({
             status: 'success',
-            data: toPaginatedData(result.jobs, result.pagination),
+            data: {
+                ...toPaginatedData(result.jobs, result.pagination),
+                facets: result.facets || {},
+            },
         });
     } catch (error) {
         next(error);
@@ -123,10 +134,10 @@ export const applyToJob = async (
             throw new AppError('Not authorized', 401);
         }
 
-        const { coverLetter } = req.body;
+        const { coverLetter, screeningAnswers } = req.body;
         const jobId = req.params.id as string;
 
-        const application = await jobService.applyToJob(req.user.id, jobId, coverLetter);
+        const application = await jobService.applyToJob(req.user.id, jobId, coverLetter, screeningAnswers);
 
         res.status(201).json({
             status: 'success',
@@ -151,15 +162,29 @@ export const getJobApplications = async (
             throw new AppError('Not authorized', 401);
         }
 
-        const applications = await jobService.getJobApplications(req.user.id, req.params.id as string);
+        const page = req.query.page ? Number(req.query.page) : undefined;
+        const limit = req.query.limit ? Number(req.query.limit) : undefined;
+        const status = req.query.status as ApplicationStatus | undefined;
+        const data = await jobService.getJobApplications(req.user.id, req.params.id as string, page, limit, status);
 
         res.status(200).json({
             status: 'success',
-            data: toPaginatedData(applications),
+            data,
         });
     } catch (error) {
         next(error);
     }
+};
+
+/**
+ * Get Single Application Detail
+ */
+export const getApplicationDetail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        const application = await jobService.getApplicationById(req.user.id, req.params.applicationId as string, req.user.role);
+        res.status(200).json({ status: 'success', data: application });
+    } catch (error) { next(error); }
 };
 
 /**
@@ -201,11 +226,14 @@ export const getAppliedJobs = async (
             throw new AppError('Not authorized', 401);
         }
 
-        const applications = await jobService.getAppliedJobs(req.user.id);
+        const page = req.query.page ? Number(req.query.page) : undefined;
+        const limit = req.query.limit ? Number(req.query.limit) : undefined;
+        const status = req.query.status as ApplicationStatus | undefined;
+        const data = await jobService.getAppliedJobs(req.user.id, page, limit, status);
 
         res.status(200).json({
             status: 'success',
-            data: toPaginatedData(applications),
+            data,
         });
     } catch (error) {
         next(error);
@@ -250,11 +278,13 @@ export const getSavedJobs = async (
             throw new AppError('Not authorized', 401);
         }
 
-        const savedJobs = await jobService.getSavedJobs(req.user.id);
+        const page = req.query.page ? Number(req.query.page) : undefined;
+        const limit = req.query.limit ? Number(req.query.limit) : undefined;
+        const data = await jobService.getSavedJobs(req.user.id, page, limit);
 
         res.status(200).json({
             status: 'success',
-            data: toPaginatedData(savedJobs.map((s: any) => ({ ...s.job, savedAt: s.createdAt }))),
+            data,
         });
     } catch (error) {
         next(error);
@@ -307,5 +337,64 @@ export const deactivateJob = async (req: Request, res: Response, next: NextFunct
         if (!req.user) throw new AppError('Not authorized', 401);
         const job = await jobService.deactivateJob(req.user.id, req.params.id as string);
         res.status(200).json({ status: 'success', message: 'Job deactivated', data: { job } });
+    } catch (error) { next(error); }
+};
+
+/**
+ * Clone/Duplicate a Job Post (Employer)
+ */
+export const cloneJob = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        const job = await jobService.cloneJob(req.user.id, req.params.id as string);
+        res.status(201).json({ status: 'success', data: { job } });
+    } catch (error) { next(error); }
+};
+
+/**
+ * Shortlist a candidate for a job (Employer)
+ */
+export const shortlistCandidateForJob = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        const { jobId } = req.body;
+        if (!jobId) throw new AppError('jobId is required', 400);
+        const application = await jobService.shortlistCandidateForJob(req.user.id, req.params.candidateId as string, jobId);
+        res.status(200).json({ status: 'success', message: 'Candidate shortlisted', data: { application } });
+    } catch (error) { next(error); }
+};
+
+/**
+ * Select a candidate for a job (Employer)
+ */
+export const selectCandidateForJob = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        const { jobId } = req.body;
+        if (!jobId) throw new AppError('jobId is required', 400);
+        const application = await jobService.selectCandidateForJob(req.user.id, req.params.candidateId as string, jobId);
+        res.status(200).json({ status: 'success', message: 'Candidate selected', data: { application } });
+    } catch (error) { next(error); }
+};
+
+/**
+ * Get all applications across employer's jobs (Employer)
+ */
+export const getAllEmployerApplications = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        const q = req.query;
+        const result = await jobService.getAllEmployerApplications(req.user.id, {
+            status: typeof q.status === 'string' ? q.status as ApplicationStatus : undefined,
+            jobId: typeof q.jobId === 'string' ? q.jobId : undefined,
+            candidateId: typeof q.candidateId === 'string' ? q.candidateId : undefined,
+            search: typeof q.search === 'string' ? q.search : undefined,
+            sortBy: typeof q.sortBy === 'string' && ['newest', 'oldest', 'matchScore'].includes(q.sortBy)
+                ? q.sortBy as 'newest' | 'oldest' | 'matchScore'
+                : undefined,
+            page: q.page ? Number(q.page) : undefined,
+            limit: q.limit ? Number(q.limit) : undefined,
+        });
+        res.status(200).json({ status: 'success', data: toPaginatedData(result.applications, result.pagination) });
     } catch (error) { next(error); }
 };

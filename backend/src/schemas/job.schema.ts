@@ -3,6 +3,9 @@ import {
     JobType, JobStatus, ApplicationStatus,
     WorkMode, ShiftType, ExperienceLevel, EducationLevel,
     SalaryType, UrgencyLevel, LanguageProficiency,
+    NoticePeriodPreference, FunctionalArea, SpecificDegree,
+    GenderPreference, DrivingLicenseType, PostingVisibility,
+    ApplyMethod, ScreeningQuestionType,
 } from '@prisma/client';
 
 // --- Reusable sub-schemas ---
@@ -19,6 +22,82 @@ const walkInDetailsSchema = z.object({
     contactPerson: z.string().optional(),
     contactPhone: z.string().optional(),
 });
+
+const screeningQuestionSchema = z.object({
+    question: z.string().min(3).max(500),
+    questionType: z.nativeEnum(ScreeningQuestionType).default(ScreeningQuestionType.TEXT),
+    isRequired: z.boolean().optional().default(false),
+    isDealBreaker: z.boolean().optional().default(false),
+    options: z.array(z.string()).optional(),
+    idealAnswer: z.string().optional(),
+    displayOrder: z.number().int().min(0).optional().default(0),
+});
+
+const screeningAnswerSchema = z.object({
+    questionId: z.string().uuid(),
+    answer: z.string().min(1),
+});
+
+// --- Shared enterprise fields ---
+
+const enterpriseFields = {
+    // Classification
+    functionalArea: z.nativeEnum(FunctionalArea, { error: 'Invalid functional area' }).optional(),
+
+    // Education (UG/PG separation + specific degrees)
+    ugRequired: z.nativeEnum(EducationLevel, { error: 'Invalid UG level' }).optional(),
+    pgRequired: z.nativeEnum(EducationLevel, { error: 'Invalid PG level' }).optional(),
+    specificDegrees: z.array(z.nativeEnum(SpecificDegree)).optional(),
+    degreeSpecializations: z.array(z.string()).optional(),
+
+    // Compensation
+    salaryNegotiable: z.boolean().optional(),
+
+    // Notice period
+    noticePeriodPreference: z.array(z.nativeEnum(NoticePeriodPreference)).optional(),
+
+    // Posting identity
+    isConfidential: z.boolean().optional(),
+    referenceCode: z.string().max(50).optional(),
+
+    // Multi-location
+    additionalLocations: z.array(z.string()).optional(),
+    accommodationProvided: z.boolean().optional(),
+
+    // Walk-in structured fields
+    walkInStartDate: z.string().date().or(z.string().datetime()).optional(),
+    walkInEndDate: z.string().date().or(z.string().datetime()).optional(),
+    walkInTime: z.string().optional(),
+    walkInVenue: z.string().optional(),
+    walkInContactPerson: z.string().optional(),
+    walkInContactPhone: z.string().optional(),
+    walkInInstructions: z.string().optional(),
+
+    // Diversity & Inclusion
+    diversityTags: z.array(z.string()).optional(),
+
+    // Compliance & Requirements
+    visaSponsorshipAvailable: z.boolean().optional(),
+    backgroundCheckRequired: z.boolean().optional(),
+    isPwdFriendly: z.boolean().optional(),
+    passportRequired: z.boolean().optional(),
+    bondDetails: z.string().max(500).optional(),
+    drivingLicenseRequired: z.nativeEnum(DrivingLicenseType, { error: 'Invalid driving license type' }).optional(),
+
+    // Age & Gender
+    ageMin: z.number().int().min(18).max(65).optional(),
+    ageMax: z.number().int().min(18).max(65).optional(),
+    genderPreference: z.nativeEnum(GenderPreference, { error: 'Invalid gender preference' }).optional(),
+
+    // Posting Control
+    postingVisibility: z.nativeEnum(PostingVisibility, { error: 'Invalid visibility' }).optional(),
+    applyMethod: z.nativeEnum(ApplyMethod, { error: 'Invalid apply method' }).optional(),
+    externalApplyUrl: z.string().url().optional().or(z.literal('')),
+    scheduledPublishAt: z.string().datetime().optional(),
+
+    // Screening Questions
+    screeningQuestions: z.array(screeningQuestionSchema).max(20).optional(),
+};
 
 // --- Create job schema ---
 
@@ -83,6 +162,15 @@ export const createJobSchema = z.object({
         walkInDetails: walkInDetailsSchema.optional(),
         contactPerson: z.string().optional(),
         contactEmail: z.string().email().optional().or(z.literal('')),
+
+        // Enterprise features
+        ...enterpriseFields,
+    }).refine(data => !data.ageMin || !data.ageMax || data.ageMin <= data.ageMax, {
+        message: 'Minimum age must be less than or equal to maximum age',
+        path: ['ageMax'],
+    }).refine(data => data.applyMethod !== 'EXTERNAL_URL' || (data.externalApplyUrl && data.externalApplyUrl.length > 0), {
+        message: 'External apply URL is required when apply method is EXTERNAL_URL',
+        path: ['externalApplyUrl'],
     }),
 });
 
@@ -149,6 +237,24 @@ export const updateJobSchema = z.object({
         walkInDetails: walkInDetailsSchema.optional(),
         contactPerson: z.string().optional(),
         contactEmail: z.string().email().optional().or(z.literal('')),
+
+        // Enterprise features
+        ...enterpriseFields,
+    }).refine(data => !data.ageMin || !data.ageMax || data.ageMin <= data.ageMax, {
+        message: 'Minimum age must be less than or equal to maximum age',
+        path: ['ageMax'],
+    }).refine(data => data.applyMethod !== 'EXTERNAL_URL' || !data.applyMethod || (data.externalApplyUrl && data.externalApplyUrl.length > 0), {
+        message: 'External apply URL is required when apply method is EXTERNAL_URL',
+        path: ['externalApplyUrl'],
+    }),
+});
+
+// --- Apply with screening answers ---
+
+export const applyToJobSchema = z.object({
+    body: z.object({
+        coverLetter: z.string().optional(),
+        screeningAnswers: z.array(screeningAnswerSchema).optional(),
     }),
 });
 

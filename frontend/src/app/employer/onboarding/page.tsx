@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -67,6 +67,7 @@ interface EmployerOnboardingData {
     specialties: string[];
     companySize: string;
     employeeCount: number | undefined;
+    numberOfOffices: number | undefined;
     foundedYear: number | undefined;
     website: string;
     parentCompany: string;
@@ -120,7 +121,8 @@ interface EmployerOnboardingData {
     pincode: string;
     country: string;
     locations: string[];
-    // Step: Social Profiles
+    // Step: Social Profiles & Video
+    companyVideoUrl: string;
     socialLinks: {
         linkedin: string;
         twitter: string;
@@ -148,6 +150,7 @@ const STEPS: OnboardingStep[] = [
     { key: 'leadership', label: 'Leadership & Testimonials', optional: true },
     { key: 'awards', label: 'Awards', optional: true },
     { key: 'funding', label: 'Funding', optional: true },
+    { key: 'legal', label: 'Legal & Financial', optional: true },
     { key: 'contact', label: 'Contact Info' },
     { key: 'address', label: 'Address & Locations' },
     { key: 'social', label: 'Social Profiles', optional: true },
@@ -164,6 +167,7 @@ const INITIAL_DATA: EmployerOnboardingData = {
     specialties: [],
     companySize: '',
     employeeCount: undefined,
+    numberOfOffices: undefined,
     foundedYear: undefined,
     website: '',
     parentCompany: '',
@@ -205,6 +209,7 @@ const INITIAL_DATA: EmployerOnboardingData = {
     pincode: '',
     country: 'India',
     locations: [],
+    companyVideoUrl: '',
     socialLinks: {
         linkedin: '',
         twitter: '',
@@ -286,6 +291,10 @@ export default function EmployerOnboardingPage() {
     const [productInput, setProductInput] = useState('');
     const [ergInput, setErgInput] = useState('');
     const [logoFiles, setLogoFiles] = useState<File[]>([]);
+    const logoPreviewUrl = useMemo(
+        () => (logoFiles.length > 0 ? URL.createObjectURL(logoFiles[0]) : null),
+        [logoFiles],
+    );
 
     // --- Mutations ----------------------------------------------------------
     const saveMutation = useMutation({
@@ -349,6 +358,7 @@ export default function EmployerOnboardingPage() {
                 specialties: data.specialties.length > 0 ? data.specialties : undefined,
                 companySize: data.companySize || undefined,
                 employeeCount: data.employeeCount,
+                numberOfOffices: data.numberOfOffices,
                 foundedYear: data.foundedYear,
                 website: data.website || undefined,
                 parentCompany: data.parentCompany || undefined,
@@ -371,7 +381,7 @@ export default function EmployerOnboardingPage() {
                 cinNumber: data.cinNumber || undefined,
                 panNumber: data.panNumber || undefined,
                 annualRevenueRange: data.annualRevenueRange || undefined,
-                fundingStage: (data.fundingStage || undefined) as any,
+                fundingStage: (data.fundingStage || undefined) as FundingStage | undefined,
                 totalFundingRaised: data.totalFundingRaised || undefined,
                 investors: data.investors.length > 0 ? data.investors : undefined,
                 leadershipTeam: data.leadershipTeam.length > 0 ? data.leadershipTeam : undefined,
@@ -400,6 +410,7 @@ export default function EmployerOnboardingPage() {
                 },
                 careersPageUrl: data.careersPageUrl || undefined,
                 blogUrl: data.blogUrl || undefined,
+                companyVideoUrl: data.companyVideoUrl || undefined,
             };
 
             try {
@@ -765,7 +776,7 @@ export default function EmployerOnboardingPage() {
                 )}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
                 <Select
                     label="Company Size"
                     options={companySizeOptions}
@@ -782,6 +793,16 @@ export default function EmployerOnboardingPage() {
                         updateData({ employeeCount: e.target.value ? Number(e.target.value) : undefined })
                     }
                     leftIcon={<Users className="h-4 w-4" />}
+                />
+                <Input
+                    label="Number of Offices"
+                    type="number"
+                    placeholder="e.g. 5"
+                    value={data.numberOfOffices ?? ''}
+                    onChange={(e) =>
+                        updateData({ numberOfOffices: e.target.value ? Number(e.target.value) : undefined })
+                    }
+                    leftIcon={<MapPin className="h-4 w-4" />}
                 />
             </div>
 
@@ -844,20 +865,9 @@ export default function EmployerOnboardingPage() {
                 value={data.description}
                 onChange={(e) => updateData({ description: e.target.value })}
                 rows={6}
-                maxLength={2000}
+                maxLength={3000}
                 showCount
                 required
-            />
-
-            <Textarea
-                label="Why Work For Us (Brief)"
-                placeholder="Give a short overview of why candidates should join your company..."
-                value={data.whyWorkForUs}
-                onChange={(e) => updateData({ whyWorkForUs: e.target.value })}
-                rows={4}
-                maxLength={1000}
-                showCount
-                helperText="You can add a more detailed version in the dedicated step"
             />
 
             {/* Company Logo */}
@@ -1020,16 +1030,6 @@ export default function EmployerOnboardingPage() {
                 helperText="A compelling 'Why Work For Us' section helps attract top talent. Be specific and authentic."
             />
 
-            <Textarea
-                label="Interview Process"
-                placeholder="Describe your typical interview process step-by-step. e.g. 'Round 1: Phone screening, Round 2: Technical assessment, Round 3: System design, Round 4: Culture fit with hiring manager...'"
-                value={data.interviewProcess}
-                onChange={(e) => updateData({ interviewProcess: e.target.value })}
-                rows={6}
-                maxLength={2000}
-                showCount
-                helperText="Candidates appreciate transparency about your interview process"
-            />
         </div>
     );
 
@@ -1802,6 +1802,16 @@ export default function EmployerOnboardingPage() {
                 leftIcon={<BookOpen className="h-4 w-4" />}
                 helperText="Link to your company's blog or engineering blog"
             />
+
+            <Input
+                label="Company Video URL"
+                type="url"
+                placeholder="https://youtube.com/watch?v=..."
+                value={data.companyVideoUrl}
+                onChange={(e) => updateData({ companyVideoUrl: e.target.value })}
+                leftIcon={<Camera className="h-4 w-4" />}
+                helperText="Intro video, office tour, or culture video (YouTube, Vimeo)"
+            />
         </div>
     );
 
@@ -1856,6 +1866,9 @@ export default function EmployerOnboardingPage() {
     );
 
     const renderReview = () => {
+        // Step indices: 0=welcome 1=basics 2=identity 3=culture 4=whyWorkForUs 5=benefits
+        // 6=tech 7=leadership 8=awards 9=funding 10=legal 11=contact 12=address 13=social
+        // 14=interviewProcess 15=csrValues 16=review
         const sections: Array<{
             title: string;
             stepIndex: number;
@@ -1871,8 +1884,10 @@ export default function EmployerOnboardingPage() {
                     { label: 'Company Type', value: data.companyType ? COMPANY_TYPE_LABELS[data.companyType] : undefined },
                     { label: 'Industry', value: data.industry },
                     { label: 'Sub-Industry', value: data.subIndustry },
+                    { label: 'Specialties', value: data.specialties.length > 0 ? data.specialties.join(', ') : undefined },
                     { label: 'Company Size', value: data.companySize },
                     { label: 'Employee Count', value: data.employeeCount },
+                    { label: 'Number of Offices', value: data.numberOfOffices },
                     { label: 'Founded Year', value: data.foundedYear },
                     { label: 'Website', value: data.website },
                     { label: 'Parent Company', value: data.parentCompany },
@@ -1886,7 +1901,14 @@ export default function EmployerOnboardingPage() {
                 items: [
                     { label: 'Tagline', value: data.tagline },
                     { label: 'Description', value: data.description ? `${data.description.slice(0, 120)}...` : undefined },
-                    { label: 'Why Work For Us', value: data.whyWorkForUs ? `${data.whyWorkForUs.slice(0, 80)}...` : undefined },
+                ],
+            },
+            {
+                title: 'Why Work For Us',
+                stepIndex: 4,
+                icon: Gem,
+                items: [
+                    { label: 'Why Work For Us', value: data.whyWorkForUs ? `${data.whyWorkForUs.slice(0, 100)}...` : undefined },
                 ],
             },
             {
@@ -1958,8 +1980,19 @@ export default function EmployerOnboardingPage() {
                 ],
             },
             {
-                title: 'Contact Info',
+                title: 'Legal & Financial',
                 stepIndex: 10,
+                icon: Shield,
+                items: [
+                    { label: 'GST Number', value: data.gstNumber },
+                    { label: 'CIN Number', value: data.cinNumber },
+                    { label: 'PAN Number', value: data.panNumber },
+                    { label: 'Annual Revenue', value: data.annualRevenueRange },
+                ],
+            },
+            {
+                title: 'Contact Info',
+                stepIndex: 11,
                 icon: Mail,
                 items: [
                     { label: 'Email', value: data.contactEmail },
@@ -1970,16 +2003,17 @@ export default function EmployerOnboardingPage() {
             },
             {
                 title: 'Address & Locations',
-                stepIndex: 11,
+                stepIndex: 12,
                 icon: MapPin,
                 items: [
                     { label: 'Headquarters', value: data.headquarters },
                     {
                         label: 'Full Address',
-                        value: [data.addressLine1, data.city, data.state, data.pincode]
+                        value: [data.addressLine1, data.addressLine2, data.city, data.state, data.pincode]
                             .filter(Boolean)
                             .join(', ') || undefined,
                     },
+                    { label: 'Country', value: data.country },
                     {
                         label: 'Additional Locations',
                         value: data.locations.length > 0 ? data.locations.join(', ') : undefined,
@@ -1988,7 +2022,7 @@ export default function EmployerOnboardingPage() {
             },
             {
                 title: 'Social Profiles',
-                stepIndex: 12,
+                stepIndex: 13,
                 icon: Globe,
                 items: [
                     { label: 'LinkedIn', value: data.socialLinks.linkedin },
@@ -1999,11 +2033,12 @@ export default function EmployerOnboardingPage() {
                     { label: 'Glassdoor', value: data.socialLinks.glassdoor },
                     { label: 'Careers Page', value: data.careersPageUrl },
                     { label: 'Blog', value: data.blogUrl },
+                    { label: 'Company Video', value: data.companyVideoUrl },
                 ],
             },
             {
                 title: 'Interview Process',
-                stepIndex: 13,
+                stepIndex: 14,
                 icon: Target,
                 items: [
                     { label: 'Interview Process', value: data.interviewProcess ? `${data.interviewProcess.slice(0, 100)}...` : undefined },
@@ -2011,7 +2046,7 @@ export default function EmployerOnboardingPage() {
             },
             {
                 title: 'CSR & Values',
-                stepIndex: 14,
+                stepIndex: 15,
                 icon: HandHeart,
                 items: [
                     { label: 'CSR Initiatives', value: data.csrInitiatives ? `${data.csrInitiatives.slice(0, 100)}...` : undefined },
@@ -2060,6 +2095,29 @@ export default function EmployerOnboardingPage() {
                         </div>
                     );
                 })}
+
+                {/* Logo preview in review */}
+                {logoPreviewUrl && (
+                    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                        <button
+                            type="button"
+                            onClick={() => goToStep(2)}
+                            className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+                        >
+                            <Building2 className="h-4 w-4" />
+                            Company Logo
+                            <ExternalLink className="h-3 w-3" />
+                        </button>
+                        <div className="flex items-center gap-3">
+                            <img
+                                src={logoPreviewUrl}
+                                alt="Company logo"
+                                className="h-16 w-16 rounded-lg object-contain border border-[var(--border)] bg-white"
+                            />
+                            <span className="text-sm text-green-600 font-medium">Logo uploaded</span>
+                        </div>
+                    </div>
+                )}
 
                 {/* Benefits tags in review */}
                 {data.benefits.length > 0 && (
@@ -2141,7 +2199,85 @@ export default function EmployerOnboardingPage() {
                     </div>
                 )}
 
-                {/* Logo Upload moved to identity step */}
+                {/* Specialties tags in review */}
+                {data.specialties.length > 0 && (
+                    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                        <button
+                            type="button"
+                            onClick={() => goToStep(1)}
+                            className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+                        >
+                            <Briefcase className="h-4 w-4" />
+                            Specialties
+                            <ExternalLink className="h-3 w-3" />
+                        </button>
+                        <div className="flex flex-wrap gap-2">
+                            {data.specialties.map((s) => (
+                                <Tag key={s} label={s} variant="primary" size="sm" />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Products & Services tags in review */}
+                {data.productsServices.length > 0 && (
+                    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                        <button
+                            type="button"
+                            onClick={() => goToStep(6)}
+                            className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+                        >
+                            <Zap className="h-4 w-4" />
+                            Products & Services
+                            <ExternalLink className="h-3 w-3" />
+                        </button>
+                        <div className="flex flex-wrap gap-2">
+                            {data.productsServices.map((p) => (
+                                <Tag key={p} label={p} variant="primary" size="sm" />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ERGs tags in review */}
+                {data.employeeResourceGroups.length > 0 && (
+                    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                        <button
+                            type="button"
+                            onClick={() => goToStep(3)}
+                            className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+                        >
+                            <Heart className="h-4 w-4" />
+                            Employee Resource Groups
+                            <ExternalLink className="h-3 w-3" />
+                        </button>
+                        <div className="flex flex-wrap gap-2">
+                            {data.employeeResourceGroups.map((e) => (
+                                <Tag key={e} label={e} variant="primary" size="sm" />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Locations tags in review */}
+                {data.locations.length > 0 && (
+                    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+                        <button
+                            type="button"
+                            onClick={() => goToStep(12)}
+                            className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+                        >
+                            <MapPin className="h-4 w-4" />
+                            Office Locations
+                            <ExternalLink className="h-3 w-3" />
+                        </button>
+                        <div className="flex flex-wrap gap-2">
+                            {data.locations.map((l) => (
+                                <Tag key={l} label={l} variant="primary" size="sm" />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };

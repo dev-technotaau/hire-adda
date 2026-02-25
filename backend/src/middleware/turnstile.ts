@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { BadRequestError } from '../exceptions';
 import { env } from '../config/env';
+import logger from '../config/logger';
 
 /**
  * Middleware to verify Cloudflare Turnstile token
@@ -21,7 +22,7 @@ export const verifyTurnstile = async (req: Request, _res: Response, next: NextFu
     }
 
     if (!secretKey) {
-        console.warn('⚠️ Turnstile secret key is missing!');
+        logger.warn('Turnstile secret key is missing!');
         return next();
     }
 
@@ -45,7 +46,7 @@ export const verifyTurnstile = async (req: Request, _res: Response, next: NextFu
         next();
     } catch (error) {
         if (error instanceof BadRequestError) throw error;
-        console.error('Turnstile verification error:', error);
+        logger.error('Turnstile verification error:', error);
         throw new BadRequestError('Failed to verify CAPTCHA');
     }
 };

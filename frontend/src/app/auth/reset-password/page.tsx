@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -13,22 +13,26 @@ import Input from '@/components/ui/Input';
 import PasswordStrength from '@/components/auth/PasswordStrength';
 import { showToast } from '@/components/ui/Toast';
 import { authService } from '@/services/auth.service';
-import { resetPasswordSchema, type ResetPasswordFormData } from '@/validators/auth';
+import { createResetPasswordSchema, type ResetPasswordFormData } from '@/validators/auth';
 import { ROUTES } from '@/constants/routes';
+import { usePasswordRules } from '@/hooks/use-security-config';
 import type { ApiError } from '@/types/api';
 
 export default function ResetPasswordPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
+    const passwordRules = usePasswordRules();
 
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
+    const dynamicSchema = useMemo(() => createResetPasswordSchema(passwordRules), [passwordRules]);
+
     const { register, handleSubmit, formState: { errors }, watch } = useForm<ResetPasswordFormData>({
-        resolver: zodResolver(resetPasswordSchema),
+        resolver: zodResolver(dynamicSchema),
         defaultValues: {
             token: token || '',
             password: '',

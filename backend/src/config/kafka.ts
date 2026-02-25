@@ -20,16 +20,17 @@ try {
 
   // Add SASL authentication if username/password are present
   if (env.KAFKA_USERNAME && env.KAFKA_PASSWORD) {
-    // Load Aiven CA certificate for TLS — env var takes priority over file
+    // Load Aiven CA certificate from committed cert file
     const caPath = path.resolve(__dirname, '../../certs/aiven-ca.pem');
-    const rawCert =
-      env.KAFKA_CA_CERT || (fs.existsSync(caPath) ? fs.readFileSync(caPath, 'utf-8') : null);
-    // Env-var UIs often store PEM certs with literal \n — convert to real newlines
-    const caCert = rawCert ? rawCert.replace(/\\n/g, '\n') : null;
+    const caCert = fs.existsSync(caPath) ? fs.readFileSync(caPath, 'utf-8') : null;
 
-    kafkaConfig.ssl = caCert
-      ? { ca: [caCert], rejectUnauthorized: false }
-      : { rejectUnauthorized: false };
+    if (caCert) {
+      kafkaConfig.ssl = { ca: [caCert] };
+      logger.info('🔐 Kafka TLS: Using Aiven CA certificate from certs/aiven-ca.pem');
+    } else {
+      kafkaConfig.ssl = true;
+      logger.warn('⚠️ Kafka TLS: CA cert file not found at certs/aiven-ca.pem — using default CAs');
+    }
 
     kafkaConfig.sasl = {
       mechanism:
@@ -37,10 +38,6 @@ try {
       username: env.KAFKA_USERNAME,
       password: env.KAFKA_PASSWORD,
     };
-
-    if (caCert) {
-      logger.info('🔐 Kafka TLS: Using Aiven CA certificate');
-    }
   }
 
   kafka = new Kafka(kafkaConfig);

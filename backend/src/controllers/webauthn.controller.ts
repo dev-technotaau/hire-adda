@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { webauthnService } from '../services/webauthn.service';
 import { generateTokens } from '../services/auth.service';
+import { verifyMfaToken } from '../services/mfa.service';
 import { sessionService } from '../services/session.service';
 import { AppError } from '../middleware/error';
 import { publishEvent, KafkaTopics } from '../kafka/producer';
@@ -112,7 +113,7 @@ export const verifyAuthentication = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const { credential } = req.body;
+        const { credential, mfaCode } = req.body;
         const { verified, user } = await webauthnService.verifyAuthentication(
             credential,
             getSessionId(req)
@@ -124,6 +125,37 @@ export const verifyAuthentication = async (
 
         if (!user.isActive || user.isSuspended) {
             throw new AppError('Account is suspended or inactive', 403, 'ACCOUNT_SUSPENDED');
+        }
+
+        // Check if user has MFA enabled — passkeys don't bypass TOTP
+        const mfaUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { mfaEnabled: true },
+        });
+
+        if (mfaUser?.mfaEnabled) {
+            if (!mfaCode) {
+                // Return MFA required response (no tokens yet)
+                res.status(200).json({
+                    status: 'success',
+                    message: 'MFA required',
+                    data: {
+                        requireMfa: true,
+                        user: {
+                            id: user.id,
+                            email: user.email,
+                            role: user.role,
+                            firstName: user.firstName,
+                            lastName: user.lastName,
+                        },
+                    },
+                });
+                return;
+            }
+            const isMfaValid = await verifyMfaToken(user.id, mfaCode);
+            if (!isMfaValid) {
+                throw new AppError('Invalid MFA code', 401);
+            }
         }
 
         const userAgent = req.headers['user-agent'];

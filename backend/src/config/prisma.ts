@@ -1,9 +1,14 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+
+// Ensure Decimal fields serialize as numbers in JSON responses (not strings)
+(Prisma.Decimal.prototype as any).toJSON = function () {
+    return Number(this);
+};
 
 // Singleton pattern for PrismaClient
 const globalForPrisma = globalThis as unknown as {

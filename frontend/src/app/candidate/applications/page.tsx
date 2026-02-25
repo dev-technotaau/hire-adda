@@ -39,6 +39,7 @@ const statusTabs = [
     { key: 'APPLIED', label: 'Applied' },
     { key: 'VIEWED', label: 'Viewed' },
     { key: 'SHORTLISTED', label: 'Shortlisted' },
+    { key: 'SELECTED', label: 'Selected' },
     { key: 'INTERVIEW_SCHEDULED', label: 'Interview' },
     { key: 'OFFERED', label: 'Offered' },
     { key: 'REJECTED', label: 'Rejected' },
@@ -50,15 +51,13 @@ export default function ApplicationsPage() {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [withdrawTarget, setWithdrawTarget] = useState<string | null>(null);
 
-    const { data, isLoading } = useAppliedJobs(page, PAGINATION.APPLICATIONS_PER_PAGE);
+    const serverStatus = statusFilter === 'ALL' ? undefined : statusFilter;
+    const { data, isLoading } = useAppliedJobs(page, PAGINATION.APPLICATIONS_PER_PAGE, serverStatus);
     const withdrawMutation = useWithdrawApplication();
 
     const applications = data?.data?.items || [];
     const pagination = data?.data;
-
-    const filtered = statusFilter === 'ALL'
-        ? applications
-        : applications.filter(app => app.status === statusFilter);
+    const filtered = applications;
 
     const handleWithdraw = async () => {
         if (!withdrawTarget) return;
@@ -87,7 +86,7 @@ export default function ApplicationsPage() {
                     <Tabs
                         tabs={statusTabs}
                         activeTab={statusFilter}
-                        onChange={setStatusFilter}
+                        onChange={(tab) => { setStatusFilter(tab); setPage(1); }}
                     />
                 </div>
 
@@ -165,7 +164,7 @@ function ApplicationCard({
 }) {
     const job = application.job;
     const badgeColor = statusColorMap[APPLICATION_STATUS_COLORS[application.status] || 'neutral'] || 'neutral';
-    const canWithdraw = ['APPLIED', 'VIEWED', 'SHORTLISTED'].includes(application.status);
+    const canWithdraw = ['APPLIED', 'VIEWED', 'SHORTLISTED', 'SELECTED'].includes(application.status);
 
     return (
         <Card className="hover:shadow-sm transition-shadow">

@@ -89,6 +89,7 @@ export const addMessage = async (req: Request, res: Response, next: NextFunction
             senderName,
             req.body.body,
             isAdmin ? req.body.isInternal : false, // Only admins can create internal notes
+            req.body.subject, // Optional subject for email replies
         );
 
         res.status(201).json({ status: 'success', data: message });

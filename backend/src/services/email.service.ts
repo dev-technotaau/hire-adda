@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 import logger from '../config/logger';
+import { isFeatureEnabled } from '../config/feature-flags';
 
 interface EmailOptions {
     to: string;
@@ -27,6 +28,11 @@ const transporter = nodemailer.createTransport({
  */
 export const sendEmail = async (options: EmailOptions): Promise<any> => {
     try {
+        if (!await isFeatureEnabled('enableEmailNotifications')) {
+            logger.debug('Email disabled via feature flag — skipping');
+            return { messageId: 'flag-disabled' };
+        }
+
         if (env.NODE_ENV === 'test') {
             logger.info(`[TEST] Email sent to ${options.to}: ${options.subject}`);
             return { messageId: 'test-id' };

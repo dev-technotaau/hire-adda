@@ -6,7 +6,8 @@ import {
     ArrowLeft, Building2, MapPin, Users, Globe, Calendar,
     ShieldCheck, Mail, Phone, User, Linkedin, ExternalLink,
     Heart, Trophy, Cpu, Quote, Camera, Rocket, Eye, Target,
-    Gem, Handshake, Youtube, Instagram, Facebook,
+    Gem, Handshake, Youtube, Instagram, Facebook, Play,
+    TrendingUp, DollarSign, Briefcase, BookOpen, Home,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -16,6 +17,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import { employerService } from '@/services/employer.service';
 import { QUERY_KEYS } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
+import { FUNDING_STAGE_LABELS } from '@/constants/enums';
 import type { CompanyProfile } from '@/types/employer';
 
 export default function CompanyProfilePreviewPage() {
@@ -74,9 +76,13 @@ export default function CompanyProfilePreviewPage() {
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <h1 className="text-2xl font-bold text-[var(--text)]">{company.companyName}</h1>
-                                            {company.isVerified && (
+                                            {company.isVerified ? (
                                                 <Badge variant="success" size="sm">
                                                     <ShieldCheck className="mr-1 h-3 w-3" /> Verified
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="neutral" size="sm">
+                                                    Not Verified
                                                 </Badge>
                                             )}
                                         </div>
@@ -108,11 +114,24 @@ export default function CompanyProfilePreviewPage() {
                                                 <Calendar className="h-4 w-4" /> Founded {company.foundedYear}
                                             </span>
                                         )}
+                                        {company.numberOfOffices && (
+                                            <span className="flex items-center gap-1">
+                                                <Home className="h-4 w-4" /> {company.numberOfOffices} {company.numberOfOffices === 1 ? 'office' : 'offices'}
+                                            </span>
+                                        )}
                                     </div>
 
-                                    {company.companyType && (
-                                        <Badge variant="neutral" size="sm">{company.companyType.replace(/_/g, ' ')}</Badge>
-                                    )}
+                                    <div className="flex flex-wrap gap-2">
+                                        {company.companyType && (
+                                            <Badge variant="neutral" size="sm">{company.companyType.replace(/_/g, ' ')}</Badge>
+                                        )}
+                                        {company.parentCompany && (
+                                            <Badge variant="neutral" size="sm">Subsidiary of {company.parentCompany}</Badge>
+                                        )}
+                                        {company.stockTicker && (
+                                            <Badge variant="neutral" size="sm"><TrendingUp className="mr-1 h-3 w-3" /> {company.stockTicker}</Badge>
+                                        )}
+                                    </div>
 
                                     {company.website && (
                                         <a
@@ -146,6 +165,28 @@ export default function CompanyProfilePreviewPage() {
                                         </div>
                                     )}
                                 </div>
+                            </Card>
+                        )}
+
+                        {/* Company Video */}
+                        {company.companyVideoUrl && (
+                            <Card
+                                header={
+                                    <div className="flex items-center gap-2">
+                                        <Play className="h-5 w-5 text-[var(--error)]" />
+                                        <h2 className="text-lg font-semibold text-[var(--text)]">Company Video</h2>
+                                    </div>
+                                }
+                            >
+                                <a
+                                    href={company.companyVideoUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                                >
+                                    <Play className="h-4 w-4" /> Watch our company video
+                                    <ExternalLink className="h-3 w-3" />
+                                </a>
                             </Card>
                         )}
 
@@ -402,6 +443,64 @@ export default function CompanyProfilePreviewPage() {
                             </Card>
                         )}
 
+                        {/* Funding & Investors */}
+                        {(company.fundingStage || company.totalFundingRaised || (company.investors && company.investors.length > 0)) && (
+                            <Card
+                                header={
+                                    <div className="flex items-center gap-2">
+                                        <DollarSign className="h-5 w-5 text-[var(--success)]" />
+                                        <h2 className="text-lg font-semibold text-[var(--text)]">Funding & Investors</h2>
+                                    </div>
+                                }
+                            >
+                                <div className="space-y-4">
+                                    <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
+                                        {company.fundingStage && (
+                                            <span className="flex items-center gap-1.5">
+                                                <span className="font-medium text-[var(--text)]">Stage:</span> {FUNDING_STAGE_LABELS[company.fundingStage] || company.fundingStage}
+                                            </span>
+                                        )}
+                                        {company.totalFundingRaised && (
+                                            <span className="flex items-center gap-1.5">
+                                                <span className="font-medium text-[var(--text)]">Total Raised:</span> {company.totalFundingRaised}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {company.investors && company.investors.length > 0 && (
+                                        <div>
+                                            <h3 className="mb-2 text-sm font-semibold text-[var(--text)]">Investors</h3>
+                                            <div className="flex flex-wrap gap-2">
+                                                {company.investors.map((investor) => (
+                                                    <Badge key={investor} variant="neutral" size="sm">{investor}</Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </Card>
+                        )}
+
+                        {/* Workplace Policies */}
+                        {company.workplacePolicies && Object.keys(company.workplacePolicies).length > 0 && (
+                            <Card
+                                header={
+                                    <div className="flex items-center gap-2">
+                                        <Briefcase className="h-5 w-5 text-primary" />
+                                        <h2 className="text-lg font-semibold text-[var(--text)]">Workplace Policies</h2>
+                                    </div>
+                                }
+                            >
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {Object.entries(company.workplacePolicies).map(([key, value]) => (
+                                        <div key={key} className="rounded-lg border border-[var(--border)] px-3 py-2">
+                                            <span className="text-sm font-medium text-[var(--text)]">{key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim()}</span>
+                                            <p className="text-sm text-[var(--text-secondary)]">{value}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </Card>
+                        )}
+
                         {/* Office Photos */}
                         {company.officePhotos && company.officePhotos.length > 0 && (
                             <Card
@@ -499,6 +598,11 @@ export default function CompanyProfilePreviewPage() {
                                     {company.careersPageUrl && (
                                         <a href={company.careersPageUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]">
                                             <ExternalLink className="h-4 w-4 text-primary" /> Careers Page
+                                        </a>
+                                    )}
+                                    {company.blogUrl && (
+                                        <a href={company.blogUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]">
+                                            <BookOpen className="h-4 w-4 text-[var(--warning)]" /> Blog
                                         </a>
                                     )}
                                 </div>

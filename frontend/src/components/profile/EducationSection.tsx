@@ -7,13 +7,16 @@ import Input from '@/components/ui/Input';
 import SuggestionInput from '@/components/onboarding/SuggestionInput';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
-import { COURSE_TYPE_LABELS, GRADE_TYPE_LABELS } from '@/constants/enums';
+import {
+    COURSE_TYPE_LABELS, GRADE_TYPE_LABELS,
+    EDUCATION_LEVEL_LABELS, SPECIFIC_DEGREE_LABELS,
+} from '@/constants/enums';
 import {
     INSTITUTION_SUGGESTIONS, DEGREE_SUGGESTIONS,
     FIELD_OF_STUDY_SUGGESTIONS,
 } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
-import type { EducationEntry } from '@/types/candidate';
+import type { EducationEntry, UpdateCandidateRequest } from '@/types/candidate';
 
 function toSelectOptions(labels: Record<string, string>): SelectOption[] {
     return Object.entries(labels).map(([value, label]) => ({ value, label }));
@@ -45,6 +48,24 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
             </div>
         }>
             <div className="space-y-4">
+                {/* Education Summary */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <Select
+                        label="Highest Education Level"
+                        options={toSelectOptions(EDUCATION_LEVEL_LABELS)}
+                        value={form.highestEducationLevel || ''}
+                        onChange={(v) => updateField('highestEducationLevel', v as UpdateCandidateRequest['highestEducationLevel'])}
+                        placeholder="Select level"
+                    />
+                    <Select
+                        label="Highest Degree"
+                        options={toSelectOptions(SPECIFIC_DEGREE_LABELS)}
+                        value={form.highestDegree || ''}
+                        onChange={(v) => updateField('highestDegree', v as UpdateCandidateRequest['highestDegree'])}
+                        placeholder="Select degree"
+                    />
+                </div>
+
                 {(form.education || []).length === 0 ? (
                     <p className="py-8 text-center text-sm text-[var(--text-muted)]">
                         No education entries. Click &quot;Add&quot; to add your education.

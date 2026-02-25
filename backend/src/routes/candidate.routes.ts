@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { protect, restrictTo } from '../middleware/auth';
+import { protect } from '../middleware/auth';
+import { restrictTo } from '../middleware/rbac';
 import * as candidateController from '../controllers/candidate.controller';
 import * as jobAlertController from '../controllers/job-alert.controller';
 import { Role } from '@prisma/client';
@@ -12,14 +13,46 @@ import { audit } from '../middleware/audit';
 const router = Router();
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+const ALLOWED_RESUME_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+const resumeUpload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (ALLOWED_RESUME_TYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Invalid file type. Allowed: ${ALLOWED_RESUME_TYPES.join(', ')}`));
+        }
+    },
+});
+
+const imageUpload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Invalid file type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`));
+        }
+    },
+});
 
 router.use(protect);
 
 // Candidate-only routes
 router.get('/me/dashboard', restrictTo(Role.CANDIDATE), candidateController.getDashboard);
 router.get('/me/completeness', restrictTo(Role.CANDIDATE), candidateController.getProfileCompleteness);
+router.get('/me/resume/readiness', restrictTo(Role.CANDIDATE), candidateController.getResumeReadiness);
 router.get('/me/resume/generate', restrictTo(Role.CANDIDATE), candidateController.generateResumePdf);
+router.post('/me/resume/use-generated', restrictTo(Role.CANDIDATE), candidateController.useGeneratedResume);
 router.get('/me/profile-views', restrictTo(Role.CANDIDATE), candidateController.getProfileViews);
 
 // Analytics
@@ -36,14 +69,16 @@ router.get('/me/job-alerts/:id/matches', restrictTo(Role.CANDIDATE), jobAlertCon
 router.get('/me', restrictTo(Role.CANDIDATE), candidateController.getMyProfile);
 router.put('/me', restrictTo(Role.CANDIDATE), validate(updateCandidateProfileSchema), audit('PROFILE_UPDATE', 'CandidateProfile'), candidateController.updateMyProfile);
 
-router.post('/me/resume', restrictTo(Role.CANDIDATE), upload.single('resume'), audit('RESUME_UPLOAD', 'CandidateProfile'), candidateController.uploadResume);
+router.post('/me/resume', restrictTo(Role.CANDIDATE), resumeUpload.single('resume'), audit('RESUME_UPLOAD', 'CandidateProfile'), candidateController.uploadResume);
+router.delete('/me/resume', restrictTo(Role.CANDIDATE), audit('RESUME_DELETE', 'CandidateProfile'), candidateController.deleteResume);
 router.post('/me/resume/parse', restrictTo(Role.CANDIDATE), candidateController.triggerResumeParse);
 router.get('/me/resume/parsed', restrictTo(Role.CANDIDATE), candidateController.getParsedResumeData);
-router.post('/me/avatar', restrictTo(Role.CANDIDATE), upload.single('avatar'), candidateController.uploadAvatar);
+router.post('/me/avatar', restrictTo(Role.CANDIDATE), imageUpload.single('avatar'), candidateController.uploadAvatar);
 router.delete('/me/avatar', restrictTo(Role.CANDIDATE), candidateController.removeAvatar);
 
 // Employer/Admin: Search & view candidates
-router.get('/', restrictTo(Role.EMPLOYER, Role.ADMIN), candidateController.searchCandidates);
-router.get('/:id', restrictTo(Role.EMPLOYER, Role.ADMIN), candidateController.getCandidateProfile);
+router.get('/', restrictTo(Role.EMPLOYER, Role.ADMIN, Role.SUPER_ADMIN), candidateController.searchCandidates);
+router.get('/:id', restrictTo(Role.EMPLOYER, Role.ADMIN, Role.SUPER_ADMIN), candidateController.getCandidateProfile);
+router.get('/:id/resume', candidateController.getResumeDownloadUrl);
 
 export default router;

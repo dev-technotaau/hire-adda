@@ -206,8 +206,12 @@ export default function JobModerationPage() {
                                             <h3 className="font-medium text-[var(--text)] truncate">{job.title}</h3>
                                             <p className="text-sm text-[var(--text-muted)]">
                                                 {job.company?.companyName || 'Unknown Company'}
-                                                {job.company?.isVerified && (
-                                                    <CheckCircle className="ml-1 inline-block h-3.5 w-3.5 text-[var(--success)]" />
+                                                {job.company?.isVerified ? (
+                                                    <span className="ml-1 inline-block" title="GST Verified">
+                                                        <CheckCircle className="h-3.5 w-3.5 text-[var(--success)]" />
+                                                    </span>
+                                                ) : (
+                                                    <span className="ml-1 text-[10px] text-[var(--text-muted)]" title="Not Verified">(Not Verified)</span>
                                                 )}
                                             </p>
                                             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">

@@ -22,7 +22,9 @@ import Dropdown from '@/components/ui/Dropdown';
 import OtpInput from '@/components/auth/OtpInput';
 import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
-import { QUERY_KEYS, PAGINATION, OTP_CONFIG } from '@/constants/config';
+import { QUERY_KEYS, PAGINATION } from '@/constants/config';
+import { useOtpConfig } from '@/hooks/use-otp-config';
+import { usePasswordRules } from '@/hooks/use-security-config';
 import { ROUTES } from '@/constants/routes';
 import { ROLE_LABELS } from '@/constants/enums';
 import { formatDate, debounce } from '@/lib/utils';
@@ -54,6 +56,8 @@ const createRoleOptions = [
 
 export default function SuperAdminUsersPage() {
     const queryClient = useQueryClient();
+    const otpConfig = useOtpConfig();
+    const passwordRules = usePasswordRules();
     const [page, setPage] = useState(1);
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
@@ -107,7 +111,7 @@ export default function SuperAdminUsersPage() {
             await adminService.sendPasswordResetOtp(resetPwTarget.id);
             showToast.success(`Verification code sent to ${resetPwTarget.email}`);
             setResetStep('verify');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
         } catch (err) {
             const error = err as unknown as ApiError;
             showToast.error(error.message || 'Failed to send verification code');
@@ -122,7 +126,7 @@ export default function SuperAdminUsersPage() {
         try {
             await adminService.sendPasswordResetOtp(resetPwTarget.id);
             showToast.success('New verification code sent!');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setResetOtp('');
         } catch (err) {
             const error = err as unknown as ApiError;
@@ -634,11 +638,11 @@ export default function SuperAdminUsersPage() {
                                 <Button
                                     variant="destructive"
                                     onClick={() => {
-                                        if (!resetPwTarget || !newPassword || resetOtp.length !== OTP_CONFIG.LENGTH) return;
+                                        if (!resetPwTarget || !newPassword || resetOtp.length !== otpConfig.LENGTH) return;
                                         resetPasswordMutation.mutate({ id: resetPwTarget.id, newPassword, otp: resetOtp });
                                     }}
                                     isLoading={resetPasswordMutation.isPending}
-                                    disabled={newPassword.length < 8 || resetOtp.length !== OTP_CONFIG.LENGTH}
+                                    disabled={newPassword.length < passwordRules.MIN_LENGTH || resetOtp.length !== otpConfig.LENGTH}
                                 >
                                     Reset Password
                                 </Button>
@@ -667,7 +671,7 @@ export default function SuperAdminUsersPage() {
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-[var(--text)]">Verification Code</label>
-                                <OtpInput value={resetOtp} onChange={setResetOtp} length={OTP_CONFIG.LENGTH} />
+                                <OtpInput value={resetOtp} onChange={setResetOtp} length={otpConfig.LENGTH} />
                             </div>
 
                             <div className="text-center">

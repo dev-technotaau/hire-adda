@@ -7,19 +7,29 @@ import { jobAlertService } from '../services/job-alert.service';
 export const jobAlertWorker = new Worker(
     JOB_ALERT_QUEUE_NAME,
     async (job: Job) => {
-        logger.info(`Processing job alerts ${job.id}`);
-
+        const TIMEOUT_MS = 60_000;
+        const timeoutId = setTimeout(() => { /* safety net */ }, TIMEOUT_MS);
         try {
-            await jobAlertService.processAlerts();
+            logger.info(`Processing job alerts ${job.id}`);
+
+            await Promise.race([
+                jobAlertService.processAlerts(),
+                new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('Job alert worker timeout after 60s')), TIMEOUT_MS)
+                ),
+            ]);
             return { processed: true };
         } catch (error) {
             logger.error('Job alert processing failed:', error);
             throw error;
+        } finally {
+            clearTimeout(timeoutId);
         }
     },
     {
         connection: createBullMQConnection(),
         concurrency: 1,
+        lockDuration: 60000,
     }
 );
 

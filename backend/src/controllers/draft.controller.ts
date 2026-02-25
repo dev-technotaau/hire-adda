@@ -52,7 +52,14 @@ export const getDrafts = async (
 
         res.status(200).json({
             status: 'success',
-            data: { drafts },
+            data: {
+                items: drafts,
+                total: drafts.length,
+                page: 1,
+                limit: drafts.length || 20,
+                totalPages: 1,
+                hasMore: false,
+            },
         });
     } catch (error) {
         next(error);

@@ -4,6 +4,7 @@ import { AppError } from './error';
 import prisma from '../config/prisma';
 import logger from '../config/logger';
 import { env } from '../config/env';
+import redis from '../config/redis';
 
 // Express type extension moved to src/types/express/index.d.ts
 
@@ -47,6 +48,7 @@ export const protect = async (
                 isEmailVerified: true,
                 isActive: true,
                 isSuspended: true,
+                mfaEnabled: true,
                 lastActiveAt: true,
             },
         });
@@ -79,7 +81,28 @@ export const protect = async (
             email: user.email,
             role: user.role,
             isEmailVerified: user.isEmailVerified,
+            mfaEnabled: user.mfaEnabled,
         };
+
+        // Debounced lastActiveAt update (every 5 min via Redis)
+        // The global updateLastActive middleware can't do this because it runs before protect
+        try {
+            const cacheKey = `last_active:${user.id}`;
+            let shouldUpdate = true;
+            if (redis) {
+                const cached = await redis.get(cacheKey);
+                if (cached) shouldUpdate = false;
+                else await redis.set(cacheKey, '1', 'EX', 300);
+            }
+            if (shouldUpdate) {
+                prisma.user.update({
+                    where: { id: user.id },
+                    data: { lastActiveAt: new Date() },
+                }).catch(() => {});
+            }
+        } catch {
+            // Non-critical, never block the request
+        }
 
         next();
     } catch (error) {
@@ -159,20 +182,4 @@ export const requireEmailVerified = (
     next();
 };
 
-/**
- * Restrict access to specific roles
- * @param roles - Array of allowed roles
- */
-export const restrictTo = (...roles: string[]) => {
-    return (req: Request, _res: Response, next: NextFunction): void => {
-        if (!req.user) {
-            return next(new AppError('Not authorized. Please log in.', 401));
-        }
-
-        if (!roles.includes(req.user.role)) {
-            return next(new AppError('You do not have permission to perform this action.', 403));
-        }
-
-        next();
-    };
-};
+// restrictTo has been consolidated into middleware/rbac.ts (uses Prisma Role enum for type safety)

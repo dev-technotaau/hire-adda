@@ -144,6 +144,59 @@ export const jobOfferWhatsapp = (jobTitle: string, company: string, link: string
     text: `Congratulations! You've received an offer for ${jobTitle} at ${company}. View details: ${link}`,
 });
 
+export const jobMatchWhatsapp = (jobTitle: string, companyName: string, matchPercentage: string): WhatsappTemplate => ({
+    templateName: 'job_match',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: jobTitle },
+                { type: 'text', text: companyName },
+                { type: 'text', text: matchPercentage },
+            ],
+        },
+    ],
+    text: `New job match (${matchPercentage}): ${jobTitle} at ${companyName}. View details on Talent Bridge.`,
+});
+
+// ===============================
+// Support
+// ===============================
+
+export const ticketReplyWhatsapp = (ticketNumber: string, subject: string): WhatsappTemplate => ({
+    templateName: 'ticket_reply',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: ticketNumber },
+                { type: 'text', text: subject },
+            ],
+        },
+    ],
+    text: `You have a new reply on your support ticket #${ticketNumber}: ${subject}. Open Talent Bridge to view.`,
+});
+
+// ===============================
+// Admin
+// ===============================
+
+export const adminAlertWhatsapp = (message: string): WhatsappTemplate => ({
+    templateName: 'admin_alert',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: message },
+            ],
+        },
+    ],
+    text: `${message}. Please review in the admin dashboard.`,
+});
+
 // ===============================
 // Documents & Verification
 // ===============================
@@ -168,6 +221,58 @@ export const documentRequestWhatsapp = (docName: string, link: string): Whatsapp
         },
     ],
     text: `Action required: Please upload your ${docName} to continue your verification. Upload here: ${link}`,
+});
+
+// ===============================
+// Applications (Employer & Candidate)
+// ===============================
+
+export const newApplicationWhatsapp = (candidateName: string, jobTitle: string): WhatsappTemplate => ({
+    templateName: 'new_application',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: candidateName },
+                { type: 'text', text: jobTitle },
+            ],
+        },
+    ],
+    text: `New application: ${candidateName} applied for ${jobTitle}. Review on Talent Bridge.`,
+});
+
+export const applicationSubmittedWhatsapp = (jobTitle: string, companyName: string): WhatsappTemplate => ({
+    templateName: 'application_submitted',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: jobTitle },
+                { type: 'text', text: companyName },
+            ],
+        },
+    ],
+    text: `Your application for ${jobTitle} at ${companyName} has been submitted. Track it on Talent Bridge.`,
+});
+
+// ===============================
+// Account
+// ===============================
+
+export const accountAlertWhatsapp = (action: string): WhatsappTemplate => ({
+    templateName: 'account_alert',
+    languageCode: 'en_US',
+    components: [
+        {
+            type: 'body',
+            parameters: [
+                { type: 'text', text: action },
+            ],
+        },
+    ],
+    text: `Account update: ${action}. Contact support if you did not request this.`,
 });
 
 // ===============================

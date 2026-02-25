@@ -1,6 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { superAdminService } from '../services/super-admin.service';
+import { generateMfaSecret, enableMfa } from '../services/mfa.service';
+import { generateBackupCodes, hashToken } from '../utils/crypto';
+import { AuditService } from '../services/audit.service';
+import logger from '../config/logger';
 import { AppError } from '../middleware/error';
+import prisma from '../config/prisma';
+import { Role } from '@prisma/client';
 
 /**
  * Create Admin
@@ -176,6 +182,110 @@ export const deactivateUser = async (req: Request, res: Response, next: NextFunc
         if (!req.user) throw new AppError('Not authorized', 401);
         await superAdminService.deactivateUser(req.params.id as string, req.user.id);
         res.status(200).json({ status: 'success', message: 'User deactivated' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ── Admin MFA Management ──
+
+async function verifyTargetIsAdmin(userId: string): Promise<{ id: string; email: string }> {
+    const target = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, role: true },
+    });
+    if (!target) throw new AppError('User not found', 404);
+    if (target.role !== Role.ADMIN) throw new AppError('Target user is not an admin', 400);
+    return target;
+}
+
+export const setupAdminMfa = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const target = await verifyTargetIsAdmin(req.params.id as string);
+        const result = await generateMfaSecret(target.id, target.email);
+        res.status(200).json({ status: 'success', data: { qrCode: result.qrCodeUrl, secret: result.secret } });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const enableAdminMfa = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        await verifyTargetIsAdmin(req.params.id as string);
+        const { token } = req.body;
+        if (!token) throw new AppError('MFA code is required', 400);
+        const result = await enableMfa(req.params.id as string, token);
+        if (!result.success) throw new AppError(result.error || 'Failed to enable MFA', 400);
+        res.status(200).json({ status: 'success', data: { backupCodes: result.backupCodes } });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const disableAdminMfa = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        await verifyTargetIsAdmin(req.params.id as string);
+        // Super-admin authority: no password/TOTP needed
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: req.params.id as string },
+                data: { mfaEnabled: false, mfaSecret: null, mfaBackupCodes: [] },
+            }),
+            prisma.mfaTrustedDevice.deleteMany({ where: { userId: req.params.id as string } }),
+        ]);
+        res.status(200).json({ status: 'success', message: 'Admin MFA disabled' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getAdminMfaStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        await verifyTargetIsAdmin(req.params.id as string);
+        const user = await prisma.user.findUnique({
+            where: { id: req.params.id as string },
+            select: { mfaEnabled: true, mfaBackupCodes: true },
+        });
+        res.status(200).json({
+            status: 'success',
+            data: {
+                mfaEnabled: user?.mfaEnabled ?? false,
+                backupCodesRemaining: user?.mfaBackupCodes?.length ?? 0,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const regenerateAdminBackupCodes = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        await verifyTargetIsAdmin(req.params.id as string);
+        const user = await prisma.user.findUnique({
+            where: { id: req.params.id as string },
+            select: { mfaEnabled: true },
+        });
+        if (!user?.mfaEnabled) throw new AppError('MFA is not enabled for this admin', 400);
+
+        // Super-admin authority: no password/TOTP needed
+        const backupCodes = generateBackupCodes(10);
+        const hashedCodes = backupCodes.map(code => hashToken(code));
+
+        await prisma.user.update({
+            where: { id: req.params.id as string },
+            data: { mfaBackupCodes: hashedCodes },
+        });
+
+        logger.info(`Super-admin regenerated backup codes for admin ${req.params.id}`);
+
+        AuditService.log({
+            action: 'ADMIN_MFA_BACKUP_CODES_REGENERATED',
+            entity: 'User',
+            entityId: req.params.id as string,
+            performedBy: req.user?.id || 'unknown',
+        }).catch(() => {});
+
+        res.status(200).json({ status: 'success', data: { backupCodes } });
     } catch (error) {
         next(error);
     }

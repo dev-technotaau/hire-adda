@@ -6,22 +6,38 @@ import {
     ArrowLeft, MapPin, Briefcase, GraduationCap, Mail, Phone,
     Globe, Github, Linkedin, Code, Award, BookOpen, Calendar,
     Building2, Clock, CheckCircle, ExternalLink, Languages,
-    Trophy, Heart, FolderKanban, Palette,
+    Trophy, Heart, FolderKanban, Palette, FileText, Users,
+    Download, Video, Car, Shield, Accessibility, MessageCircle,
+    Activity, Pencil,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import Tag from '@/components/ui/Tag';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Skeleton from '@/components/ui/Skeleton';
 import { candidateService } from '@/services/candidate.service';
 import { QUERY_KEYS } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
+import {
+    WORK_STATUS_LABELS, NOTICE_PERIOD_LABELS, WORK_MODE_LABELS,
+    JOB_TYPE_LABELS, SHIFT_TYPE_LABELS, OPEN_TO_WORK_LABELS,
+    CAREER_BREAK_TYPE_LABELS, DISABILITY_TYPE_LABELS,
+    COURSE_TYPE_LABELS, GRADE_TYPE_LABELS, PATENT_STATUS_LABELS,
+} from '@/constants/enums';
+import { formatRelativeDate } from '@/lib/utils';
+import { formatSalaryAsLPA } from '@/utils/format';
 import type { CandidateProfile } from '@/types/candidate';
 
 function formatDate(dateStr?: string | null): string {
     if (!dateStr) return '';
     return new Date(dateStr).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+}
+
+function formatFullDate(dateStr?: string | null): string {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export default function ProfilePreviewPage() {
@@ -66,7 +82,6 @@ export default function ProfilePreviewPage() {
                         {/* Profile Header */}
                         <Card>
                             <div className="flex flex-col gap-6 sm:flex-row">
-                                {/* Avatar */}
                                 <div className="flex shrink-0 flex-col items-center gap-3">
                                     {profile.profileImage ? (
                                         <img
@@ -91,12 +106,14 @@ export default function ProfilePreviewPage() {
                                     )}
                                 </div>
 
-                                {/* Info */}
                                 <div className="flex-1 space-y-3">
                                     <div>
                                         <h1 className="text-2xl font-bold text-[var(--text)]">
                                             {profile.user?.firstName} {profile.user?.lastName}
                                         </h1>
+                                        {profile.pronouns && (
+                                            <span className="text-sm text-[var(--text-muted)]">({profile.pronouns})</span>
+                                        )}
                                         {profile.headline && (
                                             <p className="mt-0.5 text-base text-[var(--text-secondary)]">{profile.headline}</p>
                                         )}
@@ -118,33 +135,62 @@ export default function ProfilePreviewPage() {
                                                 <Building2 className="h-4 w-4" /> {profile.currentCompany}
                                             </span>
                                         )}
+                                        {profile.currentRole && (
+                                            <span className="text-[var(--text)]">{profile.currentRole}</span>
+                                        )}
                                         {profile.noticePeriod && (
                                             <span className="flex items-center gap-1">
-                                                <Clock className="h-4 w-4" /> {profile.noticePeriod.replace(/_/g, ' ')}
+                                                <Clock className="h-4 w-4" /> {NOTICE_PERIOD_LABELS[profile.noticePeriod]}
+                                                {profile.servingNoticePeriod && ' (Serving)'}
                                             </span>
                                         )}
                                     </div>
 
                                     <div className="flex flex-wrap gap-2">
-                                        {profile.openToWork === 'ACTIVELY_LOOKING' && (
-                                            <Badge variant="success" size="sm">Open to Work</Badge>
+                                        {profile.openToWork && (
+                                            <Badge variant={profile.openToWork === 'ACTIVELY_LOOKING' ? 'success' : profile.openToWork === 'OPEN_TO_OFFERS' ? 'info' : 'neutral'} size="sm">
+                                                {OPEN_TO_WORK_LABELS[profile.openToWork]}
+                                            </Badge>
                                         )}
-                                        {profile.openToWork === 'OPEN_TO_OFFERS' && (
-                                            <Badge variant="info" size="sm">Open to Offers</Badge>
+                                        {profile.workStatus && (
+                                            <Badge variant={profile.workStatus === 'ACTIVELY_LOOKING' ? 'success' : 'neutral'} size="sm">
+                                                {WORK_STATUS_LABELS[profile.workStatus]}
+                                            </Badge>
                                         )}
                                         {profile.user?.isEmailVerified && (
                                             <Badge variant="success" size="sm">
-                                                <CheckCircle className="mr-1 h-3 w-3" /> Email Verified
+                                                <CheckCircle className="mr-0.5 h-3 w-3" /> Email Verified
                                             </Badge>
                                         )}
                                         {profile.user?.isMobileVerified && (
                                             <Badge variant="success" size="sm">
-                                                <CheckCircle className="mr-1 h-3 w-3" /> Mobile Verified
+                                                <CheckCircle className="mr-0.5 h-3 w-3" /> Mobile Verified
+                                            </Badge>
+                                        )}
+                                        {profile.user?.isWhatsappVerified && (
+                                            <Badge variant="success" size="sm">
+                                                <MessageCircle className="mr-0.5 h-3 w-3" /> WhatsApp Verified
+                                            </Badge>
+                                        )}
+                                        {profile.isVeteran && (
+                                            <Badge variant="info" size="sm">
+                                                <Shield className="mr-0.5 h-3 w-3" /> Veteran
+                                            </Badge>
+                                        )}
+                                        {profile.isPhysicallyChallenged && (
+                                            <Badge variant="info" size="sm">
+                                                <Accessibility className="mr-0.5 h-3 w-3" /> PwD
+                                                {profile.disabilityType && profile.disabilityType !== 'NONE' && ` — ${DISABILITY_TYPE_LABELS[profile.disabilityType]}`}
+                                            </Badge>
+                                        )}
+                                        {profile.hasCareerBreak && (
+                                            <Badge variant="warning" size="sm">
+                                                Career Break
+                                                {profile.careerBreakType && ` — ${CAREER_BREAK_TYPE_LABELS[profile.careerBreakType]}`}
                                             </Badge>
                                         )}
                                     </div>
 
-                                    {/* Contact */}
                                     <div className="flex flex-wrap gap-4 text-sm text-[var(--text-muted)]">
                                         {profile.user?.email && (
                                             <span className="flex items-center gap-1">
@@ -157,319 +203,649 @@ export default function ProfilePreviewPage() {
                                             </span>
                                         )}
                                     </div>
+
+                                    {/* Activity & Modification timestamps */}
+                                    <div className="flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
+                                        {profile.user?.lastActiveAt && (
+                                            <span className="flex items-center gap-1">
+                                                <Activity className="h-3.5 w-3.5" /> Active {formatRelativeDate(profile.user.lastActiveAt)}
+                                            </span>
+                                        )}
+                                        {profile.updatedAt && (
+                                            <span className="flex items-center gap-1">
+                                                <Pencil className="h-3.5 w-3.5" /> Profile modified {formatRelativeDate(profile.updatedAt)}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </Card>
 
-                        {/* About / Bio */}
-                        {profile.bio && (
-                            <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">About</h2>}>
-                                <p className="whitespace-pre-line text-sm leading-relaxed text-[var(--text-secondary)]">
-                                    {profile.bio}
-                                </p>
-                            </Card>
-                        )}
+                        <div className="grid gap-6 lg:grid-cols-3">
+                            {/* Main Content */}
+                            <div className="space-y-6 lg:col-span-2">
+                                {/* About / Bio */}
+                                {profile.bio && (
+                                    <Card>
+                                        <h2 className="mb-3 text-lg font-semibold text-[var(--text)]">About</h2>
+                                        <p className="whitespace-pre-line text-sm leading-relaxed text-[var(--text-secondary)]">
+                                            {profile.bio}
+                                        </p>
+                                    </Card>
+                                )}
 
-                        {/* Skills */}
-                        {profile.skills.length > 0 && (
-                            <Card
-                                header={
-                                    <div className="flex items-center gap-2">
-                                        <Code className="h-5 w-5 text-primary" />
-                                        <h2 className="text-lg font-semibold text-[var(--text)]">Skills</h2>
-                                    </div>
-                                }
-                            >
-                                <div className="flex flex-wrap gap-2">
-                                    {profile.skills.map((skill) => (
-                                        <span
-                                            key={skill}
-                                            className="inline-flex items-center rounded-lg bg-primary-light px-3 py-1.5 text-sm font-medium text-primary"
-                                        >
-                                            {skill}
-                                        </span>
-                                    ))}
-                                </div>
-                            </Card>
-                        )}
+                                {/* Experience */}
+                                {profile.experience && profile.experience.length > 0 && (
+                                    <Card>
+                                        <div className="mb-4 flex items-center gap-2">
+                                            <Briefcase className="h-5 w-5 text-[var(--info)]" />
+                                            <h2 className="text-lg font-semibold text-[var(--text)]">Experience</h2>
+                                        </div>
+                                        <div className="space-y-6">
+                                            {profile.experience.map((exp, i) => (
+                                                <div key={i} className="relative border-l-2 border-[var(--border)] pl-6">
+                                                    <div className="absolute -left-[7px] top-1 h-3 w-3 rounded-full border-2 border-[var(--border)] bg-white" />
+                                                    <h3 className="font-semibold text-[var(--text)]">{exp.role}</h3>
+                                                    <p className="text-sm text-[var(--text-secondary)]">
+                                                        {exp.company}
+                                                        {exp.location && ` · ${exp.location}`}
+                                                        {exp.employmentType && ` · ${exp.employmentType}`}
+                                                    </p>
+                                                    <p className="text-xs text-[var(--text-muted)]">
+                                                        {formatDate(exp.startDate)} — {exp.isCurrent ? 'Present' : formatDate(exp.endDate)}
+                                                    </p>
+                                                    {(exp.industry || exp.department) && (
+                                                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                                                            {exp.industry && `Industry: ${exp.industry}`}
+                                                            {exp.industry && exp.department && ' · '}
+                                                            {exp.department && `Dept: ${exp.department}`}
+                                                        </p>
+                                                    )}
+                                                    {exp.description && (
+                                                        <p className="mt-2 text-sm text-[var(--text-secondary)]">{exp.description}</p>
+                                                    )}
+                                                    {exp.keyAchievements && exp.keyAchievements.length > 0 && (
+                                                        <ul className="mt-2 list-inside list-disc text-sm text-[var(--text-secondary)]">
+                                                            {exp.keyAchievements.map((a, j) => <li key={j}>{a}</li>)}
+                                                        </ul>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
 
-                        {/* Experience */}
-                        {profile.experience && profile.experience.length > 0 && (
-                            <Card
-                                header={
-                                    <div className="flex items-center gap-2">
-                                        <Briefcase className="h-5 w-5 text-[var(--info)]" />
-                                        <h2 className="text-lg font-semibold text-[var(--text)]">Experience</h2>
+                                {/* Education */}
+                                {profile.education && profile.education.length > 0 && (
+                                    <Card>
+                                        <div className="mb-4 flex items-center gap-2">
+                                            <GraduationCap className="h-5 w-5 text-[var(--warning)]" />
+                                            <h2 className="text-lg font-semibold text-[var(--text)]">Education</h2>
+                                        </div>
+                                        <div className="space-y-4">
+                                            {profile.education.map((edu, i) => (
+                                                <div key={i} className="flex gap-4">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
+                                                        <GraduationCap className="h-5 w-5 text-[var(--warning)]" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold text-[var(--text)]">{edu.degree} {edu.field ? `in ${edu.field}` : ''}</h3>
+                                                        <p className="text-sm text-[var(--text-secondary)]">{edu.institution}</p>
+                                                        <p className="text-xs text-[var(--text-muted)]">
+                                                            {formatDate(edu.startDate)} — {formatDate(edu.endDate)}
+                                                            {edu.grade && ` · ${edu.gradeType ? GRADE_TYPE_LABELS[edu.gradeType] || edu.gradeType : 'Grade'}: ${edu.grade}`}
+                                                            {edu.courseType && ` · ${COURSE_TYPE_LABELS[edu.courseType]}`}
+                                                        </p>
+                                                        {edu.specialization && (
+                                                            <p className="text-xs text-[var(--text-muted)]">Specialization: {edu.specialization}</p>
+                                                        )}
+                                                        {edu.activities && (
+                                                            <p className="mt-1 text-xs text-[var(--text-secondary)]">{edu.activities}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
+
+                                {/* Projects */}
+                                {profile.projects && profile.projects.length > 0 && (
+                                    <Card>
+                                        <div className="mb-4 flex items-center gap-2">
+                                            <FolderKanban className="h-5 w-5 text-primary" />
+                                            <h2 className="text-lg font-semibold text-[var(--text)]">Projects</h2>
+                                        </div>
+                                        <div className="space-y-4">
+                                            {profile.projects.map((proj, i) => (
+                                                <div key={i} className="rounded-lg border border-[var(--border)] p-4">
+                                                    <div className="flex items-start justify-between">
+                                                        <div>
+                                                            <h3 className="font-semibold text-[var(--text)]">{proj.name}</h3>
+                                                            {proj.role && <p className="text-sm text-[var(--text-secondary)]">Role: {proj.role}</p>}
+                                                        </div>
+                                                        {proj.url && (
+                                                            <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                                                <ExternalLink className="h-4 w-4" />
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-[var(--text-muted)]">
+                                                        {proj.startDate && formatDate(proj.startDate)}
+                                                        {proj.startDate && (proj.isCurrent ? ' — Present' : proj.endDate ? ` — ${formatDate(proj.endDate)}` : '')}
+                                                        {proj.client && ` · Client: ${proj.client}`}
+                                                        {proj.teamSize && ` · Team: ${proj.teamSize}`}
+                                                    </p>
+                                                    {proj.description && (
+                                                        <p className="mt-2 text-sm text-[var(--text-secondary)]">{proj.description}</p>
+                                                    )}
+                                                    {proj.technologies && proj.technologies.length > 0 && (
+                                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                                            {proj.technologies.map(tech => (
+                                                                <Tag key={tech} label={tech} size="sm" />
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
+
+                                {/* Certifications */}
+                                {profile.certifications && profile.certifications.length > 0 && (
+                                    <Card>
+                                        <div className="mb-4 flex items-center gap-2">
+                                            <Award className="h-5 w-5 text-[var(--success)]" />
+                                            <h2 className="text-lg font-semibold text-[var(--text)]">Certifications</h2>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            {profile.certifications.map((cert, i) => (
+                                                <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                                                    <h3 className="font-medium text-[var(--text)]">{cert.name}</h3>
+                                                    <p className="text-sm text-[var(--text-secondary)]">{cert.issuer}</p>
+                                                    <p className="text-xs text-[var(--text-muted)]">
+                                                        {cert.issueDate && formatDate(cert.issueDate)}
+                                                        {cert.expiryDate && !cert.doesNotExpire ? ` — ${formatDate(cert.expiryDate)}` : ''}
+                                                        {cert.doesNotExpire ? ' · No expiry' : ''}
+                                                    </p>
+                                                    {cert.credentialId && <p className="text-xs text-[var(--text-muted)]">ID: {cert.credentialId}</p>}
+                                                    {cert.url && (
+                                                        <a href={cert.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                                                            <ExternalLink className="h-3 w-3" /> Verify
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
+
+                                {/* Publications & Patents */}
+                                {((profile.publications && profile.publications.length > 0) || (profile.patents && profile.patents.length > 0)) && (
+                                    <Card>
+                                        <div className="mb-4 flex items-center gap-2">
+                                            <BookOpen className="h-5 w-5 text-[#8B5CF6]" />
+                                            <h2 className="text-lg font-semibold text-[var(--text)]">Publications & Patents</h2>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {profile.publications?.map((pub, i) => (
+                                                <div key={`pub-${i}`} className="rounded-lg border border-[var(--border)] p-3">
+                                                    <h3 className="font-medium text-[var(--text)]">{pub.title}</h3>
+                                                    {pub.publisher && <p className="text-sm text-[var(--text-secondary)]">{pub.publisher}</p>}
+                                                    {pub.authors && <p className="text-xs text-[var(--text-muted)]">Authors: {pub.authors}</p>}
+                                                    {pub.publicationDate && <p className="text-xs text-[var(--text-muted)]">{formatDate(pub.publicationDate)}</p>}
+                                                    {pub.description && <p className="mt-1 text-sm text-[var(--text-secondary)]">{pub.description}</p>}
+                                                    {pub.url && (
+                                                        <a href={pub.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                                                            <ExternalLink className="h-3 w-3" /> View
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {profile.patents?.map((pat, i) => (
+                                                <div key={`pat-${i}`} className="rounded-lg border border-[var(--border)] p-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-medium text-[var(--text)]">{pat.title}</h3>
+                                                        {pat.status && <Badge variant="info" size="sm">{PATENT_STATUS_LABELS[pat.status] || pat.status}</Badge>}
+                                                    </div>
+                                                    {pat.patentOffice && <p className="text-sm text-[var(--text-secondary)]">{pat.patentOffice}</p>}
+                                                    {pat.patentNumber && <p className="text-xs text-[var(--text-muted)]">Patent #{pat.patentNumber}</p>}
+                                                    {pat.inventors && <p className="text-xs text-[var(--text-muted)]">Inventors: {pat.inventors}</p>}
+                                                    <p className="text-xs text-[var(--text-muted)]">
+                                                        {pat.filingDate && `Filed: ${formatFullDate(pat.filingDate)}`}
+                                                        {pat.issueDate && ` · Issued: ${formatFullDate(pat.issueDate)}`}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
+
+                                {/* Awards */}
+                                {profile.awards && profile.awards.length > 0 && (
+                                    <Card>
+                                        <div className="mb-4 flex items-center gap-2">
+                                            <Trophy className="h-5 w-5 text-[var(--warning)]" />
+                                            <h2 className="text-lg font-semibold text-[var(--text)]">Awards</h2>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            {profile.awards.map((award, i) => (
+                                                <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                                                    <h3 className="font-medium text-[var(--text)]">{award.title}</h3>
+                                                    {award.issuer && <p className="text-sm text-[var(--text-secondary)]">{award.issuer}</p>}
+                                                    {award.date && <p className="text-xs text-[var(--text-muted)]">{formatDate(award.date)}</p>}
+                                                    {award.description && <p className="mt-1 text-sm text-[var(--text-secondary)]">{award.description}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
+
+                                {/* Courses & Test Scores */}
+                                {((profile.courses && profile.courses.length > 0) || (profile.testScores && profile.testScores.length > 0)) && (
+                                    <Card>
+                                        <div className="mb-4 flex items-center gap-2">
+                                            <GraduationCap className="h-5 w-5 text-primary" />
+                                            <h2 className="text-lg font-semibold text-[var(--text)]">Courses & Test Scores</h2>
+                                        </div>
+                                        {profile.courses && profile.courses.length > 0 && (
+                                            <div className="space-y-2">
+                                                <h3 className="text-sm font-medium text-[var(--text)]">Courses Completed</h3>
+                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                    {profile.courses.map((course, i) => (
+                                                        <div key={i} className="rounded border border-[var(--border)] p-2.5">
+                                                            <p className="font-medium text-sm text-[var(--text)]">{course.name}</p>
+                                                            {course.provider && <p className="text-xs text-[var(--text-secondary)]">{course.provider}</p>}
+                                                            {course.completionDate && <p className="text-xs text-[var(--text-muted)]">{formatDate(course.completionDate)}</p>}
+                                                            {course.url && (
+                                                                <a href={course.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">View</a>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {profile.testScores && profile.testScores.length > 0 && (
+                                            <div className={`space-y-2 ${profile.courses && profile.courses.length > 0 ? 'mt-4' : ''}`}>
+                                                <h3 className="text-sm font-medium text-[var(--text)]">Test Scores</h3>
+                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                    {profile.testScores.map((test, i) => (
+                                                        <div key={i} className="rounded border border-[var(--border)] p-2.5">
+                                                            <p className="font-medium text-sm text-[var(--text)]">{test.testName}</p>
+                                                            <p className="text-sm text-primary font-semibold">Score: {test.score}</p>
+                                                            {test.dateOfExam && <p className="text-xs text-[var(--text-muted)]">{formatFullDate(test.dateOfExam)}</p>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </Card>
+                                )}
+
+                                {/* Volunteering */}
+                                {profile.volunteerExperience && profile.volunteerExperience.length > 0 && (
+                                    <Card>
+                                        <div className="mb-4 flex items-center gap-2">
+                                            <Heart className="h-5 w-5 text-[var(--error)]" />
+                                            <h2 className="text-lg font-semibold text-[var(--text)]">Volunteering</h2>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {profile.volunteerExperience.map((vol, i) => (
+                                                <div key={i} className="border-l-2 border-[var(--border)] pl-4">
+                                                    <h3 className="font-medium text-[var(--text)]">{vol.role}</h3>
+                                                    <p className="text-sm text-[var(--text-secondary)]">{vol.organization}</p>
+                                                    {vol.cause && <p className="text-xs text-[var(--text-muted)]">Cause: {vol.cause}</p>}
+                                                    <p className="text-xs text-[var(--text-muted)]">
+                                                        {vol.startDate && formatDate(vol.startDate)}
+                                                        {vol.startDate && (vol.isCurrent ? ' — Present' : vol.endDate ? ` — ${formatDate(vol.endDate)}` : '')}
+                                                    </p>
+                                                    {vol.description && <p className="mt-1 text-sm text-[var(--text-secondary)]">{vol.description}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
+
+                                {/* Professional Memberships */}
+                                {profile.professionalMemberships && profile.professionalMemberships.length > 0 && (
+                                    <Card>
+                                        <div className="mb-4 flex items-center gap-2">
+                                            <Users className="h-5 w-5 text-[var(--info)]" />
+                                            <h2 className="text-lg font-semibold text-[var(--text)]">Professional Memberships</h2>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            {profile.professionalMemberships.map((mem, i) => (
+                                                <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                                                    <h3 className="font-medium text-[var(--text)]">{mem.organization}</h3>
+                                                    {mem.role && <p className="text-sm text-[var(--text-secondary)]">{mem.role}</p>}
+                                                    <p className="text-xs text-[var(--text-muted)]">
+                                                        {mem.startDate && formatDate(mem.startDate)}
+                                                        {mem.endDate && ` — ${formatDate(mem.endDate)}`}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
+                            </div>
+
+                            {/* Sidebar */}
+                            <div className="space-y-6">
+                                {/* Skills */}
+                                {profile.skills.length > 0 && (
+                                    <Card>
+                                        <div className="mb-3 flex items-center gap-2">
+                                            <Code className="h-5 w-5 text-primary" />
+                                            <h2 className="text-base font-semibold text-[var(--text)]">Skills</h2>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {profile.skills.map(skill => (
+                                                <Tag key={skill} label={skill} variant="primary" />
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
+
+                                {/* IT Skills */}
+                                {profile.itSkills && profile.itSkills.length > 0 && (
+                                    <Card>
+                                        <h2 className="mb-3 text-base font-semibold text-[var(--text)]">IT Skills</h2>
+                                        <div className="space-y-2">
+                                            {profile.itSkills.map((it, i) => (
+                                                <div key={i} className="flex items-center justify-between text-sm">
+                                                    <span className="text-[var(--text)]">
+                                                        {it.technology}
+                                                        {it.version && <span className="text-[var(--text-muted)]"> v{it.version}</span>}
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        {it.proficiency && <Badge variant="neutral" size="sm">{it.proficiency}</Badge>}
+                                                        {it.experienceYears != null && (
+                                                            <span className="text-xs text-[var(--text-muted)]">{it.experienceYears}yr</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
+
+                                {/* Work Details */}
+                                <Card>
+                                    <h2 className="mb-3 text-base font-semibold text-[var(--text)]">Work Details</h2>
+                                    <div className="space-y-2.5 text-sm">
+                                        {profile.currentIndustry && (
+                                            <div className="flex justify-between">
+                                                <span className="text-[var(--text-muted)]">Industry</span>
+                                                <span className="text-[var(--text)]">{profile.currentIndustry}</span>
+                                            </div>
+                                        )}
+                                        {profile.currentDepartment && (
+                                            <div className="flex justify-between">
+                                                <span className="text-[var(--text-muted)]">Department</span>
+                                                <span className="text-[var(--text)]">{profile.currentDepartment}</span>
+                                            </div>
+                                        )}
+                                        {profile.functionalArea && (
+                                            <div className="flex justify-between">
+                                                <span className="text-[var(--text-muted)]">Functional Area</span>
+                                                <span className="text-[var(--text)]">{profile.functionalArea}</span>
+                                            </div>
+                                        )}
+                                        {(profile.expectedSalaryMin || profile.expectedSalaryMax) && (
+                                            <div className="flex justify-between">
+                                                <span className="text-[var(--text-muted)]">Expected CTC</span>
+                                                <span className="font-medium text-[var(--text)]">
+                                                    {(profile.salaryCurrency || 'INR').toUpperCase() === 'INR'
+                                                        ? formatSalaryAsLPA(profile.expectedSalaryMin, profile.expectedSalaryMax)
+                                                        : `${profile.expectedSalaryMin?.toLocaleString() || ''} - ${profile.expectedSalaryMax?.toLocaleString() || ''} ${profile.salaryCurrency}`}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {profile.dateOfAvailability && (
+                                            <div className="flex justify-between">
+                                                <span className="text-[var(--text-muted)]">Available From</span>
+                                                <span className="text-[var(--text)]">{formatFullDate(profile.dateOfAvailability)}</span>
+                                            </div>
+                                        )}
                                     </div>
-                                }
-                            >
-                                <div className="space-y-6">
-                                    {profile.experience.map((exp, i) => (
-                                        <div key={i} className="relative border-l-2 border-[var(--border)] pl-6">
-                                            <div className="absolute -left-[7px] top-1 h-3 w-3 rounded-full border-2 border-[var(--border)] bg-white" />
-                                            <h3 className="font-semibold text-[var(--text)]">{exp.role}</h3>
-                                            <p className="text-sm text-[var(--text-secondary)]">
-                                                {exp.company} {exp.location ? `· ${exp.location}` : ''}
-                                            </p>
-                                            <p className="text-xs text-[var(--text-muted)]">
-                                                {formatDate(exp.startDate)} — {exp.isCurrent ? 'Present' : formatDate(exp.endDate)}
-                                            </p>
-                                            {exp.description && (
-                                                <p className="mt-2 text-sm text-[var(--text-secondary)]">{exp.description}</p>
+                                </Card>
+
+                                {/* Preferences */}
+                                {(profile.preferredJobType.length > 0 || profile.preferredWorkMode.length > 0 || profile.preferredLocations.length > 0) && (
+                                    <Card>
+                                        <h2 className="mb-3 text-base font-semibold text-[var(--text)]">Preferences</h2>
+                                        <div className="space-y-3">
+                                            {profile.preferredJobType.length > 0 && (
+                                                <div>
+                                                    <p className="text-xs text-[var(--text-muted)] mb-1">Job Types</p>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {profile.preferredJobType.map(jt => (
+                                                            <Badge key={jt} variant="info" size="sm">{JOB_TYPE_LABELS[jt] || jt}</Badge>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             )}
-                                            {exp.keyAchievements && exp.keyAchievements.length > 0 && (
-                                                <ul className="mt-2 list-inside list-disc text-sm text-[var(--text-secondary)]">
-                                                    {exp.keyAchievements.map((a, j) => <li key={j}>{a}</li>)}
-                                                </ul>
+                                            {profile.preferredWorkMode.length > 0 && (
+                                                <div>
+                                                    <p className="text-xs text-[var(--text-muted)] mb-1">Work Modes</p>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {profile.preferredWorkMode.map(wm => (
+                                                            <Badge key={wm} variant="neutral" size="sm">{WORK_MODE_LABELS[wm] || wm}</Badge>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {profile.preferredShift && (
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-[var(--text-muted)]">Shift</span>
+                                                    <span className="text-[var(--text)]">{SHIFT_TYPE_LABELS[profile.preferredShift]}</span>
+                                                </div>
+                                            )}
+                                            {profile.preferredLocations.length > 0 && (
+                                                <div>
+                                                    <p className="text-xs text-[var(--text-muted)] mb-1">Preferred Locations</p>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {profile.preferredLocations.map(loc => (
+                                                            <Tag key={loc} label={loc} size="sm" />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="space-y-1.5 text-sm">
+                                                {profile.willingToRelocate && (
+                                                    <p className="flex items-center gap-1 text-[var(--success)]">
+                                                        <CheckCircle className="h-3.5 w-3.5" /> Willing to relocate
+                                                    </p>
+                                                )}
+                                                {profile.travelWillingnessPercent != null && profile.travelWillingnessPercent > 0 && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-[var(--text-muted)]">Travel</span>
+                                                        <span className="text-[var(--text)]">{profile.travelWillingnessPercent}%</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </Card>
+                                )}
+
+                                {/* Additional Info */}
+                                {(profile.visaStatus || profile.workPermitStatus || profile.hasDrivingLicense || profile.ownVehicle) && (
+                                    <Card>
+                                        <h2 className="mb-3 text-base font-semibold text-[var(--text)]">Additional Info</h2>
+                                        <div className="space-y-2 text-sm">
+                                            {profile.visaStatus && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-[var(--text-muted)]">Visa Status</span>
+                                                    <span className="text-[var(--text)]">{profile.visaStatus}</span>
+                                                </div>
+                                            )}
+                                            {profile.workPermitStatus && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-[var(--text-muted)]">Work Permit</span>
+                                                    <span className="text-[var(--text)]">{profile.workPermitStatus}</span>
+                                                </div>
+                                            )}
+                                            {profile.hasDrivingLicense && (
+                                                <p className="flex items-center gap-1 text-[var(--success)]">
+                                                    <Car className="h-3.5 w-3.5" /> Has driving license
+                                                </p>
+                                            )}
+                                            {profile.ownVehicle && (
+                                                <p className="flex items-center gap-1 text-[var(--text)]">
+                                                    <Car className="h-3.5 w-3.5" /> Owns vehicle
+                                                </p>
                                             )}
                                         </div>
-                                    ))}
-                                </div>
-                            </Card>
-                        )}
+                                    </Card>
+                                )}
 
-                        {/* Education */}
-                        {profile.education && profile.education.length > 0 && (
-                            <Card
-                                header={
-                                    <div className="flex items-center gap-2">
-                                        <GraduationCap className="h-5 w-5 text-[var(--warning)]" />
-                                        <h2 className="text-lg font-semibold text-[var(--text)]">Education</h2>
-                                    </div>
-                                }
-                            >
-                                <div className="space-y-4">
-                                    {profile.education.map((edu, i) => (
-                                        <div key={i} className="flex gap-4">
-                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
-                                                <GraduationCap className="h-5 w-5 text-[var(--warning)]" />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-semibold text-[var(--text)]">{edu.degree} {edu.field ? `in ${edu.field}` : ''}</h3>
-                                                <p className="text-sm text-[var(--text-secondary)]">{edu.institution}</p>
-                                                <p className="text-xs text-[var(--text-muted)]">
-                                                    {formatDate(edu.startDate)} — {formatDate(edu.endDate)}
-                                                    {edu.grade ? ` · ${edu.gradeType || 'Grade'}: ${edu.grade}` : ''}
-                                                </p>
-                                            </div>
+                                {/* Languages */}
+                                {profile.languageProficiency && profile.languageProficiency.length > 0 && (
+                                    <Card>
+                                        <div className="mb-3 flex items-center gap-2">
+                                            <Languages className="h-5 w-5 text-[var(--info)]" />
+                                            <h2 className="text-base font-semibold text-[var(--text)]">Languages</h2>
                                         </div>
-                                    ))}
-                                </div>
-                            </Card>
-                        )}
+                                        <div className="space-y-2">
+                                            {profile.languageProficiency.map((lang, i) => (
+                                                <div key={i} className="flex items-center justify-between text-sm">
+                                                    <span className="text-[var(--text)]">{lang.language}</span>
+                                                    <Badge variant="neutral" size="sm">{lang.proficiency}</Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
 
-                        {/* Certifications */}
-                        {profile.certifications && profile.certifications.length > 0 && (
-                            <Card
-                                header={
-                                    <div className="flex items-center gap-2">
-                                        <Award className="h-5 w-5 text-[var(--success)]" />
-                                        <h2 className="text-lg font-semibold text-[var(--text)]">Certifications</h2>
-                                    </div>
-                                }
-                            >
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    {profile.certifications.map((cert, i) => (
-                                        <div key={i} className="rounded-lg border border-[var(--border)] p-3">
-                                            <h3 className="font-medium text-[var(--text)]">{cert.name}</h3>
-                                            <p className="text-sm text-[var(--text-secondary)]">{cert.issuer}</p>
-                                            {cert.issueDate && (
-                                                <p className="text-xs text-[var(--text-muted)]">
-                                                    {formatDate(cert.issueDate)}
-                                                    {cert.expiryDate && !cert.doesNotExpire ? ` — ${formatDate(cert.expiryDate)}` : ''}
-                                                    {cert.doesNotExpire ? ' · No expiry' : ''}
-                                                </p>
+                                {/* Interests & Hobbies */}
+                                {(profile.interests.length > 0 || profile.hobbies.length > 0) && (
+                                    <Card>
+                                        <div className="mb-3 flex items-center gap-2">
+                                            <Palette className="h-5 w-5 text-[var(--warning)]" />
+                                            <h2 className="text-base font-semibold text-[var(--text)]">Interests & Hobbies</h2>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {profile.interests.map(i => (
+                                                <Tag key={i} label={i} size="sm" variant="primary" />
+                                            ))}
+                                            {profile.hobbies.map(h => (
+                                                <Tag key={h} label={h} size="sm" />
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
+
+                                {/* Social Links */}
+                                {(profile.linkedinProfile || profile.githubProfile || profile.portfolioUrl || profile.stackOverflowProfile || profile.twitterProfile || profile.personalBlogUrl || profile.dribbbleProfile || profile.behanceProfile || profile.mediumProfile || profile.youtubeChannel) && (
+                                    <Card>
+                                        <div className="mb-3 flex items-center gap-2">
+                                            <Globe className="h-5 w-5 text-primary" />
+                                            <h2 className="text-base font-semibold text-[var(--text)]">Social Links</h2>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {profile.linkedinProfile && (
+                                                <a href={profile.linkedinProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-primary">
+                                                    <Linkedin className="h-4 w-4 text-[#0A66C2]" /> LinkedIn
+                                                </a>
                                             )}
-                                            {cert.url && (
-                                                <a href={cert.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                                                    <ExternalLink className="h-3 w-3" /> View
+                                            {profile.githubProfile && (
+                                                <a href={profile.githubProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-primary">
+                                                    <Github className="h-4 w-4" /> GitHub
+                                                </a>
+                                            )}
+                                            {profile.portfolioUrl && (
+                                                <a href={profile.portfolioUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-primary">
+                                                    <Globe className="h-4 w-4 text-primary" /> Portfolio
+                                                </a>
+                                            )}
+                                            {profile.stackOverflowProfile && (
+                                                <a href={profile.stackOverflowProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-primary">
+                                                    <Code className="h-4 w-4 text-[#F48024]" /> Stack Overflow
+                                                </a>
+                                            )}
+                                            {profile.twitterProfile && (
+                                                <a href={profile.twitterProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-primary">
+                                                    <ExternalLink className="h-4 w-4" /> Twitter/X
+                                                </a>
+                                            )}
+                                            {profile.personalBlogUrl && (
+                                                <a href={profile.personalBlogUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-primary">
+                                                    <ExternalLink className="h-4 w-4" /> Blog
+                                                </a>
+                                            )}
+                                            {profile.dribbbleProfile && (
+                                                <a href={profile.dribbbleProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-primary">
+                                                    <Palette className="h-4 w-4 text-[#EA4C89]" /> Dribbble
+                                                </a>
+                                            )}
+                                            {profile.behanceProfile && (
+                                                <a href={profile.behanceProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-primary">
+                                                    <Palette className="h-4 w-4 text-[#1769FF]" /> Behance
+                                                </a>
+                                            )}
+                                            {profile.mediumProfile && (
+                                                <a href={profile.mediumProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-primary">
+                                                    <BookOpen className="h-4 w-4" /> Medium
+                                                </a>
+                                            )}
+                                            {profile.youtubeChannel && (
+                                                <a href={profile.youtubeChannel} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-primary">
+                                                    <Video className="h-4 w-4 text-[#FF0000]" /> YouTube
                                                 </a>
                                             )}
                                         </div>
-                                    ))}
-                                </div>
-                            </Card>
-                        )}
+                                    </Card>
+                                )}
 
-                        {/* Projects */}
-                        {profile.projects && profile.projects.length > 0 && (
-                            <Card
-                                header={
-                                    <div className="flex items-center gap-2">
-                                        <FolderKanban className="h-5 w-5 text-primary" />
-                                        <h2 className="text-lg font-semibold text-[var(--text)]">Projects</h2>
-                                    </div>
-                                }
-                            >
-                                <div className="space-y-4">
-                                    {profile.projects.map((proj, i) => (
-                                        <div key={i} className="rounded-lg border border-[var(--border)] p-4">
-                                            <div className="flex items-start justify-between">
-                                                <h3 className="font-semibold text-[var(--text)]">{proj.name}</h3>
-                                                {proj.url && (
-                                                    <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                                        <ExternalLink className="h-4 w-4" />
-                                                    </a>
-                                                )}
-                                            </div>
-                                            {proj.description && (
-                                                <p className="mt-1 text-sm text-[var(--text-secondary)]">{proj.description}</p>
+                                {/* Documents */}
+                                {(profile.resume || profile.videoResumeUrl) && (
+                                    <Card>
+                                        <h2 className="mb-3 text-base font-semibold text-[var(--text)]">Documents</h2>
+                                        <div className="space-y-2">
+                                            {profile.resume && (
+                                                <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] p-3 text-sm text-[var(--text-secondary)]">
+                                                    <FileText className="h-4 w-4 text-primary" />
+                                                    <span className="flex-1">{profile.resumeOriginalName || 'Resume'}</span>
+                                                    <CheckCircle className="h-4 w-4 text-[var(--success)]" />
+                                                </div>
                                             )}
-                                            {proj.technologies && proj.technologies.length > 0 && (
-                                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                                    {proj.technologies.map((tech) => (
-                                                        <span key={tech} className="rounded bg-[var(--bg-secondary)] px-2 py-0.5 text-xs text-[var(--text-secondary)]">
-                                                            {tech}
-                                                        </span>
-                                                    ))}
+                                            {profile.videoResumeUrl && (
+                                                <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] p-3 text-sm text-[var(--text-secondary)]">
+                                                    <Video className="h-4 w-4 text-[var(--error)]" />
+                                                    <span className="flex-1">Video Resume</span>
+                                                    <CheckCircle className="h-4 w-4 text-[var(--success)]" />
                                                 </div>
                                             )}
                                         </div>
-                                    ))}
-                                </div>
-                            </Card>
-                        )}
+                                    </Card>
+                                )}
+                            </div>
+                        </div>
 
-                        {/* Publications & Patents */}
-                        {((profile.publications && profile.publications.length > 0) || (profile.patents && profile.patents.length > 0)) && (
-                            <Card
-                                header={
-                                    <div className="flex items-center gap-2">
-                                        <BookOpen className="h-5 w-5 text-[#8B5CF6]" />
-                                        <h2 className="text-lg font-semibold text-[var(--text)]">Publications & Patents</h2>
-                                    </div>
-                                }
-                            >
-                                <div className="space-y-3">
-                                    {profile.publications?.map((pub, i) => (
-                                        <div key={`pub-${i}`} className="rounded-lg border border-[var(--border)] p-3">
-                                            <h3 className="font-medium text-[var(--text)]">{pub.title}</h3>
-                                            {pub.publisher && <p className="text-sm text-[var(--text-secondary)]">{pub.publisher}</p>}
-                                            {pub.publicationDate && <p className="text-xs text-[var(--text-muted)]">{formatDate(pub.publicationDate)}</p>}
-                                        </div>
-                                    ))}
-                                    {profile.patents?.map((pat, i) => (
-                                        <div key={`pat-${i}`} className="rounded-lg border border-[var(--border)] p-3">
-                                            <h3 className="font-medium text-[var(--text)]">{pat.title}</h3>
-                                            {pat.patentNumber && <p className="text-sm text-[var(--text-secondary)]">Patent #{pat.patentNumber}</p>}
-                                            {pat.status && <Badge variant="info" size="sm">{pat.status}</Badge>}
-                                        </div>
-                                    ))}
-                                </div>
-                            </Card>
-                        )}
-
-                        {/* Awards */}
-                        {profile.awards && profile.awards.length > 0 && (
-                            <Card
-                                header={
-                                    <div className="flex items-center gap-2">
-                                        <Trophy className="h-5 w-5 text-[var(--warning)]" />
-                                        <h2 className="text-lg font-semibold text-[var(--text)]">Awards</h2>
-                                    </div>
-                                }
-                            >
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    {profile.awards.map((award, i) => (
-                                        <div key={i} className="rounded-lg border border-[var(--border)] p-3">
-                                            <h3 className="font-medium text-[var(--text)]">{award.title}</h3>
-                                            {award.issuer && <p className="text-sm text-[var(--text-secondary)]">{award.issuer}</p>}
-                                            {award.date && <p className="text-xs text-[var(--text-muted)]">{formatDate(award.date)}</p>}
-                                        </div>
-                                    ))}
-                                </div>
-                            </Card>
-                        )}
-
-                        {/* Languages */}
-                        {profile.languageProficiency && profile.languageProficiency.length > 0 && (
-                            <Card
-                                header={
-                                    <div className="flex items-center gap-2">
-                                        <Languages className="h-5 w-5 text-[var(--info)]" />
-                                        <h2 className="text-lg font-semibold text-[var(--text)]">Languages</h2>
-                                    </div>
-                                }
-                            >
-                                <div className="flex flex-wrap gap-3">
-                                    {profile.languageProficiency.map((lang, i) => (
-                                        <div key={i} className="rounded-lg border border-[var(--border)] px-4 py-2 text-center">
-                                            <p className="font-medium text-[var(--text)]">{lang.language}</p>
-                                            <p className="text-xs text-[var(--text-muted)]">{lang.proficiency}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </Card>
-                        )}
-
-                        {/* Social Links */}
-                        {(profile.linkedinProfile || profile.githubProfile || profile.portfolioUrl) && (
-                            <Card
-                                header={
-                                    <div className="flex items-center gap-2">
-                                        <Globe className="h-5 w-5 text-primary" />
-                                        <h2 className="text-lg font-semibold text-[var(--text)]">Social Links</h2>
-                                    </div>
-                                }
-                            >
-                                <div className="flex flex-wrap gap-3">
-                                    {profile.linkedinProfile && (
-                                        <a href={profile.linkedinProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]">
-                                            <Linkedin className="h-4 w-4 text-[#0A66C2]" /> LinkedIn
-                                        </a>
-                                    )}
-                                    {profile.githubProfile && (
-                                        <a href={profile.githubProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]">
-                                            <Github className="h-4 w-4" /> GitHub
-                                        </a>
-                                    )}
-                                    {profile.portfolioUrl && (
-                                        <a href={profile.portfolioUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]">
-                                            <Globe className="h-4 w-4 text-primary" /> Portfolio
-                                        </a>
-                                    )}
-                                    {profile.stackOverflowProfile && (
-                                        <a href={profile.stackOverflowProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]">
-                                            <Code className="h-4 w-4 text-[#F48024]" /> Stack Overflow
-                                        </a>
-                                    )}
-                                    {profile.twitterProfile && (
-                                        <a href={profile.twitterProfile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]">
-                                            <ExternalLink className="h-4 w-4" /> Twitter/X
-                                        </a>
-                                    )}
-                                </div>
-                            </Card>
-                        )}
-
-                        {/* Profile Score with suggestions */}
+                        {/* Profile Improvement Suggestions */}
                         {completeness && completeness.sections.some(s => !s.completed) && (
-                            <Card
-                                header={
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle className="h-5 w-5 text-[var(--success)]" />
-                                        <h2 className="text-lg font-semibold text-[var(--text)]">Improve Your Profile</h2>
-                                    </div>
-                                }
-                            >
-                                <div className="space-y-2">
-                                    <p className="text-sm text-[var(--text-muted)]">
-                                        Complete these sections to increase your visibility to employers:
-                                    </p>
-                                    <div className="grid gap-2 sm:grid-cols-2">
-                                        {completeness.sections
-                                            .filter(s => !s.completed)
-                                            .map(section => (
-                                                <div
-                                                    key={section.name}
-                                                    className="flex items-center gap-2 rounded-lg bg-[var(--warning-light)] px-3 py-2 text-sm text-[var(--warning-dark)]"
-                                                >
-                                                    <Palette className="h-4 w-4 shrink-0" />
-                                                    {section.name}
-                                                </div>
-                                            ))
-                                        }
-                                    </div>
+                            <Card>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <CheckCircle className="h-5 w-5 text-[var(--success)]" />
+                                    <h2 className="text-lg font-semibold text-[var(--text)]">Improve Your Profile</h2>
+                                </div>
+                                <p className="text-sm text-[var(--text-muted)] mb-3">
+                                    Complete these sections to increase your visibility to employers:
+                                </p>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    {completeness.sections
+                                        .filter(s => !s.completed)
+                                        .map(section => (
+                                            <div
+                                                key={section.name}
+                                                className="flex items-center gap-2 rounded-lg bg-[var(--warning-light)] px-3 py-2 text-sm text-[var(--warning-dark)]"
+                                            >
+                                                <Palette className="h-4 w-4 shrink-0" />
+                                                {section.name}
+                                            </div>
+                                        ))
+                                    }
                                 </div>
                             </Card>
                         )}

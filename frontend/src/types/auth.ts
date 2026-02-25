@@ -10,11 +10,13 @@ export interface User {
     mobileNumber: string | null;
     isMobileVerified: boolean;
     isWhatsappVerified: boolean;
+    whatsappNumber?: string | null;
     isActive: boolean;
     isSuspended: boolean;
     isEmailVerified: boolean;
     mfaEnabled: boolean;
     lastLoginAt: string | null;
+    lastActiveAt: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -24,6 +26,8 @@ export interface LoginRequest {
     password: string;
     mfaCode?: string;
     rememberMe?: boolean;
+    trustDevice?: boolean;
+    trustDeviceToken?: string;
 }
 
 export interface RegisterRequest {
@@ -41,6 +45,7 @@ export interface AuthResponse {
     accessToken: string;
     refreshToken: string;
     requireMfa?: boolean;
+    trustedDeviceToken?: string;
 }
 
 export interface RegisterResponse {

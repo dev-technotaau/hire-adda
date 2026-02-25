@@ -387,21 +387,154 @@ export const mfaDisable = async (
         next(error);
     }
 };
+
 // ===============================
-// Change Email
+// MFA: Regenerate Backup Codes
 // ===============================
-export const changeEmail = async (
+export const mfaRegenerateBackup = async (
     req: Request,
     res: Response,
     next: NextFunction
 ): Promise<void> => {
     try {
         if (!req.user) throw new AppError('Not authorized', 401);
-        await authService.changeEmail(req.user.id, req.body);
-
+        const { token, password } = req.body;
+        const result = await mfaService.regenerateBackupCodes(req.user.id, password, token);
+        if (!result.success) {
+            throw new AppError(result.error || 'Failed to regenerate backup codes', 400);
+        }
         res.status(200).json({
             status: 'success',
-            message: 'Email changed successfully. Please verify your new email.',
+            message: 'Backup codes regenerated. Save them securely.',
+            data: { backupCodes: result.backupCodes },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ===============================
+// MFA: Backup Code Count
+// ===============================
+export const mfaBackupCodeCount = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        const count = await mfaService.getBackupCodeCount(req.user.id);
+        res.status(200).json({
+            status: 'success',
+            data: { count },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ===============================
+// Change Email (2-step)
+// ===============================
+export const initiateChangeEmail = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        await authService.initiateChangeEmail(req.user.id, req.body);
+        res.status(200).json({
+            status: 'success',
+            message: 'Verification code sent to your new email address.',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const confirmChangeEmail = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        await authService.confirmChangeEmail(req.user.id, req.body.otp);
+        res.status(200).json({
+            status: 'success',
+            message: 'Email changed successfully.',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const resendChangeEmailOtp = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        await authService.resendChangeEmailOtp(req.user.id);
+        res.status(200).json({
+            status: 'success',
+            message: 'Verification code resent to your new email address.',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ===============================
+// Change Mobile (2-step)
+// ===============================
+export const initiateChangeMobile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        await authService.initiateChangeMobile(req.user.id, req.body);
+        res.status(200).json({
+            status: 'success',
+            message: 'Verification code sent to your new mobile number.',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const confirmChangeMobile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        await authService.confirmChangeMobile(req.user.id, req.body.otp);
+        res.status(200).json({
+            status: 'success',
+            message: 'Mobile number changed successfully.',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const resendChangeMobileOtp = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        await authService.resendChangeMobileOtp(req.user.id);
+        res.status(200).json({
+            status: 'success',
+            message: 'Verification code resent to your new mobile number.',
         });
     } catch (error) {
         next(error);
@@ -417,7 +550,7 @@ export const socialCallback = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-        const user = req.user as any;
+        const user = req.user;
 
         if (!user) {
             // Should be handled by passport, but safe fallback
@@ -521,8 +654,8 @@ export const verifyWhatsapp = async (
 ): Promise<void> => {
     try {
         if (!req.user) throw new AppError('Not authorized', 401);
-        const { mobileNumber } = req.body;
-        await authService.verifyWhatsapp(req.user.id, mobileNumber);
+        const { mobileNumber, whatsappNumber } = req.body;
+        await authService.verifyWhatsapp(req.user.id, mobileNumber, whatsappNumber);
 
         res.status(200).json({
             status: 'success',
@@ -542,6 +675,28 @@ export const confirmWhatsappOtp = async (req: Request, res: Response, next: Next
         const { mobileNumber, otp } = req.body;
         await authService.confirmWhatsappOtp(req.user.id, mobileNumber, otp);
         res.status(200).json({ status: 'success', message: 'WhatsApp verified successfully' });
+    } catch (error) { next(error); }
+};
+
+// ===============================
+// Change WhatsApp Number
+// ===============================
+export const changeWhatsappNumber = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        await authService.changeWhatsappNumber(req.user.id, req.body);
+        res.status(200).json({ status: 'success', message: 'Verification code sent to new WhatsApp number' });
+    } catch (error) { next(error); }
+};
+
+// ===============================
+// Remove Separate WhatsApp Number
+// ===============================
+export const removeWhatsappNumber = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        await authService.removeWhatsappNumber(req.user.id);
+        res.status(200).json({ status: 'success', message: 'Separate WhatsApp number removed. You can re-verify using your mobile number.' });
     } catch (error) { next(error); }
 };
 
@@ -584,7 +739,7 @@ export const revokeConsent = async (req: Request, res: Response, next: NextFunct
         if (!req.user) throw new AppError('Not authorized', 401);
         const { type } = req.params;
         const { ConsentService } = await import('../services/consent.service');
-        await ConsentService.revokeConsent(req.user.id, type as any);
+        await ConsentService.revokeConsent(req.user.id, type as import('../services/consent.service').ConsentType);
         res.status(200).json({ success: true, message: 'Consent revoked' });
     } catch (error) { next(error); }
 };

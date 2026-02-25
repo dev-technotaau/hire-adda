@@ -8,7 +8,7 @@ import {
     addMonths, subMonths, setMonth, setYear, getYear, getMonth,
 } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -19,7 +19,7 @@ interface DatePickerProps {
     label?: string;
     value: string;
     onChange: (value: string) => void;
-    mode?: 'date' | 'month';
+    mode?: 'date' | 'month' | 'datetime';
     placeholder?: string;
     error?: string;
     helperText?: string;
@@ -48,7 +48,7 @@ const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseValue(value: string, mode: 'date' | 'month'): Date | null {
+function parseValue(value: string, mode: 'date' | 'month' | 'datetime'): Date | null {
     if (!value) return null;
     try {
         // Handle ISO datetime strings from API (e.g. "2024-01-15T00:00:00.000Z")
@@ -63,10 +63,11 @@ function parseValue(value: string, mode: 'date' | 'month'): Date | null {
     }
 }
 
-function formatDisplay(value: string, mode: 'date' | 'month'): string {
+function formatDisplay(value: string, mode: 'date' | 'month' | 'datetime'): string {
     const d = parseValue(value, mode);
     if (!d || isNaN(d.getTime())) return '';
     if (mode === 'month') return format(d, 'MMM yyyy');
+    if (mode === 'datetime') return format(d, 'dd MMM yyyy, HH:mm');
     return format(d, 'dd MMM yyyy');
 }
 
@@ -105,27 +106,62 @@ export default function DatePicker({
     const [viewMode, setViewMode] = useState<ViewMode>(mode === 'month' ? 'months' : 'days');
     const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 
+    // Time state for datetime mode
+    const [timeHour, setTimeHour] = useState(() => {
+        const parsed = parseValue(value, mode);
+        return parsed ? parsed.getHours() : 12;
+    });
+    const [timeMinute, setTimeMinute] = useState(() => {
+        const parsed = parseValue(value, mode);
+        return parsed ? parsed.getMinutes() : 0;
+    });
+    const [selectedDate, setSelectedDate] = useState<Date | null>(() => parseValue(value, mode));
+
     const containerRef = useRef<HTMLDivElement>(null);
+    const popoverRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLDivElement>(null);
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
 
-    // Sync viewDate when value changes externally
+    // Sync viewDate and time when value changes externally
     useEffect(() => {
         const parsed = parseValue(value, mode);
-        if (parsed && !isNaN(parsed.getTime())) setViewDate(parsed);
+        if (parsed && !isNaN(parsed.getTime())) {
+            queueMicrotask(() => {
+                setViewDate(parsed);
+                if (mode === 'datetime') {
+                    setTimeHour(parsed.getHours());
+                    setTimeMinute(parsed.getMinutes());
+                    setSelectedDate(parsed);
+                }
+            });
+        }
     }, [value, mode]);
 
-    // Reset viewMode when opening
+    // Reset viewMode when opening; also sync selectedDate for datetime mode
     useEffect(() => {
-        if (isOpen) setViewMode(mode === 'month' ? 'months' : 'days');
-    }, [isOpen, mode]);
+        if (isOpen) {
+            queueMicrotask(() => {
+                setViewMode(mode === 'month' ? 'months' : 'days');
+                if (mode === 'datetime') {
+                    const parsed = parseValue(value, mode);
+                    if (parsed) {
+                        setSelectedDate(parsed);
+                        setTimeHour(parsed.getHours());
+                        setTimeMinute(parsed.getMinutes());
+                    } else {
+                        setSelectedDate(null);
+                    }
+                }
+            });
+        }
+    }, [isOpen, mode, value]);
 
     // Position the popover
     const updatePosition = useCallback(() => {
         if (!inputRef.current) return;
         const rect = inputRef.current.getBoundingClientRect();
         const spaceBelow = window.innerHeight - rect.bottom;
-        const popoverHeight = 340;
+        const popoverHeight = mode === 'datetime' ? 420 : 340;
         const top = spaceBelow >= popoverHeight ? rect.bottom + 4 : rect.top - popoverHeight - 4;
         setPopoverStyle({
             position: 'fixed',
@@ -134,7 +170,7 @@ export default function DatePicker({
             width: `${Math.max(rect.width, 300)}px`,
             zIndex: 9999,
         });
-    }, []);
+    }, [mode]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -147,11 +183,15 @@ export default function DatePicker({
         };
     }, [isOpen, updatePosition]);
 
-    // Close on click outside
+    // Close on click outside (must check both container and portal popover)
     useEffect(() => {
         if (!isOpen) return;
         const handler = (e: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+            const target = e.target as Node;
+            if (
+                containerRef.current && !containerRef.current.contains(target) &&
+                popoverRef.current && !popoverRef.current.contains(target)
+            ) {
                 setIsOpen(false);
             }
         };
@@ -168,7 +208,21 @@ export default function DatePicker({
     // Select handlers
     const selectDate = (date: Date) => {
         if (isDateDisabled(date, minDate, maxDate)) return;
+        if (mode === 'datetime') {
+            // In datetime mode, select date but stay open for time
+            setSelectedDate(date);
+            return;
+        }
         onChange(format(date, 'yyyy-MM-dd'));
+        setIsOpen(false);
+    };
+
+    // Confirm datetime selection (date + time)
+    const confirmDateTime = () => {
+        const base = selectedDate || new Date();
+        const dt = new Date(base);
+        dt.setHours(timeHour, timeMinute, 0, 0);
+        onChange(format(dt, "yyyy-MM-dd'T'HH:mm"));
         setIsOpen(false);
     };
 
@@ -196,10 +250,16 @@ export default function DatePicker({
         const today = new Date();
         if (mode === 'month') {
             onChange(format(today, 'yyyy-MM'));
+            setIsOpen(false);
+        } else if (mode === 'datetime') {
+            setSelectedDate(today);
+            setTimeHour(today.getHours());
+            setTimeMinute(today.getMinutes());
+            // Stay open so user can adjust time or confirm
         } else {
             onChange(format(today, 'yyyy-MM-dd'));
+            setIsOpen(false);
         }
-        setIsOpen(false);
     };
 
     // Calendar grid
@@ -209,7 +269,7 @@ export default function DatePicker({
         const calStart = startOfWeek(monthStart);
         const calEnd = endOfWeek(monthEnd);
         const days = eachDayOfInterval({ start: calStart, end: calEnd });
-        const selected = parseValue(value, mode);
+        const selected = mode === 'datetime' ? selectedDate : parseValue(value, mode);
 
         return (
             <>
@@ -401,10 +461,69 @@ export default function DatePicker({
         );
     };
 
+    // Time picker for datetime mode
+    const renderTimePicker = () => {
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return (
+            <div className="mt-2 border-t border-[var(--border)] pt-2">
+                <div className="flex items-center justify-center gap-1">
+                    <Clock className="mr-1.5 h-4 w-4 text-[var(--text-muted)]" />
+                    {/* Hour */}
+                    <div className="flex flex-col items-center">
+                        <button
+                            type="button"
+                            onClick={() => setTimeHour(h => (h + 1) % 24)}
+                            className="rounded p-0.5 hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] transition-colors"
+                        >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="w-8 text-center text-lg font-semibold tabular-nums text-[var(--text)]">
+                            {pad(timeHour)}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setTimeHour(h => (h - 1 + 24) % 24)}
+                            className="rounded p-0.5 hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] transition-colors"
+                        >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                    <span className="text-lg font-semibold text-[var(--text)]">:</span>
+                    {/* Minute */}
+                    <div className="flex flex-col items-center">
+                        <button
+                            type="button"
+                            onClick={() => setTimeMinute(m => (m + 1) % 60)}
+                            className="rounded p-0.5 hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] transition-colors"
+                        >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="w-8 text-center text-lg font-semibold tabular-nums text-[var(--text)]">
+                            {pad(timeMinute)}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setTimeMinute(m => (m - 1 + 60) % 60)}
+                            className="rounded p-0.5 hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] transition-colors"
+                        >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                </div>
+                {selectedDate && (
+                    <p className="mt-1 text-center text-[10px] text-[var(--text-muted)]">
+                        {format(selectedDate, 'dd MMM yyyy')} at {pad(timeHour)}:{pad(timeMinute)}
+                    </p>
+                )}
+            </div>
+        );
+    };
+
     // Popover content
     const popover = isOpen && typeof window !== 'undefined' && createPortal(
         <AnimatePresence>
             <motion.div
+                ref={popoverRef}
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
@@ -416,15 +535,43 @@ export default function DatePicker({
                 {viewMode === 'months' && renderMonths()}
                 {viewMode === 'years' && renderYears()}
 
-                {/* Today / This Month button */}
+                {/* Time picker for datetime mode */}
+                {mode === 'datetime' && viewMode === 'days' && renderTimePicker()}
+
+                {/* Footer */}
                 <div className="mt-2 border-t border-[var(--border)] pt-2">
-                    <button
-                        type="button"
-                        onClick={selectToday}
-                        className="w-full rounded-lg py-1.5 text-xs font-medium text-primary hover:bg-primary-light transition-colors"
-                    >
-                        {mode === 'month' ? 'This Month' : 'Today'}
-                    </button>
+                    {mode === 'datetime' ? (
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={selectToday}
+                                className="flex-1 rounded-lg py-1.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                            >
+                                Now
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDateTime}
+                                disabled={!selectedDate}
+                                className={cn(
+                                    'flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors',
+                                    selectedDate
+                                        ? 'bg-primary text-white hover:bg-primary/90'
+                                        : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] cursor-not-allowed',
+                                )}
+                            >
+                                Confirm
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={selectToday}
+                            className="w-full rounded-lg py-1.5 text-xs font-medium text-primary hover:bg-primary-light transition-colors"
+                        >
+                            {mode === 'month' ? 'This Month' : 'Today'}
+                        </button>
+                    )}
                 </div>
             </motion.div>
         </AnimatePresence>,
@@ -432,7 +579,7 @@ export default function DatePicker({
     );
 
     const displayValue = formatDisplay(value, mode);
-    const defaultPlaceholder = mode === 'month' ? 'Select month' : 'Select date';
+    const defaultPlaceholder = mode === 'month' ? 'Select month' : mode === 'datetime' ? 'Select date & time' : 'Select date';
 
     return (
         <div className="w-full" ref={containerRef}>

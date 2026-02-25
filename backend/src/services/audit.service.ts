@@ -46,7 +46,7 @@ export class AuditService {
                     entity: data.entity,
                     entityId: data.entityId,
                     performedBy: data.performedBy,
-                    details: (data.details || {}) as any,
+                    details: (data.details ?? {}) as object,
                     ipAddress: data.ipAddress,
                     userAgent: data.userAgent,
                     checksum,

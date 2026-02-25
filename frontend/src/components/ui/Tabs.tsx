@@ -20,20 +20,31 @@ interface TabsProps {
 }
 
 function Tabs({ tabs, activeTab, onChange, variant = 'underline', children, className }: TabsProps) {
+    const panelId = `tabpanel-${activeTab}`;
+
     return (
         <div className={cn('w-full', className)}>
-            <div className={cn(
-                'flex',
-                variant === 'underline' && 'border-b border-[var(--border)] gap-0',
-                variant === 'pills' && 'bg-[var(--bg-tertiary)] rounded-lg p-1 gap-1'
-            )}>
+            <div
+                role="tablist"
+                className={cn(
+                    'flex',
+                    variant === 'underline' && 'border-b border-[var(--border)] gap-0',
+                    variant === 'pills' && 'bg-[var(--bg-tertiary)] rounded-lg p-1 gap-1'
+                )}
+            >
                 {tabs.map((tab) => {
                     const isActive = activeTab === tab.key;
+                    const tabId = `tab-${tab.key}`;
 
                     return (
                         <button
                             key={tab.key}
+                            id={tabId}
                             type="button"
+                            role="tab"
+                            aria-selected={isActive}
+                            aria-controls={`tabpanel-${tab.key}`}
+                            tabIndex={isActive ? 0 : -1}
                             onClick={() => onChange(tab.key)}
                             className={cn(
                                 'text-sm font-medium transition-all duration-200 whitespace-nowrap',
@@ -56,7 +67,16 @@ function Tabs({ tabs, activeTab, onChange, variant = 'underline', children, clas
                     );
                 })}
             </div>
-            {children && <div className="mt-4">{children}</div>}
+            {children && (
+                <div
+                    role="tabpanel"
+                    id={panelId}
+                    aria-labelledby={`tab-${activeTab}`}
+                    className="mt-4"
+                >
+                    {children}
+                </div>
+            )}
         </div>
     );
 }

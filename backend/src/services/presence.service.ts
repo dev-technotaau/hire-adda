@@ -1,8 +1,10 @@
 import { realtimeDb } from '../config/firebase';
 import logger from '../config/logger';
+import { isFeatureEnabled } from '../config/feature-flags';
 
 export const presenceService = {
     async setOnline(userId: string): Promise<void> {
+        if (!await isFeatureEnabled('enablePresence')) return;
         if (!realtimeDb) return;
         try {
             await realtimeDb.ref(`presence/${userId}`).set({
@@ -15,6 +17,7 @@ export const presenceService = {
     },
 
     async setOffline(userId: string): Promise<void> {
+        if (!await isFeatureEnabled('enablePresence')) return;
         if (!realtimeDb) return;
         try {
             await realtimeDb.ref(`presence/${userId}`).set({
@@ -27,6 +30,7 @@ export const presenceService = {
     },
 
     async getPresence(userId: string): Promise<{ online: boolean; lastSeen: string | null } | null> {
+        if (!await isFeatureEnabled('enablePresence')) return null;
         if (!realtimeDb) return null;
         try {
             const snapshot = await realtimeDb.ref(`presence/${userId}`).get();
@@ -40,6 +44,7 @@ export const presenceService = {
     async getMultiplePresence(
         userIds: string[]
     ): Promise<Record<string, { online: boolean; lastSeen: string | null }>> {
+        if (!await isFeatureEnabled('enablePresence')) return {};
         if (!realtimeDb || userIds.length === 0) return {};
         try {
             const results: Record<string, { online: boolean; lastSeen: string | null }> = {};

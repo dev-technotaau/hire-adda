@@ -12,13 +12,35 @@ interface FeatureFlagsConfig {
 }
 
 // Default feature flags (fallback if Remote Config fails)
+// All service flags default to ON — toggle OFF from Firebase Console to disable at runtime
 const defaultFlags: FeatureFlagsConfig = {
-    enableNewJobSearch: false,
-    enableAIMatching: false,
-    enableVideoInterviews: false,
+    // Core feature toggles
     maintenanceMode: false,
-    maxUploadSizeMB: 10,
-    enableBetaFeatures: false,
+    enableBetaFeatures: true,
+
+    // Search & Matching
+    enableElasticsearch: true,
+    enableAIMatching: true,
+    enableCloudTalent: true,
+
+    // Notifications
+    enableEmailNotifications: true,
+    enableSMS: true,
+    enableWhatsApp: true,
+    enableFCM: true,
+    enableWebhooks: true,
+
+    // AI & Analytics
+    enableDocumentAI: true,
+    enableBigQuery: true,
+
+    // Infrastructure
+    enableKafka: true,
+    enablePresence: true,
+    enableFirestoreCounters: true,
+
+    // Config values
+    maxUploadSizeMB: 5,
 };
 
 let cachedFlags: FeatureFlagsConfig = { ...defaultFlags };
@@ -74,7 +96,7 @@ export const fetchFeatureFlags = async (): Promise<FeatureFlagsConfig> => {
 /**
  * Get a specific feature flag value
  */
-export const getFlag = async <T extends boolean | string | number>(
+export const getFlag = async <T extends boolean | string | number | null>(
     key: string,
     defaultValue: T
 ): Promise<T> => {

@@ -16,6 +16,7 @@ export const updateCompanyProfileSchema = z.object({
         website: z.string().url().optional().or(z.literal('')),
         careersPageUrl: z.string().url().or(z.literal('')).optional(),
         blogUrl: z.string().url().or(z.literal('')).optional(),
+        companyVideoUrl: z.string().url().or(z.literal('')).optional(),
         foundedYear: z.number().int().min(1800).max(new Date().getFullYear()).optional(),
         parentCompany: z.string().max(200).optional(),
         stockTicker: z.string().max(20).optional(),
@@ -32,6 +33,7 @@ export const updateCompanyProfileSchema = z.object({
 
         // Details
         employeeCount: z.number().int().min(1).optional(),
+        numberOfOffices: z.number().int().min(1).optional(),
         annualRevenueRange: z.string().optional(),
         techStack: z.array(z.string()).optional(),
 

@@ -25,8 +25,8 @@ export const webauthnService = {
         return res.data;
     },
 
-    async verifyAuthentication(credential: unknown): Promise<ApiResponse<AuthResponse>> {
-        const res = await api.post(API.WEBAUTHN.LOGIN_VERIFY, { credential });
+    async verifyAuthentication(credential: unknown, mfaCode?: string): Promise<ApiResponse<AuthResponse>> {
+        const res = await api.post(API.WEBAUTHN.LOGIN_VERIFY, { credential, ...(mfaCode && { mfaCode }) });
         return res.data;
     },
 

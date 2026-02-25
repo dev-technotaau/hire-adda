@@ -3,7 +3,7 @@ import { Role } from '@prisma/client';
 import { AppError } from '../middleware/error';
 import bcrypt from 'bcryptjs';
 import logger from '../config/logger';
-import { uploadImage, uploadOptions } from '../config/cloudinary';
+import { uploadImage, uploadOptions, deleteImage, extractPublicId } from '../config/cloudinary';
 import { revokeAllUserTokens } from './token.service';
 import { sessionService } from './session.service';
 import { validatePasswordStrength } from '../utils/breach-detection';
@@ -63,7 +63,8 @@ class SuperAdminService {
             }),
             prisma.user.count({ where: { role: { in: [Role.ADMIN, Role.SUPER_ADMIN] } } })
         ]);
-        return { admins, pagination: { total, page, limit, pages: Math.ceil(total / limit) } };
+        const totalPages = Math.ceil(total / limit) || 1;
+        return { items: admins, total, page, limit, totalPages, hasMore: page < totalPages };
     }
 
     async removeAdmin(adminId: string, superAdminId: string) {
@@ -145,7 +146,15 @@ class SuperAdminService {
         return user;
     }
 
-    async updateUserProfile(userId: string, data: { firstName?: string; lastName?: string; email?: string }, superAdminId: string) {
+    async updateUserProfile(
+        userId: string,
+        data: {
+            firstName?: string; lastName?: string; email?: string;
+            mobileNumber?: string | null; whatsappNumber?: string | null;
+            isMobileVerified?: boolean; isWhatsappVerified?: boolean;
+        },
+        superAdminId: string,
+    ) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) throw new AppError('User not found', 404);
         if (user.role === Role.SUPER_ADMIN && userId !== superAdminId) throw new AppError('Cannot modify another super admin', 403);
@@ -155,19 +164,62 @@ class SuperAdminService {
             if (existing) throw new AppError('Email already in use', 400);
         }
 
-        const updateData: Record<string, string> = {};
+        // Mobile uniqueness check
+        if (data.mobileNumber !== undefined && data.mobileNumber !== null && data.mobileNumber !== user.mobileNumber) {
+            const existing = await prisma.user.findFirst({ where: { mobileNumber: data.mobileNumber, NOT: { id: userId } } });
+            if (existing) throw new AppError('Mobile number already in use', 409);
+        }
+
+        const updateData: Record<string, unknown> = {};
         if (data.firstName) updateData.firstName = data.firstName;
         if (data.lastName) updateData.lastName = data.lastName;
         if (data.email) updateData.email = data.email;
 
+        // Mobile number handling
+        if (data.mobileNumber !== undefined) {
+            updateData.mobileNumber = data.mobileNumber; // null removes it
+            if (data.mobileNumber === null) {
+                // Removing number → clear verified
+                updateData.isMobileVerified = false;
+            } else if (data.mobileNumber !== user.mobileNumber) {
+                // Number changed → reset verified unless explicitly set true
+                updateData.isMobileVerified = data.isMobileVerified === true ? true : false;
+            }
+        }
+        if (data.isMobileVerified !== undefined && updateData.isMobileVerified === undefined) {
+            const effectiveMobile = data.mobileNumber !== undefined ? data.mobileNumber : user.mobileNumber;
+            if (data.isMobileVerified && !effectiveMobile) {
+                throw new AppError('Cannot verify mobile without a number', 400);
+            }
+            updateData.isMobileVerified = data.isMobileVerified;
+        }
+
+        // WhatsApp number handling
+        if (data.whatsappNumber !== undefined) {
+            updateData.whatsappNumber = data.whatsappNumber;
+            if (data.whatsappNumber === null) {
+                updateData.isWhatsappVerified = false;
+            } else if (data.whatsappNumber !== user.whatsappNumber) {
+                updateData.isWhatsappVerified = data.isWhatsappVerified === true ? true : false;
+            }
+        }
+        if (data.isWhatsappVerified !== undefined && updateData.isWhatsappVerified === undefined) {
+            const effectiveWhatsapp = data.whatsappNumber !== undefined ? data.whatsappNumber : user.whatsappNumber;
+            if (data.isWhatsappVerified && !effectiveWhatsapp) {
+                throw new AppError('Cannot verify WhatsApp without a number', 400);
+            }
+            updateData.isWhatsappVerified = data.isWhatsappVerified;
+        }
+
         const updated = await prisma.user.update({
             where: { id: userId },
             data: updateData,
-            select: { id: true, email: true, firstName: true, lastName: true, role: true }
+            select: { id: true, email: true, firstName: true, lastName: true, role: true,
+                mobileNumber: true, isMobileVerified: true, whatsappNumber: true, isWhatsappVerified: true }
         });
 
         await prisma.auditLog.create({
-            data: { action: 'UPDATE_USER_PROFILE', entity: 'User', entityId: userId, performedBy: superAdminId, details: data }
+            data: { action: 'UPDATE_USER_PROFILE', entity: 'User', entityId: userId, performedBy: superAdminId, details: JSON.parse(JSON.stringify(data)) }
         });
 
         return updated;
@@ -245,6 +297,12 @@ class SuperAdminService {
         const uploadResult = await uploadImage(file.buffer, uploadOptions.profileImage);
         const avatarUrl = uploadResult.secure_url;
 
+        // Delete old avatar from Cloudinary
+        if (user.avatar) {
+            const oldPublicId = extractPublicId(user.avatar);
+            if (oldPublicId) deleteImage(oldPublicId).catch(() => {});
+        }
+
         if (user.candidateProfile) {
             await prisma.$transaction([
                 prisma.user.update({ where: { id: userId }, data: { avatar: avatarUrl } }),
@@ -272,6 +330,12 @@ class SuperAdminService {
             ]);
         } else {
             await prisma.user.update({ where: { id: userId }, data: { avatar: null } });
+        }
+
+        // Delete from Cloudinary
+        if (user.avatar) {
+            const publicId = extractPublicId(user.avatar);
+            if (publicId) deleteImage(publicId).catch(() => {});
         }
 
         await prisma.auditLog.create({

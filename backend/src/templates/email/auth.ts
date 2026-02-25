@@ -95,6 +95,22 @@ export const loginAlert = (time: string, ip: string, userAgent?: string): EmailT
     text: `New sign-in detected on your Talent Bridge account. Time: ${time}, IP: ${ip}${userAgent ? `, Device: ${userAgent}` : ''}. If this wasn't you, change your password immediately at ${BRAND.url}/settings/security`,
 });
 
+export const accountDeletionRequested = (name: string): EmailTemplate => ({
+    subject: 'Account Deletion Requested — Talent Bridge',
+    html: emailLayout(`
+        ${iconCircle('&#128465;', BRAND.warningLight)}
+        ${heading('Account Deletion Requested')}
+        ${greeting(name)}
+        ${paragraph('We received a request to delete your Talent Bridge account.')}
+        ${warningBox('Your account and all associated data will be permanently deleted after <strong>30 days</strong>.')}
+        ${paragraph('To cancel this request, simply log in to your account before the deletion date.')}
+        ${paragraph('If you did not request this, please sign in immediately and contact our support team.')}
+        ${button('Sign In to Cancel', `${BRAND.url}/auth/login`)}
+        ${signature()}
+    `, 'Your account deletion request has been received.'),
+    text: `Hi ${name}, we received a request to delete your Talent Bridge account. Your account will be permanently deleted after 30 days. To cancel, log in before the deletion date. If you did not request this, sign in immediately.`,
+});
+
 export const accountDeactivated = (name: string): EmailTemplate => ({
     subject: 'Your Account Has Been Deactivated — Talent Bridge',
     html: emailLayout(`

@@ -2,10 +2,11 @@ import api from '@/lib/api';
 import { API } from '@/constants/api';
 import { buildQueryString } from '@/lib/utils';
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
-import type { AdminStats, UserListItem, UserDetail, AuditLog, AuditLogFilters, AnalyticsData, AnalyticsFilters, SystemConfig, SuspendUserRequest, UpdateUserRoleRequest, FlagJobRequest, CreateUserRequest, UpdateUserProfileRequest, AdminResetPasswordRequest, UserSession, DailyActiveUsersData, AdminApplication, ApplicationStats } from '@/types/admin';
+import type { AdminStats, RecentActivity, UserListItem, UserDetail, AuditLog, AuditLogFilters, AnalyticsData, AnalyticsFilters, SystemConfig, SuspendUserRequest, UpdateUserRoleRequest, FlagJobRequest, CreateUserRequest, UpdateUserProfileRequest, AdminResetPasswordRequest, UserSession, DailyActiveUsersData, AdminApplication, ApplicationStats } from '@/types/admin';
+import type { Job } from '@/types/job';
+import type { FeatureFlags } from '@/types/feature-flag';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformStats(body: any): ApiResponse<AdminStats> {
     const d = body.data;
     return {
@@ -18,9 +19,22 @@ function transformStats(body: any): ApiResponse<AdminStats> {
             activeJobs: d?.jobs?.active ?? d?.activeJobs ?? 0,
             totalApplications: d?.applications?.total ?? d?.totalApplications ?? 0,
             newUsersToday: d?.newUsersToday ?? 0,
-            newUsersThisWeek: d?.newUsersThisWeek ?? 0,
-            newUsersThisMonth: d?.newUsersThisMonth ?? 0,
+            newUsersThisWeek: d?.users?.newThisWeek ?? d?.newUsersThisWeek ?? 0,
+            newUsersThisMonth: d?.users?.newThisMonth ?? d?.newUsersThisMonth ?? 0,
             pendingVerifications: d?.verifications?.pending ?? d?.pendingVerifications ?? 0,
+            // Comprehensive fields
+            totalAdmins: d?.users?.admins,
+            activeThisWeek: d?.users?.activeThisWeek,
+            expiredJobs: d?.jobs?.expired,
+            newJobsThisWeek: d?.jobs?.newThisWeek,
+            newJobsThisMonth: d?.jobs?.newThisMonth,
+            applicationsThisWeek: d?.applications?.thisWeek,
+            applicationConversionRate: d?.applications?.conversionRate,
+            verificationsApproved: d?.verifications?.approved,
+            verificationsRejected: d?.verifications?.rejected,
+            topSkills: d?.topSkills,
+            topLocations: d?.topLocations,
+            registrationTrends: d?.registrationTrends,
         },
     };
 }
@@ -36,7 +50,7 @@ export const adminService = {
         return transformStats(res.data);
     },
 
-    async getActivity(): Promise<ApiResponse<Array<{ action: string; user: string; timestamp: string }>>> {
+    async getActivity(): Promise<ApiResponse<RecentActivity>> {
         const res = await api.get(API.ADMIN.ACTIVITY);
         return res.data;
     },
@@ -44,25 +58,7 @@ export const adminService = {
     async getUsers(filters?: Record<string, string | number | undefined>): Promise<PaginatedResponse<UserListItem>> {
         const qs = buildQueryString((filters || {}) as Record<string, string | undefined>);
         const res = await api.get(`${API.ADMIN.USERS}${qs}`);
-        const body = res.data;
-        const d = body.data;
-        // Backend: {users[], total, page, limit} → Frontend: PaginatedResponse {items[], total, page, limit, totalPages, hasMore}
-        const users = d?.users ?? d?.items ?? [];
-        const total = d?.total ?? 0;
-        const page = d?.page ?? 1;
-        const limit = d?.limit ?? 10;
-        const totalPages = d?.totalPages ?? (Math.ceil(total / limit) || 1);
-        return {
-            ...body,
-            data: {
-                items: users,
-                total,
-                page,
-                limit,
-                totalPages,
-                hasMore: d?.hasMore ?? page < totalPages,
-            },
-        };
+        return res.data;
     },
 
     async getUserDetails(id: string): Promise<ApiResponse<UserDetail>> {
@@ -121,26 +117,7 @@ export const adminService = {
     async getAuditLogs(filters?: AuditLogFilters): Promise<PaginatedResponse<AuditLog>> {
         const qs = buildQueryString((filters || {}) as Record<string, string | number | undefined>);
         const res = await api.get(`${API.ADMIN.AUDIT_LOGS}${qs}`);
-        const body = res.data;
-        const d = body.data;
-        // Backend: {logs[], pagination:{total, page, limit, pages}} → Frontend: PaginatedResponse
-        const logs = d?.logs ?? d?.items ?? [];
-        const pagination = d?.pagination ?? {};
-        const total = pagination.total ?? d?.total ?? 0;
-        const page = pagination.page ?? d?.page ?? 1;
-        const limit = pagination.limit ?? d?.limit ?? 10;
-        const totalPages = pagination.pages ?? d?.totalPages ?? (Math.ceil(total / limit) || 1);
-        return {
-            ...body,
-            data: {
-                items: logs,
-                total,
-                page,
-                limit,
-                totalPages,
-                hasMore: d?.hasMore ?? page < totalPages,
-            },
-        };
+        return res.data;
     },
 
     async createAdmin(data: { email: string; firstName: string; lastName: string; password: string }): Promise<ApiResponse<null>> {
@@ -148,7 +125,7 @@ export const adminService = {
         return res.data;
     },
 
-    async listAdmins(): Promise<ApiResponse<UserListItem[]>> {
+    async listAdmins(): Promise<PaginatedResponse<UserListItem>> {
         const res = await api.get(API.SUPER_ADMIN.LIST_ADMINS);
         return res.data;
     },
@@ -162,13 +139,13 @@ export const adminService = {
         const res = await api.get(API.SUPER_ADMIN.GET_CONFIG);
         const body = res.data;
         const d = body.data;
-        // Backend returns flat Record<string, any> → Frontend expects SystemConfig[]
+        // Backend returns flat Record<string, unknown> → Frontend expects SystemConfig[]
         if (Array.isArray(d)) return body;
         return {
             ...body,
             data: Object.entries(d ?? {}).map(([key, value]) => ({
                 key,
-                value: String(value),
+                value: typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value ?? ''),
             })),
         };
     },
@@ -275,7 +252,7 @@ export const adminService = {
 
     // ── Admin Jobs Management ──
 
-    async getJobs(filters?: Record<string, string | number | undefined>): Promise<PaginatedResponse<any>> {
+    async getJobs(filters?: Record<string, string | number | undefined>): Promise<PaginatedResponse<Job>> {
         const qs = buildQueryString((filters || {}) as Record<string, string | undefined>);
         const res = await api.get(`${API.ADMIN.JOBS}${qs}`);
         return res.data;
@@ -296,6 +273,133 @@ export const adminService = {
 
     async getApplicationStats(): Promise<ApiResponse<ApplicationStats>> {
         const res = await api.get(API.ADMIN.APPLICATION_STATS);
+        return res.data;
+    },
+
+    // ── System Health ──
+
+    async getSystemHealth(): Promise<ApiResponse<Record<string, unknown>>> {
+        const res = await api.get(API.HEALTH);
+        return res.data;
+    },
+
+    // ── Analytics Dashboard (advanced) ──
+
+    async getAnalyticsDashboard(params?: { startDate?: string; endDate?: string }): Promise<ApiResponse<{
+        userGrowth: unknown;
+        applicationFunnel: unknown;
+        popularSkills: unknown;
+        salaryTrends: unknown;
+        jobTrends: unknown;
+    }>> {
+        const qs = buildQueryString((params || {}) as Record<string, string | undefined>);
+        const [userGrowth, applicationFunnel, popularSkills, salaryTrends, jobTrends] = await Promise.all([
+            api.get(`${API.ADVANCED_ANALYTICS.USER_GROWTH}${qs}`),
+            api.get(`${API.ADVANCED_ANALYTICS.APPLICATION_FUNNEL}${qs}`),
+            api.get(`${API.ADVANCED_ANALYTICS.POPULAR_SKILLS}${qs}`),
+            api.get(`${API.ADVANCED_ANALYTICS.SALARY_TRENDS}${qs}`),
+            api.get(`${API.ADVANCED_ANALYTICS.JOB_TRENDS}${qs}`),
+        ]);
+        return {
+            status: 'success',
+            message: 'Analytics dashboard loaded',
+            data: {
+                userGrowth: userGrowth.data?.data,
+                applicationFunnel: applicationFunnel.data?.data,
+                popularSkills: popularSkills.data?.data,
+                salaryTrends: salaryTrends.data?.data,
+                jobTrends: jobTrends.data?.data,
+            },
+        };
+    },
+
+    // ── Unified Report Export ──
+
+    async exportReport(params: { type: 'users' | 'jobs' | 'analytics'; period?: 'week' | 'month' | 'year' }): Promise<Blob> {
+        const endpoints: Record<string, string> = {
+            users: API.ADMIN.REPORTS.USERS,
+            jobs: API.ADMIN.REPORTS.JOBS,
+            analytics: API.ADMIN.REPORTS.ANALYTICS,
+        };
+        const res = await api.get(endpoints[params.type], {
+            params: params.period ? { period: params.period } : undefined,
+            responseType: 'blob',
+        });
+        return res.data;
+    },
+
+    // ── Email Templates ──
+
+    async getEmailTemplates(): Promise<ApiResponse<unknown>> {
+        const res = await api.get(API.ADMIN.EMAIL_TEMPLATES);
+        return res.data;
+    },
+
+    async previewEmailTemplate(templateId: string, data?: Record<string, unknown>): Promise<ApiResponse<unknown>> {
+        const res = await api.post(`${API.ADMIN.EMAIL_TEMPLATES}/${templateId}/preview`, data);
+        return res.data;
+    },
+
+    async testEmailTemplate(templateId: string, recipientEmail: string): Promise<ApiResponse<unknown>> {
+        const res = await api.post(`${API.ADMIN.EMAIL_TEMPLATES}/${templateId}/test`, { recipientEmail });
+        return res.data;
+    },
+
+    // ── Kafka Events ──
+
+    async getKafkaEvents(limit?: number): Promise<ApiResponse<unknown>> {
+        const res = await api.get(API.ADMIN.KAFKA_EVENTS, { params: { limit } });
+        return res.data;
+    },
+
+    // ── Live Counters ──
+
+    async getLiveCounters(): Promise<ApiResponse<unknown>> {
+        const res = await api.get(API.ADMIN.LIVE_COUNTERS);
+        return res.data;
+    },
+
+    // ── Feature Flags ──
+
+    async getFeatureFlags(): Promise<ApiResponse<FeatureFlags>> {
+        const res = await api.get(API.FEATURE_FLAGS.ALL);
+        return res.data;
+    },
+
+    // ── Admin MFA Management (Super Admin) ──
+
+    async setupAdminMfa(adminId: string): Promise<ApiResponse<{ secret: string; qrCodeUrl: string }>> {
+        const res = await api.post(API.SUPER_ADMIN.MFA_SETUP(adminId));
+        return res.data;
+    },
+
+    async enableAdminMfa(adminId: string, token: string): Promise<ApiResponse<{ backupCodes: string[] }>> {
+        const res = await api.post(API.SUPER_ADMIN.MFA_ENABLE(adminId), { token });
+        return res.data;
+    },
+
+    async disableAdminMfa(adminId: string): Promise<ApiResponse<null>> {
+        const res = await api.post(API.SUPER_ADMIN.MFA_DISABLE(adminId));
+        return res.data;
+    },
+
+    async getAdminMfaStatus(adminId: string): Promise<ApiResponse<{ mfaEnabled: boolean; backupCodesRemaining: number }>> {
+        const res = await api.get(API.SUPER_ADMIN.MFA_STATUS(adminId));
+        return res.data;
+    },
+
+    async regenerateAdminBackupCodes(adminId: string): Promise<ApiResponse<{ backupCodes: string[] }>> {
+        const res = await api.post(API.SUPER_ADMIN.MFA_REGEN_BACKUP(adminId));
+        return res.data;
+    },
+
+    async getAdminSessions(adminId: string): Promise<ApiResponse<UserSession[]>> {
+        const res = await api.get(API.SUPER_ADMIN.USER_SESSIONS(adminId));
+        return res.data;
+    },
+
+    async revokeAdminSessions(adminId: string): Promise<ApiResponse<null>> {
+        const res = await api.delete(API.SUPER_ADMIN.REVOKE_USER_SESSIONS(adminId));
         return res.data;
     },
 };

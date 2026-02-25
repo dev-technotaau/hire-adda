@@ -4,7 +4,7 @@ import { VerificationType, VerificationStatus } from '@prisma/client';
 export const requestVerificationSchema = z.object({
     body: z.object({
         type: z.nativeEnum(VerificationType, { error: 'Invalid verification type' }),
-        data: z.any().optional(),
+        data: z.record(z.string(), z.unknown()).optional(),
     }),
 });
 

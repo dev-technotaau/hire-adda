@@ -24,7 +24,7 @@ export default tseslint.config(
             '@typescript-eslint/no-explicit-any': 'warn',
             '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
             '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
-            '@typescript-eslint/no-floating-promises': 'off',
+            '@typescript-eslint/no-floating-promises': 'warn',
             '@typescript-eslint/no-misused-promises': 'off',
 
             // Security

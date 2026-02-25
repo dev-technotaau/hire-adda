@@ -9,6 +9,7 @@ import {
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
@@ -19,6 +20,50 @@ import { adminService } from '@/services/admin.service';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
 import { formatDate } from '@/lib/utils';
 import type { AuditLog, AuditLogFilters } from '@/types/admin';
+
+const actionOptions = [
+    { value: '', label: 'All Actions' },
+    { value: 'CREATE_USER', label: 'Create User' },
+    { value: 'DELETE_USER', label: 'Delete User' },
+    { value: 'SUSPEND_USER', label: 'Suspend User' },
+    { value: 'ACTIVATE_USER', label: 'Activate User' },
+    { value: 'DEACTIVATE_USER', label: 'Deactivate User' },
+    { value: 'UPDATE_USER_ROLE', label: 'Update User Role' },
+    { value: 'UPDATE_USER_PROFILE', label: 'Update User Profile' },
+    { value: 'ADMIN_RESET_PASSWORD', label: 'Admin Reset Password' },
+    { value: 'PASSWORD_CHANGE', label: 'Password Change' },
+    { value: 'UPLOAD_USER_AVATAR', label: 'Upload Avatar' },
+    { value: 'REMOVE_USER_AVATAR', label: 'Remove Avatar' },
+    { value: 'REVOKE_USER_SESSIONS', label: 'Revoke Sessions' },
+    { value: 'PROFILE_UPDATE', label: 'Profile Update' },
+    { value: 'RESUME_UPLOAD', label: 'Resume Upload' },
+    { value: 'JOB_CREATE', label: 'Job Create' },
+    { value: 'JOB_UPDATE', label: 'Job Update' },
+    { value: 'JOB_CLOSE', label: 'Job Close' },
+    { value: 'DELETE_JOB', label: 'Delete Job' },
+    { value: 'MODERATE_JOB', label: 'Moderate Job' },
+    { value: 'FLAG_JOB', label: 'Flag Job' },
+    { value: 'APPLICATION_SHORTLIST', label: 'Application Shortlist' },
+    { value: 'APPLICATION_SELECT', label: 'Application Select' },
+    { value: 'VERIFICATION_APPROVE', label: 'Verification Approve' },
+    { value: 'VERIFICATION_REJECT', label: 'Verification Reject' },
+    { value: 'VERIFICATION_REQUEST_CHANGES', label: 'Verification Request Changes' },
+    { value: 'VERIFICATION_ESCALATE', label: 'Verification Escalate' },
+    { value: 'VERIFICATION_LEVEL_APPROVE', label: 'Verification Level Approve' },
+    { value: 'TICKET_ASSIGN', label: 'Ticket Assign' },
+    { value: 'TICKET_STATUS_CHANGE', label: 'Ticket Status Change' },
+];
+
+const entityOptions = [
+    { value: '', label: 'All Entity Types' },
+    { value: 'User', label: 'User' },
+    { value: 'CandidateProfile', label: 'Candidate Profile' },
+    { value: 'CompanyProfile', label: 'Company Profile' },
+    { value: 'JobPost', label: 'Job Post' },
+    { value: 'JobApplication', label: 'Job Application' },
+    { value: 'Verification', label: 'Verification' },
+    { value: 'SupportTicket', label: 'Support Ticket' },
+];
 
 export default function AuditLogsPage() {
     const [page, setPage] = useState(1);
@@ -66,41 +111,19 @@ export default function AuditLogsPage() {
                 {/* Filters */}
                 <Card>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                        <select
+                        <Select
+                            options={actionOptions}
                             value={action}
-                            onChange={(e) => { setAction(e.target.value); setPage(1); }}
-                            className="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-primary focus:outline-none"
-                        >
-                            <option value="">All Actions</option>
-                            <option value="CREATE_ADMIN">Create Admin</option>
-                            <option value="REMOVE_ADMIN">Remove Admin</option>
-                            <option value="UPDATE_USER_ROLE">Update User Role</option>
-                            <option value="SUSPEND_USER">Suspend User</option>
-                            <option value="ACTIVATE_USER">Activate User</option>
-                            <option value="DELETE_USER">Delete User</option>
-                            <option value="PASSWORD_CHANGE">Password Change</option>
-                            <option value="PROFILE_UPDATE">Profile Update</option>
-                            <option value="RESUME_UPLOAD">Resume Upload</option>
-                            <option value="JOB_CREATE">Job Create</option>
-                            <option value="JOB_UPDATE">Job Update</option>
-                            <option value="JOB_CLOSE">Job Close</option>
-                            <option value="VERIFICATION_APPROVE">Verification Approve</option>
-                            <option value="VERIFICATION_REJECT">Verification Reject</option>
-                            <option value="VERIFICATION_REQUEST_CHANGES">Verification Request Changes</option>
-                            <option value="VERIFICATION_ESCALATE">Verification Escalate</option>
-                        </select>
-                        <select
+                            onChange={(val) => { setAction(val); setPage(1); }}
+                            placeholder="All Actions"
+                            searchable
+                        />
+                        <Select
+                            options={entityOptions}
                             value={entity}
-                            onChange={(e) => { setEntity(e.target.value); setPage(1); }}
-                            className="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-primary focus:outline-none"
-                        >
-                            <option value="">All Entity Types</option>
-                            <option value="User">User</option>
-                            <option value="CandidateProfile">Candidate Profile</option>
-                            <option value="CompanyProfile">Company Profile</option>
-                            <option value="JobPost">Job Post</option>
-                            <option value="Verification">Verification</option>
-                        </select>
+                            onChange={(val) => { setEntity(val); setPage(1); }}
+                            placeholder="All Entity Types"
+                        />
                         <Input
                             placeholder="Filter by user ID..."
                             value={performedBy}

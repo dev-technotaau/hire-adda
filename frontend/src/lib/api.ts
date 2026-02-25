@@ -1,9 +1,24 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import Cookies from 'js-cookie';
-import { APP_CONFIG } from '@/constants/config';
+import { APP_CONFIG, API_BASE_URL } from '@/constants/config';
 import { API } from '@/constants/api';
-import { storage, STORAGE_KEYS } from '@/utils/storage';
+import { storage, sessionStore, STORAGE_KEYS } from '@/utils/storage';
 import type { ApiError } from '@/types/api';
+import { useMaintenanceStore } from '@/store/maintenance.store';
+
+/** Raw error body shape returned by the backend — supports both legacy and new formats */
+interface RawErrorBody {
+    status?: string;
+    message?: string;
+    error?: {
+        message?: string;
+        code?: string;
+        requestId?: string;
+        details?: unknown;
+        estimatedReturnTime?: string;
+    };
+    errors?: Record<string, string[]> | unknown;
+}
 
 const api = axios.create({
     baseURL: APP_CONFIG.apiUrl,
@@ -21,9 +36,8 @@ const MUTATION_METHODS = ['post', 'put', 'patch', 'delete'];
 
 async function fetchCsrfToken(): Promise<string | null> {
     try {
-        // CSRF endpoint is /api/csrf-token (not under /api/v1/), so strip version suffix
-        const baseUrl = APP_CONFIG.apiUrl.replace(/\/v\d+$/, '');
-        const { data } = await axios.get(`${baseUrl}/csrf-token`, {
+        // CSRF endpoint is /api/csrf-token (not under /api/v1/)
+        const { data } = await axios.get(`${API_BASE_URL}/csrf-token`, {
             withCredentials: true,
         });
         csrfToken = data.csrfToken;
@@ -62,7 +76,7 @@ function processQueue(error: unknown, token: string | null = null) {
 // Request interceptor: attach auth token + CSRF token
 api.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-        const token = storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN);
+        const token = storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN) ?? sessionStore.get<string>(STORAGE_KEYS.ACCESS_TOKEN);
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -88,7 +102,7 @@ api.interceptors.response.use(
 
         // Handle 403 CSRF token mismatch — re-fetch token and retry once
         if (error.response?.status === 403 && !originalRequest._csrfRetry) {
-            const errorData = error.response.data as any;
+            const errorData = error.response.data as RawErrorBody;
             const isCsrfError = errorData?.error?.code === 'EBADCSRFTOKEN' || errorData?.message?.toLowerCase().includes('csrf');
             if (isCsrfError) {
                 originalRequest._csrfRetry = true;
@@ -109,9 +123,22 @@ api.interceptors.response.use(
             return api(originalRequest);
         }
 
+        // Handle 503 Service Unavailable — maintenance mode
+        if (error.response?.status === 503) {
+            const errorData = error.response.data as RawErrorBody;
+            if (errorData?.error?.code === 'MAINTENANCE_MODE') {
+                useMaintenanceStore.getState().setMaintenanceMode(
+                    true,
+                    errorData?.error?.message,
+                    errorData?.error?.estimatedReturnTime
+                );
+            }
+            return Promise.reject(transformError(error));
+        }
+
         // If 401 and not a refresh request itself
         if (error.response?.status === 401 && !originalRequest._retry) {
-            const refreshToken = storage.get<string>(STORAGE_KEYS.REFRESH_TOKEN);
+            const refreshToken = storage.get<string>(STORAGE_KEYS.REFRESH_TOKEN) ?? sessionStore.get<string>(STORAGE_KEYS.REFRESH_TOKEN);
 
             // No refresh token — clear auth and redirect
             if (!refreshToken) {
@@ -149,10 +176,17 @@ api.interceptors.response.use(
                 const newAccessToken = data.data.accessToken;
                 const newRefreshToken = data.data.refreshToken;
 
-                storage.set(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
-                Cookies.set(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken, { expires: 7, secure: true, sameSite: 'strict' });
+                // Respect the rememberMe flag when storing refreshed tokens
+                const remembered = storage.get<boolean>(STORAGE_KEYS.REMEMBER_ME) ?? true;
+                const activeStore = remembered ? storage : sessionStore;
+                activeStore.set(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
+                Cookies.set(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken, {
+                    expires: remembered ? 7 : undefined,
+                    secure: true,
+                    sameSite: 'strict',
+                });
                 if (newRefreshToken) {
-                    storage.set(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+                    activeStore.set(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
                 }
 
                 processQueue(null, newAccessToken);
@@ -176,14 +210,14 @@ api.interceptors.response.use(
 
 function transformError(error: AxiosError<ApiError>): ApiError {
     if (error.response?.data) {
-        const data = error.response.data as any;
+        const data = error.response.data as RawErrorBody;
         // Support both legacy { message } and new { error: { message, code } } shapes
         const message = data.error?.message || data.message || 'An unexpected error occurred';
         const code = data.error?.code;
         const requestId = data.error?.requestId;
 
         return {
-            status: data.status || 'error',
+            status: (data.status as ApiError['status']) || 'error',
             message,
             statusCode: error.response.status,
             errors: data.errors || data.error?.details,
@@ -208,23 +242,42 @@ function transformError(error: AxiosError<ApiError>): ApiError {
 }
 
 const protectedPrefixes = ['/candidate', '/employer', '/admin', '/super-admin', '/notifications'];
+const adminPrefixes = ['/admin', '/super-admin'];
 
 let clearAuthPending = false;
 
 function clearAuth() {
+    // Clear both localStorage and sessionStorage
     storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
     storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
     storage.remove(STORAGE_KEYS.USER);
+    sessionStore.remove(STORAGE_KEYS.ACCESS_TOKEN);
+    sessionStore.remove(STORAGE_KEYS.REFRESH_TOKEN);
+    sessionStore.remove(STORAGE_KEYS.USER);
+    Cookies.remove(STORAGE_KEYS.ACCESS_TOKEN);
 
     if (typeof window !== 'undefined' && !clearAuthPending) {
         const path = window.location.pathname;
         const isProtected = protectedPrefixes.some((p) => path.startsWith(p));
-        // Don't redirect if already on the login page
-        if (isProtected && !path.startsWith('/auth/')) {
+        const isAdminRoute = adminPrefixes.some((p) => path.startsWith(p));
+
+        // Don't redirect if already on a login page
+        if (isProtected && !path.startsWith('/auth/') && !path.startsWith('/portal/')) {
             clearAuthPending = true;
-            window.location.href = `/auth/login?redirect=${encodeURIComponent(path)}`;
+            // Admin routes redirect to portal login, others to auth login
+            const loginUrl = isAdminRoute ? '/portal/login' : '/auth/login';
+            window.location.href = `${loginUrl}?redirect=${encodeURIComponent(path)}`;
         }
     }
+}
+
+// Cross-tab auth synchronization
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (event) => {
+        if (event.key === STORAGE_KEYS.ACCESS_TOKEN && !event.newValue) {
+            clearAuth();
+        }
+    });
 }
 
 export default api;

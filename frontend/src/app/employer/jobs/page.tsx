@@ -22,7 +22,8 @@ import { jobService } from '@/services/job.service';
 import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
 import { JOB_STATUS_LABELS, JOB_TYPE_LABELS, WORK_MODE_LABELS } from '@/constants/enums';
-import { formatRelativeDate } from '@/lib/utils';
+import { formatRelativeDate, formatSalaryRange } from '@/lib/utils';
+import { formatSalaryAsLPA } from '@/utils/format';
 import type { Job } from '@/types/job';
 import type { ApiError } from '@/types/api';
 
@@ -46,9 +47,10 @@ export default function MyJobsPage() {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [deactivateTarget, setDeactivateTarget] = useState<string | null>(null);
 
+    const serverStatus = statusFilter === 'ALL' ? undefined : statusFilter;
     const { data, isLoading } = useQuery({
-        queryKey: [...QUERY_KEYS.JOBS.MY_JOBS, page, PAGINATION.JOBS_PER_PAGE],
-        queryFn: () => jobService.getMyJobs(page, PAGINATION.JOBS_PER_PAGE),
+        queryKey: [...QUERY_KEYS.JOBS.MY_JOBS, page, PAGINATION.JOBS_PER_PAGE, serverStatus],
+        queryFn: () => jobService.getMyJobs(page, PAGINATION.JOBS_PER_PAGE, serverStatus),
     });
 
     const deactivateMutation = useMutation({
@@ -66,10 +68,6 @@ export default function MyJobsPage() {
 
     const jobs = data?.data?.items || [];
     const pagination = data?.data;
-
-    const filtered = statusFilter === 'ALL'
-        ? jobs
-        : jobs.filter((job) => job.status === statusFilter);
 
     const handleDeactivate = () => {
         if (!deactivateTarget) return;
@@ -114,8 +112,8 @@ export default function MyJobsPage() {
                         Array.from({ length: 5 }).map((_, i) => (
                             <Card key={i}><Skeleton variant="card" /></Card>
                         ))
-                    ) : filtered.length > 0 ? (
-                        filtered.map((job) => (
+                    ) : jobs.length > 0 ? (
+                        jobs.map((job) => (
                             <JobCard
                                 key={job.id}
                                 job={job}
@@ -241,6 +239,14 @@ function JobCard({ job, onDeactivate }: { job: Job; onDeactivate: () => void }) 
                                     <Clock className="h-3 w-3" /> Posted {formatRelativeDate(job.createdAt)}
                                 </span>
                             </div>
+                            {(job.salaryMin || job.salaryMax) && (
+                                <p className="mt-1 text-xs text-[var(--text)]">
+                                    {(job.currency || 'INR').toUpperCase() === 'INR' && job.salaryType === 'ANNUAL'
+                                        ? formatSalaryAsLPA(job.salaryMin, job.salaryMax)
+                                        : formatSalaryRange(job.salaryMin, job.salaryMax, job.currency)}
+                                    {job.salaryNegotiable && <span className="ml-1 text-[var(--success)]">(Negotiable)</span>}
+                                </p>
+                            )}
                             <div className="mt-2 flex flex-wrap gap-1.5">
                                 <Badge variant={badgeVariant} size="sm">
                                     {JOB_STATUS_LABELS[job.status] || job.status}
@@ -255,6 +261,9 @@ function JobCard({ job, onDeactivate }: { job: Job; onDeactivate: () => void }) 
                                         {WORK_MODE_LABELS[job.workMode] || job.workMode}
                                     </Badge>
                                 )}
+                                {job.isConfidential && <Badge variant="warning" size="sm">Confidential</Badge>}
+                                {job.isFeatured && <Badge variant="success" size="sm">Featured</Badge>}
+                                {job.scheduledPublishAt && job.status === 'DRAFT' && <Badge variant="info" size="sm">Scheduled</Badge>}
                             </div>
                         </div>
                     </div>

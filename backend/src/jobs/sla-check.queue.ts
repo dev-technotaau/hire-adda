@@ -20,6 +20,8 @@ export const slaCheckQueue = new Queue(SLA_CHECK_QUEUE_NAME, {
 // Check SLA breaches every 15 minutes
 slaCheckQueue.add('check-sla-breaches', {}, {
     repeat: { pattern: '*/15 * * * *' },
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
 }).catch(err => {
     logger.error('Failed to add repeatable SLA check:', err);
 });

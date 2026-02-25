@@ -44,6 +44,7 @@ const statusTabs = [
     { key: 'APPLIED', label: 'Applied' },
     { key: 'VIEWED', label: 'Viewed' },
     { key: 'SHORTLISTED', label: 'Shortlisted' },
+    { key: 'SELECTED', label: 'Selected' },
     { key: 'INTERVIEW_SCHEDULED', label: 'Interview' },
     { key: 'OFFERED', label: 'Offered' },
     { key: 'REJECTED', label: 'Rejected' },
@@ -63,9 +64,9 @@ function getAvailableActions(currentStatus: string): StatusAction[] {
         actions.push({ label: 'Shortlist', status: 'SHORTLISTED', variant: 'primary' });
     }
     if (['SHORTLISTED'].includes(currentStatus)) {
-        actions.push({ label: 'Schedule Interview', status: 'INTERVIEW_SCHEDULED', variant: 'primary' });
+        actions.push({ label: 'Select', status: 'SELECTED', variant: 'primary' });
     }
-    if (['INTERVIEW_SCHEDULED'].includes(currentStatus)) {
+    if (['SELECTED'].includes(currentStatus)) {
         actions.push({ label: 'Offer', status: 'OFFERED', variant: 'primary' });
     }
     if (['OFFERED'].includes(currentStatus)) {
@@ -94,9 +95,10 @@ export default function JobApplicationsPage() {
         enabled: !!jobId,
     });
 
+    const serverStatus = statusFilter === 'ALL' ? undefined : statusFilter;
     const { data: appsData, isLoading } = useQuery({
-        queryKey: [...QUERY_KEYS.JOBS.APPLICATIONS(jobId), page, PAGINATION.APPLICATIONS_PER_PAGE],
-        queryFn: () => jobService.getJobApplications(jobId, page, PAGINATION.APPLICATIONS_PER_PAGE),
+        queryKey: [...QUERY_KEYS.JOBS.APPLICATIONS(jobId), page, PAGINATION.APPLICATIONS_PER_PAGE, serverStatus],
+        queryFn: () => jobService.getJobApplications(jobId, page, PAGINATION.APPLICATIONS_PER_PAGE, serverStatus),
         enabled: !!jobId,
     });
 
@@ -120,9 +122,7 @@ export default function JobApplicationsPage() {
     const applications = appsData?.data?.items || [];
     const pagination = appsData?.data;
 
-    const filtered = statusFilter === 'ALL'
-        ? applications
-        : applications.filter((app) => app.status === statusFilter);
+    const filtered = applications;
 
     const handleStatusChange = (applicationId: string, status: string) => {
         if (status === 'REJECTED') {
@@ -294,7 +294,9 @@ function ApplicationCard({
                         </div>
 
                         <div className="min-w-0">
-                            <p className="font-medium text-[var(--text)]">{name}</p>
+                            <Link href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate?.id || '')} className="font-medium text-[var(--text)] hover:text-primary hover:underline">
+                                {name}
+                            </Link>
                             {candidate?.headline && (
                                 <p className="text-sm text-[var(--text-muted)]">{candidate.headline}</p>
                             )}

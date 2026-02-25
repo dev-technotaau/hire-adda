@@ -166,7 +166,7 @@ export const initializeServices = async (): Promise<void> => {
                 registerService('Kafka', 'connected', '4 consolidated topics');
 
                 // Start Kafka consumer
-                startKafkaConsumer().catch(err => logger.error('Kafka consumer failed to start:', err));
+                await startKafkaConsumer();
             } else {
                 registerService('Kafka', 'not_configured');
             }

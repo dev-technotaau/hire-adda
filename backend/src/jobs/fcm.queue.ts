@@ -22,3 +22,7 @@ fcmQueue.on('error', (err) => {
 });
 
 logger.info(`FCM Queue initialized: ${FCM_QUEUE_NAME}`);
+
+export async function addFCMJob(data: { userId: string; title: string; body: string; data?: Record<string, string> }) {
+    return fcmQueue.add('send-fcm', data);
+}

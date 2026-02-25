@@ -13,6 +13,7 @@ interface CardProps {
     footer?: ReactNode;
     children: ReactNode;
     className?: string;
+    id?: string;
     onClick?: () => void;
 }
 
@@ -28,16 +29,20 @@ const paddingStyles: Record<CardPadding, string> = {
     lg: 'p-8',
 };
 
-function Card({ variant = 'default', padding = 'md', header, footer, children, className, onClick }: CardProps) {
+function Card({ variant = 'default', padding = 'md', header, footer, children, className, id, onClick }: CardProps) {
     return (
         <div
+            id={id}
             className={cn(
                 'rounded-xl transition-all duration-200',
                 variantStyles[variant],
-                onClick && 'cursor-pointer hover:shadow-[var(--shadow-md)] hover:border-[var(--border-hover)]',
+                onClick && 'cursor-pointer hover:shadow-[var(--shadow-md)] hover:border-[var(--border-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 className
             )}
             onClick={onClick}
+            onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            role={onClick ? 'button' : undefined}
         >
             {header && (
                 <div className={cn(

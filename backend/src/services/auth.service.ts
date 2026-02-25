@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../config/prisma';
-import { env } from '../config/env';
+import { env, getOtpExpiryMinutes, getOtpLength, getOtpMaxResendAttempts, getOtpResendCooldown, getPasswordResetExpiryHours } from '../config/env';
 import logger from '../config/logger';
 import { AppError } from '../middleware/error';
 import { hashToken, generateOtp } from '../utils/crypto';
@@ -18,6 +18,23 @@ import { trackEvent, getClientId } from './analytics.service';
 
 const SALT_ROUNDS = 12;
 
+function enforceResendLimits(lastSentAt: Date | null, resendCount: number): void {
+    const cooldown = getOtpResendCooldown();
+    const maxAttempts = getOtpMaxResendAttempts();
+
+    if (resendCount >= maxAttempts) {
+        throw new AppError('Maximum resend attempts reached. Please try again later.', 429, 'OTP_MAX_RESEND');
+    }
+
+    if (lastSentAt) {
+        const elapsed = (Date.now() - lastSentAt.getTime()) / 1000;
+        if (elapsed < cooldown) {
+            const remaining = Math.ceil(cooldown - elapsed);
+            throw new AppError(`Please wait ${remaining} seconds before requesting another code`, 429, 'OTP_COOLDOWN');
+        }
+    }
+}
+
 // ===============================
 // Registration
 // ===============================
@@ -27,7 +44,8 @@ export const register = async (
     user: { id: string; email: string; role: Role };
     breachWarning?: string;
 }> => {
-    const { email, password, firstName, lastName, role } = data;
+    const { password, firstName, lastName, role } = data;
+    const email = data.email?.toLowerCase();
 
     // Check if user already exists (Email or Mobile)
     const existingUser = await prisma.user.findFirst({
@@ -56,10 +74,10 @@ export const register = async (
     // Hash password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Generate 6-digit OTP for email verification
-    const verificationOtp = generateOtp(6);
+    // Generate OTP for email verification
+    const verificationOtp = generateOtp(getOtpLength());
     const hashedVerificationOtp = hashToken(verificationOtp);
-    const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const verificationExpires = new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000);
 
     // Create user — NO tokens issued until email is verified
     const user = await prisma.user.create({
@@ -72,6 +90,7 @@ export const register = async (
             mobileNumber: data.mobileNumber,
             emailVerificationToken: hashedVerificationOtp,
             emailVerificationExpires: verificationExpires,
+            emailOtpLastSentAt: new Date(),
         },
     });
 
@@ -111,7 +130,7 @@ export const register = async (
 /**
  * Generate Access and Refresh tokens for a user
  */
-export const generateTokens = async (user: any, userAgent: string | undefined, ipAddress: string | undefined) => {
+export const generateTokens = async (user: { id: string; email: string; role: string | Role }, userAgent: string | undefined, ipAddress: string | undefined) => {
     const tokenPayload = {
         userId: user.id,
         email: user.email,
@@ -147,7 +166,8 @@ export const login = async (
     refreshToken: string;
     requireMfa?: boolean;
 }> => {
-    const { email, password, mfaCode } = data;
+    const { password, mfaCode } = data;
+    const email = data.email?.toLowerCase();
 
     // Find user
     const user = await prisma.user.findUnique({ where: { email } });
@@ -231,6 +251,13 @@ export const login = async (
 
         const isMfaValid = await verifyMfaToken(user.id, mfaCode);
         if (!isMfaValid) {
+            // Increment login attempts on MFA failure (prevents brute-force)
+            const newAttempts = user.loginAttempts + 1;
+            const lockData: Record<string, unknown> = { loginAttempts: newAttempts };
+            if (newAttempts >= parseInt(env.MAX_LOGIN_ATTEMPTS, 10)) {
+                lockData.lockUntil = new Date(Date.now() + parseInt(env.ACCOUNT_LOCK_DURATION_MINUTES, 10) * 60 * 1000);
+            }
+            await prisma.user.update({ where: { id: user.id }, data: lockData });
             throw new AppError('Invalid MFA code', 401);
         }
     }
@@ -315,6 +342,16 @@ export const logout = async (refreshToken: string, userId?: string): Promise<voi
 export const logoutEverywhere = async (userId: string): Promise<void> => {
     await revokeAllUserTokens(userId);
     await sessionService.revokeAllSessions(userId);
+
+    // Notify user via email
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, firstName: true, isEmailVerified: true } });
+    if (user?.isEmailVerified) {
+        import('../templates/email/security').then(({ sessionRevokedAll }) => {
+            const tmpl = sessionRevokedAll(user.firstName || 'there');
+            emailQueue.add('send-email', { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text }).catch(() => {});
+        });
+    }
+
     logger.info(`User logged out from all devices: ${userId}`);
 };
 
@@ -340,6 +377,12 @@ export const refreshTokens = async (
 
     // Revoke old token
     await revokeToken(oldRefreshToken);
+
+    // Update lastActiveAt so session timeout resets on token refresh
+    prisma.user.update({
+        where: { id: tokenRecord.user.id },
+        data: { lastActiveAt: new Date() },
+    }).catch(() => {});
 
     // Generate new tokens
     const tokenPayload: TokenPayload = {
@@ -372,6 +415,7 @@ export const verifyEmail = async (
         mobileNumber: string | null;
         isMobileVerified: boolean;
         isWhatsappVerified: boolean;
+        whatsappNumber: string | null;
         isActive: boolean;
         isSuspended: boolean;
         isEmailVerified: boolean;
@@ -404,6 +448,8 @@ export const verifyEmail = async (
             isEmailVerified: true,
             emailVerificationToken: null,
             emailVerificationExpires: null,
+            emailOtpResendCount: 0,
+            emailOtpLastSentAt: null,
             lastLoginAt: now,
             lastLoginIp: ipAddress,
         },
@@ -429,6 +475,7 @@ export const verifyEmail = async (
             mobileNumber: user.mobileNumber,
             isMobileVerified: user.isMobileVerified,
             isWhatsappVerified: user.isWhatsappVerified,
+            whatsappNumber: user.whatsappNumber,
             isActive: user.isActive,
             isSuspended: user.isSuspended,
             isEmailVerified: true,
@@ -446,7 +493,8 @@ export const verifyEmail = async (
 // Forgot Password
 // ===============================
 export const forgotPassword = async (data: ForgotPasswordInput): Promise<void> => {
-    const { email, mobileNumber } = data;
+    const email = data.email?.toLowerCase();
+    const { mobileNumber } = data;
 
     const user = await prisma.user.findFirst({
         where: {
@@ -462,12 +510,9 @@ export const forgotPassword = async (data: ForgotPasswordInput): Promise<void> =
         return;
     }
 
-    // Generate numeric OTP for both email and mobile for consistency in this flow
-    // Or keep link for email and OTP for mobile. The requirement asked for OTP.
-    // Let's generate a 6-digit OTP.
-    const otp = generateOtp(6);
+    const otp = generateOtp(getOtpLength());
     const hashedOtp = hashToken(otp);
-    const resetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+    const resetExpires = new Date(Date.now() + getPasswordResetExpiryHours() * 60 * 60 * 1000);
 
     await prisma.user.update({
         where: { id: user.id },
@@ -585,24 +630,15 @@ export const initiateChangePassword = async (
     }
 
     // Generate OTP
-    const otp = generateOtp(6);
+    const otp = generateOtp(getOtpLength());
     const hashedOtp = hashToken(otp);
 
-    // Store OTP in a new or existing field. 
-    // Reusing `passwordResetToken` might interefere with actual reset flow if concurrently used, 
-    // but for MVP it is acceptable or we should add `changePasswordToken`.
-    // Given the constraints and existing fields, let's reuse `passwordResetToken` 
-    // BUT typically we should differentiate. 
-    // Let's use `mobileVerificationToken` or similar if we strictly follow "mobile" auth, 
-    // but this is a security setting.
-    // Ideally: Add `changeEmailToken` / `changePasswordToken`.
-    // For now, let's reuse `passwordResetToken` as it serves the same "proof of ownership" purpose temporarily.
-
+    // Reuse passwordResetToken for change-password OTP (same "proof of ownership" purpose)
     await prisma.user.update({
         where: { id: userId },
         data: {
             passwordResetToken: hashedOtp,
-            passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 mins
+            passwordResetExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
         }
     });
 
@@ -661,6 +697,12 @@ export const confirmChangePassword = async (
     });
 
     await revokeAllUserTokens(userId);
+
+    // Notify user about password change (fire-and-forget)
+    import('./notification.service').then(({ notificationService }) => {
+        notificationService.notifyPasswordChanged(userId).catch(() => {});
+    });
+
     logger.info(`Password changed for user ${userId}`);
 };
 
@@ -676,10 +718,18 @@ export const getCurrentUser = async (userId: string) => {
             role: true,
             firstName: true,
             lastName: true,
+            avatar: true,
+            mobileNumber: true,
+            isMobileVerified: true,
+            isWhatsappVerified: true,
+            whatsappNumber: true,
+            isActive: true,
+            isSuspended: true,
             isEmailVerified: true,
             mfaEnabled: true,
-            createdAt: true,
             lastLoginAt: true,
+            createdAt: true,
+            updatedAt: true,
         },
     });
 
@@ -694,18 +744,26 @@ export const getCurrentUser = async (userId: string) => {
 // ===============================
 // Resend Email Verification
 // ===============================
-export const resendEmailVerification = async (email: string): Promise<void> => {
+export const resendEmailVerification = async (rawEmail: string): Promise<void> => {
+    const email = rawEmail.toLowerCase();
     const user = await prisma.user.findUnique({ where: { email } });
     // Silent return to prevent email enumeration
     if (!user || user.isEmailVerified) return;
 
-    const verificationOtp = generateOtp(6);
+    enforceResendLimits(user.emailOtpLastSentAt, user.emailOtpResendCount);
+
+    const verificationOtp = generateOtp(getOtpLength());
     const hashedVerificationOtp = hashToken(verificationOtp);
-    const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const verificationExpires = new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000);
 
     await prisma.user.update({
         where: { id: user.id },
-        data: { emailVerificationToken: hashedVerificationOtp, emailVerificationExpires: verificationExpires }
+        data: {
+            emailVerificationToken: hashedVerificationOtp,
+            emailVerificationExpires: verificationExpires,
+            emailOtpResendCount: user.emailOtpResendCount + 1,
+            emailOtpLastSentAt: new Date(),
+        }
     });
 
     try {
@@ -745,6 +803,8 @@ export const verifyMobile = async (mobileNumber: string, otp: string): Promise<v
             isMobileVerified: true,
             mobileVerificationToken: null,
             mobileVerificationExpires: null,
+            mobileOtpResendCount: 0,
+            mobileOtpLastSentAt: null,
         },
     });
 
@@ -760,15 +820,19 @@ export const resendMobileOtp = async (mobileNumber: string): Promise<void> => {
 
     if (user.isMobileVerified) throw new AppError('Mobile already verified', 400);
 
+    enforceResendLimits(user.mobileOtpLastSentAt, user.mobileOtpResendCount);
+
     // Generate new OTP
-    const otp = generateOtp(6); // 6 digits, numeric
+    const otp = generateOtp(getOtpLength());
     const hashedOtp = hashToken(otp);
 
     await prisma.user.update({
         where: { id: user.id },
         data: {
             mobileVerificationToken: hashedOtp,
-            mobileVerificationExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 mins
+            mobileVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+            mobileOtpResendCount: user.mobileOtpResendCount + 1,
+            mobileOtpLastSentAt: new Date(),
         },
     });
 
@@ -784,34 +848,60 @@ export const resendMobileOtp = async (mobileNumber: string): Promise<void> => {
 };
 
 // ===============================
+// Get effective WhatsApp number
+// ===============================
+export const getWhatsappNumber = (user: { whatsappNumber: string | null; mobileNumber: string | null }): string | null => {
+    return user.whatsappNumber || user.mobileNumber;
+};
+
+// ===============================
 // Verify WhatsApp (Send OTP)
 // ===============================
-export const verifyWhatsapp = async (userId: string, mobileNumber: string): Promise<void> => {
+export const verifyWhatsapp = async (userId: string, mobileNumber: string, whatsappNumber?: string): Promise<void> => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AppError('User not found', 404);
     if (!user.mobileNumber && !mobileNumber) throw new AppError('No mobile number provided', 400);
     if (user.isWhatsappVerified) throw new AppError('WhatsApp already verified', 400);
 
-    const targetNumber = mobileNumber || user.mobileNumber!;
-    const otp = generateOtp(6);
+    // If a separate whatsappNumber is provided and different from mobileNumber, store it
+    const effectiveMobile = mobileNumber || user.mobileNumber!;
+    const targetNumber = whatsappNumber || effectiveMobile;
+    const separateWhatsapp = whatsappNumber && whatsappNumber !== effectiveMobile ? whatsappNumber : null;
+
+    // Check if WhatsApp number is already used by another user
+    if (separateWhatsapp) {
+        const existingUser = await prisma.user.findFirst({
+            where: { whatsappNumber: separateWhatsapp, id: { not: userId } },
+        });
+        if (existingUser) throw new AppError('This WhatsApp number is already in use by another account', 400);
+    }
+
+    enforceResendLimits(user.whatsappOtpLastSentAt, user.whatsappOtpResendCount);
+
+    const otp = generateOtp(getOtpLength());
     const hashedOtp = hashToken(otp);
 
     await prisma.user.update({
         where: { id: userId },
         data: {
             whatsappVerificationToken: hashedOtp,
-            whatsappVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
-            mobileNumber: targetNumber,
+            whatsappVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+            mobileNumber: effectiveMobile,
+            whatsappNumber: separateWhatsapp,
+            whatsappOtpResendCount: user.whatsappOtpResendCount + 1,
+            whatsappOtpLastSentAt: new Date(),
         }
     });
 
     // Send OTP via WhatsApp
     try {
+        const { otpWhatsapp } = await import('../templates/whatsapp');
         const { whatsappQueue } = await import('../jobs/whatsapp.queue');
+        const tmpl = otpWhatsapp(otp);
         await whatsappQueue.add('send-whatsapp', {
             to: targetNumber,
-            templateName: 'otp_whatsapp',
-            components: [{ type: 'body', parameters: [{ type: 'text', text: otp }] }],
+            templateName: tmpl.templateName,
+            components: tmpl.components,
         });
     } catch (error) {
         logger.error('Failed to send WhatsApp OTP', error);
@@ -823,12 +913,11 @@ export const verifyWhatsapp = async (userId: string, mobileNumber: string): Prom
 // ===============================
 // Confirm WhatsApp OTP
 // ===============================
-export const confirmWhatsappOtp = async (userId: string, mobileNumber: string, otp: string): Promise<void> => {
+export const confirmWhatsappOtp = async (userId: string, _mobileNumber: string, otp: string): Promise<void> => {
     const hashedOtp = hashToken(otp);
     const user = await prisma.user.findFirst({
         where: {
             id: userId,
-            mobileNumber,
             whatsappVerificationToken: hashedOtp,
             whatsappVerificationExpires: { gt: new Date() },
         }
@@ -837,15 +926,113 @@ export const confirmWhatsappOtp = async (userId: string, mobileNumber: string, o
 
     await prisma.user.update({
         where: { id: userId },
-        data: { isWhatsappVerified: true, whatsappVerificationToken: null, whatsappVerificationExpires: null }
+        data: {
+            isWhatsappVerified: true,
+            whatsappVerificationToken: null,
+            whatsappVerificationExpires: null,
+            whatsappOtpResendCount: 0,
+            whatsappOtpLastSentAt: null,
+        }
     });
-    logger.info(`WhatsApp verified for ${mobileNumber}`);
+    const verifiedNumber = user.whatsappNumber || user.mobileNumber;
+    logger.info(`WhatsApp verified for ${verifiedNumber}`);
 };
 
 // ===============================
-// Change Email
+// Change WhatsApp Number
 // ===============================
-export const changeEmail = async (
+export const changeWhatsappNumber = async (
+    userId: string,
+    data: { newWhatsappNumber: string; password: string }
+): Promise<void> => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+
+    // Verify password
+    if (!user.password) throw new AppError('Cannot change WhatsApp number for social login accounts', 400);
+    const isPasswordValid = await bcrypt.compare(data.password, user.password);
+    if (!isPasswordValid) throw new AppError('Invalid password', 401);
+
+    const currentWhatsapp = user.whatsappNumber || user.mobileNumber;
+    if (data.newWhatsappNumber === currentWhatsapp) {
+        throw new AppError('New WhatsApp number must be different from current', 400);
+    }
+
+    // If new number equals mobile number, store null (meaning "same as mobile")
+    const storeNumber = data.newWhatsappNumber === user.mobileNumber ? null : data.newWhatsappNumber;
+    const targetNumber = data.newWhatsappNumber;
+
+    // Check if WhatsApp number is already used by another user
+    if (storeNumber) {
+        const existingUser = await prisma.user.findFirst({
+            where: { whatsappNumber: storeNumber, id: { not: userId } },
+        });
+        if (existingUser) throw new AppError('This WhatsApp number is already in use by another account', 400);
+    }
+
+    // Reset verification and generate OTP
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            whatsappNumber: storeNumber,
+            isWhatsappVerified: false,
+            whatsappVerificationToken: hashedOtp,
+            whatsappVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+            whatsappOtpResendCount: 1,
+            whatsappOtpLastSentAt: new Date(),
+        },
+    });
+
+    if (env.NODE_ENV !== 'production') {
+        logger.info(`DEV: WhatsApp change OTP for ${targetNumber}: ${otp}`);
+    }
+
+    // Send OTP to new WhatsApp number
+    try {
+        const { otpWhatsapp } = await import('../templates/whatsapp');
+        const { whatsappQueue } = await import('../jobs/whatsapp.queue');
+        const tmpl = otpWhatsapp(otp);
+        await whatsappQueue.add('send-whatsapp', {
+            to: targetNumber,
+            templateName: tmpl.templateName,
+            components: tmpl.components,
+        });
+    } catch (error) {
+        logger.error('Failed to send WhatsApp OTP for number change', error);
+    }
+
+    logger.info(`WhatsApp number change initiated for user ${userId} to ${targetNumber}`);
+};
+
+// ===============================
+// Remove Separate WhatsApp Number
+// ===============================
+export const removeWhatsappNumber = async (userId: string): Promise<void> => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            whatsappNumber: null,
+            isWhatsappVerified: false,
+            whatsappVerificationToken: null,
+            whatsappVerificationExpires: null,
+            whatsappOtpResendCount: 0,
+            whatsappOtpLastSentAt: null,
+        },
+    });
+
+    logger.info(`Separate WhatsApp number removed for user ${userId}, reverted to mobile number`);
+};
+
+// ===============================
+// Change Email (2-step: initiate → confirm)
+// ===============================
+export const initiateChangeEmail = async (
     userId: string,
     data: { newEmail: string; password: string }
 ): Promise<void> => {
@@ -857,25 +1044,32 @@ export const changeEmail = async (
     const isPasswordValid = await bcrypt.compare(data.password, user.password);
     if (!isPasswordValid) throw new AppError('Invalid password', 401);
 
+    // Normalize new email
+    const newEmail = data.newEmail.toLowerCase();
+
+    // Check new email is different
+    if (newEmail === user.email) throw new AppError('New email must be different from current email', 400);
+
     // Check if new email is already taken
-    const existingUser = await prisma.user.findUnique({ where: { email: data.newEmail } });
+    const existingUser = await prisma.user.findUnique({ where: { email: newEmail } });
     if (existingUser) throw new AppError('Email already in use', 400);
 
-    // Update email and mark as unverified
-    const verificationOtp = generateOtp(6);
+    // Generate OTP and store as pending (do NOT change user.email yet)
+    const verificationOtp = generateOtp(getOtpLength());
     const hashedOtp = hashToken(verificationOtp);
 
     await prisma.user.update({
         where: { id: userId },
         data: {
-            email: data.newEmail,
-            isEmailVerified: false,
+            pendingEmail: newEmail,
             emailVerificationToken: hashedOtp,
-            emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+            emailVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+            emailOtpResendCount: 0,
+            emailOtpLastSentAt: new Date(),
         },
     });
 
-    // Send verification email to new address
+    // Send verification email to NEW address
     try {
         const emailContent = verifyEmailTemplate(verificationOtp);
         await emailQueue.add('send-email', {
@@ -888,7 +1082,230 @@ export const changeEmail = async (
         logger.error('Failed to send email verification', error);
     }
 
-    logger.info(`Email changed for user ${userId} to ${data.newEmail}`);
+    logger.info(`Email change initiated for user ${userId} to ${data.newEmail}`);
+};
+
+export const confirmChangeEmail = async (
+    userId: string,
+    otp: string
+): Promise<void> => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+    if (!user.pendingEmail) throw new AppError('No pending email change', 400);
+
+    // Verify OTP
+    const hashedOtp = hashToken(otp);
+    if (user.emailVerificationToken !== hashedOtp) {
+        throw new AppError('Invalid verification code', 400);
+    }
+    if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+        throw new AppError('Verification code has expired', 400);
+    }
+
+    const oldEmail = user.email;
+
+    // Atomic check-and-update to prevent race conditions
+    await prisma.$transaction(async (tx) => {
+        const existingUser = await tx.user.findUnique({ where: { email: user.pendingEmail! } });
+        if (existingUser) throw new AppError('Email already in use', 400);
+
+        await tx.user.update({
+            where: { id: userId },
+            data: {
+                email: user.pendingEmail!,
+                isEmailVerified: true,
+                pendingEmail: null,
+                emailVerificationToken: null,
+                emailVerificationExpires: null,
+                emailOtpResendCount: 0,
+                emailOtpLastSentAt: null,
+            },
+        });
+    });
+
+    // Notify old email address using template
+    try {
+        const { emailChanged } = await import('../templates/email/security');
+        const tmpl = emailChanged(user.firstName || 'there', user.pendingEmail!);
+        await emailQueue.add('send-email', { to: oldEmail, subject: tmpl.subject, html: tmpl.html, text: tmpl.text });
+    } catch (error) {
+        logger.error('Failed to send email change notification', error);
+    }
+
+    logger.info(`Email changed for user ${userId} from ${oldEmail} to ${user.pendingEmail}`);
+};
+
+export const resendChangeEmailOtp = async (userId: string): Promise<void> => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+    if (!user.pendingEmail) throw new AppError('No pending email change', 400);
+
+    enforceResendLimits(user.emailOtpLastSentAt, user.emailOtpResendCount);
+
+    const verificationOtp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(verificationOtp);
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            emailVerificationToken: hashedOtp,
+            emailVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+            emailOtpResendCount: user.emailOtpResendCount + 1,
+            emailOtpLastSentAt: new Date(),
+        },
+    });
+
+    try {
+        const emailContent = verifyEmailTemplate(verificationOtp);
+        await emailQueue.add('send-email', {
+            to: user.pendingEmail,
+            subject: emailContent.subject,
+            html: emailContent.html,
+            text: emailContent.text,
+        });
+    } catch (error) {
+        logger.error('Failed to resend email verification', error);
+    }
+
+    logger.info(`Resent email change OTP for user ${userId}`);
+};
+
+// ===============================
+// Change Mobile (2-step: initiate → confirm)
+// ===============================
+export const initiateChangeMobile = async (
+    userId: string,
+    data: { newMobileNumber: string; password: string }
+): Promise<void> => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+
+    // Verify password
+    if (!user.password) throw new AppError('Cannot change mobile for social login accounts', 400);
+    const isPasswordValid = await bcrypt.compare(data.password, user.password);
+    if (!isPasswordValid) throw new AppError('Invalid password', 401);
+
+    // Check new number is different
+    if (data.newMobileNumber === user.mobileNumber) {
+        throw new AppError('New mobile number must be different from current number', 400);
+    }
+
+    // Check if number is already taken
+    const existingUser = await prisma.user.findFirst({ where: { mobileNumber: data.newMobileNumber } });
+    if (existingUser) throw new AppError('Mobile number already in use', 400);
+
+    // Generate OTP and store as pending
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            pendingMobileNumber: data.newMobileNumber,
+            mobileVerificationToken: hashedOtp,
+            mobileVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+            mobileOtpResendCount: 0,
+            mobileOtpLastSentAt: new Date(),
+        },
+    });
+
+    // Send SMS to NEW number
+    if (env.NODE_ENV !== 'production') {
+        logger.info(`DEV: Mobile change OTP for ${data.newMobileNumber}: ${otp}`);
+    }
+
+    try {
+        const { smsQueue } = await import('../jobs/sms.queue');
+        await smsQueue.add('send-sms', { to: data.newMobileNumber, body: `Your verification OTP is: ${otp}. Valid for ${getOtpExpiryMinutes()} minutes.` });
+    } catch (error) {
+        logger.error('Failed to send SMS OTP for mobile change', error);
+    }
+
+    logger.info(`Mobile change initiated for user ${userId} to ${data.newMobileNumber}`);
+};
+
+export const confirmChangeMobile = async (
+    userId: string,
+    otp: string
+): Promise<void> => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+    if (!user.pendingMobileNumber) throw new AppError('No pending mobile number change', 400);
+
+    // Verify OTP
+    const hashedOtp = hashToken(otp);
+    if (user.mobileVerificationToken !== hashedOtp) {
+        throw new AppError('Invalid verification code', 400);
+    }
+    if (!user.mobileVerificationExpires || user.mobileVerificationExpires < new Date()) {
+        throw new AppError('Verification code has expired', 400);
+    }
+
+    // Atomic check-and-update to prevent race conditions
+    // Only reset WhatsApp verification if user uses mobile number for WhatsApp (whatsappNumber is null)
+    const hasSeparateWhatsapp = !!user.whatsappNumber;
+
+    await prisma.$transaction(async (tx) => {
+        const existingUser = await tx.user.findFirst({ where: { mobileNumber: user.pendingMobileNumber! } });
+        if (existingUser) throw new AppError('Mobile number already in use', 400);
+
+        await tx.user.update({
+            where: { id: userId },
+            data: {
+                mobileNumber: user.pendingMobileNumber,
+                isMobileVerified: true,
+                // Only reset WhatsApp if user was using mobile for WhatsApp
+                ...(hasSeparateWhatsapp ? {} : {
+                    isWhatsappVerified: false,
+                    whatsappVerificationToken: null,
+                    whatsappVerificationExpires: null,
+                    whatsappOtpResendCount: 0,
+                    whatsappOtpLastSentAt: null,
+                }),
+                pendingMobileNumber: null,
+                mobileVerificationToken: null,
+                mobileVerificationExpires: null,
+                mobileOtpResendCount: 0,
+                mobileOtpLastSentAt: null,
+            },
+        });
+    });
+
+    logger.info(`Mobile changed for user ${userId} to ${user.pendingMobileNumber}`);
+};
+
+export const resendChangeMobileOtp = async (userId: string): Promise<void> => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+    if (!user.pendingMobileNumber) throw new AppError('No pending mobile number change', 400);
+
+    enforceResendLimits(user.mobileOtpLastSentAt, user.mobileOtpResendCount);
+
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            mobileVerificationToken: hashedOtp,
+            mobileVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+            mobileOtpResendCount: user.mobileOtpResendCount + 1,
+            mobileOtpLastSentAt: new Date(),
+        },
+    });
+
+    if (env.NODE_ENV !== 'production') {
+        logger.info(`DEV: Resent mobile change OTP for ${user.pendingMobileNumber}: ${otp}`);
+    }
+
+    try {
+        const { smsQueue } = await import('../jobs/sms.queue');
+        await smsQueue.add('send-sms', { to: user.pendingMobileNumber, body: `Your verification OTP is: ${otp}. Valid for ${getOtpExpiryMinutes()} minutes.` });
+    } catch (error) {
+        logger.error('Failed to resend SMS OTP for mobile change', error);
+    }
+
+    logger.info(`Resent mobile change OTP for user ${userId}`);
 };
 
 // ===============================
@@ -907,24 +1324,10 @@ export const requestAccountDeletion = async (userId: string): Promise<void> => {
     await revokeAllUserTokens(userId);
     await sessionService.revokeAllSessions(userId);
 
-    // Send confirmation email
-    try {
-        await emailQueue.add('send-email', {
-            to: user.email,
-            subject: 'Account Deletion Requested - Talent Bridge',
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2>Account Deletion Requested</h2>
-                    <p>Hi ${user.firstName || 'there'},</p>
-                    <p>We received a request to delete your Talent Bridge account.</p>
-                    <p>Your account and all associated data will be permanently deleted after <strong>30 days</strong>.</p>
-                    <p>To cancel this request, simply log in to your account before the deletion date.</p>
-                </div>
-            `,
-        });
-    } catch (error) {
-        logger.error('Failed to send account deletion email', error);
-    }
+    // Notify user (email + in-app)
+    import('./notification.service').then(({ notificationService }) => {
+        notificationService.notifyAccountDeletionRequested(userId).catch(() => {});
+    });
 
     logger.info(`Account deletion requested for user ${userId}`);
 };

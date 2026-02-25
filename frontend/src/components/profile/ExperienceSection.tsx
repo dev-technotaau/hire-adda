@@ -11,6 +11,7 @@ import DatePicker from '@/components/ui/DatePicker';
 import {
     WORK_STATUS_LABELS, NOTICE_PERIOD_LABELS,
     CAREER_BREAK_TYPE_LABELS, OPEN_TO_WORK_LABELS,
+    EXPERIENCE_LEVEL_LABELS,
 } from '@/constants/enums';
 import {
     COMPANY_NAME_SUGGESTIONS, ROLE_CATEGORY_SUGGESTIONS,
@@ -50,12 +51,19 @@ export default function ExperienceSection({ form, updateField }: ProfileSectionP
             </div>
         }>
             <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Input
                         label="Total Experience (years)"
                         type="number"
                         value={form.experienceYears?.toString() || '0'}
                         onChange={(e) => updateField('experienceYears', parseInt(e.target.value) || 0)}
+                    />
+                    <Select
+                        label="Experience Level"
+                        options={toSelectOptions(EXPERIENCE_LEVEL_LABELS)}
+                        value={form.experienceLevel || ''}
+                        onChange={(v) => updateField('experienceLevel', v as UpdateCandidateRequest['experienceLevel'])}
+                        placeholder="Select level"
                     />
                     <SuggestionInput
                         label="Current Company"

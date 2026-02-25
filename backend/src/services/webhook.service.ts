@@ -3,6 +3,7 @@ import prisma from '../config/prisma';
 import logger from '../config/logger';
 import { webhookQueue } from '../jobs/webhook.queue';
 import { AppError } from '../middleware/error';
+import { isFeatureEnabled } from '../config/feature-flags';
 
 export const webhookService = {
     async register(userId: string, url: string, events: string[], description?: string) {
@@ -55,22 +56,33 @@ export const webhookService = {
         logger.info(`Webhook deleted for user ${userId}: ${webhookId}`);
     },
 
-    async list(userId: string) {
-        return prisma.webhookEndpoint.findMany({
-            where: { userId },
-            orderBy: { createdAt: 'desc' },
-            select: {
-                id: true,
-                url: true,
-                events: true,
-                isActive: true,
-                description: true,
-                failureCount: true,
-                lastTriggeredAt: true,
-                createdAt: true,
-                updatedAt: true,
-            },
-        });
+    async list(userId: string, page = 1, limit = 20) {
+        const cappedLimit = Math.min(limit, 100);
+        const skip = (page - 1) * cappedLimit;
+
+        const [items, total] = await Promise.all([
+            prisma.webhookEndpoint.findMany({
+                where: { userId },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: cappedLimit,
+                select: {
+                    id: true,
+                    url: true,
+                    events: true,
+                    isActive: true,
+                    description: true,
+                    failureCount: true,
+                    lastTriggeredAt: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            }),
+            prisma.webhookEndpoint.count({ where: { userId } }),
+        ]);
+
+        const totalPages = Math.ceil(total / cappedLimit) || 1;
+        return { items, total, page, limit: cappedLimit, totalPages, hasMore: page < totalPages };
     },
 
     async getById(userId: string, webhookId: string) {
@@ -126,6 +138,11 @@ export const webhookService = {
     },
 
     async dispatch(event: string, payload: Record<string, unknown>) {
+        if (!await isFeatureEnabled('enableWebhooks')) {
+            logger.debug('Webhooks disabled via feature flag — skipping dispatch');
+            return;
+        }
+
         try {
             const webhooks = await prisma.webhookEndpoint.findMany({
                 where: {

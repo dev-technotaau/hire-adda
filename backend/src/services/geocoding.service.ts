@@ -1,4 +1,5 @@
 import { env } from '../config/env';
+import logger from '../config/logger';
 
 // --- Types ---
 
@@ -85,7 +86,7 @@ class NominatimProvider implements GeocodingProvider {
         });
 
         if (!response.ok) {
-            console.error(`Nominatim geocoding failed: ${response.status} ${response.statusText}`);
+            logger.error(`Nominatim geocoding failed: ${response.status} ${response.statusText}`);
             return null;
         }
 
@@ -119,7 +120,7 @@ class GoogleProvider implements GeocodingProvider {
 
     async geocode(address: string): Promise<GeocodingResult | null> {
         if (!this.apiKey) {
-            console.error('Google Geocoding API key not configured');
+            logger.error('Google Geocoding API key not configured');
             return null;
         }
 
@@ -130,7 +131,7 @@ class GoogleProvider implements GeocodingProvider {
 
         const response = await fetch(url);
         if (!response.ok) {
-            console.error(`Google geocoding failed: ${response.status}`);
+            logger.error(`Google geocoding failed: ${response.status}`);
             return null;
         }
 
@@ -180,7 +181,7 @@ class GeocodingService {
             this.cache.set(normalizedAddress, result);
             return result;
         } catch (error) {
-            console.error('Geocoding error:', error);
+            logger.error('Geocoding error:', error);
             return null;
         }
     }

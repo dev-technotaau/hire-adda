@@ -43,11 +43,13 @@ export const listWebhooks = async (
 ): Promise<void> => {
     try {
         const user = (req as any).user;
-        const webhooks = await webhookService.list(user.id);
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const data = await webhookService.list(user.id, page, limit);
 
         res.status(200).json({
             status: 'success',
-            data: webhooks,
+            data,
         });
     } catch (error) {
         next(error);

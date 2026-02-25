@@ -1,6 +1,6 @@
 export type JobType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | 'FREELANCE';
 export type JobStatus = 'OPEN' | 'CLOSED' | 'DRAFT' | 'EXPIRED';
-export type ApplicationStatus = 'APPLIED' | 'VIEWED' | 'SHORTLISTED' | 'INTERVIEW_SCHEDULED' | 'REJECTED' | 'OFFERED' | 'HIRED' | 'WITHDRAWN';
+export type ApplicationStatus = 'APPLIED' | 'VIEWED' | 'SHORTLISTED' | 'SELECTED' | 'INTERVIEW_SCHEDULED' | 'REJECTED' | 'OFFERED' | 'HIRED' | 'WITHDRAWN';
 export type WorkMode = 'ON_SITE' | 'REMOTE' | 'HYBRID';
 export type ShiftType = 'DAY' | 'NIGHT' | 'ROTATIONAL' | 'FLEXIBLE';
 export type ExperienceLevel = 'FRESHER' | 'ENTRY' | 'MID' | 'SENIOR' | 'LEAD' | 'EXECUTIVE';
@@ -8,6 +8,16 @@ export type SalaryType = 'ANNUAL' | 'MONTHLY' | 'HOURLY';
 export type EducationLevel = 'TENTH' | 'TWELFTH' | 'DIPLOMA' | 'BACHELORS' | 'MASTERS' | 'PHD' | 'POST_DOCTORAL';
 export type UrgencyLevel = 'NORMAL' | 'URGENT' | 'IMMEDIATE';
 export type CompanyType = 'PRIVATE' | 'PUBLIC' | 'STARTUP' | 'MNC' | 'GOVERNMENT' | 'NGO' | 'SEMI_GOVERNMENT';
+
+// Enterprise enums
+export type NoticePeriodPreference = 'IMMEDIATE' | 'FIFTEEN_DAYS' | 'ONE_MONTH' | 'TWO_MONTHS' | 'THREE_MONTHS' | 'NEGOTIABLE';
+export type FunctionalArea = 'IT_SOFTWARE' | 'IT_HARDWARE' | 'SALES' | 'MARKETING' | 'HR' | 'FINANCE' | 'ITES_BPO' | 'ENGINEERING' | 'PRODUCTION' | 'PHARMA' | 'BANKING' | 'LEGAL' | 'MEDIA' | 'HOSPITALITY' | 'RETAIL' | 'LOGISTICS' | 'EDUCATION' | 'HEALTHCARE' | 'REAL_ESTATE' | 'OTHER';
+export type SpecificDegree = 'BTECH_BE' | 'BCA' | 'BSC' | 'BCOM' | 'BA' | 'BBA' | 'MBBS' | 'LLB' | 'BARCH' | 'BDES' | 'BPHARM' | 'DIPLOMA_ENGINEERING' | 'MCA' | 'MSC' | 'MCOM' | 'MA' | 'MBA_PGDM' | 'MTECH_ME' | 'MS' | 'LLM' | 'MD' | 'CA' | 'CS' | 'ICWA' | 'PHD' | 'ANY_GRADUATE' | 'ANY_POSTGRADUATE';
+export type GenderPreference = 'ANY' | 'MALE' | 'FEMALE' | 'OTHER';
+export type DrivingLicenseType = 'NONE' | 'TWO_WHEELER' | 'FOUR_WHEELER' | 'BOTH' | 'HEAVY_VEHICLE';
+export type PostingVisibility = 'PUBLIC' | 'INTERNAL' | 'BOTH';
+export type ApplyMethod = 'IN_PLATFORM' | 'EXTERNAL_URL' | 'EMAIL' | 'WALK_IN';
+export type ScreeningQuestionType = 'TEXT' | 'YES_NO' | 'MULTIPLE_CHOICE' | 'NUMERIC';
 
 export interface Job {
     id: string;
@@ -28,6 +38,7 @@ export interface Job {
     experienceMax: number | null;
     experienceLevel: ExperienceLevel | null;
     educationRequired: EducationLevel | null;
+    preferredEducationField: string | null;
     location: string;
     latitude: number | null;
     longitude: number | null;
@@ -40,6 +51,7 @@ export interface Job {
     skillsRequired: string[];
     niceToHaveSkills: string[];
     certificationsRequired: string[];
+    languagesRequired: string[];
     numberOfOpenings: number | null;
     urgencyLevel: UrgencyLevel | null;
     isFeatured: boolean;
@@ -61,6 +73,40 @@ export interface Job {
     company?: JobCompany;
     _applicationCount?: number;
     isSaved?: boolean;
+    // Enterprise fields
+    functionalArea: FunctionalArea | null;
+    ugRequired: EducationLevel | null;
+    pgRequired: EducationLevel | null;
+    specificDegrees: SpecificDegree[];
+    degreeSpecializations: string[];
+    salaryNegotiable: boolean;
+    noticePeriodPreference: NoticePeriodPreference[];
+    isConfidential: boolean;
+    referenceCode: string | null;
+    additionalLocations: string[];
+    accommodationProvided: boolean;
+    walkInStartDate: string | null;
+    walkInEndDate: string | null;
+    walkInTime: string | null;
+    walkInVenue: string | null;
+    walkInContactPerson: string | null;
+    walkInContactPhone: string | null;
+    walkInInstructions: string | null;
+    diversityTags: string[];
+    visaSponsorshipAvailable: boolean;
+    backgroundCheckRequired: boolean;
+    isPwdFriendly: boolean;
+    passportRequired: boolean;
+    bondDetails: string | null;
+    drivingLicenseRequired: DrivingLicenseType | null;
+    ageMin: number | null;
+    ageMax: number | null;
+    genderPreference: GenderPreference | null;
+    postingVisibility: PostingVisibility;
+    applyMethod: ApplyMethod;
+    externalApplyUrl: string | null;
+    scheduledPublishAt: string | null;
+    screeningQuestions?: ScreeningQuestion[];
 }
 
 export interface JobCompany {
@@ -68,9 +114,19 @@ export interface JobCompany {
     userId?: string;
     companyName: string;
     logo: string | null;
+    tagline: string | null;
     industry: string | null;
+    subIndustry: string | null;
     companyType: CompanyType | null;
     companySize: string | null;
+    employeeCount: number | null;
+    foundedYear: number | null;
+    website: string | null;
+    headquarters: string | null;
+    city: string | null;
+    state: string | null;
+    locations: string[];
+    description: string | null;
     isVerified: boolean;
 }
 
@@ -83,14 +139,20 @@ export interface JobApplication {
     resumeSnapshot: string | null;
     matchScore: number | null;
     source: string | null;
+    candidateNotes: string | null;
     interviewDate: string | null;
     interviewNotes: string | null;
+    interviewFeedback: { stage: string; interviewer?: string; rating?: number; feedback?: string; date?: string }[] | null;
     rejectionReason: string | null;
     viewedAt: string | null;
-    offerDetails: Record<string, unknown> | null;
+    selectedAt: string | null;
+    offerDetails: { salary?: string; joiningDate?: string; designation?: string; location?: string } | null;
+    offeredAt: string | null;
+    hiredAt: string | null;
     appliedAt: string;
     updatedAt: string;
     job?: Job;
+    screeningAnswers?: ScreeningAnswer[];
     candidate?: {
         id: string;
         userId: string;
@@ -110,6 +172,14 @@ export interface JobApplication {
     };
 }
 
+export interface ShortlistCandidateRequest {
+    jobId: string;
+}
+
+export interface SelectCandidateRequest {
+    jobId: string;
+}
+
 export interface CreateJobRequest {
     title: string;
     description: string;
@@ -126,6 +196,7 @@ export interface CreateJobRequest {
     experienceMax?: number;
     experienceLevel?: ExperienceLevel;
     educationRequired?: EducationLevel;
+    preferredEducationField?: string;
     location: string;
     isRemote?: boolean;
     salaryMin?: number;
@@ -136,6 +207,7 @@ export interface CreateJobRequest {
     skillsRequired: string[];
     niceToHaveSkills?: string[];
     certificationsRequired?: string[];
+    languagesRequired?: string[];
     numberOfOpenings?: number;
     urgencyLevel?: UrgencyLevel;
     isFeatured?: boolean;
@@ -149,9 +221,88 @@ export interface CreateJobRequest {
     walkInDetails?: Record<string, unknown>;
     contactPerson?: string;
     contactEmail?: string;
+    // Enterprise fields
+    functionalArea?: FunctionalArea;
+    ugRequired?: EducationLevel;
+    pgRequired?: EducationLevel;
+    specificDegrees?: SpecificDegree[];
+    degreeSpecializations?: string[];
+    salaryNegotiable?: boolean;
+    noticePeriodPreference?: NoticePeriodPreference[];
+    isConfidential?: boolean;
+    referenceCode?: string;
+    additionalLocations?: string[];
+    accommodationProvided?: boolean;
+    walkInStartDate?: string;
+    walkInEndDate?: string;
+    walkInTime?: string;
+    walkInVenue?: string;
+    walkInContactPerson?: string;
+    walkInContactPhone?: string;
+    walkInInstructions?: string;
+    diversityTags?: string[];
+    visaSponsorshipAvailable?: boolean;
+    backgroundCheckRequired?: boolean;
+    isPwdFriendly?: boolean;
+    passportRequired?: boolean;
+    bondDetails?: string;
+    drivingLicenseRequired?: DrivingLicenseType;
+    ageMin?: number;
+    ageMax?: number;
+    genderPreference?: GenderPreference;
+    postingVisibility?: PostingVisibility;
+    applyMethod?: ApplyMethod;
+    externalApplyUrl?: string;
+    scheduledPublishAt?: string;
+    screeningQuestions?: ScreeningQuestionInput[];
 }
 
 export type UpdateJobRequest = Partial<CreateJobRequest>;
+
+export interface ScreeningQuestion {
+    id: string;
+    jobId: string;
+    question: string;
+    questionType: ScreeningQuestionType;
+    isRequired: boolean;
+    isDealBreaker: boolean;
+    options: string[] | null;
+    idealAnswer: string | null;
+    displayOrder: number;
+    createdAt: string;
+}
+
+export interface ScreeningQuestionInput {
+    question: string;
+    questionType?: ScreeningQuestionType;
+    isRequired?: boolean;
+    isDealBreaker?: boolean;
+    options?: string[];
+    idealAnswer?: string;
+    displayOrder?: number;
+}
+
+export interface ScreeningAnswerInput {
+    questionId: string;
+    answer: string;
+}
+
+export interface ScreeningAnswer {
+    id: string;
+    questionId: string;
+    answer: string;
+    question: ScreeningQuestion;
+}
+
+export interface JobTemplate {
+    id: string;
+    companyId: string;
+    name: string;
+    description: string | null;
+    templateData: Record<string, unknown>;
+    createdAt: string;
+    updatedAt: string;
+}
 
 export interface JobSearchFilters {
     keyword?: string;
@@ -178,7 +329,15 @@ export interface JobSearchFilters {
     latitude?: string;
     longitude?: string;
     radiusKm?: string;
-    sortBy?: 'relevance' | 'date' | 'salary' | 'distance';
+    sortBy?: 'relevance' | 'date' | 'salary' | 'salary_asc' | 'distance';
     page?: string;
     limit?: string;
+    // Enterprise filters
+    functionalArea?: FunctionalArea;
+    noticePeriodPreference?: string;
+    isPwdFriendly?: string;
+    visaSponsorshipAvailable?: string;
+    genderPreference?: GenderPreference;
+    diversityTags?: string;
+    postingVisibility?: PostingVisibility;
 }

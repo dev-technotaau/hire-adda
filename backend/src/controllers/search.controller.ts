@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { searchService } from '../services/search.service';
+import { AppError } from '../middleware/error';
 import { ELASTIC_INDICES } from '../constants';
 
 /**
@@ -111,7 +112,7 @@ export const didYouMean = async (req: Request, res: Response, next: NextFunction
  */
 export const getSearchHistory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        if (!req.user) { res.status(401).json({ status: 'error', message: 'Not authorized' }); return; }
+        if (!req.user) throw new AppError('Not authorized', 401);
         const limit = Math.min(Number(req.query.limit) || 10, 20);
 
         const history = await searchService.getSearchHistory(req.user.id, limit);
@@ -128,7 +129,7 @@ export const getSearchHistory = async (req: Request, res: Response, next: NextFu
  */
 export const clearSearchHistory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        if (!req.user) { res.status(401).json({ status: 'error', message: 'Not authorized' }); return; }
+        if (!req.user) throw new AppError('Not authorized', 401);
 
         await searchService.clearSearchHistory(req.user.id);
 
@@ -144,10 +145,10 @@ export const clearSearchHistory = async (req: Request, res: Response, next: Next
  */
 export const addToSearchHistory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        if (!req.user) { res.status(401).json({ status: 'error', message: 'Not authorized' }); return; }
+        if (!req.user) throw new AppError('Not authorized', 401);
         const { query, type } = req.body;
 
-        if (!query || !type) { res.status(400).json({ status: 'error', message: 'query and type are required' }); return; }
+        if (!query || !type) throw new AppError('query and type are required', 400);
 
         await searchService.addToSearchHistory(req.user.id, query, type);
 

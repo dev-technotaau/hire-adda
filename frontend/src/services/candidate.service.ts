@@ -2,7 +2,7 @@ import api from '@/lib/api';
 import { API } from '@/constants/api';
 import { buildQueryString } from '@/lib/utils';
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
-import type { CandidateProfile, CandidateDashboard, ProfileCompleteness, UpdateCandidateRequest, CandidateSearchFilters, CandidateAnalytics, JobAlert, CreateJobAlertRequest, UpdateJobAlertRequest } from '@/types/candidate';
+import type { CandidateProfile, CandidateDashboard, ProfileCompleteness, ResumeReadiness, UpdateCandidateRequest, CandidateSearchFilters, CandidateAnalytics, JobAlert, CreateJobAlertRequest, UpdateJobAlertRequest, ResumeUploadResponse } from '@/types/candidate';
 import type { Job } from '@/types/job';
 import type { ParsedResumeData } from '@/types/resume-parse';
 
@@ -55,15 +55,23 @@ export const candidateService = {
         };
     },
 
-    async uploadResume(file: File): Promise<ApiResponse<{ url: string }>> {
+    async uploadResume(file: File): Promise<ApiResponse<ResumeUploadResponse>> {
         const formData = new FormData();
         formData.append('resume', file);
         const res = await api.post(API.CANDIDATES.RESUME, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
         const body = res.data;
-        // Backend returns { data: { resume: "url" } } — normalize to { url }
-        return { ...body, data: { url: body.data?.resume ?? body.data?.url ?? '' } };
+        return {
+            ...body,
+            data: {
+                resume: body.data?.resume ?? '',
+                resumeOriginalName: body.data?.resumeOriginalName ?? file.name,
+                resumeSize: body.data?.resumeSize ?? file.size,
+                resumeMimeType: body.data?.resumeMimeType ?? file.type,
+                resumeUploadedAt: body.data?.resumeUploadedAt ?? new Date().toISOString(),
+            },
+        };
     },
 
     async uploadAvatar(file: File): Promise<ApiResponse<{ url: string }>> {
@@ -82,10 +90,23 @@ export const candidateService = {
         return res.data;
     },
 
-    async generateResume(): Promise<Blob> {
-        const res = await api.get(API.CANDIDATES.RESUME_GENERATE, {
-            responseType: 'blob',
-        });
+    async deleteResume(type: 'uploaded' | 'generated' | 'both' = 'both'): Promise<ApiResponse<null>> {
+        const res = await api.delete(`${API.CANDIDATES.RESUME}?type=${type}`);
+        return res.data;
+    },
+
+    async getResumeReadiness(): Promise<ApiResponse<ResumeReadiness>> {
+        const res = await api.get(API.CANDIDATES.RESUME_READINESS);
+        return res.data;
+    },
+
+    async generateResume(): Promise<ApiResponse<{ url: string; generatedAt: string }>> {
+        const res = await api.get(API.CANDIDATES.RESUME_GENERATE);
+        return res.data;
+    },
+
+    async useGeneratedResume(): Promise<ApiResponse<{ resume: string }>> {
+        const res = await api.post(API.CANDIDATES.RESUME_USE_GENERATED);
         return res.data;
     },
 
@@ -102,6 +123,12 @@ export const candidateService = {
 
     async getCandidateProfile(id: string): Promise<ApiResponse<CandidateProfile>> {
         const res = await api.get(API.CANDIDATES.DETAIL(id));
+        return res.data;
+    },
+
+    async getResumeDownloadUrl(candidateUserId: string, applicationId?: string): Promise<ApiResponse<{ url: string }>> {
+        const qs = applicationId ? `?applicationId=${applicationId}` : '';
+        const res = await api.get(`${API.CANDIDATES.RESUME_DOWNLOAD(candidateUserId)}${qs}`);
         return res.data;
     },
 

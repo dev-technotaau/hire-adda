@@ -133,23 +133,22 @@ export default function DashboardHeader() {
             <Menu className="h-5 w-5" />
           </button>
 
-          <Logo size="sm" href={dashboardPath} />
+          <Logo size="md" href={dashboardPath} />
         </div>
 
         {/* Center — Search section */}
         {hasSearchPage ? (
-          <div className="mx-auto hidden max-w-2xl min-w-0 flex-1 items-center gap-2 px-4 md:flex">
-            <div className="w-full max-w-sm">
+          <div className="hidden min-w-0 flex-1 items-center gap-3 px-6 md:flex">
+            <div className="w-full max-w-md">
               <SearchBar
                 placeholder={searchPlaceholder}
                 searchType={searchType}
                 onSearch={handleSearch}
                 onSelect={handleSelect}
-                size="sm"
                 fullWidth
               />
             </div>
-            <div className="hidden w-full max-w-[200px] lg:block">
+            <div className="hidden w-full max-w-[220px] lg:block">
               <AutoSuggest
                 placeholder="Location"
                 value={location}
@@ -160,12 +159,11 @@ export default function DashboardHeader() {
                 allowCreate
                 createLabel={(q) => `Search in "${q}"`}
                 minChars={2}
-                inputSize="sm"
               />
             </div>
           </div>
         ) : (
-          <div className="mx-auto hidden min-w-0 flex-1 px-4 md:block">
+          <div className="hidden min-w-0 flex-1 px-6 md:block">
             {/* Ctrl+K trigger for admin/super-admin */}
             <button
               onClick={openCommandPalette}

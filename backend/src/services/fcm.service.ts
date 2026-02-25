@@ -1,5 +1,6 @@
 import { messaging } from '../config/firebase';
 import logger from '../config/logger';
+import { isFeatureEnabled } from '../config/feature-flags';
 
 interface FcmNotificationData {
     tokens: string[];
@@ -10,6 +11,11 @@ interface FcmNotificationData {
 }
 
 export const sendFcmNotification = async (data: FcmNotificationData): Promise<any> => {
+    if (!await isFeatureEnabled('enableFCM')) {
+        logger.debug('FCM disabled via feature flag — skipping');
+        return { successCount: 0, failureCount: data.tokens.length };
+    }
+
     if (!messaging) {
         logger.warn('Firebase messaging not initialized - FCM notification skipped');
         return { successCount: 0, failureCount: data.tokens.length };

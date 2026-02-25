@@ -30,7 +30,9 @@ import { xssSanitize } from './middleware/xss-sanitize';
 import { enforceContentType } from './middleware/content-type';
 import { ddosProtection } from './middleware/ddos-protection';
 import { waf } from './middleware/waf';
-import { protect, restrictTo } from './middleware/auth';
+import { Role } from '@prisma/client';
+import { protect } from './middleware/auth';
+import { restrictTo } from './middleware/rbac';
 import { handleCspReport } from './controllers/csp-report.controller';
 
 // Security middleware
@@ -44,7 +46,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", 'https://challenges.cloudflare.com'], // Allow Cloudflare Turnstile
+        scriptSrc: ["'self'", "'unsafe-eval'", 'https://challenges.cloudflare.com'], // Allow Cloudflare Turnstile
         frameSrc: ["'self'", 'https://challenges.cloudflare.com'], // Allow Turnstile iframe
         imgSrc: [
           "'self'",
@@ -75,8 +77,7 @@ app.use(
 
       if (allowedOrigins === '*') {
         callback(null, true);
-      } else if (allowedOrigins.indexOf(origin as string) !== -1 || !origin) {
-        // !origin allows requests from non-browser sources (like Postman)
+      } else if (allowedOrigins.indexOf(origin as string) !== -1) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -154,7 +155,7 @@ const swaggerSetup = swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Talent Bridge API Docs',
 });
 if (env.NODE_ENV === 'production') {
-  app.use('/api-docs', protect, restrictTo('ADMIN', 'SUPER_ADMIN'), swaggerUi.serve, swaggerSetup);
+  app.use('/api-docs', protect, restrictTo(Role.ADMIN, Role.SUPER_ADMIN), swaggerUi.serve, swaggerSetup);
 } else {
   app.use('/api-docs', swaggerUi.serve, swaggerSetup);
 }
@@ -174,6 +175,45 @@ import { generateCsrfToken, doubleCsrfProtection } from './config/csrf';
 app.get('/api/csrf-token', (req: Request, res: Response) => {
   const csrfToken = generateCsrfToken(req, res);
   res.json({ csrfToken });
+});
+
+// Public config endpoints (Frontend fetches to stay in sync with backend env)
+import {
+  getOtpExpiryMinutes, getOtpLength, getOtpMaxResendAttempts, getOtpResendCooldown,
+  getPasswordMinLength, getPasswordMaxLength, getPasswordRequireUppercase,
+  getPasswordRequireLowercase, getPasswordRequireNumber, getPasswordRequireSpecial,
+  getMaxLoginAttempts, getAccountLockDuration, getSessionTimeout,
+  getPasswordResetExpiryHours, getPasswordResetMaxAttempts, getMaxSessionsPerUser,
+} from './config/env';
+
+app.get('/api/config/otp', (_req: Request, res: Response) => {
+  res.json({
+    length: getOtpLength(),
+    resendCooldown: getOtpResendCooldown(),
+    expiry: getOtpExpiryMinutes() * 60,
+    maxResendAttempts: getOtpMaxResendAttempts(),
+  });
+});
+
+app.get('/api/config/security', (_req: Request, res: Response) => {
+  res.json({
+    password: {
+      minLength: getPasswordMinLength(),
+      maxLength: getPasswordMaxLength(),
+      requireUppercase: getPasswordRequireUppercase(),
+      requireLowercase: getPasswordRequireLowercase(),
+      requireNumber: getPasswordRequireNumber(),
+      requireSpecial: getPasswordRequireSpecial(),
+    },
+    account: {
+      maxLoginAttempts: getMaxLoginAttempts(),
+      lockDurationMinutes: getAccountLockDuration(),
+      sessionTimeoutHours: getSessionTimeout(),
+      maxSessionsPerUser: getMaxSessionsPerUser(),
+      passwordResetExpiryHours: getPasswordResetExpiryHours(),
+      passwordResetMaxAttempts: getPasswordResetMaxAttempts(),
+    },
+  });
 });
 
 // Protect all state-changing API routes
@@ -211,6 +251,7 @@ import superAdminRoutes from './routes/super-admin.routes';
 import savedCandidateRoutes from './routes/saved-candidate.routes';
 import savedSearchRoutes from './routes/saved-search.routes';
 import searchRoutes from './routes/search.routes';
+import candidateListRoutes from './routes/candidate-list.routes';
 import reportRoutes from './routes/report.routes';
 import featureFlagRoutes from './routes/feature-flag.routes';
 import webauthnRoutes from './routes/webauthn.routes';
@@ -233,6 +274,7 @@ apiV1Router.use('/drafts', draftRoutes);
 apiV1Router.use('/sessions', sessionRoutes);
 apiV1Router.use('/super-admin', superAdminRoutes);
 apiV1Router.use('/saved-candidates', savedCandidateRoutes);
+apiV1Router.use('/candidate-lists', candidateListRoutes);
 apiV1Router.use('/saved-searches', savedSearchRoutes);
 apiV1Router.use('/search', searchRoutes);
 apiV1Router.use('/reports', reportRoutes);

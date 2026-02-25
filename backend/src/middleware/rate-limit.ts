@@ -59,3 +59,36 @@ export const publicLimiter = rateLimit({
     legacyHeaders: false,
     store: createRedisStore('pub'),
 });
+
+/**
+ * MFA Route Limiter
+ * Usage: Apply to /auth/mfa/* endpoints to prevent brute-force
+ */
+export const mfaLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // 10 attempts per window
+    standardHeaders: true,
+    legacyHeaders: false,
+    store: createRedisStore('mfa'),
+    message: {
+        status: 'fail',
+        message: 'Too many MFA attempts. Please try again later.',
+    },
+});
+
+/**
+ * Search Route Limiter
+ * Usage: Apply to /search routes (autocomplete, suggestions, etc.)
+ * More permissive than auth but stricter than general API to prevent abuse.
+ */
+export const searchLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 60, // 60 requests per minute
+    standardHeaders: true,
+    legacyHeaders: false,
+    store: createRedisStore('search'),
+    message: {
+        status: 'fail',
+        message: 'Too many search requests, please slow down.',
+    },
+});

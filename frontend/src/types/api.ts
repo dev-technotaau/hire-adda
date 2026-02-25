@@ -4,6 +4,15 @@ export interface ApiResponse<T = unknown> {
     data: T;
 }
 
+export interface FacetBucket {
+    key: string;
+    count: number;
+}
+
+export interface SearchFacets {
+    [key: string]: FacetBucket[];
+}
+
 export interface PaginatedData<T> {
     items: T[];
     total: number;
@@ -11,9 +20,10 @@ export interface PaginatedData<T> {
     limit: number;
     totalPages: number;
     hasMore: boolean;
+    facets?: SearchFacets;
 }
 
-export interface PaginatedResponse<T> extends ApiResponse<PaginatedData<T>> {}
+export type PaginatedResponse<T> = ApiResponse<PaginatedData<T>>;
 
 export interface PaginationParams {
     page?: number;

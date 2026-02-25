@@ -1,7 +1,8 @@
 import { prisma } from '../config/prisma';
+import logger from '../config/logger';
 import { AppError } from '../middleware/error';
 import { CandidateProfile } from '@prisma/client';
-import { uploadImage, uploadOptions } from '../config/cloudinary';
+import { uploadImage, uploadOptions, deleteImage, extractPublicId } from '../config/cloudinary';
 import { searchService } from './search.service';
 import { PAGINATION } from '@/constants';
 import { publishEvent, KafkaTopics } from '../kafka/producer';
@@ -70,7 +71,7 @@ export class CandidateService {
 
         // INDEXING
         if (profile) {
-            searchService.indexCandidate(profile).catch((err: any) => console.error('Failed to index candidate', err));
+            searchService.indexCandidate(profile).catch((err: unknown) => logger.error('Failed to index candidate', err));
         }
 
         // Update cached completeness score
@@ -99,7 +100,7 @@ export class CandidateService {
         try {
             const { matchingQueue } = await import('../jobs/matching.queue');
             await matchingQueue.add('match-jobs', { userId });
-        } catch (err) { console.error('Failed to enqueue matching job', err); }
+        } catch (err) { logger.error('Failed to enqueue matching job', err); }
 
         // Publish Kafka event
         publishEvent(KafkaTopics.PROFILE_UPDATED, userId, { userId, profileId: profile.id });
@@ -108,28 +109,43 @@ export class CandidateService {
     }
 
     /**
-     * Upload Resume to Cloudinary
+     * Upload Resume to R2
      */
     async uploadResume(userId: string, file: Express.Multer.File) {
-        const uploadResult = await uploadImage(profileImageBufferOrPath(file), uploadOptions.resume);
+        const { uploadFileToR2, extractR2KeyFromUrl, deleteFileFromR2 } = await import('./storage.service');
+
+        // Delete old resume from R2 if it exists
+        const existing = await prisma.candidateProfile.findUnique({ where: { userId }, select: { resume: true, generatedResumeUrl: true } });
+        if (existing?.resume && existing.resume !== existing.generatedResumeUrl) {
+            const oldKey = extractR2KeyFromUrl(existing.resume);
+            if (oldKey) deleteFileFromR2(oldKey).catch(() => {});
+        }
+
+        const { url } = await uploadFileToR2(file.buffer, file.originalname, 'resumes', file.mimetype);
 
         const profile = await prisma.candidateProfile.upsert({
             where: { userId },
             create: {
                 userId,
-                resume: uploadResult.secure_url,
+                resume: url,
                 resumeOriginalName: file.originalname,
+                resumeSize: file.size,
+                resumeMimeType: file.mimetype,
+                resumeUploadedAt: new Date(),
             },
             update: {
-                resume: uploadResult.secure_url,
+                resume: url,
                 resumeOriginalName: file.originalname,
+                resumeSize: file.size,
+                resumeMimeType: file.mimetype,
+                resumeUploadedAt: new Date(),
             },
             include: { user: true }
         });
 
         // Sync with Search
         if (profile) {
-            searchService.indexCandidate(profile).catch((err: any) => console.error('Failed to index candidate (resume upload)', err));
+            searchService.indexCandidate(profile).catch((err: unknown) => logger.error('Failed to index candidate (resume upload)', err));
         }
 
         // GA4: track resume_uploaded
@@ -142,7 +158,19 @@ export class CandidateService {
      * Upload Profile Image (Avatar)
      */
     async uploadProfileImage(userId: string, file: Express.Multer.File) {
+        // Fetch old image URL before uploading new one
+        const existing = await prisma.candidateProfile.findUnique({
+            where: { userId },
+            select: { profileImage: true },
+        });
+
         const uploadResult = await uploadImage(profileImageBufferOrPath(file), uploadOptions.profileImage);
+
+        // Delete old image from Cloudinary
+        if (existing?.profileImage) {
+            const oldPublicId = extractPublicId(existing.profileImage);
+            if (oldPublicId) deleteImage(oldPublicId).catch(() => {});
+        }
 
         // Transaction to ensure both update
         const [candidateProfile] = await prisma.$transaction([
@@ -165,7 +193,7 @@ export class CandidateService {
 
         // Sync with Search
         if (candidateProfile) {
-            searchService.indexCandidate(candidateProfile).catch((err: any) => console.error('Failed to index candidate (image upload)', err));
+            searchService.indexCandidate(candidateProfile).catch((err: unknown) => logger.error('Failed to index candidate (image upload)', err));
         }
 
         return candidateProfile;
@@ -175,6 +203,12 @@ export class CandidateService {
      * Remove Profile Image (Avatar)
      */
     async removeProfileImage(userId: string) {
+        // Fetch current image URL for cleanup
+        const existing = await prisma.candidateProfile.findUnique({
+            where: { userId },
+            select: { profileImage: true },
+        });
+
         await prisma.$transaction([
             prisma.candidateProfile.update({
                 where: { userId },
@@ -185,6 +219,104 @@ export class CandidateService {
                 data: { avatar: null },
             }),
         ]);
+
+        // Delete from Cloudinary
+        if (existing?.profileImage) {
+            const publicId = extractPublicId(existing.profileImage);
+            if (publicId) deleteImage(publicId).catch(() => {});
+        }
+    }
+
+    /**
+     * Delete Resume (both uploaded and generated)
+     */
+    async deleteResume(userId: string, resumeType: 'uploaded' | 'generated' | 'both' = 'both') {
+        const { extractR2KeyFromUrl, deleteFileFromR2 } = await import('./storage.service');
+
+        // Fetch current resume URLs for cleanup
+        const existing = await prisma.candidateProfile.findUnique({
+            where: { userId },
+            select: {
+                resume: true,
+                generatedResumeUrl: true,
+                resumeOriginalName: true,
+            },
+        });
+
+        if (!existing) {
+            throw new AppError('Candidate profile not found', 404);
+        }
+
+        // Determine which resumes to delete
+        const deleteUploadedResume = resumeType === 'uploaded' || resumeType === 'both';
+        const deleteGeneratedResume = resumeType === 'generated' || resumeType === 'both';
+
+        const updateData: any = {};
+
+        // Handle uploaded resume deletion
+        if (deleteUploadedResume && existing.resume) {
+            const isGeneratedResume = existing.resume === existing.generatedResumeUrl;
+
+            if (!isGeneratedResume) {
+                // It's a manually uploaded resume - delete from R2
+                const resumeKey = extractR2KeyFromUrl(existing.resume);
+                if (resumeKey) deleteFileFromR2(resumeKey).catch(() => {});
+
+                // Clear uploaded resume fields
+                updateData.resume = null;
+                updateData.resumeOriginalName = null;
+                updateData.resumeSize = null;
+                updateData.resumeMimeType = null;
+                updateData.resumeUploadedAt = null;
+            } else if (resumeType === 'uploaded' && isGeneratedResume) {
+                // User wants to delete "active" resume which is generated - just clear the reference
+                updateData.resume = null;
+            }
+        }
+
+        // Handle generated resume deletion
+        if (deleteGeneratedResume && existing.generatedResumeUrl) {
+            const generatedKey = extractR2KeyFromUrl(existing.generatedResumeUrl);
+            if (generatedKey) deleteFileFromR2(generatedKey).catch(() => {});
+
+            updateData.generatedResumeUrl = null;
+            updateData.generatedResumeAt = null;
+
+            // If active resume is the generated one, clear it too
+            if (existing.resume === existing.generatedResumeUrl) {
+                updateData.resume = null;
+            }
+        }
+
+        // Update database
+        const profile = await prisma.candidateProfile.update({
+            where: { userId },
+            data: updateData,
+            include: { user: true },
+        });
+
+        // Sync with Elasticsearch
+        if (profile) {
+            searchService.indexCandidate(profile).catch((err: unknown) =>
+                logger.error('Failed to index candidate (resume deletion)', err)
+            );
+        }
+
+        // GA4: track resume_deleted
+        trackEvent(getClientId(userId), {
+            name: 'resume_deleted',
+            params: { resumeType }
+        }).catch(() => {});
+
+        // Publish Kafka event
+        publishEvent(KafkaTopics.PROFILE_UPDATED, userId, {
+            userId,
+            profileId: profile.id,
+            action: 'resume_deleted',
+            resumeType,
+        });
+
+        return profile;
     }
 
     /**
@@ -259,11 +391,11 @@ export class CandidateService {
                 },
             };
         } catch (error) {
-            console.warn('Elasticsearch candidate search failed, falling back to DB', error);
+            logger.warn('Elasticsearch candidate search failed, falling back to DB', error);
 
             const page = filters.page || PAGINATION.DEFAULT_PAGE;
-            const limit = filters.limit || PAGINATION.DEFAULT_LIMIT;
-            const skip = (page - 1) * limit;
+            const cappedLimit = Math.min(filters.limit || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT);
+            const skip = (page - 1) * cappedLimit;
 
             const where: any = {};
 
@@ -432,15 +564,23 @@ export class CandidateService {
                         },
                     },
                     skip,
-                    take: limit,
+                    take: cappedLimit,
                     orderBy: { updatedAt: 'desc' },
                 }),
                 prisma.candidateProfile.count({ where }),
             ]);
 
+            // Strip raw R2 URLs — employers must use the signed download endpoint
+            const sanitized = candidates.map(c => ({
+                ...c,
+                resume: c.resume ? true : null,
+                generatedResumeUrl: c.generatedResumeUrl ? true : null,
+            }));
+
+            const totalPages = Math.ceil(total / cappedLimit) || 1;
             return {
-                candidates,
-                pagination: { total, page, limit, pages: Math.ceil(total / limit) },
+                candidates: sanitized,
+                pagination: { total, page, limit: cappedLimit, pages: totalPages },
             };
         }
     }
@@ -450,8 +590,46 @@ export class CandidateService {
      */
     async getProfileCompleteness(userId: string) {
         const [profile, user] = await prisma.$transaction([
-            prisma.candidateProfile.findUnique({ where: { userId } }),
-            prisma.user.findUnique({ where: { id: userId } }),
+            prisma.candidateProfile.findUnique({
+                where: { userId },
+                select: {
+                    gender: true,
+                    dob: true,
+                    phone: true,
+                    currentRole: true,
+                    experienceYears: true,
+                    skills: true,
+                    education: true,
+                    experience: true,
+                    resume: true,
+                    headline: true,
+                    preferredWorkMode: true,
+                    preferredJobType: true,
+                    willingToRelocate: true,
+                    certifications: true,
+                    projects: true,
+                    languageProficiency: true,
+                    linkedinProfile: true,
+                    githubProfile: true,
+                    portfolioUrl: true,
+                    publications: true,
+                    patents: true,
+                    volunteerExperience: true,
+                    interests: true,
+                    hobbies: true,
+                    references: true,
+                    passportNumber: true,
+                    hasDrivingLicense: true,
+                },
+            }),
+            prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    firstName: true,
+                    lastName: true,
+                    mobileNumber: true,
+                },
+            }),
         ]);
         if (!profile || !user) return { percentage: 0, completed: [], missing: ['Create your profile'] };
 
@@ -488,7 +666,7 @@ export class CandidateService {
             prisma.user.findUnique({
                 where: { id: userId },
                 select: {
-                    isEmailVerified: true, isMobileVerified: true, isWhatsappVerified: true,
+                    isEmailVerified: true, isMobileVerified: true, isWhatsappVerified: true, whatsappNumber: true,
                     lastActiveAt: true, lastLoginAt: true,
                 }
             }),
@@ -541,13 +719,20 @@ export class CandidateService {
                     select: {
                         id: true, firstName: true, lastName: true, email: true, avatar: true,
                         isEmailVerified: true, isMobileVerified: true, isWhatsappVerified: true,
+                        mobileNumber: true, whatsappNumber: true,
                         lastActiveAt: true,
                     }
                 }
             }
         });
         if (!profile) throw new AppError('Candidate not found', 404);
-        return profile;
+
+        // Strip raw R2 URLs — employers must use the signed download endpoint
+        return {
+            ...profile,
+            resume: profile.resume ? true : null,
+            generatedResumeUrl: profile.generatedResumeUrl ? true : null,
+        };
     }
 }
 

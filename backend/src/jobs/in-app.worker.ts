@@ -15,9 +15,11 @@ interface InAppJobData {
 export const inAppWorker = new Worker<InAppJobData>(
     IN_APP_QUEUE_NAME,
     async (job: Job<InAppJobData>) => {
-        logger.info(`Processing In-App notification job ${job.id} for User ${job.data.userId}`);
-
+        const TIMEOUT_MS = 15_000;
+        const timeoutId = setTimeout(() => { /* safety net */ }, TIMEOUT_MS);
         try {
+            logger.info(`Processing In-App notification job ${job.id} for User ${job.data.userId}`);
+
             // Send via Socket.IO (Real-time)
             // Note: Notification record is already created by NotificationService.send()
             try {
@@ -39,11 +41,15 @@ export const inAppWorker = new Worker<InAppJobData>(
         } catch (error) {
             logger.error(`Failed to process In-App notification for User ${job.data.userId}:`, error);
             throw error;
+        } finally {
+            clearTimeout(timeoutId);
         }
     },
     {
         connection: createBullMQConnection(),
         concurrency: 10, // High concurrency for real-time feel
+        lockDuration: 60000,
+        limiter: { max: 50, duration: 1000 },
     }
 );
 

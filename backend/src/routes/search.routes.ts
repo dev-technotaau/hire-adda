@@ -1,10 +1,14 @@
 import { Router } from 'express';
 import { protect } from '../middleware/auth';
+import { searchLimiter } from '../middleware/rate-limit';
 import { validate } from '../validators/validate';
 import { autocompleteQuery, suggestQuery, didYouMeanQuery, popularQuery } from '../validators/search.validators';
 import * as searchController from '../controllers/search.controller';
 
 const router = Router();
+
+// Apply search-specific rate limiter (60 req/min)
+router.use(searchLimiter);
 
 // Public routes (no auth required) — with query param validation
 router.get('/autocomplete', validate({ query: autocompleteQuery }), searchController.autocomplete);

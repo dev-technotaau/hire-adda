@@ -9,7 +9,7 @@ import {
     Shield, ShieldCheck, ShieldAlert, UserCog,
     Ban, CheckCircle, Trash2, AlertCircle,
     Key, Smartphone, Camera, X, Power,
-    Monitor, Globe, LogOut,
+    Monitor, Globe, LogOut, MessageCircle,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -18,12 +18,15 @@ import Breadcrumb from '@/components/ui/Breadcrumb';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import Switch from '@/components/ui/Switch';
 import Skeleton from '@/components/ui/Skeleton';
 import Modal from '@/components/ui/Modal';
 import OtpInput from '@/components/auth/OtpInput';
 import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
-import { QUERY_KEYS, OTP_CONFIG } from '@/constants/config';
+import { QUERY_KEYS } from '@/constants/config';
+import { useOtpConfig } from '@/hooks/use-otp-config';
+import { usePasswordRules } from '@/hooks/use-security-config';
 import { ROUTES } from '@/constants/routes';
 import { ROLE_LABELS } from '@/constants/enums';
 import { formatDate } from '@/lib/utils';
@@ -38,6 +41,8 @@ export default function SuperAdminUserDetailPage() {
     const params = useParams();
     const router = useRouter();
     const queryClient = useQueryClient();
+    const otpConfig = useOtpConfig();
+    const passwordRules = usePasswordRules();
     const userId = params.id as string;
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,7 +73,7 @@ export default function SuperAdminUserDetailPage() {
             await adminService.sendPasswordResetOtp(userId);
             showToast.success('Verification code sent to user email');
             setResetStep('verify');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
         } catch (err) {
             const error = err as unknown as ApiError;
             showToast.error(error.message || 'Failed to send verification code');
@@ -82,7 +87,7 @@ export default function SuperAdminUserDetailPage() {
         try {
             await adminService.sendPasswordResetOtp(userId);
             showToast.success('New verification code sent!');
-            setResendTimer(OTP_CONFIG.RESEND_COOLDOWN);
+            setResendTimer(otpConfig.RESEND_COOLDOWN);
             setResetOtp('');
         } catch (err) {
             const error = err as unknown as ApiError;
@@ -104,6 +109,10 @@ export default function SuperAdminUserDetailPage() {
     const [editFirstName, setEditFirstName] = useState('');
     const [editLastName, setEditLastName] = useState('');
     const [editEmail, setEditEmail] = useState('');
+    const [editMobileNumber, setEditMobileNumber] = useState('');
+    const [editWhatsappNumber, setEditWhatsappNumber] = useState('');
+    const [editIsMobileVerified, setEditIsMobileVerified] = useState(false);
+    const [editIsWhatsappVerified, setEditIsWhatsappVerified] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
 
     const { data, isLoading } = useQuery({
@@ -205,7 +214,7 @@ export default function SuperAdminUserDetailPage() {
     });
 
     const updateProfileMutation = useMutation({
-        mutationFn: (data: { firstName?: string; lastName?: string; email?: string }) =>
+        mutationFn: (data: Parameters<typeof adminService.updateUserProfile>[1]) =>
             adminService.updateUserProfile(userId, data),
         onSuccess: () => {
             showToast.success('Profile updated');
@@ -269,20 +278,35 @@ export default function SuperAdminUserDetailPage() {
         setEditFirstName(user.firstName || '');
         setEditLastName(user.lastName || '');
         setEditEmail(user.email);
+        setEditMobileNumber(user.mobileNumber || '');
+        setEditWhatsappNumber(user.whatsappNumber || '');
+        setEditIsMobileVerified(user.isMobileVerified);
+        setEditIsWhatsappVerified(user.isWhatsappVerified);
         setIsEditing(true);
     };
 
     const handleSaveProfile = () => {
         if (!user) return;
-        const updates: Record<string, string> = {};
+        const updates: Record<string, unknown> = {};
         if (editFirstName && editFirstName !== user.firstName) updates.firstName = editFirstName;
         if (editLastName && editLastName !== user.lastName) updates.lastName = editLastName;
         if (editEmail && editEmail !== user.email) updates.email = editEmail;
+
+        // Mobile number: empty string → null (remove), changed → update
+        const effectiveMobile = editMobileNumber.trim() || null;
+        if (effectiveMobile !== (user.mobileNumber || null)) updates.mobileNumber = effectiveMobile;
+        if (editIsMobileVerified !== user.isMobileVerified) updates.isMobileVerified = editIsMobileVerified;
+
+        // WhatsApp number
+        const effectiveWhatsapp = editWhatsappNumber.trim() || null;
+        if (effectiveWhatsapp !== (user.whatsappNumber || null)) updates.whatsappNumber = effectiveWhatsapp;
+        if (editIsWhatsappVerified !== user.isWhatsappVerified) updates.isWhatsappVerified = editIsWhatsappVerified;
+
         if (Object.keys(updates).length === 0) {
             setIsEditing(false);
             return;
         }
-        updateProfileMutation.mutate(updates);
+        updateProfileMutation.mutate(updates as Parameters<typeof adminService.updateUserProfile>[1]);
     };
 
     const getRoleBadgeVariant = (role: string): BadgeVariant => {
@@ -385,6 +409,9 @@ export default function SuperAdminUserDetailPage() {
                                             )}
                                             {user.isMobileVerified && (
                                                 <Badge variant="info" size="sm">Mobile Verified</Badge>
+                                            )}
+                                            {user.isWhatsappVerified && (
+                                                <Badge variant="info" size="sm">WhatsApp Verified</Badge>
                                             )}
                                         </div>
                                     </div>
@@ -491,6 +518,36 @@ export default function SuperAdminUserDetailPage() {
                                         value={editEmail}
                                         onChange={(e) => setEditEmail(e.target.value)}
                                     />
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <Input
+                                            label="Mobile Number"
+                                            placeholder="+919876543210"
+                                            value={editMobileNumber}
+                                            onChange={(e) => setEditMobileNumber(e.target.value)}
+                                        />
+                                        <Input
+                                            label="WhatsApp Number"
+                                            placeholder="+919876543210"
+                                            value={editWhatsappNumber}
+                                            onChange={(e) => setEditWhatsappNumber(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <Switch
+                                            label="Mobile Verified"
+                                            description="Mark mobile number as verified (trusted bypass)"
+                                            checked={editIsMobileVerified}
+                                            onChange={(e) => setEditIsMobileVerified(e.target.checked)}
+                                            disabled={!editMobileNumber.trim()}
+                                        />
+                                        <Switch
+                                            label="WhatsApp Verified"
+                                            description="Mark WhatsApp number as verified (trusted bypass)"
+                                            checked={editIsWhatsappVerified}
+                                            onChange={(e) => setEditIsWhatsappVerified(e.target.checked)}
+                                            disabled={!editWhatsappNumber.trim()}
+                                        />
+                                    </div>
                                     <div className="flex gap-3">
                                         <Button
                                             onClick={handleSaveProfile}
@@ -515,6 +572,28 @@ export default function SuperAdminUserDetailPage() {
                                         <p className="text-xs text-[var(--text-muted)]">Email</p>
                                         <p className="text-sm font-medium text-[var(--text)]">{user.email}</p>
                                     </div>
+                                    <div>
+                                        <p className="text-xs text-[var(--text-muted)]">Mobile Number</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm font-medium text-[var(--text)]">{user.mobileNumber || '—'}</p>
+                                            {user.mobileNumber && (
+                                                <Badge variant={user.isMobileVerified ? 'success' : 'warning'} size="sm">
+                                                    {user.isMobileVerified ? 'Verified' : 'Unverified'}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-[var(--text-muted)]">WhatsApp Number</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm font-medium text-[var(--text)]">{user.whatsappNumber || '—'}</p>
+                                            {user.whatsappNumber && (
+                                                <Badge variant={user.isWhatsappVerified ? 'success' : 'warning'} size="sm">
+                                                    {user.isWhatsappVerified ? 'Verified' : 'Unverified'}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </Card>
@@ -534,6 +613,8 @@ export default function SuperAdminUserDetailPage() {
                                 <InfoItem icon={Key} label="MFA Enabled" value={user.mfaEnabled ? 'Yes' : 'No'} />
                                 <InfoItem icon={ShieldCheck} label="Email Verified" value={user.isEmailVerified ? 'Yes' : 'No'} />
                                 <InfoItem icon={Smartphone} label="Mobile Verified" value={user.isMobileVerified ? 'Yes' : 'No'} />
+                                <InfoItem icon={MessageCircle} label="WhatsApp" value={user.whatsappNumber || 'Not provided'} />
+                                <InfoItem icon={MessageCircle} label="WhatsApp Verified" value={user.isWhatsappVerified ? 'Yes' : 'No'} />
                                 <InfoItem icon={Shield} label="Role" value={ROLE_LABELS[user.role] || user.role} />
                             </div>
                         </Card>
@@ -748,7 +829,7 @@ export default function SuperAdminUserDetailPage() {
                                     variant="destructive"
                                     onClick={() => resetPasswordMutation.mutate({ pw: newPassword, otp: resetOtp })}
                                     isLoading={resetPasswordMutation.isPending}
-                                    disabled={newPassword.length < 8 || resetOtp.length !== OTP_CONFIG.LENGTH}
+                                    disabled={newPassword.length < passwordRules.MIN_LENGTH || resetOtp.length !== otpConfig.LENGTH}
                                 >
                                     Reset Password
                                 </Button>
@@ -774,7 +855,7 @@ export default function SuperAdminUserDetailPage() {
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-[var(--text)]">Verification Code</label>
-                                <OtpInput value={resetOtp} onChange={setResetOtp} length={OTP_CONFIG.LENGTH} />
+                                <OtpInput value={resetOtp} onChange={setResetOtp} length={otpConfig.LENGTH} />
                             </div>
 
                             <div className="text-center">

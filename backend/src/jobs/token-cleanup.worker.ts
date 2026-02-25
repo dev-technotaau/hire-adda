@@ -7,20 +7,30 @@ import { cleanupExpiredTokens } from '../services/token.service';
 export const tokenCleanupWorker = new Worker(
     TOKEN_CLEANUP_QUEUE_NAME,
     async (job: Job) => {
-        logger.info(`Processing token cleanup job ${job.id}`);
-
+        const TIMEOUT_MS = 60_000;
+        const timeoutId = setTimeout(() => { /* safety net */ }, TIMEOUT_MS);
         try {
-            const deletedCount = await cleanupExpiredTokens();
+            logger.info(`Processing token cleanup job ${job.id}`);
+
+            const deletedCount = await Promise.race([
+                cleanupExpiredTokens(),
+                new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('Token cleanup worker timeout after 60s')), TIMEOUT_MS)
+                ),
+            ]);
             logger.info(`Token cleanup completed: ${deletedCount} tokens removed`);
             return { deleted: deletedCount };
         } catch (error) {
             logger.error('Token cleanup failed:', error);
             throw error;
+        } finally {
+            clearTimeout(timeoutId);
         }
     },
     {
         connection: createBullMQConnection(),
         concurrency: 1,
+        lockDuration: 60000,
     }
 );
 

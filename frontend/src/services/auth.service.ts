@@ -125,8 +125,43 @@ export const authService = {
         return res.data;
     },
 
-    async changeEmail(data: { newEmail: string; password: string }): Promise<ApiResponse<null>> {
-        const res = await api.post(API.AUTH.CHANGE_EMAIL, data);
+    async mfaRegenerateBackup(data: { password: string; token: string }): Promise<ApiResponse<{ backupCodes: string[] }>> {
+        const res = await api.post(API.AUTH.MFA_REGENERATE_BACKUP, data);
+        return res.data;
+    },
+
+    async mfaBackupCodeCount(): Promise<ApiResponse<{ count: number }>> {
+        const res = await api.get(API.AUTH.MFA_BACKUP_CODE_COUNT);
+        return res.data;
+    },
+
+    async initiateChangeEmail(data: { newEmail: string; password: string }): Promise<ApiResponse<null>> {
+        const res = await api.post(API.AUTH.CHANGE_EMAIL_INITIATE, data);
+        return res.data;
+    },
+
+    async confirmChangeEmail(data: { otp: string }): Promise<ApiResponse<null>> {
+        const res = await api.post(API.AUTH.CHANGE_EMAIL_CONFIRM, data);
+        return res.data;
+    },
+
+    async resendChangeEmailOtp(): Promise<ApiResponse<null>> {
+        const res = await api.post(API.AUTH.CHANGE_EMAIL_RESEND_OTP);
+        return res.data;
+    },
+
+    async initiateChangeMobile(data: { newMobileNumber: string; password: string }): Promise<ApiResponse<null>> {
+        const res = await api.post(API.AUTH.CHANGE_MOBILE_INITIATE, data);
+        return res.data;
+    },
+
+    async confirmChangeMobile(data: { otp: string }): Promise<ApiResponse<null>> {
+        const res = await api.post(API.AUTH.CHANGE_MOBILE_CONFIRM, data);
+        return res.data;
+    },
+
+    async resendChangeMobileOtp(): Promise<ApiResponse<null>> {
+        const res = await api.post(API.AUTH.CHANGE_MOBILE_RESEND_OTP);
         return res.data;
     },
 
@@ -140,13 +175,23 @@ export const authService = {
         return res.data;
     },
 
-    async verifyWhatsApp(data: { mobileNumber: string }): Promise<ApiResponse<null>> {
+    async verifyWhatsApp(data: { mobileNumber: string; whatsappNumber?: string }): Promise<ApiResponse<null>> {
         const res = await api.post(API.AUTH.VERIFY_WHATSAPP, data);
         return res.data;
     },
 
     async verifyWhatsAppOtp(data: { mobileNumber: string; otp: string }): Promise<ApiResponse<null>> {
         const res = await api.post(API.AUTH.VERIFY_WHATSAPP_OTP, data);
+        return res.data;
+    },
+
+    async changeWhatsappNumber(data: { newWhatsappNumber: string; password: string }): Promise<ApiResponse<null>> {
+        const res = await api.post(API.AUTH.CHANGE_WHATSAPP_NUMBER, data);
+        return res.data;
+    },
+
+    async removeWhatsappNumber(): Promise<ApiResponse<null>> {
+        const res = await api.delete(API.AUTH.REMOVE_WHATSAPP_NUMBER);
         return res.data;
     },
 

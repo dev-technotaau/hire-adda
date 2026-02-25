@@ -1,5 +1,6 @@
 import { firestore } from '../config/firebase';
 import logger from '../config/logger';
+import { isFeatureEnabled } from '../config/feature-flags';
 
 const COUNTERS_COLLECTION = 'counters';
 const COUNTERS_DOC = 'platform';
@@ -12,6 +13,7 @@ export type CounterMetric =
 
 export const firestoreCountersService = {
     async incrementCounter(metric: CounterMetric, amount: number = 1): Promise<void> {
+        if (!await isFeatureEnabled('enableFirestoreCounters')) return;
         if (!firestore) return;
         try {
             const { FieldValue } = await import('firebase-admin/firestore');
@@ -26,6 +28,7 @@ export const firestoreCountersService = {
     },
 
     async getCounters(): Promise<Record<string, number>> {
+        if (!await isFeatureEnabled('enableFirestoreCounters')) return {};
         if (!firestore) return {};
         try {
             const docRef = firestore.collection(COUNTERS_COLLECTION).doc(COUNTERS_DOC);
@@ -45,6 +48,7 @@ export const firestoreCountersService = {
     },
 
     async resetDailyCounters(): Promise<void> {
+        if (!await isFeatureEnabled('enableFirestoreCounters')) return;
         if (!firestore) return;
         try {
             const docRef = firestore.collection(COUNTERS_COLLECTION).doc(COUNTERS_DOC);

@@ -44,6 +44,7 @@ export interface TicketMessage {
     senderId: string | null;
     senderType: 'USER' | 'ADMIN' | 'SYSTEM' | 'GUEST';
     senderName: string;
+    subject?: string | null;
     body: string;
     isInternal: boolean;
     createdAt: string;

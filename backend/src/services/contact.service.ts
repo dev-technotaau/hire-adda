@@ -1,5 +1,5 @@
 import prisma from '../config/prisma';
-import { emailService } from './email.service';
+import { emailQueue } from '../jobs/email.queue';
 import { ticketService } from './ticket.service';
 import logger from '../config/logger';
 
@@ -15,8 +15,8 @@ class ContactService {
             description: data.message,
         }).catch((err) => logger.warn('Failed to create support ticket from contact form', { error: err }));
 
-        // Notify admins via email (fire-and-forget)
-        emailService.sendEmail({
+        // Notify admins via email queue (rate-limited, fire-and-forget)
+        emailQueue.add('send-email', {
             to: 'support@talentbridge.com',
             subject: `[Contact Form] ${data.subject} — from ${data.name}`,
             html: `
@@ -29,7 +29,7 @@ class ContactService {
                 <hr />
                 <p style="color: #888; font-size: 12px;">Message ID: ${contact.id}</p>
             `,
-        }).catch((err) => logger.warn('Failed to send contact notification email', { error: err }));
+        }).catch((err) => logger.warn('Failed to enqueue contact notification email', { error: err }));
 
         return contact;
     }

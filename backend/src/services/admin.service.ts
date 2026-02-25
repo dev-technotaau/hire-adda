@@ -2,6 +2,25 @@ import { prisma } from '../config/prisma';
 import { Role, JobStatus, VerificationStatus } from '@prisma/client';
 import { AppError } from '../middleware/error';
 
+const VALID_AUDIT_ACTIONS = new Set([
+    'PASSWORD_CHANGE', 'REQUEST_ACCOUNT_DELETION',
+    'DELETE_USER', 'SUSPEND_USER', 'ACTIVATE_USER', 'UPDATE_USER_ROLE',
+    'CREATE_USER', 'UPDATE_USER_PROFILE', 'SEND_PASSWORD_RESET_OTP',
+    'ADMIN_RESET_PASSWORD', 'DEACTIVATE_USER', 'UPLOAD_USER_AVATAR', 'REMOVE_USER_AVATAR',
+    'REVOKE_USER_SESSIONS',
+    'PROFILE_UPDATE', 'RESUME_UPLOAD',
+    'JOB_CREATE', 'JOB_UPDATE', 'JOB_CLOSE', 'DELETE_JOB', 'MODERATE_JOB', 'FLAG_JOB',
+    'APPLICATION_SHORTLIST', 'APPLICATION_SELECT',
+    'VERIFICATION_APPROVE', 'VERIFICATION_REJECT', 'VERIFICATION_REQUEST_CHANGES',
+    'VERIFICATION_ESCALATE', 'VERIFICATION_LEVEL_APPROVE', 'EMPLOYMENT_VERIFICATION_CONTACT',
+    'TICKET_ASSIGN', 'TICKET_STATUS_CHANGE',
+]);
+
+const VALID_AUDIT_ENTITIES = new Set([
+    'User', 'CandidateProfile', 'CompanyProfile', 'JobPost', 'JobApplication',
+    'Verification', 'SupportTicket',
+]);
+
 export class AdminService {
     /**
      * Get High-Level Dashboard Stats
@@ -95,7 +114,8 @@ export class AdminService {
             prisma.user.count({ where })
         ]);
 
-        return { users, total, page, limit };
+        const totalPages = Math.ceil(total / limit) || 1;
+        return { items: users, total, page, limit, totalPages, hasMore: page < totalPages };
     }
 
     /**
@@ -132,14 +152,19 @@ export class AdminService {
         if (user.role === Role.SUPER_ADMIN) throw new AppError('Cannot suspend a super admin', 403);
         if (user.id === adminId) throw new AppError('Cannot suspend yourself', 400);
 
-        await prisma.user.update({
-            where: { id: userId },
-            data: { isSuspended: true, suspendedAt: new Date(), suspendedBy: adminId }
-        });
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: userId },
+                data: { isSuspended: true, suspendedAt: new Date(), suspendedBy: adminId }
+            }),
+            prisma.auditLog.create({
+                data: { action: 'SUSPEND_USER', entity: 'User', entityId: userId, performedBy: adminId }
+            }),
+        ]);
 
-        // Create audit log
-        await prisma.auditLog.create({
-            data: { action: 'SUSPEND_USER', entity: 'User', entityId: userId, performedBy: adminId }
+        // Notify the suspended user
+        import('./notification.service').then(({ notificationService }) => {
+            notificationService.notifyUserSuspended(userId).catch(() => {});
         });
     }
 
@@ -150,13 +175,19 @@ export class AdminService {
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) throw new AppError('User not found', 404);
 
-        await prisma.user.update({
-            where: { id: userId },
-            data: { isSuspended: false, isActive: true, suspendedAt: null, suspendedBy: null }
-        });
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: userId },
+                data: { isSuspended: false, isActive: true, suspendedAt: null, suspendedBy: null }
+            }),
+            prisma.auditLog.create({
+                data: { action: 'ACTIVATE_USER', entity: 'User', entityId: userId, performedBy: adminId }
+            }),
+        ]);
 
-        await prisma.auditLog.create({
-            data: { action: 'ACTIVATE_USER', entity: 'User', entityId: userId, performedBy: adminId }
+        // Notify the reactivated user
+        import('./notification.service').then(({ notificationService }) => {
+            notificationService.notifyUserActivated(userId).catch(() => {});
         });
     }
 
@@ -173,14 +204,15 @@ export class AdminService {
             throw new AppError('Only super admin can promote to admin', 403);
         }
 
-        await prisma.user.update({ where: { id: userId }, data: { role: newRole } });
-
-        await prisma.auditLog.create({
-            data: {
-                action: 'UPDATE_USER_ROLE', entity: 'User', entityId: userId, performedBy: adminId,
-                details: { oldRole: user.role, newRole }
-            }
-        });
+        await prisma.$transaction([
+            prisma.user.update({ where: { id: userId }, data: { role: newRole } }),
+            prisma.auditLog.create({
+                data: {
+                    action: 'UPDATE_USER_ROLE', entity: 'User', entityId: userId, performedBy: adminId,
+                    details: { oldRole: user.role, newRole }
+                }
+            }),
+        ]);
     }
 
     /**
@@ -256,12 +288,22 @@ export class AdminService {
         page?: number; limit?: number; startDate?: string; endDate?: string;
     }) {
         const page = filters.page || 1;
-        const limit = filters.limit || 20;
-        const skip = (page - 1) * limit;
+        const cappedLimit = Math.min(filters.limit || 20, 100);
+        const skip = (page - 1) * cappedLimit;
         const where: any = {};
 
-        if (filters.action) where.action = filters.action;
-        if (filters.entity) where.entity = filters.entity;
+        if (filters.action) {
+            if (!VALID_AUDIT_ACTIONS.has(filters.action)) {
+                throw new AppError('Invalid audit action filter', 400, 'INVALID_AUDIT_ACTION');
+            }
+            where.action = filters.action;
+        }
+        if (filters.entity) {
+            if (!VALID_AUDIT_ENTITIES.has(filters.entity)) {
+                throw new AppError('Invalid audit entity filter', 400, 'INVALID_AUDIT_ENTITY');
+            }
+            where.entity = filters.entity;
+        }
         if (filters.performedBy) where.performedBy = filters.performedBy;
         if (filters.startDate || filters.endDate) {
             where.createdAt = {};
@@ -272,12 +314,13 @@ export class AdminService {
         const [logs, total] = await prisma.$transaction([
             prisma.auditLog.findMany({
                 where, include: { user: { select: { email: true, firstName: true, lastName: true } } },
-                orderBy: { createdAt: 'desc' }, skip, take: limit,
+                orderBy: { createdAt: 'desc' }, skip, take: cappedLimit,
             }),
             prisma.auditLog.count({ where }),
         ]);
 
-        return { logs, pagination: { total, page, limit, pages: Math.ceil(total / limit) } };
+        const totalPages = Math.ceil(total / cappedLimit) || 1;
+        return { items: logs, total, page, limit: cappedLimit, totalPages, hasMore: page < totalPages };
     }
 
     /**
@@ -462,15 +505,16 @@ export class AdminService {
         const job = await prisma.jobPost.findUnique({ where: { id: jobId } });
         if (!job) throw new AppError('Job not found', 404);
 
-        await prisma.jobPost.delete({ where: { id: jobId } });
+        await prisma.$transaction([
+            prisma.jobPost.delete({ where: { id: jobId } }),
+            prisma.auditLog.create({
+                data: { action: 'DELETE_JOB', entity: 'JobPost', entityId: jobId, performedBy: adminId, details: { title: job.title } }
+            }),
+        ]);
 
         // Clean up ES index (fire-and-forget)
         const { searchService } = await import('./search.service');
         searchService.deleteJob(jobId).catch(() => {});
-
-        await prisma.auditLog.create({
-            data: { action: 'DELETE_JOB', entity: 'JobPost', entityId: jobId, performedBy: adminId, details: { title: job.title } }
-        });
     }
 
     /**
@@ -480,11 +524,12 @@ export class AdminService {
         const job = await prisma.jobPost.findUnique({ where: { id: jobId } });
         if (!job) throw new AppError('Job not found', 404);
 
-        await prisma.jobPost.update({ where: { id: jobId }, data: { status: JobStatus.DRAFT } });
-
-        await prisma.auditLog.create({
-            data: { action: 'FLAG_JOB', entity: 'JobPost', entityId: jobId, performedBy: adminId, details: { reason } }
-        });
+        await prisma.$transaction([
+            prisma.jobPost.update({ where: { id: jobId }, data: { status: JobStatus.DRAFT } }),
+            prisma.auditLog.create({
+                data: { action: 'FLAG_JOB', entity: 'JobPost', entityId: jobId, performedBy: adminId, details: { reason } }
+            }),
+        ]);
     }
 
     /**

@@ -141,6 +141,7 @@ export const applicationStatusUpdate = (
 ): EmailTemplate => {
     const statusConfig: Record<string, { emoji: string; bg: string; message: string }> = {
         shortlisted: { emoji: '&#11088;', bg: '#fffbeb', message: 'Your application has been shortlisted! The hiring team is impressed with your profile.' },
+        selected: { emoji: '&#127942;', bg: '#ecfdf5', message: 'You have been selected! The hiring team wants to move forward with your candidacy.' },
         reviewing: { emoji: '&#128269;', bg: '#eef2ff', message: 'Your application is currently being reviewed by the hiring team.' },
         interview: { emoji: '&#128197;', bg: '#ecfdf5', message: 'You\'ve been selected for an interview. Details will follow shortly.' },
         offered: { emoji: '&#127881;', bg: '#ecfdf5', message: 'An offer has been extended to you. Check your dashboard for details.' },
@@ -167,6 +168,62 @@ export const applicationStatusUpdate = (
             ${signature()}
         `, `Your application for ${jobTitle} at ${companyName} has been updated to ${status}.`),
         text: `Hi ${candidateName}, your application for ${jobTitle} at ${companyName} has been updated to: ${status}. View details at ${BRAND.url}/candidate/applications`,
+    };
+};
+
+export const jobPostedConfirmation = (employerName: string, jobTitle: string, jobId: string): EmailTemplate => ({
+    subject: `Job Posted: ${jobTitle} — Talent Bridge`,
+    html: emailLayout(`
+        ${iconCircle('&#9989;', BRAND.successLight)}
+        ${heading('Job Posted Successfully')}
+        ${greeting(employerName)}
+        ${paragraph(`Your job posting <strong>${jobTitle}</strong> is now live on Talent Bridge.`)}
+        ${successBox('Candidates can now discover and apply for this position.')}
+        ${paragraph('You\'ll receive notifications when candidates apply. You can manage your listing at any time from your dashboard.')}
+        ${button('View Job Listing', `${BRAND.url}/employer/jobs/${jobId}`)}
+        ${signature()}
+    `, `Your job posting "${jobTitle}" is now live on Talent Bridge.`),
+    text: `Hi ${employerName}, your job posting "${jobTitle}" is now live on Talent Bridge. You'll receive notifications when candidates apply. View it at ${BRAND.url}/employer/jobs/${jobId}`,
+});
+
+export const jobClosedNotification = (candidateName: string, jobTitle: string, companyName: string): EmailTemplate => ({
+    subject: `Position Closed: ${jobTitle} at ${companyName}`,
+    html: emailLayout(`
+        ${iconCircle('&#128276;', BRAND.warningLight)}
+        ${heading('Position Closed')}
+        ${greeting(candidateName)}
+        ${paragraph(`The <strong>${jobTitle}</strong> position at <strong>${companyName}</strong> that you applied for has been closed by the employer.`)}
+        ${paragraph('Don\'t worry — we\'re constantly finding new opportunities that match your profile. Keep your profile updated to receive the best matches.')}
+        ${button('Browse Similar Jobs', `${BRAND.url}/candidate/jobs`)}
+        ${divider()}
+        ${smallText('You\'re receiving this because you applied for this position.')}
+        ${signature()}
+    `, `The ${jobTitle} position at ${companyName} has been closed.`),
+    text: `Hi ${candidateName}, the ${jobTitle} position at ${companyName} that you applied for has been closed. Browse similar jobs at ${BRAND.url}/candidate/jobs`,
+});
+
+export const jobMatchFound = (candidateName: string, jobTitle: string, companyName: string, jobId: string, matchScore: number): EmailTemplate => {
+    const scorePercent = Math.round(matchScore * 100);
+    return {
+        subject: `New Job Match: ${jobTitle} at ${companyName}`,
+        html: emailLayout(`
+            ${iconCircle('&#127919;', '#eef2ff')}
+            ${heading('New Job Match')}
+            ${subtitle(`We found a role that fits your profile.`)}
+            ${greeting(candidateName)}
+            ${paragraph(`The position <strong>${jobTitle}</strong> at <strong>${companyName}</strong> matches your profile.`)}
+            ${infoBox([
+                { label: 'Position', value: jobTitle },
+                { label: 'Company', value: companyName },
+                { label: 'Match Score', value: `${scorePercent}%` },
+            ])}
+            ${paragraph('This match is based on your skills, experience, and preferences. Review the job details to see if it\'s right for you.')}
+            ${button('View Job Details', `${BRAND.url}/candidate/jobs/${jobId}`)}
+            ${divider()}
+            ${smallText('You\'re receiving this because your profile matches this job. <a href="' + BRAND.url + '/candidate/settings" style="color:' + BRAND.textSecondary + ';text-decoration:underline;">Manage notifications</a>')}
+            ${signature()}
+        `, `New job match: ${jobTitle} at ${companyName} (${scorePercent}% match)`),
+        text: `Hi ${candidateName}, ${jobTitle} at ${companyName} matches your profile (${scorePercent}% match). View details: ${BRAND.url}/candidate/jobs/${jobId}`,
     };
 };
 
@@ -211,3 +268,25 @@ export const jobAlert = (candidateName: string, jobs: Array<{ title: string; com
         text: `Hi ${candidateName}, here are new jobs for you:\n${jobsText}\n\nView all jobs: ${BRAND.url}/jobs`,
     };
 };
+
+export const matchingCandidatesFound = (employerName: string, jobTitle: string, matchCount: number, jobId: string): EmailTemplate => ({
+    subject: `${matchCount} Matching Candidate${matchCount === 1 ? '' : 's'} Found for ${jobTitle}`,
+    html: emailLayout(`
+        ${iconCircle('&#127919;', BRAND.successLight)}
+        ${heading('Matching Candidates Found')}
+        ${subtitle('We found candidates for your open position.')}
+        ${greeting(employerName)}
+        ${paragraph(`Great news! We've identified <strong>${matchCount} candidate${matchCount === 1 ? '' : 's'}</strong> whose profile${matchCount === 1 ? '' : 's'} match${matchCount === 1 ? 'es' : ''} your <strong>${jobTitle}</strong> position.`)}
+        ${infoBox([
+            { label: 'Position', value: jobTitle },
+            { label: 'Matching Candidates', value: matchCount.toString() },
+            { label: 'Status', value: 'Ready to Review' },
+        ])}
+        ${paragraph('Review these candidates to find the best fit for your team.')}
+        ${button('Review Candidates', `${BRAND.url}/employer/jobs/${jobId}/applications`)}
+        ${divider()}
+        ${smallText('Candidates match based on skills, experience, and location preferences in your job posting.')}
+        ${signature()}
+    `, `${matchCount} matching candidate${matchCount === 1 ? '' : 's'} found for ${jobTitle}`),
+    text: `Hi ${employerName}, we found ${matchCount} candidate${matchCount === 1 ? '' : 's'} for your ${jobTitle} position. Review them at ${BRAND.url}/employer/jobs/${jobId}/applications`,
+});

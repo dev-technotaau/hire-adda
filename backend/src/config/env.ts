@@ -16,7 +16,7 @@ const envSchema = z
     DATABASE_POOL_TIMEOUT: z.string().default('10'),
 
     // CSRF
-    CSRF_SECRET: z.string().min(32).default('change-me-csrf-secret-min-32-characters-long'),
+    CSRF_SECRET: z.string().min(32),
 
     // JWT
     JWT_SECRET: z.string().min(32),
@@ -57,7 +57,6 @@ const envSchema = z
     UPLOAD_MAX_SIZE: z.string().default('5242880'), // 5MB
     UPLOAD_DIR: z.string().default('uploads'),
 
-    // Frontend URL (for CORS)
     // Frontend URL (for CORS)
     FRONTEND_URL: z.string().default('http://localhost:3000'),
     CORS_ORIGIN: z.string().default('*'),
@@ -118,6 +117,7 @@ const envSchema = z
     GOOGLE_CLOUD_PROJECT_ID: z.string().optional(),
     GOOGLE_CLOUD_LOCATION_ID: z.string().default('us-central1'),
     DOCUMENT_AI_PROCESSOR_ID: z.string().optional(),
+    CLOUD_TALENT_TENANT_ID: z.string().optional(),
 
     // Google Analytics
     GA_MEASUREMENT_ID: z.string().optional(),
@@ -139,17 +139,20 @@ const envSchema = z
     META_WHATSAPP_PHONE_ID: z.string().optional(),
     META_WHATSAPP_TOKEN: z.string().optional(),
 
+    // SMS Cost Control — Essential SMS (OTP, security) always enabled
+    // Transactional SMS (job matches, reminders) can be toggled
+    ENABLE_TRANSACTIONAL_SMS: z.string().default('true'),
+
     // Apache Kafka
     KAFKA_BROKERS: z.string().default('localhost:9092'),
-    KAFKA_CLIENT_ID: z.string().default('talent-bridge-api'),
+    KAFKA_CLIENT_ID: z.string().default(`talent-bridge-${process.env.NODE_ENV || 'development'}`),
     KAFKA_USERNAME: z.string().optional(),
     KAFKA_PASSWORD: z.string().optional(),
     KAFKA_SASL_MECHANISM: z.string().default('plain'),
-    KAFKA_CA_CERT: z.string().optional(),
 
     // OTP Configuration
     OTP_EXPIRY_MINUTES: z.string().default('10'),
-    OTP_LENGTH: z.string().default('6'),
+    OTP_LENGTH: z.string().default('6').refine((v) => { const n = parseInt(v, 10); return n >= 4 && n <= 8; }, 'OTP_LENGTH must be between 4 and 8'),
     OTP_MAX_RESEND_ATTEMPTS: z.string().default('5'),
     OTP_RESEND_COOLDOWN_SECONDS: z.string().default('60'),
 
@@ -183,12 +186,12 @@ const envSchema = z
       .default('info'),
 
     // Webhooks
-    WEBHOOK_SECRET: z.string().optional(),
+    WEBHOOK_SECRET: z.string().min(32, 'WEBHOOK_SECRET must be at least 32 characters').optional(),
     WEBHOOK_CALLBACK_URL: z.string().optional(),
 
     // Super Admin
-    SUPER_ADMIN_EMAIL: z.string().optional(),
-    SUPER_ADMIN_PASSWORD: z.string().optional(),
+    SUPER_ADMIN_EMAIL: z.string().email('SUPER_ADMIN_EMAIL must be a valid email').optional(),
+    SUPER_ADMIN_PASSWORD: z.string().min(8, 'SUPER_ADMIN_PASSWORD must be at least 8 characters').optional(),
 
     // OpenTelemetry
     OTEL_ENABLED: z.string().default('true'),
@@ -208,7 +211,7 @@ const envSchema = z
       .default('require'),
 
     // Field-Level Encryption (AES-256-GCM, 32-byte hex key)
-    FIELD_ENCRYPTION_KEY: z.string().optional(),
+    FIELD_ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, 'FIELD_ENCRYPTION_KEY must be a 64-char hex string (32 bytes)').optional(),
 
     // Centralized Log Aggregation
     LOG_AGGREGATION_URL: z.string().optional(),
@@ -231,6 +234,35 @@ const envSchema = z
           path: ['JWT_PUBLIC_KEY'],
         });
       }
+    }
+
+    // Validate Firebase service account JSON if provided
+    if (data.FIREBASE_SERVICE_ACCOUNT) {
+      try {
+        const parsed = JSON.parse(data.FIREBASE_SERVICE_ACCOUNT);
+        if (!parsed.project_id || !parsed.private_key || !parsed.client_email) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'FIREBASE_SERVICE_ACCOUNT JSON must contain project_id, private_key, and client_email',
+            path: ['FIREBASE_SERVICE_ACCOUNT'],
+          });
+        }
+      } catch {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'FIREBASE_SERVICE_ACCOUNT must be valid JSON',
+          path: ['FIREBASE_SERVICE_ACCOUNT'],
+        });
+      }
+    }
+
+    // Super admin: if email is set, password must also be set
+    if (data.SUPER_ADMIN_EMAIL && !data.SUPER_ADMIN_PASSWORD) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'SUPER_ADMIN_PASSWORD is required when SUPER_ADMIN_EMAIL is set',
+        path: ['SUPER_ADMIN_PASSWORD'],
+      });
     }
   });
 
@@ -266,6 +298,17 @@ export const getPasswordResetExpiryHours = (): number =>
 export const getMaxLoginAttempts = (): number => parseInt(env.MAX_LOGIN_ATTEMPTS, 10);
 export const getAccountLockDuration = (): number => parseInt(env.ACCOUNT_LOCK_DURATION_MINUTES, 10);
 export const getSessionTimeout = (): number => parseInt(env.SESSION_TIMEOUT_HOURS, 10);
+export const getPasswordResetMaxAttempts = (): number =>
+  parseInt(env.PASSWORD_RESET_MAX_ATTEMPTS, 10);
+export const getMaxSessionsPerUser = (): number => parseInt(env.MAX_SESSIONS_PER_USER, 10);
+
+// Password validation helpers
+export const getPasswordMinLength = (): number => parseInt(env.PASSWORD_MIN_LENGTH, 10);
+export const getPasswordMaxLength = (): number => parseInt(env.PASSWORD_MAX_LENGTH, 10);
+export const getPasswordRequireUppercase = (): boolean => env.PASSWORD_REQUIRE_UPPERCASE === 'true';
+export const getPasswordRequireLowercase = (): boolean => env.PASSWORD_REQUIRE_LOWERCASE === 'true';
+export const getPasswordRequireNumber = (): boolean => env.PASSWORD_REQUIRE_NUMBER === 'true';
+export const getPasswordRequireSpecial = (): boolean => env.PASSWORD_REQUIRE_SPECIAL === 'true';
 
 // Email helpers
 export const getEmailMaxSendPerHour = (): number => parseInt(env.EMAIL_MAX_SEND_PER_HOUR, 10);

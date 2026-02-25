@@ -1,7 +1,7 @@
 import { prisma } from '../config/prisma';
 import { AppError } from '../middleware/error';
 import { VerificationStatus, VerificationType, Role } from '@prisma/client';
-import { uploadImage, uploadOptions } from '../config/cloudinary';
+import { uploadFileToR2 } from './storage.service';
 
 export class VerificationService {
     /**
@@ -23,15 +23,10 @@ export class VerificationService {
 
         let documentUrl: string | undefined;
 
-        // 2. Upload Document if provided (Cloudinary as 'raw' or 'image' depending on mimetype)
+        // 2. Upload Document to R2
         if (file) {
-            // Simple logic: if pdf use raw, else image
-            const options = file.mimetype === 'application/pdf'
-                ? uploadOptions.resume // reuse resume config for raw/pdf
-                : uploadOptions.profileImage; // reuse image config (or create specific one)
-
-            const uploadResult = await uploadImage(file.buffer, options);
-            documentUrl = uploadResult.secure_url;
+            const { url } = await uploadFileToR2(file.buffer, file.originalname, 'verification-docs', file.mimetype);
+            documentUrl = url;
         }
 
         // 3. Create Request
@@ -45,14 +40,26 @@ export class VerificationService {
             },
         });
 
+        // Notify user about submission acknowledgment
+        import('./notification.service').then(({ notificationService }) => {
+            notificationService.notifyVerificationSubmitted(userId, type).catch(() => {});
+        });
+
+        // Notify all admins about new verification request (multi-channel)
+        import('./notification.service').then(({ notificationService }) => {
+            notificationService.notifyAdminsNewVerification(userId, type, request.id).catch(() => {});
+        });
+
         return request;
     }
 
     /**
      * Get all pending verifications (Admin)
      */
-    async getPendingVerifications(skip = 0, take = 10) {
-        const [requests, total] = await prisma.$transaction([
+    async getPendingVerifications(page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+
+        const [items, total] = await prisma.$transaction([
             prisma.verificationRequest.findMany({
                 where: { status: VerificationStatus.PENDING },
                 include: {
@@ -69,13 +76,14 @@ export class VerificationService {
                     }
                 },
                 skip,
-                take,
+                take: limit,
                 orderBy: { createdAt: 'asc' },
             }),
             prisma.verificationRequest.count({ where: { status: VerificationStatus.PENDING } }),
         ]);
 
-        return { requests, total };
+        const totalPages = Math.ceil(total / limit) || 1;
+        return { items, total, page, limit, totalPages, hasMore: page < totalPages };
     }
 
     /**
@@ -117,18 +125,16 @@ export class VerificationService {
             // Add other logic for Candidate Identity etc.
         }
 
-        // Notify user about verification status change
+        // Notify user about verification status change (multi-channel with proper email)
         try {
             const { notificationService } = await import('./notification.service');
-            const statusText = status === 'APPROVED' ? 'approved' : status === 'REJECTED' ? 'rejected' : 'updated';
-            await notificationService.send({
-                userId: request.userId,
-                title: `Verification ${statusText}`,
-                message: `Your ${request.type} verification has been ${statusText}.${comments ? ` Admin note: ${comments}` : ''}`,
-                type: status === 'APPROVED' ? 'SUCCESS' : status === 'REJECTED' ? 'ERROR' : 'INFO',
-                category: 'verification',
-                channels: ['email', 'in_app'],
-            });
+            const statusText = status === 'APPROVED' ? 'approved' : 'rejected';
+            await notificationService.notifyVerificationReviewed(
+                request.userId,
+                request.type,
+                statusText as 'approved' | 'rejected',
+                comments || undefined
+            );
         } catch (e) { /* non-critical */ }
 
         return updatedRequest;
@@ -177,7 +183,8 @@ export class VerificationService {
             prisma.verificationRequest.count({ where }),
         ]);
 
-        return { requests, pagination: { total, page, limit, pages: Math.ceil(total / limit) } };
+        const totalPages = Math.ceil(total / limit) || 1;
+        return { items: requests, total, page, limit, totalPages, hasMore: page < totalPages };
     }
 
     /**
@@ -314,18 +321,15 @@ export class VerificationService {
             },
         });
 
-        // Notify the candidate
+        // Notify the candidate (multi-channel with proper email)
         try {
             const { notificationService } = await import('./notification.service');
-            const statusText = action === 'confirm' ? 'verified' : 'could not be verified';
-            await notificationService.send({
-                userId: request.userId,
-                title: 'Employment Verification Update',
-                message: `Your employment verification has been ${statusText} by the previous employer.`,
-                type: action === 'confirm' ? 'SUCCESS' : 'WARNING',
-                category: 'verification',
-                channels: ['email', 'in_app'],
-            });
+            await notificationService.notifyVerificationReviewed(
+                request.userId,
+                'EMPLOYMENT',
+                action === 'confirm' ? 'approved' : 'rejected',
+                comments || undefined
+            );
         } catch (_e) { /* non-critical */ }
 
         return { action, status: newStatus };

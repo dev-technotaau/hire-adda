@@ -1,9 +1,12 @@
 import { prisma } from '../config/prisma';
+import logger from '../config/logger';
 import { AppError } from '../middleware/error';
 import {
-    JobStatus, JobType, ApplicationStatus,
+    JobStatus, JobType, ApplicationStatus, Role,
     WorkMode, ShiftType, ExperienceLevel, EducationLevel,
-    SalaryType, UrgencyLevel,
+    SalaryType, UrgencyLevel, FunctionalArea, NoticePeriodPreference,
+    SpecificDegree, GenderPreference, DrivingLicenseType,
+    PostingVisibility, ApplyMethod, ScreeningQuestionType,
 } from '@prisma/client';
 import { searchService } from './search.service';
 import { PAGINATION } from '@/constants';
@@ -11,6 +14,22 @@ import { publishEvent, KafkaTopics } from '../kafka/producer';
 import { trackEvent, getClientId } from './analytics.service';
 import { notificationService } from './notification.service';
 import { moderationService } from './moderation.service';
+import { talentMatchingService } from './talent-matching.service';
+
+interface ScreeningQuestionInput {
+    question: string;
+    questionType?: ScreeningQuestionType;
+    isRequired?: boolean;
+    isDealBreaker?: boolean;
+    options?: string[];
+    idealAnswer?: string;
+    displayOrder?: number;
+}
+
+interface ScreeningAnswerInput {
+    questionId: string;
+    answer: string;
+}
 
 interface CreateJobDto {
     title: string;
@@ -55,6 +74,40 @@ interface CreateJobDto {
     walkInDetails?: any;
     contactPerson?: string;
     contactEmail?: string;
+    // Enterprise fields
+    functionalArea?: FunctionalArea;
+    ugRequired?: EducationLevel;
+    pgRequired?: EducationLevel;
+    specificDegrees?: SpecificDegree[];
+    degreeSpecializations?: string[];
+    salaryNegotiable?: boolean;
+    noticePeriodPreference?: NoticePeriodPreference[];
+    isConfidential?: boolean;
+    referenceCode?: string;
+    additionalLocations?: string[];
+    accommodationProvided?: boolean;
+    walkInStartDate?: string;
+    walkInEndDate?: string;
+    walkInTime?: string;
+    walkInVenue?: string;
+    walkInContactPerson?: string;
+    walkInContactPhone?: string;
+    walkInInstructions?: string;
+    diversityTags?: string[];
+    visaSponsorshipAvailable?: boolean;
+    backgroundCheckRequired?: boolean;
+    isPwdFriendly?: boolean;
+    passportRequired?: boolean;
+    bondDetails?: string;
+    drivingLicenseRequired?: DrivingLicenseType;
+    ageMin?: number;
+    ageMax?: number;
+    genderPreference?: GenderPreference;
+    postingVisibility?: PostingVisibility;
+    applyMethod?: ApplyMethod;
+    externalApplyUrl?: string;
+    scheduledPublishAt?: string;
+    screeningQuestions?: ScreeningQuestionInput[];
 }
 
 interface JobSearchFilters {
@@ -85,6 +138,14 @@ interface JobSearchFilters {
     radiusKm?: number;
     page?: number;
     limit?: number;
+    // Enterprise filters
+    functionalArea?: FunctionalArea;
+    noticePeriodPreference?: NoticePeriodPreference[];
+    isPwdFriendly?: boolean;
+    visaSponsorshipAvailable?: boolean;
+    genderPreference?: GenderPreference;
+    diversityTags?: string[];
+    postingVisibility?: PostingVisibility;
 }
 
 export class JobService {
@@ -113,17 +174,47 @@ export class JobService {
             );
         }
 
+        // Extract screening questions (created separately)
+        const { screeningQuestions: sqInput, ...jobData } = data;
+
+        // Convert date strings to Date objects
+        const dateFields: Record<string, Date | undefined> = {};
+        if (jobData.walkInStartDate) dateFields.walkInStartDate = new Date(jobData.walkInStartDate);
+        if (jobData.walkInEndDate) dateFields.walkInEndDate = new Date(jobData.walkInEndDate);
+        if (jobData.scheduledPublishAt) dateFields.scheduledPublishAt = new Date(jobData.scheduledPublishAt);
+
+        // If scheduled for future, keep as DRAFT
+        const statusOverride = jobData.scheduledPublishAt ? { status: JobStatus.DRAFT } : {};
+
         const job = await prisma.jobPost.create({
             data: {
                 companyId: company.id,
-                ...data,
-                salaryMin: data.salaryMin ? Number(data.salaryMin) : undefined,
-                salaryMax: data.salaryMax ? Number(data.salaryMax) : undefined,
-                experienceMin: data.experienceMin ? Number(data.experienceMin) : 0,
-                experienceMax: data.experienceMax ? Number(data.experienceMax) : undefined,
-                isRemote: Boolean(data.isRemote),
+                ...jobData,
+                ...dateFields,
+                ...statusOverride,
+                salaryMin: jobData.salaryMin ? Number(jobData.salaryMin) : undefined,
+                salaryMax: jobData.salaryMax ? Number(jobData.salaryMax) : undefined,
+                experienceMin: jobData.experienceMin ? Number(jobData.experienceMin) : 0,
+                experienceMax: jobData.experienceMax ? Number(jobData.experienceMax) : undefined,
+                isRemote: Boolean(jobData.isRemote),
             }
         });
+
+        // Bulk-create screening questions
+        if (sqInput && sqInput.length > 0) {
+            await prisma.screeningQuestion.createMany({
+                data: sqInput.map((q, idx) => ({
+                    jobId: job.id,
+                    question: q.question,
+                    questionType: q.questionType || ScreeningQuestionType.TEXT,
+                    isRequired: q.isRequired ?? false,
+                    isDealBreaker: q.isDealBreaker ?? false,
+                    options: q.options || undefined,
+                    idealAnswer: q.idealAnswer,
+                    displayOrder: q.displayOrder ?? idx,
+                })),
+            });
+        }
 
         // INDEXING: Sync with Elasticsearch
         const jobForIndex = await prisma.jobPost.findUnique({
@@ -132,7 +223,7 @@ export class JobService {
         });
 
         if (jobForIndex) {
-            searchService.indexJob(jobForIndex).catch((err: any) => console.error('Failed to index job', err));
+            searchService.indexJob(jobForIndex).catch((err: any) => logger.error('Failed to index job', err));
         }
 
         // Trigger geocoding if location provided
@@ -146,7 +237,7 @@ export class JobService {
         try {
             const { matchingQueue } = await import('../jobs/matching.queue');
             await matchingQueue.add('match-candidates', { jobId: job.id });
-        } catch (err) { console.error('Failed to enqueue matching job', err); }
+        } catch (err) { logger.error('Failed to enqueue matching job', err); }
 
         // Publish Kafka event
         publishEvent(KafkaTopics.JOB_POSTED, job.id, { jobId: job.id, companyId: company.id, title: data.title });
@@ -154,7 +245,45 @@ export class JobService {
         // GA4: track job_posted
         trackEvent(getClientId(userId), { name: 'job_posted', params: { job_id: job.id, job_type: data.type } }).catch(() => {});
 
-        return job;
+        // Notify employer (email + in-app)
+        notificationService.notifyJobPosted(userId, data.title, job.id).catch(() => {});
+
+        // Sync to Cloud Talent for AI recommendations
+        if (jobForIndex) {
+            talentMatchingService.syncJobToTalent({
+                id: jobForIndex.id,
+                title: jobForIndex.title,
+                description: jobForIndex.description,
+                location: jobForIndex.location,
+                company: jobForIndex.company ? { id: jobForIndex.company.id, companyName: jobForIndex.company.companyName } : null,
+                skills: (jobForIndex as any).skillsRequired || [],
+                jobType: (jobForIndex as any).type || '',
+                workMode: (jobForIndex as any).workMode,
+                experienceLevel: (jobForIndex as any).experienceLevel,
+                industry: (jobForIndex as any).industry,
+                salaryMin: (jobForIndex as any).salaryMin ? Number((jobForIndex as any).salaryMin) : null,
+                salaryMax: (jobForIndex as any).salaryMax ? Number((jobForIndex as any).salaryMax) : null,
+                currency: (jobForIndex as any).currency,
+            }).catch(() => {});
+        }
+
+        // Build suggested candidate search filters from job requirements
+        const suggestedFilters = {
+            skills: data.skillsRequired || [],
+            location: data.location,
+            experienceMin: data.experienceMin,
+            experienceMax: data.experienceMax,
+            experienceLevel: data.experienceLevel,
+            educationRequired: data.educationRequired,
+            preferredWorkMode: data.workMode,
+            preferredJobType: data.type,
+            industry: data.industry,
+            department: data.department,
+            noticePeriod: data.noticePeriodPreference,
+            expectedSalaryMax: data.salaryMax ? Number(data.salaryMax) : undefined,
+        };
+
+        return { job, suggestedFilters };
     }
 
     /**
@@ -167,13 +296,27 @@ export class JobService {
                 company: {
                     select: {
                         companyName: true,
+                        companyType: true,
                         logo: true,
+                        tagline: true,
                         industry: true,
+                        subIndustry: true,
+                        companySize: true,
+                        employeeCount: true,
+                        foundedYear: true,
                         website: true,
+                        headquarters: true,
+                        city: true,
+                        state: true,
                         locations: true,
+                        description: true,
+                        isVerified: true,
                         userId: true,
                     }
-                }
+                },
+                screeningQuestions: {
+                    orderBy: { displayOrder: 'asc' },
+                },
             }
         });
 
@@ -202,7 +345,7 @@ export class JobService {
             || filters.workMode || filters.experienceLevel || filters.tags;
         if (hasSearchCriteria) {
             try {
-                const { hits, total } = await searchService.searchJobs(filters.keyword, {
+                const { hits, total, facets } = await searchService.searchJobs(filters.keyword, {
                     ...filters,
                     from: skip,
                     size: limit,
@@ -211,9 +354,10 @@ export class JobService {
                 return {
                     jobs: hits,
                     pagination: { total, page, limit, pages: Math.ceil(total / limit) },
+                    facets: facets || {},
                 };
             } catch (error) {
-                console.warn('Elasticsearch failed, falling back to database search', error);
+                logger.warn('Elasticsearch failed, falling back to database search', error);
             }
         }
 
@@ -252,7 +396,7 @@ export class JobService {
             where.educationRequired = filters.educationRequired;
         }
         if (filters.salaryMin) {
-            where.salaryMax = { gte: filters.salaryMin };
+            where.salaryMax = { ...where.salaryMax, gte: filters.salaryMin };
         }
         if (filters.salaryMax) {
             where.salaryMin = { ...where.salaryMin, lte: filters.salaryMax };
@@ -281,11 +425,38 @@ export class JobService {
         if (filters.tags && filters.tags.length > 0) {
             where.tags = { hasSome: filters.tags };
         }
+        // Enterprise filters (Prisma fallback)
+        if (filters.functionalArea) {
+            where.functionalArea = filters.functionalArea;
+        }
+        if (filters.noticePeriodPreference && filters.noticePeriodPreference.length > 0) {
+            where.noticePeriodPreference = { hasSome: filters.noticePeriodPreference };
+        }
+        if (filters.isPwdFriendly !== undefined) {
+            where.isPwdFriendly = filters.isPwdFriendly;
+        }
+        if (filters.visaSponsorshipAvailable !== undefined) {
+            where.visaSponsorshipAvailable = filters.visaSponsorshipAvailable;
+        }
+        if (filters.genderPreference) {
+            where.genderPreference = filters.genderPreference;
+        }
+        if (filters.diversityTags && filters.diversityTags.length > 0) {
+            where.diversityTags = { hasSome: filters.diversityTags };
+        }
+        // Filter out INTERNAL-only postings for non-employer searches
+        if (!filters.postingVisibility) {
+            where.postingVisibility = { in: ['PUBLIC', 'BOTH'] };
+        } else {
+            where.postingVisibility = filters.postingVisibility;
+        }
 
-        // Sort
+        // Sort — 'relevance' and 'distance' need ES; in DB fallback, default to newest
         let orderBy: any = { createdAt: 'desc' };
         if (filters.sortBy === 'salary') {
             orderBy = { salaryMax: 'desc' };
+        } else if (filters.sortBy === 'date') {
+            orderBy = { createdAt: 'desc' };
         }
 
         const [jobs, total] = await prisma.$transaction([
@@ -310,10 +481,10 @@ export class JobService {
     /**
      * Apply to a Job
      */
-    async applyToJob(userId: string, jobId: string, coverLetter?: string) {
+    async applyToJob(userId: string, jobId: string, coverLetter?: string, screeningAnswers?: ScreeningAnswerInput[]) {
         const candidate = await prisma.candidateProfile.findUnique({
             where: { userId },
-            select: { id: true }
+            select: { id: true, resume: true }
         });
 
         if (!candidate) {
@@ -338,9 +509,21 @@ export class JobService {
                 jobId,
                 candidateId: candidate.id,
                 coverLetter,
+                resumeSnapshot: candidate.resume || null,
                 status: ApplicationStatus.APPLIED
             }
         });
+
+        // Bulk-create screening answers
+        if (screeningAnswers && screeningAnswers.length > 0) {
+            await prisma.screeningAnswer.createMany({
+                data: screeningAnswers.map(a => ({
+                    applicationId: application.id,
+                    questionId: a.questionId,
+                    answer: a.answer,
+                })),
+            });
+        }
 
         // Publish Kafka event
         publishEvent(KafkaTopics.APPLICATION_SUBMITTED, application.id, {
@@ -353,7 +536,7 @@ export class JobService {
         // Notify employer about the new application
         const jobWithCompany = await prisma.jobPost.findUnique({
             where: { id: jobId },
-            select: { title: true, company: { select: { userId: true } } }
+            select: { title: true, company: { select: { userId: true, companyName: true } } }
         });
         if (jobWithCompany?.company?.userId) {
             const candidateUser = await prisma.user.findUnique({
@@ -364,6 +547,11 @@ export class JobService {
             notificationService.notifyNewApplication(
                 jobWithCompany.company.userId, candidateName, jobWithCompany.title, jobId, application.id
             ).catch(() => {});
+
+            // Confirm submission to candidate
+            notificationService.notifyApplicationSubmitted(
+                userId, jobWithCompany.title, jobWithCompany.company.companyName, jobId
+            ).catch(() => {});
         }
 
         return application;
@@ -372,7 +560,7 @@ export class JobService {
     /**
      * Get Applications for a Job (Employer)
      */
-    async getJobApplications(userId: string, jobId: string) {
+    async getJobApplications(userId: string, jobId: string, page: number = PAGINATION.DEFAULT_PAGE, limit: number = PAGINATION.DEFAULT_LIMIT, status?: ApplicationStatus) {
         const job = await prisma.jobPost.findFirst({
             where: { id: jobId, company: { userId } }
         });
@@ -381,9 +569,67 @@ export class JobService {
             throw new AppError('Job not found or access denied', 404);
         }
 
-        const applications = await prisma.jobApplication.findMany({
-            where: { jobId },
+        const cappedLimit = Math.min(limit, PAGINATION.MAX_LIMIT);
+        const skip = (page - 1) * cappedLimit;
+        const where = { jobId, ...(status ? { status } : {}) };
+
+        const [applications, total] = await prisma.$transaction([
+            prisma.jobApplication.findMany({
+                where,
+                include: {
+                    candidate: {
+                        include: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                    avatar: true
+                                }
+                            }
+                        }
+                    },
+                    screeningAnswers: {
+                        include: { question: true },
+                    },
+                },
+                orderBy: { appliedAt: 'desc' },
+                skip,
+                take: cappedLimit,
+            }),
+            prisma.jobApplication.count({ where }),
+        ]);
+
+        // Strip raw R2 URLs — employers must use the signed download endpoint
+        const items = applications.map(app => ({
+            ...app,
+            resumeSnapshot: app.resumeSnapshot ? true : null,
+            candidate: {
+                ...app.candidate,
+                resume: app.candidate.resume ? true : null,
+                generatedResumeUrl: app.candidate.generatedResumeUrl ? true : null,
+            },
+        }));
+
+        const totalPages = Math.ceil(total / cappedLimit) || 1;
+        return { items, total, page, limit: cappedLimit, totalPages, hasMore: page < totalPages };
+    }
+
+    /**
+     * Get Single Application by ID
+     */
+    async getApplicationById(userId: string, applicationId: string, userRole: Role) {
+        const application = await prisma.jobApplication.findUnique({
+            where: { id: applicationId },
             include: {
+                job: {
+                    include: {
+                        company: {
+                            select: { id: true, userId: true, companyName: true, logo: true },
+                        },
+                    },
+                },
                 candidate: {
                     include: {
                         user: {
@@ -392,16 +638,45 @@ export class JobService {
                                 firstName: true,
                                 lastName: true,
                                 email: true,
-                                avatar: true
-                            }
-                        }
-                    }
-                }
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+                screeningAnswers: {
+                    include: { question: true },
+                    orderBy: { question: { displayOrder: 'asc' } },
+                },
             },
-            orderBy: { appliedAt: 'desc' }
         });
 
-        return applications;
+        if (!application) {
+            throw new AppError('Application not found', 404);
+        }
+
+        // Authorization
+        const isAdmin = userRole === Role.ADMIN || userRole === Role.SUPER_ADMIN;
+        const isCandidate = application.candidate.userId === userId;
+        const isEmployer = application.job.company.userId === userId;
+
+        if (!isAdmin && !isCandidate && !isEmployer) {
+            throw new AppError('Not authorized to view this application', 403);
+        }
+
+        // Strip R2 URLs for non-candidate access
+        if (!isCandidate) {
+            return {
+                ...application,
+                resumeSnapshot: application.resumeSnapshot ? true : null,
+                candidate: {
+                    ...application.candidate,
+                    resume: application.candidate.resume ? true : null,
+                    generatedResumeUrl: application.candidate.generatedResumeUrl ? true : null,
+                },
+            };
+        }
+
+        return application;
     }
 
     /**
@@ -426,6 +701,9 @@ export class JobService {
             data: {
                 status,
                 ...(status === 'VIEWED' && !application.viewedAt ? { viewedAt: new Date() } : {}),
+                ...(status === 'SELECTED' ? { selectedAt: new Date() } : {}),
+                ...(status === 'OFFERED' ? { offeredAt: new Date() } : {}),
+                ...(status === 'HIRED' ? { hiredAt: new Date() } : {}),
             }
         });
 
@@ -434,21 +712,21 @@ export class JobService {
             applicationId, status, jobId: application.job.id, candidateId: application.candidateId,
         });
 
-        // Notify Candidate
+        // Notify Candidate (multi-channel: in_app, fcm, web_push, email, whatsapp)
         const appWithCandidate = await prisma.jobApplication.findUnique({
             where: { id: applicationId },
-            include: { candidate: { include: { user: true } }, job: { include: { company: true } } }
+            include: { candidate: true, job: { include: { company: true } } }
         });
 
-        if (appWithCandidate && appWithCandidate.candidate.user.email) {
-            // Lazy load to avoid circular dependency if any
-            import('./email.service').then(service => {
-                service.emailService.sendApplicationStatusUpdate(
-                    appWithCandidate.candidate.user.email,
+        if (appWithCandidate) {
+            import('./notification.service').then(({ notificationService }) => {
+                notificationService.notifyApplicationStatusChange(
+                    appWithCandidate.candidate.userId,
                     appWithCandidate.job.title,
                     appWithCandidate.job.company.companyName,
-                    status
-                ).catch((err: any) => console.error('Failed to send status email', err));
+                    status,
+                    appWithCandidate.job.id
+                ).catch((err: any) => logger.error('Failed to send status notification', err));
             });
         }
 
@@ -458,25 +736,35 @@ export class JobService {
     /**
      * Get Applied Jobs (Candidate)
      */
-    async getAppliedJobs(userId: string) {
+    async getAppliedJobs(userId: string, page: number = PAGINATION.DEFAULT_PAGE, limit: number = PAGINATION.DEFAULT_LIMIT, status?: ApplicationStatus) {
         const candidate = await prisma.candidateProfile.findUnique({ where: { userId } });
         if (!candidate) throw new AppError('Candidate profile not found', 404);
 
-        const applications = await prisma.jobApplication.findMany({
-            where: { candidateId: candidate.id },
-            include: {
-                job: {
-                    include: {
-                        company: {
-                            select: { companyName: true, logo: true, locations: true }
+        const cappedLimit = Math.min(limit, PAGINATION.MAX_LIMIT);
+        const skip = (page - 1) * cappedLimit;
+        const where = { candidateId: candidate.id, ...(status ? { status } : {}) };
+
+        const [items, total] = await prisma.$transaction([
+            prisma.jobApplication.findMany({
+                where,
+                include: {
+                    job: {
+                        include: {
+                            company: {
+                                select: { companyName: true, logo: true, locations: true }
+                            }
                         }
                     }
-                }
-            },
-            orderBy: { appliedAt: 'desc' }
-        });
+                },
+                orderBy: { appliedAt: 'desc' },
+                skip,
+                take: cappedLimit,
+            }),
+            prisma.jobApplication.count({ where }),
+        ]);
 
-        return applications;
+        const totalPages = Math.ceil(total / cappedLimit) || 1;
+        return { items, total, page, limit: cappedLimit, totalPages, hasMore: page < totalPages };
     }
 
     /**
@@ -508,22 +796,32 @@ export class JobService {
     /**
      * Get Saved Jobs (Candidate)
      */
-    async getSavedJobs(userId: string) {
-        const saved = await prisma.savedJob.findMany({
-            where: { userId },
-            include: {
-                job: {
-                    include: {
-                        company: {
-                            select: { companyName: true, logo: true, locations: true }
+    async getSavedJobs(userId: string, page: number = PAGINATION.DEFAULT_PAGE, limit: number = PAGINATION.DEFAULT_LIMIT) {
+        const cappedLimit = Math.min(limit, PAGINATION.MAX_LIMIT);
+        const skip = (page - 1) * cappedLimit;
+
+        const [saved, total] = await prisma.$transaction([
+            prisma.savedJob.findMany({
+                where: { userId },
+                include: {
+                    job: {
+                        include: {
+                            company: {
+                                select: { companyName: true, logo: true, locations: true }
+                            }
                         }
                     }
-                }
-            },
-            orderBy: { createdAt: 'desc' }
-        });
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: cappedLimit,
+            }),
+            prisma.savedJob.count({ where: { userId } }),
+        ]);
 
-        return saved;
+        const items = saved.map(s => ({ ...s.job, savedAt: s.createdAt, savedJobId: s.id }));
+        const totalPages = Math.ceil(total / cappedLimit) || 1;
+        return { items, total, page, limit: cappedLimit, totalPages, hasMore: page < totalPages };
     }
 
     /**
@@ -548,17 +846,20 @@ export class JobService {
             data: { status: ApplicationStatus.WITHDRAWN },
         });
 
-        // Notify employer
+        // Notify employer about withdrawal
         try {
             const { notificationService } = await import('./notification.service');
-            await notificationService.send({
-                userId: application.job.company.userId,
-                title: 'Application Withdrawn',
-                message: `A candidate has withdrawn their application for "${application.job.title}".`,
-                type: 'INFO',
-                category: 'application_update',
-                channels: ['in_app', 'email'],
+            const candidateUser = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { firstName: true, lastName: true },
             });
+            const candidateName = [candidateUser?.firstName, candidateUser?.lastName].filter(Boolean).join(' ') || 'A candidate';
+            await notificationService.notifyApplicationWithdrawn(
+                application.job.company.userId,
+                candidateName,
+                application.job.title,
+                application.jobId
+            );
         } catch (e) { /* non-critical */ }
 
         publishEvent(KafkaTopics.APPLICATION_STATUS_CHANGED, applicationId, {
@@ -576,19 +877,19 @@ export class JobService {
         if (!company) throw new AppError('Company profile not found', 404);
 
         const page = filters.page || PAGINATION.DEFAULT_PAGE;
-        const limit = filters.limit || PAGINATION.DEFAULT_LIMIT;
-        const skip = (page - 1) * limit;
+        const cappedLimit = Math.min(filters.limit || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT);
+        const skip = (page - 1) * cappedLimit;
         const where: any = { companyId: company.id };
         if (filters.status) where.status = filters.status;
 
         const [jobs, total] = await prisma.$transaction([
             prisma.jobPost.findMany({
                 where, include: { _count: { select: { applications: true } } },
-                orderBy: { createdAt: 'desc' }, skip, take: limit,
+                orderBy: { createdAt: 'desc' }, skip, take: cappedLimit,
             }),
             prisma.jobPost.count({ where }),
         ]);
-        return { jobs, pagination: { total, page, limit, pages: Math.ceil(total / limit) } };
+        return { jobs, pagination: { total, page, limit: cappedLimit, pages: Math.ceil(total / cappedLimit) } };
     }
 
     /**
@@ -598,14 +899,41 @@ export class JobService {
         const job = await prisma.jobPost.findFirst({ where: { id: jobId, company: { userId } } });
         if (!job) throw new AppError('Job not found or access denied', 404);
 
-        const updated = await prisma.jobPost.update({ where: { id: jobId }, data });
+        // Extract screening questions for separate handling
+        const { screeningQuestions: sqInput, ...updateData } = data;
+
+        // Convert date strings to Date objects
+        if (updateData.walkInStartDate) updateData.walkInStartDate = new Date(updateData.walkInStartDate);
+        if (updateData.walkInEndDate) updateData.walkInEndDate = new Date(updateData.walkInEndDate);
+        if (updateData.scheduledPublishAt) updateData.scheduledPublishAt = new Date(updateData.scheduledPublishAt);
+
+        const updated = await prisma.jobPost.update({ where: { id: jobId }, data: updateData });
+
+        // Replace screening questions if provided (delete all + recreate)
+        if (sqInput !== undefined) {
+            await prisma.screeningQuestion.deleteMany({ where: { jobId } });
+            if (sqInput.length > 0) {
+                await prisma.screeningQuestion.createMany({
+                    data: sqInput.map((q: ScreeningQuestionInput, idx: number) => ({
+                        jobId,
+                        question: q.question,
+                        questionType: q.questionType || ScreeningQuestionType.TEXT,
+                        isRequired: q.isRequired ?? false,
+                        isDealBreaker: q.isDealBreaker ?? false,
+                        options: q.options || undefined,
+                        idealAnswer: q.idealAnswer,
+                        displayOrder: q.displayOrder ?? idx,
+                    })),
+                });
+            }
+        }
 
         // Re-index in ES
         const jobForIndex = await prisma.jobPost.findUnique({
             where: { id: jobId }, include: { company: { select: { id: true, companyName: true, logo: true, industry: true, companyType: true, companySize: true, isVerified: true } } }
         });
         if (jobForIndex) {
-            searchService.indexJob(jobForIndex).catch(err => console.error('Failed to re-index job', err));
+            searchService.indexJob(jobForIndex).catch(err => logger.error('Failed to re-index job', err));
         }
 
         // Trigger geocoding if location changed
@@ -617,6 +945,25 @@ export class JobService {
 
         publishEvent(KafkaTopics.JOB_UPDATED, jobId, { jobId, userId });
 
+        // Re-sync to Cloud Talent
+        if (jobForIndex) {
+            talentMatchingService.syncJobToTalent({
+                id: jobForIndex.id,
+                title: jobForIndex.title,
+                description: jobForIndex.description,
+                location: jobForIndex.location,
+                company: jobForIndex.company ? { id: jobForIndex.company.id, companyName: jobForIndex.company.companyName } : null,
+                skills: (jobForIndex as any).skillsRequired || [],
+                jobType: (jobForIndex as any).type || '',
+                workMode: (jobForIndex as any).workMode,
+                experienceLevel: (jobForIndex as any).experienceLevel,
+                industry: (jobForIndex as any).industry,
+                salaryMin: (jobForIndex as any).salaryMin ? Number((jobForIndex as any).salaryMin) : null,
+                salaryMax: (jobForIndex as any).salaryMax ? Number((jobForIndex as any).salaryMax) : null,
+                currency: (jobForIndex as any).currency,
+            }).catch(() => {});
+        }
+
         return updated;
     }
 
@@ -624,7 +971,10 @@ export class JobService {
      * Deactivate/close a job
      */
     async deactivateJob(userId: string, jobId: string) {
-        const job = await prisma.jobPost.findFirst({ where: { id: jobId, company: { userId } } });
+        const job = await prisma.jobPost.findFirst({
+            where: { id: jobId, company: { userId } },
+            select: { id: true, title: true, company: { select: { companyName: true } } },
+        });
         if (!job) throw new AppError('Job not found or access denied', 404);
 
         const updated = await prisma.jobPost.update({
@@ -632,14 +982,299 @@ export class JobService {
         });
 
         // Remove from ES
-        searchService.deleteJob(jobId).catch(err => console.error('Failed to delete job from ES', err));
+        searchService.deleteJob(jobId).catch(err => logger.error('Failed to delete job from ES', err));
 
         publishEvent(KafkaTopics.JOB_CLOSED, jobId, { jobId, userId });
 
         // GA4: track job_closed
         trackEvent(getClientId(userId), { name: 'job_closed', params: { job_id: jobId } }).catch(() => {});
 
+        // Notify applicants (email + in-app)
+        notificationService.notifyJobClosed(jobId, job.title, job.company.companyName).catch(() => {});
+
+        // Remove from Cloud Talent index
+        talentMatchingService.deleteJobFromTalent(jobId).catch(() => {});
+
         return updated;
+    }
+
+    /**
+     * Clone/duplicate an existing job as DRAFT
+     */
+    async cloneJob(userId: string, jobId: string) {
+        const company = await prisma.companyProfile.findUnique({ where: { userId }, select: { id: true } });
+        if (!company) throw new AppError('Company profile not found', 404);
+
+        const original = await prisma.jobPost.findFirst({
+            where: { id: jobId, companyId: company.id },
+            include: { screeningQuestions: { orderBy: { displayOrder: 'asc' } } },
+        });
+        if (!original) throw new AppError('Job not found or access denied', 404);
+
+        const origQuestions = original.screeningQuestions;
+
+        const cloned = await prisma.jobPost.create({
+            data: {
+                companyId: company.id,
+                status: JobStatus.DRAFT,
+                title: `${original.title} (Copy)`,
+                description: original.description,
+                keyResponsibilities: original.keyResponsibilities,
+                requirements: original.requirements,
+                benefits: original.benefits,
+                type: original.type,
+                workMode: original.workMode,
+                shiftType: original.shiftType,
+                industry: original.industry,
+                department: original.department,
+                roleCategory: original.roleCategory,
+                experienceMin: original.experienceMin,
+                experienceMax: original.experienceMax,
+                experienceLevel: original.experienceLevel,
+                educationRequired: original.educationRequired,
+                preferredEducationField: original.preferredEducationField,
+                location: original.location,
+                isRemote: original.isRemote,
+                salaryMin: original.salaryMin,
+                salaryMax: original.salaryMax,
+                currency: original.currency,
+                salaryType: original.salaryType,
+                salaryDisclosed: original.salaryDisclosed,
+                skillsRequired: original.skillsRequired,
+                niceToHaveSkills: original.niceToHaveSkills,
+                certificationsRequired: original.certificationsRequired,
+                languagesRequired: original.languagesRequired !== null ? original.languagesRequired : undefined,
+                numberOfOpenings: original.numberOfOpenings,
+                urgencyLevel: original.urgencyLevel,
+                isFeatured: original.isFeatured,
+                isPremium: original.isPremium,
+                tags: original.tags,
+                jobPerks: original.jobPerks,
+                travelRequirementPercent: original.travelRequirementPercent,
+                relocationAssistance: original.relocationAssistance,
+                interviewProcess: original.interviewProcess,
+                isWalkIn: original.isWalkIn,
+                walkInDetails: original.walkInDetails !== null ? original.walkInDetails : undefined,
+                contactPerson: original.contactPerson,
+                contactEmail: original.contactEmail,
+                // Enterprise fields
+                functionalArea: original.functionalArea,
+                ugRequired: original.ugRequired,
+                pgRequired: original.pgRequired,
+                specificDegrees: original.specificDegrees,
+                degreeSpecializations: original.degreeSpecializations,
+                salaryNegotiable: original.salaryNegotiable,
+                noticePeriodPreference: original.noticePeriodPreference,
+                isConfidential: original.isConfidential,
+                referenceCode: original.referenceCode,
+                additionalLocations: original.additionalLocations,
+                accommodationProvided: original.accommodationProvided,
+                diversityTags: original.diversityTags,
+                visaSponsorshipAvailable: original.visaSponsorshipAvailable,
+                backgroundCheckRequired: original.backgroundCheckRequired,
+                isPwdFriendly: original.isPwdFriendly,
+                passportRequired: original.passportRequired,
+                bondDetails: original.bondDetails,
+                drivingLicenseRequired: original.drivingLicenseRequired,
+                ageMin: original.ageMin,
+                ageMax: original.ageMax,
+                genderPreference: original.genderPreference,
+                postingVisibility: original.postingVisibility,
+                applyMethod: original.applyMethod,
+                externalApplyUrl: original.externalApplyUrl,
+            },
+        });
+
+        // Clone screening questions
+        if (origQuestions.length > 0) {
+            await prisma.screeningQuestion.createMany({
+                data: origQuestions.map(q => ({
+                    jobId: cloned.id,
+                    question: q.question,
+                    questionType: q.questionType,
+                    isRequired: q.isRequired,
+                    isDealBreaker: q.isDealBreaker,
+                    options: q.options || undefined,
+                    idealAnswer: q.idealAnswer,
+                    displayOrder: q.displayOrder,
+                })),
+            });
+        }
+
+        return cloned;
+    }
+
+    /**
+     * Employer shortlists a candidate for a specific job
+     */
+    async shortlistCandidateForJob(employerUserId: string, candidateProfileId: string, jobId: string) {
+        const job = await prisma.jobPost.findFirst({
+            where: { id: jobId, company: { userId: employerUserId } },
+            include: { company: { select: { companyName: true, userId: true } } },
+        });
+        if (!job) throw new AppError('Job not found or access denied', 404);
+
+        const candidate = await prisma.candidateProfile.findUnique({
+            where: { id: candidateProfileId },
+            select: { id: true, userId: true },
+        });
+        if (!candidate) throw new AppError('Candidate not found', 404);
+
+        const existing = await prisma.jobApplication.findUnique({
+            where: { jobId_candidateId: { jobId, candidateId: candidateProfileId } },
+        });
+
+        let application;
+        if (existing) {
+            if (['SHORTLISTED', 'SELECTED', 'INTERVIEW_SCHEDULED', 'OFFERED', 'HIRED'].includes(existing.status)) {
+                throw new AppError(`Candidate is already ${existing.status.toLowerCase().replace('_', ' ')} for this job`, 400);
+            }
+            application = await prisma.jobApplication.update({
+                where: { id: existing.id },
+                data: { status: ApplicationStatus.SHORTLISTED },
+            });
+        } else {
+            application = await prisma.jobApplication.create({
+                data: {
+                    jobId,
+                    candidateId: candidateProfileId,
+                    status: ApplicationStatus.SHORTLISTED,
+                    source: 'EMPLOYER_SHORTLISTED',
+                },
+            });
+        }
+
+        publishEvent(KafkaTopics.APPLICATION_STATUS_CHANGED, application.id, {
+            applicationId: application.id, status: 'SHORTLISTED', jobId, candidateId: candidateProfileId,
+        });
+
+        notificationService.notifyApplicationStatusChange(
+            candidate.userId, job.title, job.company.companyName, 'SHORTLISTED', jobId
+        ).catch((err: any) => logger.error('Failed to send shortlist notification', err));
+
+        return application;
+    }
+
+    /**
+     * Employer selects a candidate for a specific job
+     */
+    async selectCandidateForJob(employerUserId: string, candidateProfileId: string, jobId: string) {
+        const job = await prisma.jobPost.findFirst({
+            where: { id: jobId, company: { userId: employerUserId } },
+            include: { company: { select: { companyName: true, userId: true } } },
+        });
+        if (!job) throw new AppError('Job not found or access denied', 404);
+
+        const candidate = await prisma.candidateProfile.findUnique({
+            where: { id: candidateProfileId },
+            select: { id: true, userId: true },
+        });
+        if (!candidate) throw new AppError('Candidate not found', 404);
+
+        const existing = await prisma.jobApplication.findUnique({
+            where: { jobId_candidateId: { jobId, candidateId: candidateProfileId } },
+        });
+
+        let application;
+        if (existing) {
+            if (['SELECTED', 'INTERVIEW_SCHEDULED', 'OFFERED', 'HIRED'].includes(existing.status)) {
+                throw new AppError(`Candidate is already ${existing.status.toLowerCase().replace('_', ' ')} for this job`, 400);
+            }
+            application = await prisma.jobApplication.update({
+                where: { id: existing.id },
+                data: { status: ApplicationStatus.SELECTED, selectedAt: new Date() },
+            });
+        } else {
+            application = await prisma.jobApplication.create({
+                data: {
+                    jobId,
+                    candidateId: candidateProfileId,
+                    status: ApplicationStatus.SELECTED,
+                    selectedAt: new Date(),
+                    source: 'EMPLOYER_SELECTED',
+                },
+            });
+        }
+
+        publishEvent(KafkaTopics.APPLICATION_STATUS_CHANGED, application.id, {
+            applicationId: application.id, status: 'SELECTED', jobId, candidateId: candidateProfileId,
+        });
+
+        notificationService.notifyApplicationStatusChange(
+            candidate.userId, job.title, job.company.companyName, 'SELECTED', jobId
+        ).catch((err: any) => logger.error('Failed to send select notification', err));
+
+        return application;
+    }
+
+    /**
+     * Get all applications across employer's jobs with pagination and filters
+     */
+    async getAllEmployerApplications(employerUserId: string, filters: {
+        status?: ApplicationStatus;
+        jobId?: string;
+        candidateId?: string;
+        search?: string;
+        sortBy?: 'newest' | 'oldest' | 'matchScore';
+        page?: number;
+        limit?: number;
+    }) {
+        const company = await prisma.companyProfile.findUnique({ where: { userId: employerUserId }, select: { id: true } });
+        if (!company) throw new AppError('Company profile not found', 404);
+
+        const page = filters.page || PAGINATION.DEFAULT_PAGE;
+        const cappedLimit = Math.min(filters.limit || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT);
+        const skip = (page - 1) * cappedLimit;
+
+        const where: any = { job: { companyId: company.id } };
+        if (filters.status) where.status = filters.status;
+        if (filters.jobId) where.jobId = filters.jobId;
+        if (filters.candidateId) where.candidateId = filters.candidateId;
+        if (filters.search) {
+            where.candidate = {
+                user: {
+                    OR: [
+                        { firstName: { contains: filters.search, mode: 'insensitive' } },
+                        { lastName: { contains: filters.search, mode: 'insensitive' } },
+                        { email: { contains: filters.search, mode: 'insensitive' } },
+                    ],
+                },
+            };
+        }
+
+        const orderBy: any = filters.sortBy === 'oldest'
+            ? { appliedAt: 'asc' }
+            : filters.sortBy === 'matchScore'
+                ? { matchScore: 'desc' }
+                : { appliedAt: 'desc' };
+
+        const [applications, total] = await prisma.$transaction([
+            prisma.jobApplication.findMany({
+                where,
+                include: {
+                    job: { select: { id: true, title: true, location: true, status: true } },
+                    candidate: {
+                        include: {
+                            user: {
+                                select: {
+                                    id: true, firstName: true, lastName: true,
+                                    email: true, avatar: true,
+                                },
+                            },
+                        },
+                    },
+                },
+                orderBy,
+                skip,
+                take: cappedLimit,
+            }),
+            prisma.jobApplication.count({ where }),
+        ]);
+
+        return {
+            applications,
+            pagination: { total, page, limit: cappedLimit, pages: Math.ceil(total / cappedLimit) },
+        };
     }
 }
 

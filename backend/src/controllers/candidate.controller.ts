@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Role } from '@prisma/client';
 import { candidateService } from '../services/candidate.service';
 import { candidateAnalyticsService } from '../services/candidate-analytics.service';
 import { AppError } from '../middleware/error';
@@ -81,7 +82,10 @@ export const uploadResume = async (
             message: 'Resume uploaded successfully',
             data: {
                 resume: profile.resume,
-                resumeOriginalName: profile.resumeOriginalName
+                resumeOriginalName: profile.resumeOriginalName,
+                resumeSize: profile.resumeSize,
+                resumeMimeType: profile.resumeMimeType,
+                resumeUploadedAt: profile.resumeUploadedAt,
             },
         });
     } catch (error) {
@@ -145,6 +149,37 @@ export const removeAvatar = async (
 };
 
 /**
+ * Delete Resume (uploaded and/or generated)
+ */
+export const deleteResume = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        if (!req.user) {
+            throw new AppError('Not authorized', 401);
+        }
+
+        // Optional query param to specify which resume to delete: uploaded, generated, or both (default)
+        const resumeType = (req.query.type as 'uploaded' | 'generated' | 'both') || 'both';
+
+        if (!['uploaded', 'generated', 'both'].includes(resumeType)) {
+            throw new AppError('Invalid resume type. Must be: uploaded, generated, or both', 400);
+        }
+
+        await candidateService.deleteResume(req.user.id, resumeType);
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Resume deleted successfully',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * Get Profile Completeness (Candidate)
  */
 export const getProfileCompleteness = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -167,6 +202,19 @@ export const getDashboard = async (req: Request, res: Response, next: NextFuncti
 };
 
 /**
+ * Get resume generation readiness status
+ */
+export const getResumeReadiness = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+        const profile = await candidateService.getProfile(req.user.id);
+        const { resumeGenerator } = await import('../services/resume-generator.service');
+        const readiness = resumeGenerator.validateResumeReadiness(profile);
+        res.status(200).json({ status: 'success', data: readiness });
+    } catch (error) { next(error); }
+};
+
+/**
  * Generate Resume PDF from profile
  */
 export const generateResumePdf = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -174,27 +222,114 @@ export const generateResumePdf = async (req: Request, res: Response, next: NextF
         if (!req.user) throw new AppError('Not authorized', 401);
         const profile = await candidateService.getProfile(req.user.id);
         const { resumeGenerator } = await import('../services/resume-generator.service');
+
+        // Validate readiness
+        const readiness = resumeGenerator.validateResumeReadiness(profile);
+        if (!readiness.canGenerate) {
+            throw new AppError('Profile incomplete — add required fields before generating resume', 400, 'RESUME_NOT_READY');
+        }
+
         const resumeData = {
             fullName: `${profile.user.firstName || ''} ${profile.user.lastName || ''}`.trim(),
             email: profile.user.email,
             phone: profile.phone || '',
             location: profile.currentLocation || '',
+            headline: profile.headline || undefined,
             linkedin: profile.linkedinProfile || undefined,
             portfolio: profile.portfolioUrl || undefined,
+            github: profile.githubProfile || undefined,
             summary: profile.bio || undefined,
             experience: profile.experience ? (profile.experience as any[]).map(e => ({
-                title: e.role, company: e.company, startDate: e.startDate, endDate: e.endDate || 'Present',
+                title: e.role, company: e.company, location: e.location || '',
+                startDate: e.startDate, endDate: e.endDate || 'Present',
                 description: e.description || '',
+                highlights: e.keyAchievements?.length ? e.keyAchievements : undefined,
             })) : undefined,
             education: profile.education ? (profile.education as any[]).map(e => ({
-                institution: e.institution || e.college, degree: e.degree, year: e.year || '',
+                institution: e.institution || e.college, degree: e.degree,
+                field: e.field || '', year: e.year || e.endDate || '',
+                grade: e.grade || undefined,
             })) : undefined,
             skills: profile.skills.length > 0 ? profile.skills : undefined,
+            certifications: profile.certifications ? (profile.certifications as any[]).map(c => ({
+                name: c.name, issuer: c.issuer,
+                date: c.issueDate || '', credentialId: c.credentialId || undefined,
+                url: c.url || undefined,
+            })) : undefined,
+            projects: profile.projects ? (profile.projects as any[]).map(p => ({
+                name: p.name, description: p.description || '',
+                technologies: p.technologies || [], url: p.url || undefined,
+                role: p.role || undefined,
+            })) : undefined,
+            awards: profile.awards ? (profile.awards as any[]).map(a => ({
+                title: a.title, issuer: a.issuer || '',
+                date: a.date || '', description: a.description || undefined,
+            })) : undefined,
+            languages: profile.languageProficiency ? (profile.languageProficiency as any[]).map(l => ({
+                language: l.language, proficiency: l.proficiency,
+            })) : undefined,
         };
         const pdfBuffer = await resumeGenerator.generateResume(resumeData);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="resume-${profile.user.firstName || 'candidate'}.pdf"`);
-        res.send(pdfBuffer);
+
+        // Delete old generated resume from R2
+        const { uploadFileToR2, extractR2KeyFromUrl, deleteFileFromR2 } = await import('../services/storage.service');
+        if (profile.generatedResumeUrl) {
+            const oldKey = extractR2KeyFromUrl(profile.generatedResumeUrl as string);
+            if (oldKey) deleteFileFromR2(oldKey).catch(() => {});
+        }
+
+        // Save to R2
+        const filename = `resume-${profile.user.firstName || 'candidate'}-${Date.now()}.pdf`;
+        const { url } = await uploadFileToR2(pdfBuffer, filename, 'generated-resumes', 'application/pdf');
+
+        // Persist URL in profile
+        await prisma.candidateProfile.update({
+            where: { userId: req.user.id },
+            data: { generatedResumeUrl: url, generatedResumeAt: new Date() },
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: { url, generatedAt: new Date().toISOString() },
+        });
+    } catch (error) { next(error); }
+};
+
+/**
+ * Set generated resume as the active profile resume
+ */
+export const useGeneratedResume = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+
+        const profile = await prisma.candidateProfile.findUnique({ where: { userId: req.user.id } });
+        if (!profile?.generatedResumeUrl) {
+            throw new AppError('No generated resume found — generate one first', 400, 'NO_GENERATED_RESUME');
+        }
+
+        // Delete old uploaded resume from R2 (skip if it's the same as generated)
+        if (profile.resume && profile.resume !== profile.generatedResumeUrl) {
+            const { extractR2KeyFromUrl, deleteFileFromR2 } = await import('../services/storage.service');
+            const oldKey = extractR2KeyFromUrl(profile.resume);
+            if (oldKey) deleteFileFromR2(oldKey).catch(() => {});
+        }
+
+        await prisma.candidateProfile.update({
+            where: { userId: req.user.id },
+            data: {
+                resume: profile.generatedResumeUrl,
+                resumeOriginalName: 'Generated Resume.pdf',
+                resumeSize: null,
+                resumeMimeType: 'application/pdf',
+                resumeUploadedAt: new Date(),
+            },
+        });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Generated resume set as profile resume',
+            data: { resume: profile.generatedResumeUrl },
+        });
     } catch (error) { next(error); }
 };
 
@@ -418,6 +553,95 @@ export const getParsedResumeData = async (
             status: 'success',
             data: profile?.parsedResumeData || null,
         });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * GET /api/v1/candidates/:id/resume
+ * Secure resume download — returns a short-lived signed URL.
+ * Candidates can download their own; employers/admins who have a relationship can download others'.
+ */
+export const getResumeDownloadUrl = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        if (!req.user) throw new AppError('Not authorized', 401);
+
+        const candidateUserId = req.params.id as string;
+        const isSelf = req.user.id === candidateUserId;
+
+        // If not self, must be EMPLOYER or ADMIN
+        if (!isSelf && req.user.role !== Role.EMPLOYER && req.user.role !== Role.ADMIN && req.user.role !== Role.SUPER_ADMIN) {
+            throw new AppError('Not authorized to access this resume', 403);
+        }
+
+        // For employers, verify they have a relationship (received an application or saved the candidate)
+        if (!isSelf && req.user.role === Role.EMPLOYER) {
+            const company = await prisma.companyProfile.findUnique({
+                where: { userId: req.user.id },
+                select: { id: true },
+            });
+            if (!company) throw new AppError('Employer profile not found', 404);
+
+            const hasRelationship = await prisma.jobApplication.findFirst({
+                where: {
+                    candidate: { user: { id: candidateUserId } },
+                    job: { companyId: company.id },
+                },
+                select: { id: true },
+            });
+
+            const hasSaved = !hasRelationship ? await prisma.savedCandidate.findFirst({
+                where: {
+                    employerId: company.id,
+                    candidateId: candidateUserId,
+                },
+                select: { id: true },
+            }) : hasRelationship;
+
+            if (!hasSaved) {
+                throw new AppError('You must have an application or save this candidate before accessing their resume', 403);
+            }
+        }
+
+        // Determine which resume URL to use — query param `snapshot` for application resume
+        const applicationId = req.query.applicationId as string | undefined;
+        let resumeUrl: string | null = null;
+
+        if (applicationId) {
+            const application = await prisma.jobApplication.findUnique({
+                where: { id: applicationId },
+                select: { resumeSnapshot: true, candidate: { select: { resume: true } } },
+            });
+            resumeUrl = application?.resumeSnapshot || application?.candidate?.resume || null;
+        } else {
+            const profile = await prisma.candidateProfile.findFirst({
+                where: { userId: candidateUserId },
+                select: { resume: true },
+            });
+            resumeUrl = profile?.resume || null;
+        }
+
+        if (!resumeUrl) {
+            throw new AppError('No resume found', 404);
+        }
+
+        // Extract R2 key and generate signed URL
+        const { extractR2KeyFromUrl, getSignedDownloadUrl } = await import('../services/storage.service');
+        const key = extractR2KeyFromUrl(resumeUrl);
+
+        if (!key) {
+            // Fallback: if URL is not R2 (e.g. Cloudinary legacy), redirect directly
+            res.status(200).json({ status: 'success', data: { url: resumeUrl } });
+            return;
+        }
+
+        const signedUrl = await getSignedDownloadUrl(key, 300); // 5 minutes
+        res.status(200).json({ status: 'success', data: { url: signedUrl } });
     } catch (error) {
         next(error);
     }

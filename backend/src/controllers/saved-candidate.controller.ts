@@ -56,8 +56,6 @@ export const listSaved = async (
             limit
         );
 
-        const pg = result.pagination;
-
         // Flatten SavedCandidate → CandidateProfile shape for frontend
         const items = result.savedCandidates.map((sc: any) => ({
             ...(sc.candidate?.candidateProfile || {}),
@@ -68,6 +66,10 @@ export const listSaved = async (
                 lastName: sc.candidate?.lastName,
                 email: sc.candidate?.email,
                 avatar: sc.candidate?.avatar,
+                isEmailVerified: sc.candidate?.isEmailVerified ?? false,
+                isMobileVerified: sc.candidate?.isMobileVerified ?? false,
+                isWhatsappVerified: sc.candidate?.isWhatsappVerified ?? false,
+                lastActiveAt: sc.candidate?.lastActiveAt ?? null,
             },
             savedAt: sc.savedAt,
             notes: sc.notes,
@@ -77,11 +79,11 @@ export const listSaved = async (
             status: 'success',
             data: {
                 items,
-                total: pg.total,
-                page: pg.page,
-                limit: pg.limit,
-                totalPages: pg.pages,
-                hasMore: pg.page < pg.pages,
+                total: result.total,
+                page: result.page,
+                limit: result.limit,
+                totalPages: result.totalPages,
+                hasMore: result.hasMore,
             },
         });
     } catch (error) {

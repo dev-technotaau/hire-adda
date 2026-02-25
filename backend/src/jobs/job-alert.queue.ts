@@ -20,6 +20,8 @@ export const jobAlertQueue = new Queue(JOB_ALERT_QUEUE_NAME, {
 // Process job alerts every hour
 jobAlertQueue.add('process-alerts', {}, {
     repeat: { pattern: '0 * * * *' },
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
 }).catch(err => {
     logger.error('Failed to add repeatable job alert processing:', err);
 });

@@ -32,11 +32,13 @@ export interface CompanyProfile {
     tagline: string | null;
     logo: string | null;
     coverImage: string | null;
+    companyVideoUrl: string | null;
     industry: string | null;
     subIndustry: string | null;
     specialties: string[];
     companySize: string | null;
     employeeCount: number | null;
+    numberOfOffices: number | null;
     description: string | null;
     whyWorkForUs: string | null;
     website: string | null;
@@ -105,11 +107,13 @@ export interface UpdateCompanyRequest {
     specialties?: string[];
     companySize?: string;
     employeeCount?: number;
+    numberOfOffices?: number;
     description?: string;
     whyWorkForUs?: string;
     website?: string;
     careersPageUrl?: string;
     blogUrl?: string;
+    companyVideoUrl?: string;
     foundedYear?: number;
     parentCompany?: string;
     stockTicker?: string;
@@ -155,7 +159,10 @@ export interface UpdateCompanyRequest {
         emailMessages?: boolean;
         emailMarketing?: boolean;
         smsAlerts?: boolean;
-        pushNotifications?: boolean;
+        whatsappNotifications?: boolean;
+        inAppNotifications?: boolean;
+        fcmNotifications?: boolean;
+        webPushNotifications?: boolean;
         weeklyDigest?: boolean;
     };
     showCompany?: boolean;
@@ -217,6 +224,7 @@ export interface EmployerAnalytics {
         savedCandidates: number;
         hiringVelocity: number;
     };
+    previousPeriodSummary?: { totalJobsPosted: number; totalApplications: number; profileViews: number } | null;
     funnel: Record<string, number>;
     trends: Array<{
         period: string;
@@ -245,4 +253,18 @@ export interface EmployerAnalytics {
         status: string;
         date: string;
     }>;
+    dayOfWeekDistribution?: Array<{ day: string; count: number }>;
+    responseTimeDistribution?: Array<{ bucket: string; count: number }>;
+    sourceEffectiveness?: Array<{ source: string; total: number; interviews: number; offers: number; hires: number; interviewRate: number }>;
+    locationDistribution?: Array<{ location: string; count: number }>;
+    timeToHireDistribution?: Array<{ bucket: string; count: number }>;
+}
+
+export interface CompanyProfileCompleteness {
+    score: number;
+    sections: {
+        name: string;
+        completed: boolean;
+        weight: number;
+    }[];
 }
