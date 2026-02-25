@@ -66,3 +66,4 @@ export const connectKafka = async () => {
 };
 
 export { consumer, kafka, producer };
+

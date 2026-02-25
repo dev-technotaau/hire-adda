@@ -26,6 +26,7 @@ dist
 # Sensitive files
 cookies.txt
 *.pem
+!backend/certs/aiven-ca.pem
 
 # Logs
 npm-debug.log*
