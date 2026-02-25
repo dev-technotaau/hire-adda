@@ -6,7 +6,7 @@ const createJestConfig = nextJest({ dir: './' });
 const config: Config = {
     displayName: 'frontend',
     testEnvironment: 'jsdom',
-    setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
+    setupFilesAfterEnv: ['<rootDir>/src/test/setup.tsx'],
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
     },

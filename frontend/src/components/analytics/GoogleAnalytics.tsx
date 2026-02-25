@@ -7,29 +7,31 @@ import Cookies from 'js-cookie';
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export default function GoogleAnalytics({ nonce }: { nonce?: string }) {
-    const [consent, setConsent] = useState(false);
+  const [consent, setConsent] = useState(false);
 
-    useEffect(() => {
-        const raw = Cookies.get('tb_cookie_consent');
-        if (raw) {
-            try {
-                const prefs = JSON.parse(raw);
-                setConsent(!!prefs.analytics);
-            } catch { /* ignore */ }
-        }
-    }, []);
+  useEffect(() => {
+    const raw = Cookies.get('tb_cookie_consent');
+    if (raw) {
+      try {
+        const prefs = JSON.parse(raw);
+        queueMicrotask(() => setConsent(!!prefs.analytics));
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
 
-    if (!GA_ID || !consent) return null;
+  if (!GA_ID || !consent) return null;
 
-    return (
-        <>
-            <Script
-                src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-                strategy="afterInteractive"
-                nonce={nonce}
-            />
-            <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
-                {`
+  return (
+    <>
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+        strategy="afterInteractive"
+        nonce={nonce}
+      />
+      <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
+        {`
                     window.dataLayer = window.dataLayer || [];
                     function gtag(){dataLayer.push(arguments);}
                     gtag('js', new Date());
@@ -37,7 +39,7 @@ export default function GoogleAnalytics({ nonce }: { nonce?: string }) {
                         page_path: window.location.pathname,
                     });
                 `}
-            </Script>
-        </>
-    );
+      </Script>
+    </>
+  );
 }

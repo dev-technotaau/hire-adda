@@ -11,16 +11,16 @@ import 'dotenv/config';
 import { searchService } from '../services/search.service';
 
 async function main() {
-    console.log('Starting full reindex of all Elasticsearch indices...');
-    console.log('This will DELETE existing indices and recreate them with updated mappings.\n');
+  console.log('Starting full reindex of all Elasticsearch indices...');
+  console.log('This will DELETE existing indices and recreate them with updated mappings.\n');
 
-    await searchService.reindexAll();
+  await searchService.reindexAll();
 
-    console.log('\nReindex complete. Exiting.');
-    process.exit(0);
+  console.log('\nReindex complete. Exiting.');
+  process.exit(0);
 }
 
 main().catch((err) => {
-    console.error('Reindex failed:', err);
-    process.exit(1);
+  console.error('Reindex failed:', err);
+  process.exit(1);
 });

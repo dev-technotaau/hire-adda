@@ -2,16 +2,16 @@
  * Email template for admin notification when new verification request is submitted
  */
 export function verificationRequestReceivedEmailTemplate(
-    verificationType: string,
-    userName: string,
-    userRole: string,
-    companyInfo: string
+  verificationType: string,
+  userName: string,
+  userRole: string,
+  companyInfo: string
 ) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://talentbridge.com';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://talentbridge.com';
 
-    return {
-        subject: `New ${verificationType} Verification Request - Action Required`,
-        html: `
+  return {
+    subject: `New ${verificationType} Verification Request - Action Required`,
+    html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -71,7 +71,7 @@ export function verificationRequestReceivedEmailTemplate(
 </body>
 </html>
         `.trim(),
-        text: `
+    text: `
 New ${verificationType} Verification Request - Action Required
 
 A new verification request has been submitted and requires admin review.
@@ -91,5 +91,5 @@ Review at: ${appUrl}/admin/verifications
 Talent Bridge - Admin Notifications
 This is an automated notification. Do not reply to this email.
         `.trim(),
-    };
+  };
 }

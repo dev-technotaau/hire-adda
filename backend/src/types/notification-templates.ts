@@ -1,16 +1,16 @@
 export interface EmailTemplate {
-    subject: string;
-    html: string;
-    text: string;
+  subject: string;
+  html: string;
+  text: string;
 }
 
 export interface SmsTemplate {
-    text: string;
+  text: string;
 }
 
 export interface WhatsappTemplate {
-    templateName: string;
-    languageCode: string; // e.g., 'en_US'
-    components?: any[]; // WhatsApp specific component structure
-    text?: string; // Fallback or direct message
+  templateName: string;
+  languageCode: string; // e.g., 'en_US'
+  components?: any[]; // WhatsApp specific component structure
+  text?: string; // Fallback or direct message
 }

@@ -1,4 +1,5 @@
-import { v2 as cloudinary, UploadApiOptions, UploadApiResponse } from 'cloudinary';
+import type { UploadApiOptions, UploadApiResponse } from 'cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 import { env } from './env';
 
 // Configure Cloudinary

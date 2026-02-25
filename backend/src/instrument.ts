@@ -35,7 +35,17 @@ if (SENTRY_DSN) {
       }
       // Redact sensitive fields from request body
       if (event.request?.data && typeof event.request.data === 'object') {
-        const sensitive = ['password', 'newPassword', 'currentPassword', 'confirmPassword', 'token', 'secret', 'mfaCode', 'otp', 'refreshToken'];
+        const sensitive = [
+          'password',
+          'newPassword',
+          'currentPassword',
+          'confirmPassword',
+          'token',
+          'secret',
+          'mfaCode',
+          'otp',
+          'refreshToken',
+        ];
         for (const key of sensitive) {
           if (key in (event.request.data as Record<string, unknown>)) {
             (event.request.data as Record<string, unknown>)[key] = '[REDACTED]';

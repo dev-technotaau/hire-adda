@@ -152,7 +152,13 @@ const envSchema = z
 
     // OTP Configuration
     OTP_EXPIRY_MINUTES: z.string().default('10'),
-    OTP_LENGTH: z.string().default('6').refine((v) => { const n = parseInt(v, 10); return n >= 4 && n <= 8; }, 'OTP_LENGTH must be between 4 and 8'),
+    OTP_LENGTH: z
+      .string()
+      .default('6')
+      .refine((v) => {
+        const n = parseInt(v, 10);
+        return n >= 4 && n <= 8;
+      }, 'OTP_LENGTH must be between 4 and 8'),
     OTP_MAX_RESEND_ATTEMPTS: z.string().default('5'),
     OTP_RESEND_COOLDOWN_SECONDS: z.string().default('60'),
 
@@ -191,7 +197,10 @@ const envSchema = z
 
     // Super Admin
     SUPER_ADMIN_EMAIL: z.string().email('SUPER_ADMIN_EMAIL must be a valid email').optional(),
-    SUPER_ADMIN_PASSWORD: z.string().min(8, 'SUPER_ADMIN_PASSWORD must be at least 8 characters').optional(),
+    SUPER_ADMIN_PASSWORD: z
+      .string()
+      .min(8, 'SUPER_ADMIN_PASSWORD must be at least 8 characters')
+      .optional(),
 
     // OpenTelemetry
     OTEL_ENABLED: z.string().default('true'),
@@ -211,7 +220,10 @@ const envSchema = z
       .default('require'),
 
     // Field-Level Encryption (AES-256-GCM, 32-byte hex key)
-    FIELD_ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, 'FIELD_ENCRYPTION_KEY must be a 64-char hex string (32 bytes)').optional(),
+    FIELD_ENCRYPTION_KEY: z
+      .string()
+      .regex(/^[0-9a-fA-F]{64}$/, 'FIELD_ENCRYPTION_KEY must be a 64-char hex string (32 bytes)')
+      .optional(),
 
     // Centralized Log Aggregation
     LOG_AGGREGATION_URL: z.string().optional(),
@@ -243,7 +255,8 @@ const envSchema = z
         if (!parsed.project_id || !parsed.private_key || !parsed.client_email) {
           ctx.addIssue({
             code: 'custom',
-            message: 'FIREBASE_SERVICE_ACCOUNT JSON must contain project_id, private_key, and client_email',
+            message:
+              'FIREBASE_SERVICE_ACCOUNT JSON must contain project_id, private_key, and client_email',
             path: ['FIREBASE_SERVICE_ACCOUNT'],
           });
         }

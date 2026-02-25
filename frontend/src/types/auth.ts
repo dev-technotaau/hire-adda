@@ -1,105 +1,105 @@
 export type Role = 'CANDIDATE' | 'EMPLOYER' | 'ADMIN' | 'SUPER_ADMIN';
 
 export interface User {
-    id: string;
-    email: string;
-    role: Role;
-    firstName: string | null;
-    lastName: string | null;
-    avatar: string | null;
-    mobileNumber: string | null;
-    isMobileVerified: boolean;
-    isWhatsappVerified: boolean;
-    whatsappNumber?: string | null;
-    isActive: boolean;
-    isSuspended: boolean;
-    isEmailVerified: boolean;
-    mfaEnabled: boolean;
-    lastLoginAt: string | null;
-    lastActiveAt: string | null;
-    createdAt: string;
-    updatedAt: string;
+  id: string;
+  email: string;
+  role: Role;
+  firstName: string | null;
+  lastName: string | null;
+  avatar: string | null;
+  mobileNumber: string | null;
+  isMobileVerified: boolean;
+  isWhatsappVerified: boolean;
+  whatsappNumber?: string | null;
+  isActive: boolean;
+  isSuspended: boolean;
+  isEmailVerified: boolean;
+  mfaEnabled: boolean;
+  lastLoginAt: string | null;
+  lastActiveAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LoginRequest {
-    email: string;
-    password: string;
-    mfaCode?: string;
-    rememberMe?: boolean;
-    trustDevice?: boolean;
-    trustDeviceToken?: string;
+  email: string;
+  password: string;
+  mfaCode?: string;
+  rememberMe?: boolean;
+  trustDevice?: boolean;
+  trustDeviceToken?: string;
 }
 
 export interface RegisterRequest {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    role: 'CANDIDATE' | 'EMPLOYER';
-    mobileNumber?: string;
-    companyName?: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role: 'CANDIDATE' | 'EMPLOYER';
+  mobileNumber?: string;
+  companyName?: string;
 }
 
 export interface AuthResponse {
-    user: User;
-    accessToken: string;
-    refreshToken: string;
-    requireMfa?: boolean;
-    trustedDeviceToken?: string;
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+  requireMfa?: boolean;
+  trustedDeviceToken?: string;
 }
 
 export interface RegisterResponse {
-    user: { id: string; email: string; role: Role };
+  user: { id: string; email: string; role: Role };
 }
 
 export interface TokenPair {
-    accessToken: string;
-    refreshToken: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface ForgotPasswordRequest {
-    email: string;
+  email: string;
 }
 
 export interface ResetPasswordRequest {
-    token: string;
-    password: string;
-    confirmPassword: string;
+  token: string;
+  password: string;
+  confirmPassword: string;
 }
 
 export interface ChangePasswordRequest {
-    currentPassword: string;
-    newPassword: string;
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface VerifyEmailRequest {
-    token: string;
+  token: string;
 }
 
 export interface VerifyMobileRequest {
-    mobileNumber: string;
-    otp: string;
+  mobileNumber: string;
+  otp: string;
 }
 
 export interface MfaSetupResponse {
-    secret: string;
-    qrCodeUrl: string;
-    backupCodes: string[];
+  secret: string;
+  qrCodeUrl: string;
+  backupCodes: string[];
 }
 
 export interface MfaVerifyRequest {
-    token: string;
+  token: string;
 }
 
 export interface Session {
-    id: string;
-    userAgent: string | null;
-    ipAddress: string | null;
-    lastSeenAt: string;
-    isActive: boolean;
-    createdAt: string;
-    // Computed client-side
-    isCurrent?: boolean;
-    deviceInfo?: string | null;
-    lastActive?: string;
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  lastSeenAt: string;
+  isActive: boolean;
+  createdAt: string;
+  // Computed client-side
+  isCurrent?: boolean;
+  deviceInfo?: string | null;
+  lastActive?: string;
 }

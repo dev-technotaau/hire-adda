@@ -4,8 +4,16 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    Briefcase, MapPin, Eye, Users, Clock,
-    Plus, Pencil, Power, AlertCircle, MoreVertical,
+  Briefcase,
+  MapPin,
+  Eye,
+  Users,
+  Clock,
+  Plus,
+  Pencil,
+  Power,
+  AlertCircle,
+  MoreVertical,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -30,268 +38,298 @@ import type { ApiError } from '@/types/api';
 type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 
 const statusBadgeMap: Record<string, BadgeVariant> = {
-    OPEN: 'success',
-    CLOSED: 'neutral',
-    DRAFT: 'warning',
-    EXPIRED: 'error',
+  OPEN: 'success',
+  CLOSED: 'neutral',
+  DRAFT: 'warning',
+  EXPIRED: 'error',
 };
 
 const statusTabs = [
-    { key: 'ALL', label: 'All' },
-    ...Object.entries(JOB_STATUS_LABELS).map(([key, label]) => ({ key, label })),
+  { key: 'ALL', label: 'All' },
+  ...Object.entries(JOB_STATUS_LABELS).map(([key, label]) => ({ key, label })),
 ];
 
 export default function MyJobsPage() {
-    const queryClient = useQueryClient();
-    const [page, setPage] = useState(1);
-    const [statusFilter, setStatusFilter] = useState('ALL');
-    const [deactivateTarget, setDeactivateTarget] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [deactivateTarget, setDeactivateTarget] = useState<string | null>(null);
 
-    const serverStatus = statusFilter === 'ALL' ? undefined : statusFilter;
-    const { data, isLoading } = useQuery({
-        queryKey: [...QUERY_KEYS.JOBS.MY_JOBS, page, PAGINATION.JOBS_PER_PAGE, serverStatus],
-        queryFn: () => jobService.getMyJobs(page, PAGINATION.JOBS_PER_PAGE, serverStatus),
-    });
+  const serverStatus = statusFilter === 'ALL' ? undefined : statusFilter;
+  const { data, isLoading } = useQuery({
+    queryKey: [...QUERY_KEYS.JOBS.MY_JOBS, page, PAGINATION.JOBS_PER_PAGE, serverStatus],
+    queryFn: () => jobService.getMyJobs(page, PAGINATION.JOBS_PER_PAGE, serverStatus),
+  });
 
-    const deactivateMutation = useMutation({
-        mutationFn: (id: string) => jobService.deactivateJob(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS.MY_JOBS });
-            showToast.success('Job deactivated successfully');
-            setDeactivateTarget(null);
-        },
-        onError: (err) => {
-            const error = err as unknown as ApiError;
-            showToast.error(error.message || 'Failed to deactivate job');
-        },
-    });
+  const deactivateMutation = useMutation({
+    mutationFn: (id: string) => jobService.deactivateJob(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS.MY_JOBS });
+      showToast.success('Job deactivated successfully');
+      setDeactivateTarget(null);
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to deactivate job');
+    },
+  });
 
-    const jobs = data?.data?.items || [];
-    const pagination = data?.data;
+  const jobs = data?.data?.items || [];
+  const pagination = data?.data;
 
-    const handleDeactivate = () => {
-        if (!deactivateTarget) return;
-        deactivateMutation.mutate(deactivateTarget);
-    };
+  const handleDeactivate = () => {
+    if (!deactivateTarget) return;
+    deactivateMutation.mutate(deactivateTarget);
+  };
 
-    const handlePageChange = (newPage: number) => {
-        setPage(newPage);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-    return (
-        <DashboardLayout requiredRole={['EMPLOYER']}>
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-[var(--text)]">My Jobs</h1>
-                        <p className="mt-1 text-sm text-[var(--text-muted)]">
-                            Manage your posted job listings
-                        </p>
-                    </div>
-                    <Link href={ROUTES.EMPLOYER.POST_JOB}>
-                        <Button leftIcon={<Plus className="h-4 w-4" />}>
-                            Post New Job
-                        </Button>
-                    </Link>
-                </div>
+  return (
+    <DashboardLayout requiredRole={['EMPLOYER']}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--text)]">My Jobs</h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">Manage your posted job listings</p>
+          </div>
+          <Link href={ROUTES.EMPLOYER.POST_JOB}>
+            <Button leftIcon={<Plus className="h-4 w-4" />}>Post New Job</Button>
+          </Link>
+        </div>
 
-                {/* Status Tabs */}
-                <div className="overflow-x-auto">
-                    <Tabs
-                        tabs={statusTabs}
-                        activeTab={statusFilter}
-                        onChange={(key) => { setStatusFilter(key); setPage(1); }}
-                    />
-                </div>
+        {/* Status Tabs */}
+        <div className="overflow-x-auto">
+          <Tabs
+            tabs={statusTabs}
+            activeTab={statusFilter}
+            onChange={(key) => {
+              setStatusFilter(key);
+              setPage(1);
+            }}
+          />
+        </div>
 
-                {/* Jobs List */}
-                <div className="space-y-3">
-                    {isLoading ? (
-                        Array.from({ length: 5 }).map((_, i) => (
-                            <Card key={i}><Skeleton variant="card" /></Card>
-                        ))
-                    ) : jobs.length > 0 ? (
-                        jobs.map((job) => (
-                            <JobCard
-                                key={job.id}
-                                job={job}
-                                onDeactivate={() => setDeactivateTarget(job.id)}
-                            />
-                        ))
-                    ) : (
-                        <EmptyState
-                            icon={Briefcase}
-                            title={statusFilter === 'ALL' ? 'No jobs posted yet' : `No ${JOB_STATUS_LABELS[statusFilter] || statusFilter} jobs`}
-                            description="Post your first job to start receiving applications from top candidates."
-                            action={
-                                <Link href={ROUTES.EMPLOYER.POST_JOB}>
-                                    <Button size="sm" leftIcon={<Plus className="h-4 w-4" />}>Post a Job</Button>
-                                </Link>
-                            }
-                        />
-                    )}
-                </div>
+        {/* Jobs List */}
+        <div className="space-y-3">
+          {isLoading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <Card key={i}>
+                <Skeleton variant="card" />
+              </Card>
+            ))
+          ) : jobs.length > 0 ? (
+            jobs.map((job) => (
+              <JobCard key={job.id} job={job} onDeactivate={() => setDeactivateTarget(job.id)} />
+            ))
+          ) : (
+            <EmptyState
+              icon={Briefcase}
+              title={
+                statusFilter === 'ALL'
+                  ? 'No jobs posted yet'
+                  : `No ${JOB_STATUS_LABELS[statusFilter] || statusFilter} jobs`
+              }
+              description="Post your first job to start receiving applications from top candidates."
+              action={
+                <Link href={ROUTES.EMPLOYER.POST_JOB}>
+                  <Button size="sm" leftIcon={<Plus className="h-4 w-4" />}>
+                    Post a Job
+                  </Button>
+                </Link>
+              }
+            />
+          )}
+        </div>
 
-                {/* Pagination */}
-                {pagination && pagination.totalPages > 1 && (
-                    <Pagination
-                        currentPage={page}
-                        totalPages={pagination.totalPages}
-                        onPageChange={handlePageChange}
-                        totalItems={pagination.total}
-                        pageSize={pagination.limit}
-                    />
-                )}
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <Pagination
+            currentPage={page}
+            totalPages={pagination.totalPages}
+            onPageChange={handlePageChange}
+            totalItems={pagination.total}
+            pageSize={pagination.limit}
+          />
+        )}
 
-                {/* Deactivate Confirmation Modal */}
-                <Modal
-                    isOpen={!!deactivateTarget}
-                    onClose={() => setDeactivateTarget(null)}
-                    title="Deactivate Job"
-                    size="sm"
-                    footer={
-                        <div className="flex justify-end gap-3">
-                            <Button variant="outline" onClick={() => setDeactivateTarget(null)}>
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={handleDeactivate}
-                                isLoading={deactivateMutation.isPending}
-                            >
-                                Deactivate
-                            </Button>
-                        </div>
-                    }
-                >
-                    <div className="flex items-start gap-3">
-                        <AlertCircle className="h-5 w-5 shrink-0 text-[var(--warning)]" />
-                        <p className="text-sm text-[var(--text-secondary)]">
-                            Are you sure you want to deactivate this job? It will no longer be visible to candidates and no new applications will be accepted.
-                        </p>
-                    </div>
-                </Modal>
+        {/* Deactivate Confirmation Modal */}
+        <Modal
+          isOpen={!!deactivateTarget}
+          onClose={() => setDeactivateTarget(null)}
+          title="Deactivate Job"
+          size="sm"
+          footer={
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setDeactivateTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeactivate}
+                isLoading={deactivateMutation.isPending}
+              >
+                Deactivate
+              </Button>
             </div>
-        </DashboardLayout>
-    );
+          }
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 shrink-0 text-[var(--warning)]" />
+            <p className="text-sm text-[var(--text-secondary)]">
+              Are you sure you want to deactivate this job? It will no longer be visible to
+              candidates and no new applications will be accepted.
+            </p>
+          </div>
+        </Modal>
+      </div>
+    </DashboardLayout>
+  );
 }
 
 function JobCard({ job, onDeactivate }: { job: Job; onDeactivate: () => void }) {
-    const badgeVariant = statusBadgeMap[job.status] || 'neutral';
+  const badgeVariant = statusBadgeMap[job.status] || 'neutral';
 
-    const dropdownItems = [
-        {
-            label: 'View Details',
-            onClick: () => { window.location.href = ROUTES.EMPLOYER.JOB_DETAIL(job.id); },
-            icon: Eye,
-        },
-        {
-            label: 'Edit Job',
-            onClick: () => { window.location.href = ROUTES.EMPLOYER.JOB_EDIT(job.id); },
-            icon: Pencil,
-            disabled: job.status === 'CLOSED' || job.status === 'EXPIRED',
-        },
-        {
-            label: 'View Applications',
-            onClick: () => { window.location.href = ROUTES.EMPLOYER.JOB_APPLICATIONS(job.id); },
-            icon: Users,
-        },
-        { label: '', onClick: () => {}, separator: true },
-        {
-            label: 'Deactivate',
-            onClick: onDeactivate,
-            icon: Power,
-            destructive: true,
-            disabled: job.status !== 'OPEN',
-        },
-    ];
+  const dropdownItems = [
+    {
+      label: 'View Details',
+      onClick: () => {
+        window.location.href = ROUTES.EMPLOYER.JOB_DETAIL(job.id);
+      },
+      icon: Eye,
+    },
+    {
+      label: 'Edit Job',
+      onClick: () => {
+        window.location.href = ROUTES.EMPLOYER.JOB_EDIT(job.id);
+      },
+      icon: Pencil,
+      disabled: job.status === 'CLOSED' || job.status === 'EXPIRED',
+    },
+    {
+      label: 'View Applications',
+      onClick: () => {
+        window.location.href = ROUTES.EMPLOYER.JOB_APPLICATIONS(job.id);
+      },
+      icon: Users,
+    },
+    { label: '', onClick: () => {}, separator: true },
+    {
+      label: 'Deactivate',
+      onClick: onDeactivate,
+      icon: Power,
+      destructive: true,
+      disabled: job.status !== 'OPEN',
+    },
+  ];
 
-    return (
-        <Card className="hover:shadow-sm transition-shadow">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-start gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
-                            <Briefcase className="h-5 w-5 text-[var(--text-muted)]" />
-                        </div>
-                        <div className="min-w-0">
-                            <Link
-                                href={ROUTES.EMPLOYER.JOB_DETAIL(job.id)}
-                                className="font-medium text-[var(--text)] hover:text-primary transition-colors"
-                            >
-                                {job.title}
-                            </Link>
-                            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-                                {job.location && (
-                                    <span className="flex items-center gap-1">
-                                        <MapPin className="h-3 w-3" /> {job.location}
-                                    </span>
-                                )}
-                                <span className="flex items-center gap-1">
-                                    <Eye className="h-3 w-3" /> {job.views} views
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <Users className="h-3 w-3" /> {job._applicationCount ?? 0} applications
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3" /> Posted {formatRelativeDate(job.createdAt)}
-                                </span>
-                            </div>
-                            {(job.salaryMin || job.salaryMax) && (
-                                <p className="mt-1 text-xs text-[var(--text)]">
-                                    {(job.currency || 'INR').toUpperCase() === 'INR' && job.salaryType === 'ANNUAL'
-                                        ? formatSalaryAsLPA(job.salaryMin, job.salaryMax)
-                                        : formatSalaryRange(job.salaryMin, job.salaryMax, job.currency)}
-                                    {job.salaryNegotiable && <span className="ml-1 text-[var(--success)]">(Negotiable)</span>}
-                                </p>
-                            )}
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                                <Badge variant={badgeVariant} size="sm">
-                                    {JOB_STATUS_LABELS[job.status] || job.status}
-                                </Badge>
-                                {job.type && (
-                                    <Badge variant="info" size="sm">
-                                        {JOB_TYPE_LABELS[job.type] || job.type}
-                                    </Badge>
-                                )}
-                                {job.workMode && (
-                                    <Badge variant="neutral" size="sm">
-                                        {WORK_MODE_LABELS[job.workMode] || job.workMode}
-                                    </Badge>
-                                )}
-                                {job.isConfidential && <Badge variant="warning" size="sm">Confidential</Badge>}
-                                {job.isFeatured && <Badge variant="success" size="sm">Featured</Badge>}
-                                {job.scheduledPublishAt && job.status === 'DRAFT' && <Badge variant="info" size="sm">Scheduled</Badge>}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                    <Link href={ROUTES.EMPLOYER.JOB_DETAIL(job.id)}>
-                        <Button variant="outline" size="sm">View</Button>
-                    </Link>
-                    <Link href={ROUTES.EMPLOYER.JOB_EDIT(job.id)}>
-                        <Button variant="ghost" size="sm" disabled={job.status === 'CLOSED' || job.status === 'EXPIRED'}>
-                            Edit
-                        </Button>
-                    </Link>
-                    <Dropdown
-                        trigger={
-                            <button
-                                type="button"
-                                className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-                            >
-                                <MoreVertical className="h-4 w-4" />
-                            </button>
-                        }
-                        items={dropdownItems}
-                        align="right"
-                    />
-                </div>
+  return (
+    <Card className="transition-shadow hover:shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
+              <Briefcase className="h-5 w-5 text-[var(--text-muted)]" />
             </div>
-        </Card>
-    );
+            <div className="min-w-0">
+              <Link
+                href={ROUTES.EMPLOYER.JOB_DETAIL(job.id)}
+                className="hover:text-primary font-medium text-[var(--text)] transition-colors"
+              >
+                {job.title}
+              </Link>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+                {job.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> {job.location}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <Eye className="h-3 w-3" /> {job.views} views
+                </span>
+                <span className="flex items-center gap-1">
+                  <Users className="h-3 w-3" /> {job._applicationCount ?? 0} applications
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> Posted {formatRelativeDate(job.createdAt)}
+                </span>
+              </div>
+              {(job.salaryMin || job.salaryMax) && (
+                <p className="mt-1 text-xs text-[var(--text)]">
+                  {(job.currency || 'INR').toUpperCase() === 'INR' && job.salaryType === 'ANNUAL'
+                    ? formatSalaryAsLPA(job.salaryMin, job.salaryMax)
+                    : formatSalaryRange(job.salaryMin, job.salaryMax, job.currency)}
+                  {job.salaryNegotiable && (
+                    <span className="ml-1 text-[var(--success)]">(Negotiable)</span>
+                  )}
+                </p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <Badge variant={badgeVariant} size="sm">
+                  {JOB_STATUS_LABELS[job.status] || job.status}
+                </Badge>
+                {job.type && (
+                  <Badge variant="info" size="sm">
+                    {JOB_TYPE_LABELS[job.type] || job.type}
+                  </Badge>
+                )}
+                {job.workMode && (
+                  <Badge variant="neutral" size="sm">
+                    {WORK_MODE_LABELS[job.workMode] || job.workMode}
+                  </Badge>
+                )}
+                {job.isConfidential && (
+                  <Badge variant="warning" size="sm">
+                    Confidential
+                  </Badge>
+                )}
+                {job.isFeatured && (
+                  <Badge variant="success" size="sm">
+                    Featured
+                  </Badge>
+                )}
+                {job.scheduledPublishAt && job.status === 'DRAFT' && (
+                  <Badge variant="info" size="sm">
+                    Scheduled
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <Link href={ROUTES.EMPLOYER.JOB_DETAIL(job.id)}>
+            <Button variant="outline" size="sm">
+              View
+            </Button>
+          </Link>
+          <Link href={ROUTES.EMPLOYER.JOB_EDIT(job.id)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={job.status === 'CLOSED' || job.status === 'EXPIRED'}
+            >
+              Edit
+            </Button>
+          </Link>
+          <Dropdown
+            trigger={
+              <button
+                type="button"
+                className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            }
+            items={dropdownItems}
+            align="right"
+          />
+        </div>
+      </div>
+    </Card>
+  );
 }

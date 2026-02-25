@@ -2,10 +2,7 @@ import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import { validate } from '../validators/validate';
 import * as notificationController from '../controllers/notification.controller';
-import {
-    listNotificationsSchema,
-    markReadSchema,
-} from '../schemas/notification.schema';
+import { listNotificationsSchema, markReadSchema } from '../schemas/notification.schema';
 
 const router = Router();
 

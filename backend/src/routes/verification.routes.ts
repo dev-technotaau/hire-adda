@@ -5,7 +5,12 @@ import { restrictTo } from '../middleware/rbac';
 import * as verificationController from '../controllers/verification.controller';
 import { Role } from '@prisma/client';
 import { validate } from '../validators/validate';
-import { requestVerificationSchema, reviewVerificationSchema, escalateVerificationSchema, listVerificationsSchema } from '../schemas/verification.schema';
+import {
+  requestVerificationSchema,
+  reviewVerificationSchema,
+  escalateVerificationSchema,
+  listVerificationsSchema,
+} from '../schemas/verification.schema';
 import { audit } from '../middleware/audit';
 
 const router = Router();
@@ -13,19 +18,22 @@ const router = Router();
 // Configure Multer
 const storage = multer.memoryStorage();
 const ALLOWED_DOCUMENT_TYPES = [
-    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-    'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
 ];
 const upload = multer({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-    fileFilter: (_req, file, cb) => {
-        if (ALLOWED_DOCUMENT_TYPES.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error(`Invalid file type. Allowed: ${ALLOWED_DOCUMENT_TYPES.join(', ')}`));
-        }
-    },
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_DOCUMENT_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type. Allowed: ${ALLOWED_DOCUMENT_TYPES.join(', ')}`));
+    }
+  },
 });
 
 // Public: Employer response to employment verification (no auth required)
@@ -35,45 +43,78 @@ router.use(protect);
 
 // User: Request Verification
 router.post(
-    '/request',
-    upload.single('document'),
-    validate(requestVerificationSchema),
-    verificationController.requestVerification
+  '/request',
+  upload.single('document'),
+  validate(requestVerificationSchema),
+  verificationController.requestVerification
 );
 
 // Admin: Get Pending
 router.get(
-    '/pending',
-    restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
-    verificationController.getPendingVerifications
+  '/pending',
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  verificationController.getPendingVerifications
 );
 
 // Admin: Review Request
 router.post(
-    '/:id/review',
-    restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
-    validate(reviewVerificationSchema),
-    verificationController.reviewVerification
+  '/:id/review',
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  validate(reviewVerificationSchema),
+  verificationController.reviewVerification
 );
 
 // User: Get my verifications
 router.get('/mine', verificationController.getMyVerifications);
 
 // Admin: Get all verifications (not just pending)
-router.get('/all', restrictTo(Role.ADMIN, Role.SUPER_ADMIN), validate(listVerificationsSchema), verificationController.getAllVerifications);
+router.get(
+  '/all',
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  validate(listVerificationsSchema),
+  verificationController.getAllVerifications
+);
 
 // Admin: Verification stats
-router.get('/stats', restrictTo(Role.ADMIN, Role.SUPER_ADMIN), verificationController.getVerificationStats);
+router.get(
+  '/stats',
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  verificationController.getVerificationStats
+);
 
 // Admin: Escalate verification
-router.post('/:id/escalate', restrictTo(Role.ADMIN, Role.SUPER_ADMIN), validate(escalateVerificationSchema), audit('VERIFICATION_ESCALATE', 'Verification'), verificationController.escalateVerification);
+router.post(
+  '/:id/escalate',
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  validate(escalateVerificationSchema),
+  audit('VERIFICATION_ESCALATE', 'Verification'),
+  verificationController.escalateVerification
+);
 
 // Admin: Send employment verification contact email
-router.post('/:id/employment-contact', restrictTo(Role.ADMIN, Role.SUPER_ADMIN), audit('EMPLOYMENT_VERIFICATION_CONTACT', 'Verification'), verificationController.sendEmploymentContact);
+router.post(
+  '/:id/employment-contact',
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  audit('EMPLOYMENT_VERIFICATION_CONTACT', 'Verification'),
+  verificationController.sendEmploymentContact
+);
 
 // Admin: SLA & Approval Chain
-router.patch('/:id/sla', restrictTo(Role.ADMIN, Role.SUPER_ADMIN), verificationController.setSlaDeadline);
-router.post('/:id/approval-chain', restrictTo(Role.ADMIN, Role.SUPER_ADMIN), verificationController.setApprovalChain);
-router.post('/:id/approve-level', restrictTo(Role.ADMIN, Role.SUPER_ADMIN), audit('VERIFICATION_LEVEL_APPROVE', 'Verification'), verificationController.approveAtLevel);
+router.patch(
+  '/:id/sla',
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  verificationController.setSlaDeadline
+);
+router.post(
+  '/:id/approval-chain',
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  verificationController.setApprovalChain
+);
+router.post(
+  '/:id/approve-level',
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  audit('VERIFICATION_LEVEL_APPROVE', 'Verification'),
+  verificationController.approveAtLevel
+);
 
 export default router;

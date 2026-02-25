@@ -1,19 +1,19 @@
 interface EmailTemplate {
-    subject: string;
-    html: string;
+  subject: string;
+  html: string;
 }
 
 /**
  * Email template for new device login alerts.
  */
 export const newDeviceLoginEmail = (
-    name: string,
-    deviceName: string,
-    location: string,
-    time: string
+  name: string,
+  deviceName: string,
+  location: string,
+  time: string
 ): EmailTemplate => ({
-    subject: 'New Device Login Detected - Talent Bridge',
-    html: `
+  subject: 'New Device Login Detected - Talent Bridge',
+  html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #333;">New Device Login</h2>
             <p>Hi ${name},</p>

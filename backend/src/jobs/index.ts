@@ -28,24 +28,24 @@ import { weeklyDigestQueue } from './weekly-digest.queue';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const workers: Worker<any>[] = [
-    emailWorker,
-    smsWorker,
-    fcmWorker,
-    webPushWorker,
-    inAppWorker,
-    whatsappWorker,
-    webhookWorker,
-    matchingWorker,
-    geocodingWorker,
-    resumeParseWorker,
-    jobExpirationWorker,
-    tokenCleanupWorker,
-    jobAlertWorker,
-    dataExportWorker,
-    slaCheckWorker,
-    profileReminderWorker,
-    scheduledPublishWorker,
-    weeklyDigestWorker,
+  emailWorker,
+  smsWorker,
+  fcmWorker,
+  webPushWorker,
+  inAppWorker,
+  whatsappWorker,
+  webhookWorker,
+  matchingWorker,
+  geocodingWorker,
+  resumeParseWorker,
+  jobExpirationWorker,
+  tokenCleanupWorker,
+  jobAlertWorker,
+  dataExportWorker,
+  slaCheckWorker,
+  profileReminderWorker,
+  scheduledPublishWorker,
+  weeklyDigestWorker,
 ];
 
 /**
@@ -53,42 +53,42 @@ const workers: Worker<any>[] = [
  * This prevents duplicate repeatables when cron patterns or job names change.
  */
 async function cleanStaleRepeatableJobs(): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const repeatableQueues: Queue<any>[] = [
-        jobExpirationQueue,
-        tokenCleanupQueue,
-        slaCheckQueue,
-        jobAlertQueue,
-        profileReminderQueue,
-        scheduledPublishQueue,
-        weeklyDigestQueue,
-    ];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const repeatableQueues: Queue<any>[] = [
+    jobExpirationQueue,
+    tokenCleanupQueue,
+    slaCheckQueue,
+    jobAlertQueue,
+    profileReminderQueue,
+    scheduledPublishQueue,
+    weeklyDigestQueue,
+  ];
 
-    for (const queue of repeatableQueues) {
-        try {
-            const repeatableJobs = await queue.getRepeatableJobs();
-            for (const rj of repeatableJobs) {
-                await queue.removeRepeatableByKey(rj.key);
-                logger.debug(`Removed stale repeatable job: ${rj.key} from ${queue.name}`);
-            }
-            if (repeatableJobs.length > 0) {
-                logger.info(`Cleaned ${repeatableJobs.length} stale repeatable job(s) from ${queue.name}`);
-            }
-        } catch (error) {
-            logger.error(`Failed to clean repeatable jobs from ${queue.name}:`, error);
-        }
+  for (const queue of repeatableQueues) {
+    try {
+      const repeatableJobs = await queue.getRepeatableJobs();
+      for (const rj of repeatableJobs) {
+        await queue.removeRepeatableByKey(rj.key);
+        logger.debug(`Removed stale repeatable job: ${rj.key} from ${queue.name}`);
+      }
+      if (repeatableJobs.length > 0) {
+        logger.info(`Cleaned ${repeatableJobs.length} stale repeatable job(s) from ${queue.name}`);
+      }
+    } catch (error) {
+      logger.error(`Failed to clean repeatable jobs from ${queue.name}:`, error);
     }
+  }
 }
 
 export async function closeAllWorkers() {
-    await Promise.allSettled(workers.map((w) => w.close()));
-    logger.info('All BullMQ workers closed');
+  await Promise.allSettled(workers.map((w) => w.close()));
+  logger.info('All BullMQ workers closed');
 }
 
 // Clean stale repeatables on startup, then log initialization
 cleanStaleRepeatableJobs()
-    .then(() => logger.info(`Initialized ${workers.length} BullMQ workers (repeatable jobs cleaned)`))
-    .catch((err) => {
-        logger.error('Failed to clean stale repeatable jobs:', err);
-        logger.info(`Initialized ${workers.length} BullMQ workers`);
-    });
+  .then(() => logger.info(`Initialized ${workers.length} BullMQ workers (repeatable jobs cleaned)`))
+  .catch((err) => {
+    logger.error('Failed to clean stale repeatable jobs:', err);
+    logger.info(`Initialized ${workers.length} BullMQ workers`);
+  });

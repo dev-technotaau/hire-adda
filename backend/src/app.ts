@@ -155,7 +155,13 @@ const swaggerSetup = swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Talent Bridge API Docs',
 });
 if (env.NODE_ENV === 'production') {
-  app.use('/api-docs', protect, restrictTo(Role.ADMIN, Role.SUPER_ADMIN), swaggerUi.serve, swaggerSetup);
+  app.use(
+    '/api-docs',
+    protect,
+    restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+    swaggerUi.serve,
+    swaggerSetup
+  );
 } else {
   app.use('/api-docs', swaggerUi.serve, swaggerSetup);
 }
@@ -179,11 +185,22 @@ app.get('/api/csrf-token', (req: Request, res: Response) => {
 
 // Public config endpoints (Frontend fetches to stay in sync with backend env)
 import {
-  getOtpExpiryMinutes, getOtpLength, getOtpMaxResendAttempts, getOtpResendCooldown,
-  getPasswordMinLength, getPasswordMaxLength, getPasswordRequireUppercase,
-  getPasswordRequireLowercase, getPasswordRequireNumber, getPasswordRequireSpecial,
-  getMaxLoginAttempts, getAccountLockDuration, getSessionTimeout,
-  getPasswordResetExpiryHours, getPasswordResetMaxAttempts, getMaxSessionsPerUser,
+  getOtpExpiryMinutes,
+  getOtpLength,
+  getOtpMaxResendAttempts,
+  getOtpResendCooldown,
+  getPasswordMinLength,
+  getPasswordMaxLength,
+  getPasswordRequireUppercase,
+  getPasswordRequireLowercase,
+  getPasswordRequireNumber,
+  getPasswordRequireSpecial,
+  getMaxLoginAttempts,
+  getAccountLockDuration,
+  getSessionTimeout,
+  getPasswordResetExpiryHours,
+  getPasswordResetMaxAttempts,
+  getMaxSessionsPerUser,
 } from './config/env';
 
 app.get('/api/config/otp', (_req: Request, res: Response) => {

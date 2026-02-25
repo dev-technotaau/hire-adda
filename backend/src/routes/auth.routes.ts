@@ -10,29 +10,29 @@ import { verifyTurnstile } from '../middleware/turnstile';
 import { blockAdminSelfMfa } from '../middleware/require-mfa';
 import passport from 'passport';
 import {
-    registerSchema,
-    loginSchema,
-    verifyEmailSchema,
-    forgotPasswordSchema,
-    resetPasswordSchema,
-    initiateChangePasswordSchema,
-    confirmChangePasswordSchema,
-    refreshTokenSchema,
-    mfaVerifySchema,
-    mfaDisableSchema,
-    verifyMobileSchema,
-    resendMobileOtpSchema,
-    verifyWhatsappSchema,
-    verifyWhatsappOtpSchema,
-    initiateChangeEmailSchema,
-    confirmChangeEmailSchema,
-    initiateChangeMobileSchema,
-    confirmChangeMobileSchema,
-    changeWhatsappNumberSchema,
-    resendEmailVerificationSchema,
-    firebaseLoginSchema,
-    giveConsentSchema,
-    mfaRegenerateBackupSchema,
+  registerSchema,
+  loginSchema,
+  verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  initiateChangePasswordSchema,
+  confirmChangePasswordSchema,
+  refreshTokenSchema,
+  mfaVerifySchema,
+  mfaDisableSchema,
+  verifyMobileSchema,
+  resendMobileOtpSchema,
+  verifyWhatsappSchema,
+  verifyWhatsappOtpSchema,
+  initiateChangeEmailSchema,
+  confirmChangeEmailSchema,
+  initiateChangeMobileSchema,
+  confirmChangeMobileSchema,
+  changeWhatsappNumberSchema,
+  resendEmailVerificationSchema,
+  firebaseLoginSchema,
+  giveConsentSchema,
+  mfaRegenerateBackupSchema,
 } from '../schemas/auth.schema';
 
 const router = Router();
@@ -109,7 +109,12 @@ router.post('/verify-email', validate(verifyEmailSchema), authController.verifyE
  *     tags: [Auth]
  *     summary: Request password reset email
  */
-router.post('/forgot-password', verifyTurnstile, validate(forgotPasswordSchema), authController.forgotPassword);
+router.post(
+  '/forgot-password',
+  verifyTurnstile,
+  validate(forgotPasswordSchema),
+  authController.forgotPassword
+);
 
 /**
  * @openapi
@@ -160,8 +165,19 @@ router.get('/me', protect, authController.getMe);
  *     summary: Change password (authenticated)
  *     security: [{ bearerAuth: [] }]
  */
-router.post('/change-password/initiate', protect, validate(initiateChangePasswordSchema), authController.initiateChangePassword);
-router.post('/change-password/confirm', protect, validate(confirmChangePasswordSchema), audit('PASSWORD_CHANGE', 'User'), authController.confirmChangePassword);
+router.post(
+  '/change-password/initiate',
+  protect,
+  validate(initiateChangePasswordSchema),
+  authController.initiateChangePassword
+);
+router.post(
+  '/change-password/confirm',
+  protect,
+  validate(confirmChangePasswordSchema),
+  audit('PASSWORD_CHANGE', 'User'),
+  authController.confirmChangePassword
+);
 
 /**
  * @openapi
@@ -178,58 +194,100 @@ router.post('/logout-everywhere', protect, authController.logoutEverywhere);
 // ===============================
 
 router.post('/mfa/setup', protect, mfaLimiter, blockAdminSelfMfa, authController.mfaSetup);
-router.post('/mfa/enable', protect, mfaLimiter, blockAdminSelfMfa, validate(mfaVerifySchema), authController.mfaEnable);
-router.post('/mfa/disable', protect, mfaLimiter, blockAdminSelfMfa, validate(mfaDisableSchema), authController.mfaDisable);
-router.post('/mfa/backup-codes', protect, mfaLimiter, blockAdminSelfMfa, validate(mfaRegenerateBackupSchema), authController.mfaRegenerateBackup);
+router.post(
+  '/mfa/enable',
+  protect,
+  mfaLimiter,
+  blockAdminSelfMfa,
+  validate(mfaVerifySchema),
+  authController.mfaEnable
+);
+router.post(
+  '/mfa/disable',
+  protect,
+  mfaLimiter,
+  blockAdminSelfMfa,
+  validate(mfaDisableSchema),
+  authController.mfaDisable
+);
+router.post(
+  '/mfa/backup-codes',
+  protect,
+  mfaLimiter,
+  blockAdminSelfMfa,
+  validate(mfaRegenerateBackupSchema),
+  authController.mfaRegenerateBackup
+);
 router.get('/mfa/backup-codes/count', protect, authController.mfaBackupCodeCount);
 
+router.post('/verify-mobile', validate(verifyMobileSchema), authController.verifyMobile);
+
+router.post('/resend-mobile-otp', validate(resendMobileOtpSchema), authController.resendMobileOtp);
+
 router.post(
-    '/verify-mobile',
-    validate(verifyMobileSchema),
-    authController.verifyMobile
+  '/verify-whatsapp',
+  protect,
+  validate(verifyWhatsappSchema),
+  authController.verifyWhatsapp
 );
 
 router.post(
-    '/resend-mobile-otp',
-    validate(resendMobileOtpSchema),
-    authController.resendMobileOtp
-);
-
-router.post(
-    '/verify-whatsapp',
-    protect,
-    validate(verifyWhatsappSchema),
-    authController.verifyWhatsapp
-);
-
-router.post(
-    '/verify-whatsapp-otp',
-    protect,
-    validate(verifyWhatsappOtpSchema),
-    authController.confirmWhatsappOtp
+  '/verify-whatsapp-otp',
+  protect,
+  validate(verifyWhatsappOtpSchema),
+  authController.confirmWhatsappOtp
 );
 
 // Public — accepts { email } in body (no auth required for pre-login resend)
-router.post('/resend-email-verification', validate(resendEmailVerificationSchema), authController.resendEmailVerification);
+router.post(
+  '/resend-email-verification',
+  validate(resendEmailVerificationSchema),
+  authController.resendEmailVerification
+);
 
 // ===============================
 // Change Email (2-step)
 // ===============================
-router.post('/change-email/initiate', protect, validate(initiateChangeEmailSchema), authController.initiateChangeEmail);
-router.post('/change-email/confirm', protect, validate(confirmChangeEmailSchema), authController.confirmChangeEmail);
+router.post(
+  '/change-email/initiate',
+  protect,
+  validate(initiateChangeEmailSchema),
+  authController.initiateChangeEmail
+);
+router.post(
+  '/change-email/confirm',
+  protect,
+  validate(confirmChangeEmailSchema),
+  authController.confirmChangeEmail
+);
 router.post('/change-email/resend-otp', protect, authController.resendChangeEmailOtp);
 
 // ===============================
 // Change Mobile (2-step)
 // ===============================
-router.post('/change-mobile/initiate', protect, validate(initiateChangeMobileSchema), authController.initiateChangeMobile);
-router.post('/change-mobile/confirm', protect, validate(confirmChangeMobileSchema), authController.confirmChangeMobile);
+router.post(
+  '/change-mobile/initiate',
+  protect,
+  validate(initiateChangeMobileSchema),
+  authController.initiateChangeMobile
+);
+router.post(
+  '/change-mobile/confirm',
+  protect,
+  validate(confirmChangeMobileSchema),
+  authController.confirmChangeMobile
+);
 router.post('/change-mobile/resend-otp', protect, authController.resendChangeMobileOtp);
 
 // ===============================
 // Change/Remove WhatsApp Number
 // ===============================
-router.post('/change-whatsapp-number', protect, validate(changeWhatsappNumberSchema), authController.changeWhatsappNumber);
+router.post(
+  '/change-whatsapp-number',
+  protect,
+  validate(changeWhatsappNumberSchema),
+  authController.changeWhatsappNumber
+);
 router.delete('/whatsapp-number', protect, authController.removeWhatsappNumber);
 
 // ===============================
@@ -243,30 +301,35 @@ router.post('/firebase-login', validate(firebaseLoginSchema), firebaseAuthContro
 
 // Google (pass ?role=EMPLOYER to register as employer)
 router.get('/google', (req, res, next) => {
-    const role = req.query.role === 'EMPLOYER' ? 'EMPLOYER' : 'CANDIDATE';
-    passport.authenticate('google', { scope: ['profile', 'email'], state: role })(req, res, next);
+  const role = req.query.role === 'EMPLOYER' ? 'EMPLOYER' : 'CANDIDATE';
+  passport.authenticate('google', { scope: ['profile', 'email'], state: role })(req, res, next);
 });
 router.get(
-    '/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login', session: false }),
-    authController.socialCallback
+  '/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login', session: false }),
+  authController.socialCallback
 );
 
 // LinkedIn
 router.get('/linkedin', (req, res, next) => {
-    const state = crypto.randomBytes(16).toString('hex');
-    passport.authenticate('linkedin', { state })(req, res, next);
+  const state = crypto.randomBytes(16).toString('hex');
+  passport.authenticate('linkedin', { state })(req, res, next);
 });
 router.get(
-    '/linkedin/callback',
-    passport.authenticate('linkedin', { failureRedirect: '/login', session: false }),
-    authController.socialCallback
+  '/linkedin/callback',
+  passport.authenticate('linkedin', { failureRedirect: '/login', session: false }),
+  authController.socialCallback
 );
 
 // ===============================
 // Account Deletion (GDPR)
 // ===============================
-router.delete('/me', protect, audit('REQUEST_ACCOUNT_DELETION', 'User'), authController.requestAccountDeletion);
+router.delete(
+  '/me',
+  protect,
+  audit('REQUEST_ACCOUNT_DELETION', 'User'),
+  authController.requestAccountDeletion
+);
 
 // ===============================
 // Consent Management (GDPR)

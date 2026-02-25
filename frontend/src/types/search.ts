@@ -1,48 +1,48 @@
 export type SuggestionType = 'job_title' | 'skill' | 'company' | 'location';
 
 export interface AutocompleteResult {
-    text: string;
-    type: SuggestionType;
-    count?: number;
+  text: string;
+  type: SuggestionType;
+  count?: number;
 }
 
 export interface SuggestionItem {
-    text: string;
-    count: number;
+  text: string;
+  count: number;
 }
 
 export interface SearchHistoryItem {
-    query: string;
-    type: 'job' | 'candidate';
-    timestamp: number;
+  query: string;
+  type: 'job' | 'candidate';
+  timestamp: number;
 }
 
 export interface PopularSearch {
-    query: string;
-    count: number;
+  query: string;
+  count: number;
 }
 
 export interface FacetBucket {
-    key: string;
-    count: number;
+  key: string;
+  count: number;
 }
 
 export interface SearchFacets {
-    [field: string]: FacetBucket[];
+  [field: string]: FacetBucket[];
 }
 
 export interface SearchResultHighlight {
-    [field: string]: string[];
+  [field: string]: string[];
 }
 
 export interface JobSearchResult {
-    _score: number;
-    _highlight: SearchResultHighlight;
-    [key: string]: unknown;
+  _score: number;
+  _highlight: SearchResultHighlight;
+  [key: string]: unknown;
 }
 
 export interface CandidateSearchResult {
-    _score: number;
-    _highlight: SearchResultHighlight;
-    [key: string]: unknown;
+  _score: number;
+  _highlight: SearchResultHighlight;
+  [key: string]: unknown;
 }

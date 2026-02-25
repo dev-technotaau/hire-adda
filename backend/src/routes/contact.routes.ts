@@ -11,19 +11,34 @@ const router = Router();
 
 // Public: Submit a contact form message (rate-limited)
 router.post(
-    '/',
-    publicLimiter,
-    validate(submitContactSchema),
-    contactController.submitContactMessage
+  '/',
+  publicLimiter,
+  validate(submitContactSchema),
+  contactController.submitContactMessage
 );
 
 // Admin: List all contact messages
-router.get('/', protect, restrictTo(Role.ADMIN, Role.SUPER_ADMIN), contactController.listContactMessages);
+router.get(
+  '/',
+  protect,
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  contactController.listContactMessages
+);
 
 // Admin: Mark message as read
-router.patch('/:id/read', protect, restrictTo(Role.ADMIN, Role.SUPER_ADMIN), contactController.markContactMessageRead);
+router.patch(
+  '/:id/read',
+  protect,
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  contactController.markContactMessageRead
+);
 
 // Admin: Delete message
-router.delete('/:id', protect, restrictTo(Role.ADMIN, Role.SUPER_ADMIN), contactController.deleteContactMessage);
+router.delete(
+  '/:id',
+  protect,
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  contactController.deleteContactMessage
+);
 
 export default router;

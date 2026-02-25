@@ -10,7 +10,10 @@ const piiRedact = winston.format((info) => {
     str
       .replace(/password["'\s:=]+["']?[^\s,}"']+/gi, 'password=[REDACTED]')
       .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL_REDACTED]')
-      .replace(/\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g, '[PHONE_REDACTED]');
+      .replace(
+        /\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
+        '[PHONE_REDACTED]'
+      );
 
   if (typeof info.message === 'string') {
     info.message = redactString(info.message);
@@ -78,16 +81,18 @@ const logAggregationUrl = process.env.LOG_AGGREGATION_URL;
 if (logAggregationUrl) {
   try {
     const url = new URL(logAggregationUrl);
-    logger.add(new winston.transports.Http({
-      host: url.hostname,
-      port: parseInt(url.port) || (url.protocol === 'https:' ? 443 : 80),
-      path: url.pathname,
-      ssl: url.protocol === 'https:',
-      format: prodFormat,
-      headers: process.env.LOG_AGGREGATION_TOKEN
-        ? { Authorization: `Bearer ${process.env.LOG_AGGREGATION_TOKEN}` }
-        : undefined,
-    }));
+    logger.add(
+      new winston.transports.Http({
+        host: url.hostname,
+        port: parseInt(url.port) || (url.protocol === 'https:' ? 443 : 80),
+        path: url.pathname,
+        ssl: url.protocol === 'https:',
+        format: prodFormat,
+        headers: process.env.LOG_AGGREGATION_TOKEN
+          ? { Authorization: `Bearer ${process.env.LOG_AGGREGATION_TOKEN}` }
+          : undefined,
+      })
+    );
   } catch {
     // Invalid URL — skip
   }

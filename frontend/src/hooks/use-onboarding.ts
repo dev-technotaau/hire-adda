@@ -5,178 +5,184 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 const AUTOSAVE_DELAY = 3000; // 3 seconds debounce
 
 interface UseOnboardingOptions<T> {
-    storageKey: string;
-    totalSteps: number;
-    initialData: T;
-    onComplete?: (data: T) => void;
+  storageKey: string;
+  totalSteps: number;
+  initialData: T;
+  onComplete?: (data: T) => void;
 }
 
 interface UseOnboardingReturn<T> {
-    step: number;
-    setStep: (step: number) => void;
-    data: T;
-    updateData: (partial: Partial<T>) => void;
-    nextStep: () => void;
-    prevStep: () => void;
-    goToStep: (step: number) => void;
-    isFirstStep: boolean;
-    isLastStep: boolean;
-    progress: number;
-    skipOnboarding: () => void;
-    isDirty: boolean;
-    clearSavedData: () => void;
+  step: number;
+  setStep: (step: number) => void;
+  data: T;
+  updateData: (partial: Partial<T>) => void;
+  nextStep: () => void;
+  prevStep: () => void;
+  goToStep: (step: number) => void;
+  isFirstStep: boolean;
+  isLastStep: boolean;
+  progress: number;
+  skipOnboarding: () => void;
+  isDirty: boolean;
+  clearSavedData: () => void;
 }
 
 export function useOnboarding<T extends Record<string, unknown>>({
-    storageKey,
-    totalSteps,
-    initialData,
-    onComplete,
+  storageKey,
+  totalSteps,
+  initialData,
+  onComplete,
 }: UseOnboardingOptions<T>): UseOnboardingReturn<T> {
-    const [step, setStep] = useState(0);
-    const [data, setData] = useState<T>(initialData);
-    const [isDirty, setIsDirty] = useState(false);
-    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-    const initialLoadRef = useRef(true);
+  const [step, setStep] = useState(0);
+  const [data, setData] = useState<T>(initialData);
+  const [isDirty, setIsDirty] = useState(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const initialLoadRef = useRef(true);
 
-    // Load saved data from localStorage on mount
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem(storageKey);
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed.data) setData(parsed.data);
-                if (typeof parsed.step === 'number') setStep(parsed.step);
-            }
-        } catch {
-            // Ignore parse errors
-        }
-        initialLoadRef.current = false;
-    }, [storageKey]);
+  // Load saved data from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        queueMicrotask(() => {
+          if (parsed.data) setData(parsed.data);
+          if (typeof parsed.step === 'number') setStep(parsed.step);
+        });
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    initialLoadRef.current = false;
+  }, [storageKey]);
 
-    // Auto-save to localStorage with debounce
-    useEffect(() => {
-        if (initialLoadRef.current) return;
+  // Auto-save to localStorage with debounce
+  useEffect(() => {
+    if (initialLoadRef.current) return;
 
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
-        saveTimeoutRef.current = setTimeout(() => {
-            try {
-                localStorage.setItem(storageKey, JSON.stringify({ data, step }));
-            } catch {
-                // Storage full or unavailable
-            }
-        }, AUTOSAVE_DELAY);
+    saveTimeoutRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify({ data, step }));
+      } catch {
+        // Storage full or unavailable
+      }
+    }, AUTOSAVE_DELAY);
 
-        return () => {
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        };
-    }, [data, step, storageKey]);
-
-    const updateData = useCallback((partial: Partial<T>) => {
-        setData(prev => ({ ...prev, ...partial }));
-        setIsDirty(true);
-    }, []);
-
-    const nextStep = useCallback(() => {
-        setStep(prev => Math.min(prev + 1, totalSteps - 1));
-    }, [totalSteps]);
-
-    const prevStep = useCallback(() => {
-        setStep(prev => Math.max(prev - 1, 0));
-    }, []);
-
-    const goToStep = useCallback((target: number) => {
-        if (target >= 0 && target < totalSteps) {
-            setStep(target);
-        }
-    }, [totalSteps]);
-
-    const skipOnboarding = useCallback(() => {
-        try {
-            localStorage.setItem(`${storageKey}_skipped`, 'true');
-            localStorage.removeItem(storageKey);
-        } catch {
-            // Ignore
-        }
-        onComplete?.(data);
-    }, [storageKey, onComplete, data]);
-
-    const clearSavedData = useCallback(() => {
-        try {
-            localStorage.removeItem(storageKey);
-            localStorage.removeItem(`${storageKey}_skipped`);
-        } catch {
-            // Ignore
-        }
-    }, [storageKey]);
-
-    // Keyboard navigation
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Don't handle if user is typing in an input
-            const target = e.target as HTMLElement;
-            const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
-
-            if (e.key === 'Escape') {
-                prevStep();
-            }
-
-            // Ctrl+S to trigger save (prevent default browser save)
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                try {
-                    localStorage.setItem(storageKey, JSON.stringify({ data, step }));
-                } catch {
-                    // Ignore
-                }
-            }
-
-            // Enter on non-input to go next
-            if (e.key === 'Enter' && !isInput && !e.shiftKey) {
-                e.preventDefault();
-                nextStep();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [step, data, prevStep, nextStep, storageKey]);
-
-    const progress = totalSteps > 1 ? Math.round((step / (totalSteps - 1)) * 100) : 0;
-
-    return {
-        step,
-        setStep,
-        data,
-        updateData,
-        nextStep,
-        prevStep,
-        goToStep,
-        isFirstStep: step === 0,
-        isLastStep: step === totalSteps - 1,
-        progress,
-        skipOnboarding,
-        isDirty,
-        clearSavedData,
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
+  }, [data, step, storageKey]);
+
+  const updateData = useCallback((partial: Partial<T>) => {
+    setData((prev) => ({ ...prev, ...partial }));
+    setIsDirty(true);
+  }, []);
+
+  const nextStep = useCallback(() => {
+    setStep((prev) => Math.min(prev + 1, totalSteps - 1));
+  }, [totalSteps]);
+
+  const prevStep = useCallback(() => {
+    setStep((prev) => Math.max(prev - 1, 0));
+  }, []);
+
+  const goToStep = useCallback(
+    (target: number) => {
+      if (target >= 0 && target < totalSteps) {
+        setStep(target);
+      }
+    },
+    [totalSteps],
+  );
+
+  const skipOnboarding = useCallback(() => {
+    try {
+      localStorage.setItem(`${storageKey}_skipped`, 'true');
+      localStorage.removeItem(storageKey);
+    } catch {
+      // Ignore
+    }
+    onComplete?.(data);
+  }, [storageKey, onComplete, data]);
+
+  const clearSavedData = useCallback(() => {
+    try {
+      localStorage.removeItem(storageKey);
+      localStorage.removeItem(`${storageKey}_skipped`);
+    } catch {
+      // Ignore
+    }
+  }, [storageKey]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if user is typing in an input
+      const target = e.target as HTMLElement;
+      const isInput =
+        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+
+      if (e.key === 'Escape') {
+        prevStep();
+      }
+
+      // Ctrl+S to trigger save (prevent default browser save)
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({ data, step }));
+        } catch {
+          // Ignore
+        }
+      }
+
+      // Enter on non-input to go next
+      if (e.key === 'Enter' && !isInput && !e.shiftKey) {
+        e.preventDefault();
+        nextStep();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [step, data, prevStep, nextStep, storageKey]);
+
+  const progress = totalSteps > 1 ? Math.round((step / (totalSteps - 1)) * 100) : 0;
+
+  return {
+    step,
+    setStep,
+    data,
+    updateData,
+    nextStep,
+    prevStep,
+    goToStep,
+    isFirstStep: step === 0,
+    isLastStep: step === totalSteps - 1,
+    progress,
+    skipOnboarding,
+    isDirty,
+    clearSavedData,
+  };
 }
 
 /** Check if onboarding was skipped or completed */
 export function wasOnboardingSkipped(storageKey: string): boolean {
-    try {
-        return localStorage.getItem(`${storageKey}_skipped`) === 'true';
-    } catch {
-        return false;
-    }
+  try {
+    return localStorage.getItem(`${storageKey}_skipped`) === 'true';
+  } catch {
+    return false;
+  }
 }
 
 /** Mark onboarding as completed */
 export function markOnboardingComplete(storageKey: string): void {
-    try {
-        localStorage.setItem(`${storageKey}_skipped`, 'true');
-        localStorage.removeItem(storageKey);
-    } catch {
-        // Ignore
-    }
+  try {
+    localStorage.setItem(`${storageKey}_skipped`, 'true');
+    localStorage.removeItem(storageKey);
+  } catch {
+    // Ignore
+  }
 }

@@ -4,9 +4,7 @@ import { useState, useEffect, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-    ArrowLeft, Save, X, Plus,
-} from 'lucide-react';
+import { ArrowLeft, Save, X, Plus } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -24,20 +22,28 @@ import { jobService } from '@/services/job.service';
 import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS } from '@/constants/config';
 import {
-    JOB_TYPE_LABELS, WORK_MODE_LABELS, SHIFT_TYPE_LABELS,
-    EXPERIENCE_LEVEL_LABELS, EDUCATION_LEVEL_LABELS,
-    SALARY_TYPE_LABELS, URGENCY_LEVEL_LABELS,
-    FUNCTIONAL_AREA_LABELS, NOTICE_PERIOD_PREFERENCE_LABELS,
-    GENDER_PREFERENCE_LABELS, DRIVING_LICENSE_TYPE_LABELS,
-    POSTING_VISIBILITY_LABELS, APPLY_METHOD_LABELS,
-    SPECIFIC_DEGREE_LABELS, DIVERSITY_TAG_OPTIONS,
+  JOB_TYPE_LABELS,
+  WORK_MODE_LABELS,
+  SHIFT_TYPE_LABELS,
+  EXPERIENCE_LEVEL_LABELS,
+  EDUCATION_LEVEL_LABELS,
+  SALARY_TYPE_LABELS,
+  URGENCY_LEVEL_LABELS,
+  FUNCTIONAL_AREA_LABELS,
+  NOTICE_PERIOD_PREFERENCE_LABELS,
+  GENDER_PREFERENCE_LABELS,
+  DRIVING_LICENSE_TYPE_LABELS,
+  POSTING_VISIBILITY_LABELS,
+  APPLY_METHOD_LABELS,
+  SPECIFIC_DEGREE_LABELS,
+  DIVERSITY_TAG_OPTIONS,
 } from '@/constants/enums';
 import { formatSalaryAsLPA } from '@/utils/format';
 import type { UpdateJobRequest, ScreeningQuestionInput } from '@/types/job';
 import type { ApiError } from '@/types/api';
 
 function toSelectOptions(labels: Record<string, string>): SelectOption[] {
-    return Object.entries(labels).map(([value, label]) => ({ value, label }));
+  return Object.entries(labels).map(([value, label]) => ({ value, label }));
 }
 
 const jobTypeOptions = toSelectOptions(JOB_TYPE_LABELS);
@@ -55,916 +61,1203 @@ const applyMethodOptions = toSelectOptions(APPLY_METHOD_LABELS);
 const specificDegreeOptions = toSelectOptions(SPECIFIC_DEGREE_LABELS);
 
 export default function EditJobPage() {
-    const params = useParams();
-    const id = params.id as string;
-    const router = useRouter();
-    const queryClient = useQueryClient();
+  const params = useParams();
+  const id = params.id as string;
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
-    const [form, setForm] = useState<UpdateJobRequest>({});
-    const [skillInput, setSkillInput] = useState('');
-    const [niceSkillInput, setNiceSkillInput] = useState('');
-    const [certInput, setCertInput] = useState('');
-    const [tagInput, setTagInput] = useState('');
-    const [perkInput, setPerkInput] = useState('');
-    const [langInput, setLangInput] = useState('');
-    const [addLocInput, setAddLocInput] = useState('');
-    const [degreeSpecInput, setDegreeSpecInput] = useState('');
-    const [screeningQuestions, setScreeningQuestions] = useState<ScreeningQuestionInput[]>([]);
-    const [initialized, setInitialized] = useState(false);
+  const [form, setForm] = useState<UpdateJobRequest>({});
+  const [skillInput, setSkillInput] = useState('');
+  const [niceSkillInput, setNiceSkillInput] = useState('');
+  const [certInput, setCertInput] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [perkInput, setPerkInput] = useState('');
+  const [langInput, setLangInput] = useState('');
+  const [addLocInput, setAddLocInput] = useState('');
+  const [degreeSpecInput, setDegreeSpecInput] = useState('');
+  const [screeningQuestions, setScreeningQuestions] = useState<ScreeningQuestionInput[]>([]);
+  const [initialized, setInitialized] = useState(false);
 
-    const { data: jobData, isLoading } = useQuery({
-        queryKey: QUERY_KEYS.JOBS.DETAIL(id),
-        queryFn: () => jobService.getJob(id),
-        enabled: !!id,
-    });
+  const { data: jobData, isLoading } = useQuery({
+    queryKey: QUERY_KEYS.JOBS.DETAIL(id),
+    queryFn: () => jobService.getJob(id),
+    enabled: !!id,
+  });
 
-    const updateMutation = useMutation({
-        mutationFn: (data: UpdateJobRequest) => jobService.updateJob(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS.DETAIL(id) });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS.MY_JOBS });
-            showToast.success('Job updated successfully');
-            router.push(ROUTES.EMPLOYER.JOB_DETAIL(id));
-        },
-        onError: (err) => {
-            const error = err as unknown as ApiError;
-            showToast.error(error.message || 'Failed to update job');
-        },
-    });
+  const updateMutation = useMutation({
+    mutationFn: (data: UpdateJobRequest) => jobService.updateJob(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS.DETAIL(id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS.MY_JOBS });
+      showToast.success('Job updated successfully');
+      router.push(ROUTES.EMPLOYER.JOB_DETAIL(id));
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to update job');
+    },
+  });
 
-    const job = jobData?.data;
+  const job = jobData?.data;
 
-    // Populate form when job data loads
-    useEffect(() => {
-        if (job && !initialized) {
-            setForm({
-                title: job.title || '',
-                description: job.description || '',
-                keyResponsibilities: job.keyResponsibilities || '',
-                requirements: job.requirements || '',
-                benefits: job.benefits || '',
-                interviewProcess: job.interviewProcess || '',
-                location: job.location || '',
-                type: job.type || undefined,
-                workMode: job.workMode || undefined,
-                shiftType: job.shiftType || undefined,
-                industry: job.industry || '',
-                department: job.department || '',
-                experienceMin: job.experienceMin ?? 0,
-                experienceMax: job.experienceMax ?? undefined,
-                experienceLevel: job.experienceLevel || undefined,
-                educationRequired: job.educationRequired || undefined,
-                preferredEducationField: job.preferredEducationField || '',
-                roleCategory: job.roleCategory || '',
-                numberOfOpenings: job.numberOfOpenings ?? undefined,
-                salaryMin: job.salaryMin ?? undefined,
-                salaryMax: job.salaryMax ?? undefined,
-                salaryType: job.salaryType || undefined,
-                currency: job.currency || '',
-                salaryDisclosed: job.salaryDisclosed ?? true,
-                isRemote: job.isRemote ?? false,
-                relocationAssistance: job.relocationAssistance ?? false,
-                travelRequirementPercent: job.travelRequirementPercent ?? undefined,
-                isWalkIn: job.isWalkIn ?? false,
-                contactPerson: job.contactPerson || '',
-                contactEmail: job.contactEmail || '',
-                skillsRequired: job.skillsRequired || [],
-                niceToHaveSkills: job.niceToHaveSkills || [],
-                certificationsRequired: job.certificationsRequired || [],
-                languagesRequired: job.languagesRequired || [],
-                tags: job.tags || [],
-                jobPerks: job.jobPerks || [],
-                urgencyLevel: job.urgencyLevel || undefined,
-                applicationDeadline: job.applicationDeadline ? job.applicationDeadline.split('T')[0] : '',
-                isFeatured: job.isFeatured ?? false,
-                // Enterprise fields
-                functionalArea: job.functionalArea || undefined,
-                referenceCode: job.referenceCode || '',
-                ugRequired: job.ugRequired || undefined,
-                pgRequired: job.pgRequired || undefined,
-                specificDegrees: job.specificDegrees || [],
-                degreeSpecializations: job.degreeSpecializations || [],
-                salaryNegotiable: job.salaryNegotiable ?? false,
-                noticePeriodPreference: job.noticePeriodPreference || [],
-                isConfidential: job.isConfidential ?? false,
-                additionalLocations: job.additionalLocations || [],
-                accommodationProvided: job.accommodationProvided ?? false,
-                walkInStartDate: job.walkInStartDate ? job.walkInStartDate.split('T')[0] : '',
-                walkInEndDate: job.walkInEndDate ? job.walkInEndDate.split('T')[0] : '',
-                walkInTime: job.walkInTime || '',
-                walkInVenue: job.walkInVenue || '',
-                walkInContactPerson: job.walkInContactPerson || '',
-                walkInContactPhone: job.walkInContactPhone || '',
-                walkInInstructions: job.walkInInstructions || '',
-                diversityTags: job.diversityTags || [],
-                visaSponsorshipAvailable: job.visaSponsorshipAvailable ?? false,
-                backgroundCheckRequired: job.backgroundCheckRequired ?? false,
-                isPwdFriendly: job.isPwdFriendly ?? false,
-                passportRequired: job.passportRequired ?? false,
-                bondDetails: job.bondDetails || '',
-                drivingLicenseRequired: job.drivingLicenseRequired || undefined,
-                ageMin: job.ageMin ?? undefined,
-                ageMax: job.ageMax ?? undefined,
-                genderPreference: job.genderPreference || undefined,
-                postingVisibility: job.postingVisibility || 'PUBLIC',
-                applyMethod: job.applyMethod || 'IN_PLATFORM',
-                externalApplyUrl: job.externalApplyUrl || '',
-                scheduledPublishAt: job.scheduledPublishAt ? job.scheduledPublishAt.split('T')[0] : '',
-            });
-            setScreeningQuestions(
-                (job.screeningQuestions || []).map(q => ({
-                    question: q.question,
-                    questionType: q.questionType,
-                    isRequired: q.isRequired,
-                    isDealBreaker: q.isDealBreaker,
-                    options: q.options || undefined,
-                    idealAnswer: q.idealAnswer || undefined,
-                    displayOrder: q.displayOrder,
-                }))
-            );
-            setInitialized(true);
-        }
-    }, [job, initialized]);
-
-    const handleChange = (field: keyof UpdateJobRequest, value: unknown) => {
-        setForm((prev) => ({ ...prev, [field]: value }));
-    };
-
-    type ArrayFieldKey = 'skillsRequired' | 'niceToHaveSkills' | 'certificationsRequired' | 'tags' | 'jobPerks' | 'languagesRequired' | 'additionalLocations' | 'degreeSpecializations' | 'diversityTags' | 'specificDegrees' | 'noticePeriodPreference';
-
-    const addToArray = (key: ArrayFieldKey, value: string, clearFn: (v: string) => void) => {
-        const trimmed = value.trim();
-        const arr = (form[key] || []) as string[];
-        if (trimmed && !arr.includes(trimmed)) {
-            handleChange(key, [...arr, trimmed]);
-            clearFn('');
-        }
-    };
-
-    const removeFromArray = (key: ArrayFieldKey, value: string) => {
-        handleChange(key, ((form[key] || []) as string[]).filter((v) => v !== value));
-    };
-
-    const handleAddSkill = (e: KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addToArray('skillsRequired', skillInput, setSkillInput);
-        }
-    };
-
-    const handleRemoveSkill = (skill: string) => {
-        removeFromArray('skillsRequired', skill);
-    };
-
-    const handleAddTag = (e: KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addToArray('tags', tagInput, setTagInput);
-        }
-    };
-
-    const handleRemoveTag = (tag: string) => {
-        removeFromArray('tags', tag);
-    };
-
-    const handleSubmit = () => {
-        if (!form.title?.trim()) {
-            showToast.error('Job title is required');
-            return;
-        }
-        if (!form.description?.trim()) {
-            showToast.error('Job description is required');
-            return;
-        }
-        if (!form.location?.trim()) {
-            showToast.error('Location is required');
-            return;
-        }
-        if (!form.skillsRequired || form.skillsRequired.length === 0) {
-            showToast.error('At least one required skill is needed');
-            return;
-        }
-        const payload = {
-            ...form,
-            applicationDeadline: form.applicationDeadline ? new Date(form.applicationDeadline).toISOString() : undefined,
-            walkInStartDate: form.walkInStartDate ? new Date(form.walkInStartDate).toISOString() : undefined,
-            walkInEndDate: form.walkInEndDate ? new Date(form.walkInEndDate).toISOString() : undefined,
-            scheduledPublishAt: form.scheduledPublishAt ? new Date(form.scheduledPublishAt).toISOString() : undefined,
-            screeningQuestions: screeningQuestions.length > 0 ? screeningQuestions : undefined,
-        };
-        updateMutation.mutate(payload);
-    };
-
-    if (isLoading) {
-        return (
-            <DashboardLayout requiredRole={['EMPLOYER']}>
-                <div className="space-y-6">
-                    <Skeleton variant="line" width="200px" height="32px" />
-                    <Skeleton variant="rect" height="400px" />
-                </div>
-            </DashboardLayout>
-        );
+  // Populate form when job data loads
+  useEffect(() => {
+    if (job && !initialized) {
+      setForm({
+        title: job.title || '',
+        description: job.description || '',
+        keyResponsibilities: job.keyResponsibilities || '',
+        requirements: job.requirements || '',
+        benefits: job.benefits || '',
+        interviewProcess: job.interviewProcess || '',
+        location: job.location || '',
+        type: job.type || undefined,
+        workMode: job.workMode || undefined,
+        shiftType: job.shiftType || undefined,
+        industry: job.industry || '',
+        department: job.department || '',
+        experienceMin: job.experienceMin ?? 0,
+        experienceMax: job.experienceMax ?? undefined,
+        experienceLevel: job.experienceLevel || undefined,
+        educationRequired: job.educationRequired || undefined,
+        preferredEducationField: job.preferredEducationField || '',
+        roleCategory: job.roleCategory || '',
+        numberOfOpenings: job.numberOfOpenings ?? undefined,
+        salaryMin: job.salaryMin ?? undefined,
+        salaryMax: job.salaryMax ?? undefined,
+        salaryType: job.salaryType || undefined,
+        currency: job.currency || '',
+        salaryDisclosed: job.salaryDisclosed ?? true,
+        isRemote: job.isRemote ?? false,
+        relocationAssistance: job.relocationAssistance ?? false,
+        travelRequirementPercent: job.travelRequirementPercent ?? undefined,
+        isWalkIn: job.isWalkIn ?? false,
+        contactPerson: job.contactPerson || '',
+        contactEmail: job.contactEmail || '',
+        skillsRequired: job.skillsRequired || [],
+        niceToHaveSkills: job.niceToHaveSkills || [],
+        certificationsRequired: job.certificationsRequired || [],
+        languagesRequired: job.languagesRequired || [],
+        tags: job.tags || [],
+        jobPerks: job.jobPerks || [],
+        urgencyLevel: job.urgencyLevel || undefined,
+        applicationDeadline: job.applicationDeadline ? job.applicationDeadline.split('T')[0] : '',
+        isFeatured: job.isFeatured ?? false,
+        // Enterprise fields
+        functionalArea: job.functionalArea || undefined,
+        referenceCode: job.referenceCode || '',
+        ugRequired: job.ugRequired || undefined,
+        pgRequired: job.pgRequired || undefined,
+        specificDegrees: job.specificDegrees || [],
+        degreeSpecializations: job.degreeSpecializations || [],
+        salaryNegotiable: job.salaryNegotiable ?? false,
+        noticePeriodPreference: job.noticePeriodPreference || [],
+        isConfidential: job.isConfidential ?? false,
+        additionalLocations: job.additionalLocations || [],
+        accommodationProvided: job.accommodationProvided ?? false,
+        walkInStartDate: job.walkInStartDate ? job.walkInStartDate.split('T')[0] : '',
+        walkInEndDate: job.walkInEndDate ? job.walkInEndDate.split('T')[0] : '',
+        walkInTime: job.walkInTime || '',
+        walkInVenue: job.walkInVenue || '',
+        walkInContactPerson: job.walkInContactPerson || '',
+        walkInContactPhone: job.walkInContactPhone || '',
+        walkInInstructions: job.walkInInstructions || '',
+        diversityTags: job.diversityTags || [],
+        visaSponsorshipAvailable: job.visaSponsorshipAvailable ?? false,
+        backgroundCheckRequired: job.backgroundCheckRequired ?? false,
+        isPwdFriendly: job.isPwdFriendly ?? false,
+        passportRequired: job.passportRequired ?? false,
+        bondDetails: job.bondDetails || '',
+        drivingLicenseRequired: job.drivingLicenseRequired || undefined,
+        ageMin: job.ageMin ?? undefined,
+        ageMax: job.ageMax ?? undefined,
+        genderPreference: job.genderPreference || undefined,
+        postingVisibility: job.postingVisibility || 'PUBLIC',
+        applyMethod: job.applyMethod || 'IN_PLATFORM',
+        externalApplyUrl: job.externalApplyUrl || '',
+        scheduledPublishAt: job.scheduledPublishAt ? job.scheduledPublishAt.split('T')[0] : '',
+      });
+      setScreeningQuestions(
+        (job.screeningQuestions || []).map((q) => ({
+          question: q.question,
+          questionType: q.questionType,
+          isRequired: q.isRequired,
+          isDealBreaker: q.isDealBreaker,
+          options: q.options || undefined,
+          idealAnswer: q.idealAnswer || undefined,
+          displayOrder: q.displayOrder,
+        })),
+      );
+      setInitialized(true);
     }
+  }, [job, initialized]);
 
-    if (!job) {
-        return (
-            <DashboardLayout requiredRole={['EMPLOYER']}>
-                <div className="flex flex-col items-center justify-center py-20">
-                    <h2 className="text-lg font-semibold text-[var(--text)]">Job not found</h2>
-                    <p className="mt-1 text-sm text-[var(--text-muted)]">The job you are trying to edit does not exist.</p>
-                    <Link href={ROUTES.EMPLOYER.MY_JOBS} className="mt-4">
-                        <Button variant="outline" size="sm">Back to My Jobs</Button>
-                    </Link>
-                </div>
-            </DashboardLayout>
-        );
+  const handleChange = (field: keyof UpdateJobRequest, value: unknown) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  type ArrayFieldKey =
+    | 'skillsRequired'
+    | 'niceToHaveSkills'
+    | 'certificationsRequired'
+    | 'tags'
+    | 'jobPerks'
+    | 'languagesRequired'
+    | 'additionalLocations'
+    | 'degreeSpecializations'
+    | 'diversityTags'
+    | 'specificDegrees'
+    | 'noticePeriodPreference';
+
+  const addToArray = (key: ArrayFieldKey, value: string, clearFn: (v: string) => void) => {
+    const trimmed = value.trim();
+    const arr = (form[key] || []) as string[];
+    if (trimmed && !arr.includes(trimmed)) {
+      handleChange(key, [...arr, trimmed]);
+      clearFn('');
     }
+  };
 
-    return (
-        <DashboardLayout requiredRole={['EMPLOYER']}>
-            <div className="space-y-6">
-                {/* Back Button */}
-                <Link
-                    href={ROUTES.EMPLOYER.JOB_DETAIL(id)}
-                    className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Job Details
-                </Link>
-
-                {/* Header */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-[var(--text)]">Edit Job</h1>
-                        <p className="mt-1 text-sm text-[var(--text-muted)]">
-                            Update your job listing details
-                        </p>
-                    </div>
-                    <Button
-                        leftIcon={<Save className="h-4 w-4" />}
-                        onClick={handleSubmit}
-                        isLoading={updateMutation.isPending}
-                    >
-                        Save Changes
-                    </Button>
-                </div>
-
-                {/* Basic Info */}
-                <Card>
-                    <h2 className="text-base font-semibold text-[var(--text)] mb-4">Basic Information</h2>
-                    <div className="space-y-4">
-                        <Input
-                            label="Job Title"
-                            required
-                            value={form.title || ''}
-                            onChange={(e) => handleChange('title', e.target.value)}
-                            placeholder="e.g. Senior Software Engineer"
-                        />
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Select
-                                label="Experience Level"
-                                options={experienceLevelOptions}
-                                value={form.experienceLevel || ''}
-                                onChange={(val) => handleChange('experienceLevel', val || undefined)}
-                                placeholder="Select level"
-                            />
-                            <Select
-                                label="Education Required"
-                                options={educationLevelOptions}
-                                value={form.educationRequired || ''}
-                                onChange={(val) => handleChange('educationRequired', val || undefined)}
-                                placeholder="Select level"
-                            />
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Input
-                                label="Preferred Education Field"
-                                placeholder="e.g. Computer Science, MBA"
-                                value={form.preferredEducationField || ''}
-                                onChange={(e) => handleChange('preferredEducationField', e.target.value)}
-                            />
-                            <Input
-                                label="Role Category"
-                                placeholder="e.g. Engineering, Marketing"
-                                value={form.roleCategory || ''}
-                                onChange={(e) => handleChange('roleCategory', e.target.value)}
-                            />
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Input
-                                label="Industry"
-                                placeholder="e.g. Information Technology"
-                                value={form.industry || ''}
-                                onChange={(e) => handleChange('industry', e.target.value)}
-                            />
-                            <Input
-                                label="Department"
-                                placeholder="e.g. Engineering"
-                                value={form.department || ''}
-                                onChange={(e) => handleChange('department', e.target.value)}
-                            />
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Input
-                                label="Number of Openings"
-                                type="number"
-                                placeholder="1"
-                                value={form.numberOfOpenings?.toString() || ''}
-                                onChange={(e) => handleChange('numberOfOpenings', e.target.value ? Number(e.target.value) : undefined)}
-                                min={1}
-                            />
-                            <Input
-                                label="Reference Code"
-                                placeholder="e.g. JOB-2026-001"
-                                value={form.referenceCode || ''}
-                                onChange={(e) => handleChange('referenceCode', e.target.value)}
-                            />
-                        </div>
-                        <Select
-                            label="Functional Area"
-                            options={functionalAreaOptions}
-                            value={form.functionalArea || ''}
-                            onChange={(val) => handleChange('functionalArea', val || undefined)}
-                            placeholder="Select functional area"
-                        />
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Select
-                                label="UG Required"
-                                options={educationLevelOptions}
-                                value={form.ugRequired || ''}
-                                onChange={(val) => handleChange('ugRequired', val || undefined)}
-                                placeholder="Select UG level"
-                            />
-                            <Select
-                                label="PG Required"
-                                options={educationLevelOptions}
-                                value={form.pgRequired || ''}
-                                onChange={(val) => handleChange('pgRequired', val || undefined)}
-                                placeholder="Select PG level"
-                            />
-                        </div>
-                        {/* Specific Degrees */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Specific Degrees</label>
-                            <div className="flex flex-wrap gap-2 mb-2">
-                                {specificDegreeOptions.map(opt => (
-                                    <button
-                                        key={opt.value}
-                                        type="button"
-                                        onClick={() => {
-                                            const arr = form.specificDegrees || [];
-                                            if (arr.includes(opt.value as never)) {
-                                                handleChange('specificDegrees', arr.filter(d => d !== opt.value));
-                                            } else {
-                                                handleChange('specificDegrees', [...arr, opt.value]);
-                                            }
-                                        }}
-                                        className={`rounded-full px-3 py-1 text-xs border transition-colors ${(form.specificDegrees || []).includes(opt.value as never) ? 'bg-primary text-white border-primary' : 'border-[var(--border)] text-[var(--text-muted)] hover:border-primary'}`}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        {/* Degree Specializations */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Degree Specializations</label>
-                            <div className="flex gap-2 mb-2">
-                                <Input
-                                    value={degreeSpecInput}
-                                    onChange={(e) => setDegreeSpecInput(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('degreeSpecializations', degreeSpecInput, setDegreeSpecInput); } }}
-                                    placeholder="e.g. Computer Science"
-                                />
-                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('degreeSpecializations', degreeSpecInput, setDegreeSpecInput)}>
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            {(form.degreeSpecializations || []).length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {(form.degreeSpecializations || []).map(s => (
-                                        <Tag key={s} label={s} size="md" onRemove={() => removeFromArray('degreeSpecializations', s)} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </Card>
-
-                {/* Description & Details */}
-                <Card>
-                    <h2 className="text-base font-semibold text-[var(--text)] mb-4">Description & Details</h2>
-                    <div className="space-y-4">
-                        <RichTextEditor
-                            label="Description"
-                            required
-                            value={form.description || ''}
-                            onChange={(v) => handleChange('description', v)}
-                            placeholder="Describe the role and what the candidate will be doing..."
-                        />
-                        <RichTextEditor
-                            label="Key Responsibilities"
-                            value={form.keyResponsibilities || ''}
-                            onChange={(v) => handleChange('keyResponsibilities', v)}
-                            placeholder="List the key responsibilities for this role..."
-                        />
-                        <RichTextEditor
-                            label="Requirements"
-                            value={form.requirements || ''}
-                            onChange={(v) => handleChange('requirements', v)}
-                            placeholder="List the qualifications and requirements..."
-                        />
-                        <RichTextEditor
-                            label="Benefits"
-                            value={form.benefits || ''}
-                            onChange={(v) => handleChange('benefits', v)}
-                            placeholder="List the benefits and perks..."
-                        />
-                        <Textarea
-                            label="Interview Process"
-                            value={form.interviewProcess || ''}
-                            onChange={(e) => handleChange('interviewProcess', e.target.value)}
-                            placeholder="Describe the interview process (e.g. Phone screen -> Technical -> Onsite)"
-                            rows={3}
-                        />
-                    </div>
-                </Card>
-
-                {/* Location & Type */}
-                <Card>
-                    <h2 className="text-base font-semibold text-[var(--text)] mb-4">Location & Work Mode</h2>
-                    <div className="space-y-4">
-                        <Input
-                            label="Location"
-                            required
-                            value={form.location || ''}
-                            onChange={(e) => handleChange('location', e.target.value)}
-                            placeholder="e.g. Mumbai, India"
-                        />
-                        <div className="grid gap-4 sm:grid-cols-3">
-                            <Select
-                                label="Job Type"
-                                options={jobTypeOptions}
-                                value={form.type || ''}
-                                onChange={(val) => handleChange('type', val || undefined)}
-                                placeholder="Select job type"
-                            />
-                            <Select
-                                label="Work Mode"
-                                options={workModeOptions}
-                                value={form.workMode || ''}
-                                onChange={(val) => handleChange('workMode', val || undefined)}
-                                placeholder="Select work mode"
-                            />
-                            <Select
-                                label="Shift Type"
-                                options={shiftTypeOptions}
-                                value={form.shiftType || ''}
-                                onChange={(val) => handleChange('shiftType', val || undefined)}
-                                placeholder="Select shift"
-                            />
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Switch
-                                label="Remote position"
-                                checked={form.isRemote || false}
-                                onChange={() => handleChange('isRemote', !form.isRemote)}
-                            />
-                            <Switch
-                                label="Relocation assistance offered"
-                                checked={form.relocationAssistance || false}
-                                onChange={() => handleChange('relocationAssistance', !form.relocationAssistance)}
-                            />
-                        </div>
-                        <Input
-                            label="Travel Requirement (%)"
-                            type="number"
-                            placeholder="0"
-                            value={form.travelRequirementPercent?.toString() || ''}
-                            onChange={(e) => handleChange('travelRequirementPercent', e.target.value ? Number(e.target.value) : undefined)}
-                            min={0}
-                            max={100}
-                        />
-                        {/* Additional Locations */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Additional Locations</label>
-                            <div className="flex gap-2 mb-2">
-                                <Input
-                                    value={addLocInput}
-                                    onChange={(e) => setAddLocInput(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('additionalLocations', addLocInput, setAddLocInput); } }}
-                                    placeholder="e.g. Pune, India"
-                                />
-                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('additionalLocations', addLocInput, setAddLocInput)}>
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            {(form.additionalLocations || []).length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {(form.additionalLocations || []).map(loc => (
-                                        <Tag key={loc} label={loc} size="md" onRemove={() => removeFromArray('additionalLocations', loc)} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <Switch
-                            label="Accommodation provided"
-                            checked={form.accommodationProvided || false}
-                            onChange={() => handleChange('accommodationProvided', !form.accommodationProvided)}
-                        />
-                        <Switch
-                            label="Walk-in interview"
-                            checked={form.isWalkIn || false}
-                            onChange={() => handleChange('isWalkIn', !form.isWalkIn)}
-                        />
-                        {form.isWalkIn && (
-                            <div className="space-y-4 rounded-lg border border-[var(--border)] p-4">
-                                <p className="text-sm font-medium text-[var(--text)]">Walk-in Details</p>
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <DatePicker label="Start Date" value={form.walkInStartDate || ''} onChange={(v) => handleChange('walkInStartDate', v)} />
-                                    <DatePicker label="End Date" value={form.walkInEndDate || ''} onChange={(v) => handleChange('walkInEndDate', v)} />
-                                </div>
-                                <Input label="Time" placeholder="e.g. 10:00 AM - 4:00 PM" value={form.walkInTime || ''} onChange={(e) => handleChange('walkInTime', e.target.value)} />
-                                <Input label="Venue" placeholder="Full address of walk-in venue" value={form.walkInVenue || ''} onChange={(e) => handleChange('walkInVenue', e.target.value)} />
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <Input label="Contact Person" placeholder="HR Manager Name" value={form.walkInContactPerson || ''} onChange={(e) => handleChange('walkInContactPerson', e.target.value)} />
-                                    <Input label="Contact Phone" placeholder="+91 98765 43210" value={form.walkInContactPhone || ''} onChange={(e) => handleChange('walkInContactPhone', e.target.value)} />
-                                </div>
-                                <Textarea label="Walk-in Instructions" placeholder="Any special instructions for candidates..." value={form.walkInInstructions || ''} onChange={(e) => handleChange('walkInInstructions', e.target.value)} rows={3} />
-                            </div>
-                        )}
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Input
-                                label="Contact Person"
-                                placeholder="HR Manager Name"
-                                value={form.contactPerson || ''}
-                                onChange={(e) => handleChange('contactPerson', e.target.value)}
-                            />
-                            <Input
-                                label="Contact Email"
-                                type="email"
-                                placeholder="hr@company.com"
-                                value={form.contactEmail || ''}
-                                onChange={(e) => handleChange('contactEmail', e.target.value)}
-                            />
-                        </div>
-                    </div>
-                </Card>
-
-                {/* Experience & Salary */}
-                <Card>
-                    <h2 className="text-base font-semibold text-[var(--text)] mb-4">Experience & Compensation</h2>
-                    <div className="space-y-4">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Input
-                                label="Min Experience (years)"
-                                type="number"
-                                value={form.experienceMin ?? ''}
-                                onChange={(e) => handleChange('experienceMin', e.target.value ? Number(e.target.value) : undefined)}
-                                placeholder="0"
-                                min={0}
-                            />
-                            <Input
-                                label="Max Experience (years)"
-                                type="number"
-                                value={form.experienceMax ?? ''}
-                                onChange={(e) => handleChange('experienceMax', e.target.value ? Number(e.target.value) : undefined)}
-                                placeholder="10"
-                                min={0}
-                            />
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-3">
-                            <Input
-                                label="Min Salary"
-                                type="number"
-                                value={form.salaryMin ?? ''}
-                                onChange={(e) => handleChange('salaryMin', e.target.value ? Number(e.target.value) : undefined)}
-                                placeholder="e.g. 500000"
-                                min={0}
-                            />
-                            <Input
-                                label="Max Salary"
-                                type="number"
-                                value={form.salaryMax ?? ''}
-                                onChange={(e) => handleChange('salaryMax', e.target.value ? Number(e.target.value) : undefined)}
-                                placeholder="e.g. 1500000"
-                                min={0}
-                            />
-                            <Select
-                                label="Salary Type"
-                                options={salaryTypeOptions}
-                                value={form.salaryType || ''}
-                                onChange={(val) => handleChange('salaryType', val || undefined)}
-                                placeholder="Select type"
-                            />
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Input
-                                label="Currency"
-                                placeholder="INR"
-                                value={form.currency || ''}
-                                onChange={(e) => handleChange('currency', e.target.value)}
-                            />
-                            <div className="flex items-end pb-1">
-                                <Switch
-                                    label="Disclose salary on listing"
-                                    checked={form.salaryDisclosed !== false}
-                                    onChange={() => handleChange('salaryDisclosed', form.salaryDisclosed === false)}
-                                />
-                            </div>
-                        </div>
-                        <Switch
-                            label="Salary is negotiable"
-                            checked={form.salaryNegotiable || false}
-                            onChange={() => handleChange('salaryNegotiable', !form.salaryNegotiable)}
-                        />
-                        {(form.currency || 'INR').toUpperCase() === 'INR' && form.salaryType === 'ANNUAL' && (form.salaryMin || form.salaryMax) && (
-                            <p className="text-xs text-[var(--text-muted)]">
-                                CTC: {formatSalaryAsLPA(form.salaryMin, form.salaryMax)}
-                            </p>
-                        )}
-                    </div>
-                </Card>
-
-                {/* Skills & Certifications */}
-                <Card>
-                    <h2 className="text-base font-semibold text-[var(--text)] mb-4">Skills & Certifications</h2>
-                    <div className="space-y-4">
-                        {/* Required Skills */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Required Skills *</label>
-                            <div className="flex gap-2 mb-2">
-                                <Input
-                                    value={skillInput}
-                                    onChange={(e) => setSkillInput(e.target.value)}
-                                    onKeyDown={handleAddSkill}
-                                    placeholder="e.g. React, TypeScript"
-                                />
-                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('skillsRequired', skillInput, setSkillInput)}>
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            {(form.skillsRequired || []).length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {(form.skillsRequired || []).map((skill) => (
-                                        <Tag key={skill} label={skill} variant="primary" size="md" onRemove={() => handleRemoveSkill(skill)} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Nice-to-Have Skills */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Nice-to-Have Skills</label>
-                            <div className="flex gap-2 mb-2">
-                                <Input
-                                    value={niceSkillInput}
-                                    onChange={(e) => setNiceSkillInput(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('niceToHaveSkills', niceSkillInput, setNiceSkillInput); } }}
-                                    placeholder="e.g. GraphQL, Docker"
-                                />
-                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('niceToHaveSkills', niceSkillInput, setNiceSkillInput)}>
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            {(form.niceToHaveSkills || []).length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {(form.niceToHaveSkills || []).map((skill) => (
-                                        <Tag key={skill} label={skill} size="md" onRemove={() => removeFromArray('niceToHaveSkills', skill)} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Certifications Required */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Certifications Required</label>
-                            <div className="flex gap-2 mb-2">
-                                <Input
-                                    value={certInput}
-                                    onChange={(e) => setCertInput(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('certificationsRequired', certInput, setCertInput); } }}
-                                    placeholder="e.g. AWS Solutions Architect"
-                                />
-                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('certificationsRequired', certInput, setCertInput)}>
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            {(form.certificationsRequired || []).length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {(form.certificationsRequired || []).map((cert) => (
-                                        <Tag key={cert} label={cert} size="md" onRemove={() => removeFromArray('certificationsRequired', cert)} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Languages Required */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Languages Required</label>
-                            <div className="flex gap-2 mb-2">
-                                <Input
-                                    value={langInput}
-                                    onChange={(e) => setLangInput(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('languagesRequired', langInput, setLangInput); } }}
-                                    placeholder="e.g. English, Hindi"
-                                />
-                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('languagesRequired', langInput, setLangInput)}>
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            {(form.languagesRequired || []).length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {(form.languagesRequired || []).map((lang) => (
-                                        <Tag key={lang} label={lang} size="md" onRemove={() => removeFromArray('languagesRequired', lang)} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </Card>
-
-                {/* Tags, Perks & More */}
-                <Card>
-                    <h2 className="text-base font-semibold text-[var(--text)] mb-4">Tags, Perks & More</h2>
-                    <div className="space-y-4">
-                        {/* Tags */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Tags</label>
-                            <div className="flex gap-2 mb-2">
-                                <Input
-                                    value={tagInput}
-                                    onChange={(e) => setTagInput(e.target.value)}
-                                    onKeyDown={handleAddTag}
-                                    placeholder="e.g. startup, fintech"
-                                />
-                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('tags', tagInput, setTagInput)}>
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            {(form.tags || []).length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {(form.tags || []).map((tag) => (
-                                        <Tag key={tag} label={tag} size="md" onRemove={() => handleRemoveTag(tag)} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Job Perks */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Job Perks</label>
-                            <div className="flex gap-2 mb-2">
-                                <Input
-                                    value={perkInput}
-                                    onChange={(e) => setPerkInput(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addToArray('jobPerks', perkInput, setPerkInput); } }}
-                                    placeholder="e.g. Free meals, Gym membership"
-                                />
-                                <Button variant="outline" className="shrink-0" onClick={() => addToArray('jobPerks', perkInput, setPerkInput)}>
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            {(form.jobPerks || []).length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {(form.jobPerks || []).map((perk) => (
-                                        <Tag key={perk} label={perk} size="md" onRemove={() => removeFromArray('jobPerks', perk)} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Select
-                                label="Urgency Level"
-                                options={urgencyLevelOptions}
-                                value={form.urgencyLevel || ''}
-                                onChange={(val) => handleChange('urgencyLevel', val || undefined)}
-                                placeholder="Select urgency"
-                            />
-                            <DatePicker
-                                label="Application Deadline"
-                                value={form.applicationDeadline || ''}
-                                onChange={(val) => handleChange('applicationDeadline', val)}
-                            />
-                        </div>
-
-                        <Switch
-                            label="Feature this job (premium)"
-                            checked={form.isFeatured || false}
-                            onChange={() => handleChange('isFeatured', !form.isFeatured)}
-                        />
-                        {/* Notice Period Preference */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Notice Period Preference</label>
-                            <div className="flex flex-wrap gap-2">
-                                {Object.entries(NOTICE_PERIOD_PREFERENCE_LABELS).map(([val, lbl]) => (
-                                    <button
-                                        key={val}
-                                        type="button"
-                                        onClick={() => {
-                                            const arr = (form.noticePeriodPreference || []) as string[];
-                                            if (arr.includes(val)) {
-                                                handleChange('noticePeriodPreference', arr.filter(v => v !== val));
-                                            } else {
-                                                handleChange('noticePeriodPreference', [...arr, val]);
-                                            }
-                                        }}
-                                        className={`rounded-full px-3 py-1 text-xs border transition-colors ${((form.noticePeriodPreference || []) as string[]).includes(val) ? 'bg-primary text-white border-primary' : 'border-[var(--border)] text-[var(--text-muted)] hover:border-primary'}`}
-                                    >
-                                        {lbl}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </Card>
-
-                {/* Requirements & Inclusion */}
-                <Card>
-                    <h2 className="text-base font-semibold text-[var(--text)] mb-4">Requirements & Inclusion</h2>
-                    <div className="space-y-4">
-                        {/* Diversity Tags */}
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Diversity & Inclusion Tags</label>
-                            <div className="flex flex-wrap gap-2">
-                                {DIVERSITY_TAG_OPTIONS.map(tag => (
-                                    <button
-                                        key={tag}
-                                        type="button"
-                                        onClick={() => {
-                                            const arr = form.diversityTags || [];
-                                            if (arr.includes(tag)) {
-                                                handleChange('diversityTags', arr.filter(t => t !== tag));
-                                            } else {
-                                                handleChange('diversityTags', [...arr, tag]);
-                                            }
-                                        }}
-                                        className={`rounded-full px-3 py-1 text-xs border transition-colors ${(form.diversityTags || []).includes(tag) ? 'bg-primary text-white border-primary' : 'border-[var(--border)] text-[var(--text-muted)] hover:border-primary'}`}
-                                    >
-                                        {tag}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            <Switch label="PwD Friendly" checked={form.isPwdFriendly || false} onChange={() => handleChange('isPwdFriendly', !form.isPwdFriendly)} />
-                            <Switch label="Visa Sponsorship Available" checked={form.visaSponsorshipAvailable || false} onChange={() => handleChange('visaSponsorshipAvailable', !form.visaSponsorshipAvailable)} />
-                            <Switch label="Background Check Required" checked={form.backgroundCheckRequired || false} onChange={() => handleChange('backgroundCheckRequired', !form.backgroundCheckRequired)} />
-                            <Switch label="Passport Required" checked={form.passportRequired || false} onChange={() => handleChange('passportRequired', !form.passportRequired)} />
-                            <Switch label="Confidential Posting" checked={form.isConfidential || false} onChange={() => handleChange('isConfidential', !form.isConfidential)} />
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Select label="Gender Preference" options={genderPreferenceOptions} value={form.genderPreference || ''} onChange={(val) => handleChange('genderPreference', val || undefined)} placeholder="Any" />
-                            <Select label="Driving License Required" options={drivingLicenseOptions} value={form.drivingLicenseRequired || ''} onChange={(val) => handleChange('drivingLicenseRequired', val || undefined)} placeholder="None" />
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Input label="Minimum Age" type="number" placeholder="18" value={form.ageMin?.toString() || ''} onChange={(e) => handleChange('ageMin', e.target.value ? Number(e.target.value) : undefined)} min={14} max={70} />
-                            <Input label="Maximum Age" type="number" placeholder="60" value={form.ageMax?.toString() || ''} onChange={(e) => handleChange('ageMax', e.target.value ? Number(e.target.value) : undefined)} min={14} max={70} />
-                        </div>
-                        <Textarea
-                            label="Bond / Service Agreement Details"
-                            placeholder="e.g. 2-year service bond required..."
-                            value={form.bondDetails || ''}
-                            onChange={(e) => handleChange('bondDetails', e.target.value)}
-                            rows={2}
-                        />
-                    </div>
-                </Card>
-
-                {/* Screening & Posting */}
-                <Card>
-                    <h2 className="text-base font-semibold text-[var(--text)] mb-4">Screening & Posting</h2>
-                    <div className="space-y-4">
-                        <ScreeningQuestionBuilder
-                            questions={screeningQuestions}
-                            onChange={setScreeningQuestions}
-                        />
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <Select label="Posting Visibility" options={postingVisibilityOptions} value={form.postingVisibility || 'PUBLIC'} onChange={(val) => handleChange('postingVisibility', val || 'PUBLIC')} />
-                            <Select label="Apply Method" options={applyMethodOptions} value={form.applyMethod || 'IN_PLATFORM'} onChange={(val) => handleChange('applyMethod', val || 'IN_PLATFORM')} />
-                        </div>
-                        {form.applyMethod === 'EXTERNAL_URL' && (
-                            <Input label="External Apply URL" type="url" placeholder="https://careers.company.com/apply" value={form.externalApplyUrl || ''} onChange={(e) => handleChange('externalApplyUrl', e.target.value)} />
-                        )}
-                        <DatePicker label="Scheduled Publish Date" value={form.scheduledPublishAt || ''} onChange={(v) => handleChange('scheduledPublishAt', v)} />
-                    </div>
-                </Card>
-
-                {/* Bottom Save */}
-                <div className="flex items-center justify-end gap-3 pt-2">
-                    <Link href={ROUTES.EMPLOYER.JOB_DETAIL(id)}>
-                        <Button variant="outline">Cancel</Button>
-                    </Link>
-                    <Button
-                        leftIcon={<Save className="h-4 w-4" />}
-                        onClick={handleSubmit}
-                        isLoading={updateMutation.isPending}
-                    >
-                        Save Changes
-                    </Button>
-                </div>
-            </div>
-        </DashboardLayout>
+  const removeFromArray = (key: ArrayFieldKey, value: string) => {
+    handleChange(
+      key,
+      ((form[key] || []) as string[]).filter((v) => v !== value),
     );
+  };
+
+  const handleAddSkill = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addToArray('skillsRequired', skillInput, setSkillInput);
+    }
+  };
+
+  const handleRemoveSkill = (skill: string) => {
+    removeFromArray('skillsRequired', skill);
+  };
+
+  const handleAddTag = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addToArray('tags', tagInput, setTagInput);
+    }
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    removeFromArray('tags', tag);
+  };
+
+  const handleSubmit = () => {
+    if (!form.title?.trim()) {
+      showToast.error('Job title is required');
+      return;
+    }
+    if (!form.description?.trim()) {
+      showToast.error('Job description is required');
+      return;
+    }
+    if (!form.location?.trim()) {
+      showToast.error('Location is required');
+      return;
+    }
+    if (!form.skillsRequired || form.skillsRequired.length === 0) {
+      showToast.error('At least one required skill is needed');
+      return;
+    }
+    const payload = {
+      ...form,
+      applicationDeadline: form.applicationDeadline
+        ? new Date(form.applicationDeadline).toISOString()
+        : undefined,
+      walkInStartDate: form.walkInStartDate
+        ? new Date(form.walkInStartDate).toISOString()
+        : undefined,
+      walkInEndDate: form.walkInEndDate ? new Date(form.walkInEndDate).toISOString() : undefined,
+      scheduledPublishAt: form.scheduledPublishAt
+        ? new Date(form.scheduledPublishAt).toISOString()
+        : undefined,
+      screeningQuestions: screeningQuestions.length > 0 ? screeningQuestions : undefined,
+    };
+    updateMutation.mutate(payload);
+  };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout requiredRole={['EMPLOYER']}>
+        <div className="space-y-6">
+          <Skeleton variant="line" width="200px" height="32px" />
+          <Skeleton variant="rect" height="400px" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!job) {
+    return (
+      <DashboardLayout requiredRole={['EMPLOYER']}>
+        <div className="flex flex-col items-center justify-center py-20">
+          <h2 className="text-lg font-semibold text-[var(--text)]">Job not found</h2>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            The job you are trying to edit does not exist.
+          </p>
+          <Link href={ROUTES.EMPLOYER.MY_JOBS} className="mt-4">
+            <Button variant="outline" size="sm">
+              Back to My Jobs
+            </Button>
+          </Link>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout requiredRole={['EMPLOYER']}>
+      <div className="space-y-6">
+        {/* Back Button */}
+        <Link
+          href={ROUTES.EMPLOYER.JOB_DETAIL(id)}
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Job Details
+        </Link>
+
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--text)]">Edit Job</h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">Update your job listing details</p>
+          </div>
+          <Button
+            leftIcon={<Save className="h-4 w-4" />}
+            onClick={handleSubmit}
+            isLoading={updateMutation.isPending}
+          >
+            Save Changes
+          </Button>
+        </div>
+
+        {/* Basic Info */}
+        <Card>
+          <h2 className="mb-4 text-base font-semibold text-[var(--text)]">Basic Information</h2>
+          <div className="space-y-4">
+            <Input
+              label="Job Title"
+              required
+              value={form.title || ''}
+              onChange={(e) => handleChange('title', e.target.value)}
+              placeholder="e.g. Senior Software Engineer"
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Experience Level"
+                options={experienceLevelOptions}
+                value={form.experienceLevel || ''}
+                onChange={(val) => handleChange('experienceLevel', val || undefined)}
+                placeholder="Select level"
+              />
+              <Select
+                label="Education Required"
+                options={educationLevelOptions}
+                value={form.educationRequired || ''}
+                onChange={(val) => handleChange('educationRequired', val || undefined)}
+                placeholder="Select level"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Preferred Education Field"
+                placeholder="e.g. Computer Science, MBA"
+                value={form.preferredEducationField || ''}
+                onChange={(e) => handleChange('preferredEducationField', e.target.value)}
+              />
+              <Input
+                label="Role Category"
+                placeholder="e.g. Engineering, Marketing"
+                value={form.roleCategory || ''}
+                onChange={(e) => handleChange('roleCategory', e.target.value)}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Industry"
+                placeholder="e.g. Information Technology"
+                value={form.industry || ''}
+                onChange={(e) => handleChange('industry', e.target.value)}
+              />
+              <Input
+                label="Department"
+                placeholder="e.g. Engineering"
+                value={form.department || ''}
+                onChange={(e) => handleChange('department', e.target.value)}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Number of Openings"
+                type="number"
+                placeholder="1"
+                value={form.numberOfOpenings?.toString() || ''}
+                onChange={(e) =>
+                  handleChange(
+                    'numberOfOpenings',
+                    e.target.value ? Number(e.target.value) : undefined,
+                  )
+                }
+                min={1}
+              />
+              <Input
+                label="Reference Code"
+                placeholder="e.g. JOB-2026-001"
+                value={form.referenceCode || ''}
+                onChange={(e) => handleChange('referenceCode', e.target.value)}
+              />
+            </div>
+            <Select
+              label="Functional Area"
+              options={functionalAreaOptions}
+              value={form.functionalArea || ''}
+              onChange={(val) => handleChange('functionalArea', val || undefined)}
+              placeholder="Select functional area"
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="UG Required"
+                options={educationLevelOptions}
+                value={form.ugRequired || ''}
+                onChange={(val) => handleChange('ugRequired', val || undefined)}
+                placeholder="Select UG level"
+              />
+              <Select
+                label="PG Required"
+                options={educationLevelOptions}
+                value={form.pgRequired || ''}
+                onChange={(val) => handleChange('pgRequired', val || undefined)}
+                placeholder="Select PG level"
+              />
+            </div>
+            {/* Specific Degrees */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Specific Degrees
+              </label>
+              <div className="mb-2 flex flex-wrap gap-2">
+                {specificDegreeOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      const arr = form.specificDegrees || [];
+                      if (arr.includes(opt.value as never)) {
+                        handleChange(
+                          'specificDegrees',
+                          arr.filter((d) => d !== opt.value),
+                        );
+                      } else {
+                        handleChange('specificDegrees', [...arr, opt.value]);
+                      }
+                    }}
+                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${(form.specificDegrees || []).includes(opt.value as never) ? 'bg-primary border-primary text-white' : 'hover:border-primary border-[var(--border)] text-[var(--text-muted)]'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Degree Specializations */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Degree Specializations
+              </label>
+              <div className="mb-2 flex gap-2">
+                <Input
+                  value={degreeSpecInput}
+                  onChange={(e) => setDegreeSpecInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addToArray('degreeSpecializations', degreeSpecInput, setDegreeSpecInput);
+                    }
+                  }}
+                  placeholder="e.g. Computer Science"
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() =>
+                    addToArray('degreeSpecializations', degreeSpecInput, setDegreeSpecInput)
+                  }
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {(form.degreeSpecializations || []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(form.degreeSpecializations || []).map((s) => (
+                    <Tag
+                      key={s}
+                      label={s}
+                      size="md"
+                      onRemove={() => removeFromArray('degreeSpecializations', s)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Description & Details */}
+        <Card>
+          <h2 className="mb-4 text-base font-semibold text-[var(--text)]">Description & Details</h2>
+          <div className="space-y-4">
+            <RichTextEditor
+              label="Description"
+              required
+              value={form.description || ''}
+              onChange={(v) => handleChange('description', v)}
+              placeholder="Describe the role and what the candidate will be doing..."
+            />
+            <RichTextEditor
+              label="Key Responsibilities"
+              value={form.keyResponsibilities || ''}
+              onChange={(v) => handleChange('keyResponsibilities', v)}
+              placeholder="List the key responsibilities for this role..."
+            />
+            <RichTextEditor
+              label="Requirements"
+              value={form.requirements || ''}
+              onChange={(v) => handleChange('requirements', v)}
+              placeholder="List the qualifications and requirements..."
+            />
+            <RichTextEditor
+              label="Benefits"
+              value={form.benefits || ''}
+              onChange={(v) => handleChange('benefits', v)}
+              placeholder="List the benefits and perks..."
+            />
+            <Textarea
+              label="Interview Process"
+              value={form.interviewProcess || ''}
+              onChange={(e) => handleChange('interviewProcess', e.target.value)}
+              placeholder="Describe the interview process (e.g. Phone screen -> Technical -> Onsite)"
+              rows={3}
+            />
+          </div>
+        </Card>
+
+        {/* Location & Type */}
+        <Card>
+          <h2 className="mb-4 text-base font-semibold text-[var(--text)]">Location & Work Mode</h2>
+          <div className="space-y-4">
+            <Input
+              label="Location"
+              required
+              value={form.location || ''}
+              onChange={(e) => handleChange('location', e.target.value)}
+              placeholder="e.g. Mumbai, India"
+            />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Select
+                label="Job Type"
+                options={jobTypeOptions}
+                value={form.type || ''}
+                onChange={(val) => handleChange('type', val || undefined)}
+                placeholder="Select job type"
+              />
+              <Select
+                label="Work Mode"
+                options={workModeOptions}
+                value={form.workMode || ''}
+                onChange={(val) => handleChange('workMode', val || undefined)}
+                placeholder="Select work mode"
+              />
+              <Select
+                label="Shift Type"
+                options={shiftTypeOptions}
+                value={form.shiftType || ''}
+                onChange={(val) => handleChange('shiftType', val || undefined)}
+                placeholder="Select shift"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Switch
+                label="Remote position"
+                checked={form.isRemote || false}
+                onChange={() => handleChange('isRemote', !form.isRemote)}
+              />
+              <Switch
+                label="Relocation assistance offered"
+                checked={form.relocationAssistance || false}
+                onChange={() => handleChange('relocationAssistance', !form.relocationAssistance)}
+              />
+            </div>
+            <Input
+              label="Travel Requirement (%)"
+              type="number"
+              placeholder="0"
+              value={form.travelRequirementPercent?.toString() || ''}
+              onChange={(e) =>
+                handleChange(
+                  'travelRequirementPercent',
+                  e.target.value ? Number(e.target.value) : undefined,
+                )
+              }
+              min={0}
+              max={100}
+            />
+            {/* Additional Locations */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Additional Locations
+              </label>
+              <div className="mb-2 flex gap-2">
+                <Input
+                  value={addLocInput}
+                  onChange={(e) => setAddLocInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addToArray('additionalLocations', addLocInput, setAddLocInput);
+                    }
+                  }}
+                  placeholder="e.g. Pune, India"
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => addToArray('additionalLocations', addLocInput, setAddLocInput)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {(form.additionalLocations || []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(form.additionalLocations || []).map((loc) => (
+                    <Tag
+                      key={loc}
+                      label={loc}
+                      size="md"
+                      onRemove={() => removeFromArray('additionalLocations', loc)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            <Switch
+              label="Accommodation provided"
+              checked={form.accommodationProvided || false}
+              onChange={() => handleChange('accommodationProvided', !form.accommodationProvided)}
+            />
+            <Switch
+              label="Walk-in interview"
+              checked={form.isWalkIn || false}
+              onChange={() => handleChange('isWalkIn', !form.isWalkIn)}
+            />
+            {form.isWalkIn && (
+              <div className="space-y-4 rounded-lg border border-[var(--border)] p-4">
+                <p className="text-sm font-medium text-[var(--text)]">Walk-in Details</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <DatePicker
+                    label="Start Date"
+                    value={form.walkInStartDate || ''}
+                    onChange={(v) => handleChange('walkInStartDate', v)}
+                  />
+                  <DatePicker
+                    label="End Date"
+                    value={form.walkInEndDate || ''}
+                    onChange={(v) => handleChange('walkInEndDate', v)}
+                  />
+                </div>
+                <Input
+                  label="Time"
+                  placeholder="e.g. 10:00 AM - 4:00 PM"
+                  value={form.walkInTime || ''}
+                  onChange={(e) => handleChange('walkInTime', e.target.value)}
+                />
+                <Input
+                  label="Venue"
+                  placeholder="Full address of walk-in venue"
+                  value={form.walkInVenue || ''}
+                  onChange={(e) => handleChange('walkInVenue', e.target.value)}
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Contact Person"
+                    placeholder="HR Manager Name"
+                    value={form.walkInContactPerson || ''}
+                    onChange={(e) => handleChange('walkInContactPerson', e.target.value)}
+                  />
+                  <Input
+                    label="Contact Phone"
+                    placeholder="+91 98765 43210"
+                    value={form.walkInContactPhone || ''}
+                    onChange={(e) => handleChange('walkInContactPhone', e.target.value)}
+                  />
+                </div>
+                <Textarea
+                  label="Walk-in Instructions"
+                  placeholder="Any special instructions for candidates..."
+                  value={form.walkInInstructions || ''}
+                  onChange={(e) => handleChange('walkInInstructions', e.target.value)}
+                  rows={3}
+                />
+              </div>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Contact Person"
+                placeholder="HR Manager Name"
+                value={form.contactPerson || ''}
+                onChange={(e) => handleChange('contactPerson', e.target.value)}
+              />
+              <Input
+                label="Contact Email"
+                type="email"
+                placeholder="hr@company.com"
+                value={form.contactEmail || ''}
+                onChange={(e) => handleChange('contactEmail', e.target.value)}
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* Experience & Salary */}
+        <Card>
+          <h2 className="mb-4 text-base font-semibold text-[var(--text)]">
+            Experience & Compensation
+          </h2>
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Min Experience (years)"
+                type="number"
+                value={form.experienceMin ?? ''}
+                onChange={(e) =>
+                  handleChange('experienceMin', e.target.value ? Number(e.target.value) : undefined)
+                }
+                placeholder="0"
+                min={0}
+              />
+              <Input
+                label="Max Experience (years)"
+                type="number"
+                value={form.experienceMax ?? ''}
+                onChange={(e) =>
+                  handleChange('experienceMax', e.target.value ? Number(e.target.value) : undefined)
+                }
+                placeholder="10"
+                min={0}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input
+                label="Min Salary"
+                type="number"
+                value={form.salaryMin ?? ''}
+                onChange={(e) =>
+                  handleChange('salaryMin', e.target.value ? Number(e.target.value) : undefined)
+                }
+                placeholder="e.g. 500000"
+                min={0}
+              />
+              <Input
+                label="Max Salary"
+                type="number"
+                value={form.salaryMax ?? ''}
+                onChange={(e) =>
+                  handleChange('salaryMax', e.target.value ? Number(e.target.value) : undefined)
+                }
+                placeholder="e.g. 1500000"
+                min={0}
+              />
+              <Select
+                label="Salary Type"
+                options={salaryTypeOptions}
+                value={form.salaryType || ''}
+                onChange={(val) => handleChange('salaryType', val || undefined)}
+                placeholder="Select type"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Currency"
+                placeholder="INR"
+                value={form.currency || ''}
+                onChange={(e) => handleChange('currency', e.target.value)}
+              />
+              <div className="flex items-end pb-1">
+                <Switch
+                  label="Disclose salary on listing"
+                  checked={form.salaryDisclosed !== false}
+                  onChange={() => handleChange('salaryDisclosed', form.salaryDisclosed === false)}
+                />
+              </div>
+            </div>
+            <Switch
+              label="Salary is negotiable"
+              checked={form.salaryNegotiable || false}
+              onChange={() => handleChange('salaryNegotiable', !form.salaryNegotiable)}
+            />
+            {(form.currency || 'INR').toUpperCase() === 'INR' &&
+              form.salaryType === 'ANNUAL' &&
+              (form.salaryMin || form.salaryMax) && (
+                <p className="text-xs text-[var(--text-muted)]">
+                  CTC: {formatSalaryAsLPA(form.salaryMin, form.salaryMax)}
+                </p>
+              )}
+          </div>
+        </Card>
+
+        {/* Skills & Certifications */}
+        <Card>
+          <h2 className="mb-4 text-base font-semibold text-[var(--text)]">
+            Skills & Certifications
+          </h2>
+          <div className="space-y-4">
+            {/* Required Skills */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Required Skills *
+              </label>
+              <div className="mb-2 flex gap-2">
+                <Input
+                  value={skillInput}
+                  onChange={(e) => setSkillInput(e.target.value)}
+                  onKeyDown={handleAddSkill}
+                  placeholder="e.g. React, TypeScript"
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => addToArray('skillsRequired', skillInput, setSkillInput)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {(form.skillsRequired || []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(form.skillsRequired || []).map((skill) => (
+                    <Tag
+                      key={skill}
+                      label={skill}
+                      variant="primary"
+                      size="md"
+                      onRemove={() => handleRemoveSkill(skill)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Nice-to-Have Skills */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Nice-to-Have Skills
+              </label>
+              <div className="mb-2 flex gap-2">
+                <Input
+                  value={niceSkillInput}
+                  onChange={(e) => setNiceSkillInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addToArray('niceToHaveSkills', niceSkillInput, setNiceSkillInput);
+                    }
+                  }}
+                  placeholder="e.g. GraphQL, Docker"
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => addToArray('niceToHaveSkills', niceSkillInput, setNiceSkillInput)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {(form.niceToHaveSkills || []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(form.niceToHaveSkills || []).map((skill) => (
+                    <Tag
+                      key={skill}
+                      label={skill}
+                      size="md"
+                      onRemove={() => removeFromArray('niceToHaveSkills', skill)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Certifications Required */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Certifications Required
+              </label>
+              <div className="mb-2 flex gap-2">
+                <Input
+                  value={certInput}
+                  onChange={(e) => setCertInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addToArray('certificationsRequired', certInput, setCertInput);
+                    }
+                  }}
+                  placeholder="e.g. AWS Solutions Architect"
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => addToArray('certificationsRequired', certInput, setCertInput)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {(form.certificationsRequired || []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(form.certificationsRequired || []).map((cert) => (
+                    <Tag
+                      key={cert}
+                      label={cert}
+                      size="md"
+                      onRemove={() => removeFromArray('certificationsRequired', cert)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Languages Required */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Languages Required
+              </label>
+              <div className="mb-2 flex gap-2">
+                <Input
+                  value={langInput}
+                  onChange={(e) => setLangInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addToArray('languagesRequired', langInput, setLangInput);
+                    }
+                  }}
+                  placeholder="e.g. English, Hindi"
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => addToArray('languagesRequired', langInput, setLangInput)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {(form.languagesRequired || []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(form.languagesRequired || []).map((lang) => (
+                    <Tag
+                      key={lang}
+                      label={lang}
+                      size="md"
+                      onRemove={() => removeFromArray('languagesRequired', lang)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Tags, Perks & More */}
+        <Card>
+          <h2 className="mb-4 text-base font-semibold text-[var(--text)]">Tags, Perks & More</h2>
+          <div className="space-y-4">
+            {/* Tags */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Tags</label>
+              <div className="mb-2 flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleAddTag}
+                  placeholder="e.g. startup, fintech"
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => addToArray('tags', tagInput, setTagInput)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {(form.tags || []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(form.tags || []).map((tag) => (
+                    <Tag key={tag} label={tag} size="md" onRemove={() => handleRemoveTag(tag)} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Job Perks */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Job Perks
+              </label>
+              <div className="mb-2 flex gap-2">
+                <Input
+                  value={perkInput}
+                  onChange={(e) => setPerkInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addToArray('jobPerks', perkInput, setPerkInput);
+                    }
+                  }}
+                  placeholder="e.g. Free meals, Gym membership"
+                />
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => addToArray('jobPerks', perkInput, setPerkInput)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {(form.jobPerks || []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(form.jobPerks || []).map((perk) => (
+                    <Tag
+                      key={perk}
+                      label={perk}
+                      size="md"
+                      onRemove={() => removeFromArray('jobPerks', perk)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Urgency Level"
+                options={urgencyLevelOptions}
+                value={form.urgencyLevel || ''}
+                onChange={(val) => handleChange('urgencyLevel', val || undefined)}
+                placeholder="Select urgency"
+              />
+              <DatePicker
+                label="Application Deadline"
+                value={form.applicationDeadline || ''}
+                onChange={(val) => handleChange('applicationDeadline', val)}
+              />
+            </div>
+
+            <Switch
+              label="Feature this job (premium)"
+              checked={form.isFeatured || false}
+              onChange={() => handleChange('isFeatured', !form.isFeatured)}
+            />
+            {/* Notice Period Preference */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Notice Period Preference
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(NOTICE_PERIOD_PREFERENCE_LABELS).map(([val, lbl]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => {
+                      const arr = (form.noticePeriodPreference || []) as string[];
+                      if (arr.includes(val)) {
+                        handleChange(
+                          'noticePeriodPreference',
+                          arr.filter((v) => v !== val),
+                        );
+                      } else {
+                        handleChange('noticePeriodPreference', [...arr, val]);
+                      }
+                    }}
+                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${((form.noticePeriodPreference || []) as string[]).includes(val) ? 'bg-primary border-primary text-white' : 'hover:border-primary border-[var(--border)] text-[var(--text-muted)]'}`}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Requirements & Inclusion */}
+        <Card>
+          <h2 className="mb-4 text-base font-semibold text-[var(--text)]">
+            Requirements & Inclusion
+          </h2>
+          <div className="space-y-4">
+            {/* Diversity Tags */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Diversity & Inclusion Tags
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {DIVERSITY_TAG_OPTIONS.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      const arr = form.diversityTags || [];
+                      if (arr.includes(tag)) {
+                        handleChange(
+                          'diversityTags',
+                          arr.filter((t) => t !== tag),
+                        );
+                      } else {
+                        handleChange('diversityTags', [...arr, tag]);
+                      }
+                    }}
+                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${(form.diversityTags || []).includes(tag) ? 'bg-primary border-primary text-white' : 'hover:border-primary border-[var(--border)] text-[var(--text-muted)]'}`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Switch
+                label="PwD Friendly"
+                checked={form.isPwdFriendly || false}
+                onChange={() => handleChange('isPwdFriendly', !form.isPwdFriendly)}
+              />
+              <Switch
+                label="Visa Sponsorship Available"
+                checked={form.visaSponsorshipAvailable || false}
+                onChange={() =>
+                  handleChange('visaSponsorshipAvailable', !form.visaSponsorshipAvailable)
+                }
+              />
+              <Switch
+                label="Background Check Required"
+                checked={form.backgroundCheckRequired || false}
+                onChange={() =>
+                  handleChange('backgroundCheckRequired', !form.backgroundCheckRequired)
+                }
+              />
+              <Switch
+                label="Passport Required"
+                checked={form.passportRequired || false}
+                onChange={() => handleChange('passportRequired', !form.passportRequired)}
+              />
+              <Switch
+                label="Confidential Posting"
+                checked={form.isConfidential || false}
+                onChange={() => handleChange('isConfidential', !form.isConfidential)}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Gender Preference"
+                options={genderPreferenceOptions}
+                value={form.genderPreference || ''}
+                onChange={(val) => handleChange('genderPreference', val || undefined)}
+                placeholder="Any"
+              />
+              <Select
+                label="Driving License Required"
+                options={drivingLicenseOptions}
+                value={form.drivingLicenseRequired || ''}
+                onChange={(val) => handleChange('drivingLicenseRequired', val || undefined)}
+                placeholder="None"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Minimum Age"
+                type="number"
+                placeholder="18"
+                value={form.ageMin?.toString() || ''}
+                onChange={(e) =>
+                  handleChange('ageMin', e.target.value ? Number(e.target.value) : undefined)
+                }
+                min={14}
+                max={70}
+              />
+              <Input
+                label="Maximum Age"
+                type="number"
+                placeholder="60"
+                value={form.ageMax?.toString() || ''}
+                onChange={(e) =>
+                  handleChange('ageMax', e.target.value ? Number(e.target.value) : undefined)
+                }
+                min={14}
+                max={70}
+              />
+            </div>
+            <Textarea
+              label="Bond / Service Agreement Details"
+              placeholder="e.g. 2-year service bond required..."
+              value={form.bondDetails || ''}
+              onChange={(e) => handleChange('bondDetails', e.target.value)}
+              rows={2}
+            />
+          </div>
+        </Card>
+
+        {/* Screening & Posting */}
+        <Card>
+          <h2 className="mb-4 text-base font-semibold text-[var(--text)]">Screening & Posting</h2>
+          <div className="space-y-4">
+            <ScreeningQuestionBuilder
+              questions={screeningQuestions}
+              onChange={setScreeningQuestions}
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Posting Visibility"
+                options={postingVisibilityOptions}
+                value={form.postingVisibility || 'PUBLIC'}
+                onChange={(val) => handleChange('postingVisibility', val || 'PUBLIC')}
+              />
+              <Select
+                label="Apply Method"
+                options={applyMethodOptions}
+                value={form.applyMethod || 'IN_PLATFORM'}
+                onChange={(val) => handleChange('applyMethod', val || 'IN_PLATFORM')}
+              />
+            </div>
+            {form.applyMethod === 'EXTERNAL_URL' && (
+              <Input
+                label="External Apply URL"
+                type="url"
+                placeholder="https://careers.company.com/apply"
+                value={form.externalApplyUrl || ''}
+                onChange={(e) => handleChange('externalApplyUrl', e.target.value)}
+              />
+            )}
+            <DatePicker
+              label="Scheduled Publish Date"
+              value={form.scheduledPublishAt || ''}
+              onChange={(v) => handleChange('scheduledPublishAt', v)}
+            />
+          </div>
+        </Card>
+
+        {/* Bottom Save */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Link href={ROUTES.EMPLOYER.JOB_DETAIL(id)}>
+            <Button variant="outline">Cancel</Button>
+          </Link>
+          <Button
+            leftIcon={<Save className="h-4 w-4" />}
+            onClick={handleSubmit}
+            isLoading={updateMutation.isPending}
+          >
+            Save Changes
+          </Button>
+        </div>
+      </div>
+    </DashboardLayout>
+  );
 }

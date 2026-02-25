@@ -7,7 +7,7 @@ import { env } from '../config/env';
  * @returns Hex encoded token string
  */
 export const generateSecureToken = (length: number = 32): string => {
-    return crypto.randomBytes(length).toString('hex');
+  return crypto.randomBytes(length).toString('hex');
 };
 
 /**
@@ -16,7 +16,7 @@ export const generateSecureToken = (length: number = 32): string => {
  * @returns Hashed token
  */
 export const hashToken = (token: string): string => {
-    return crypto.createHash('sha256').update(token).digest('hex');
+  return crypto.createHash('sha256').update(token).digest('hex');
 };
 
 /**
@@ -25,9 +25,9 @@ export const hashToken = (token: string): string => {
  * @returns Numeric OTP string
  */
 export const generateOtp = (length: number = parseInt(env.OTP_LENGTH, 10)): string => {
-    const min = Math.pow(10, length - 1);
-    const max = Math.pow(10, length);
-    return crypto.randomInt(min, max).toString();
+  const min = Math.pow(10, length - 1);
+  const max = Math.pow(10, length);
+  return crypto.randomInt(min, max).toString();
 };
 
 /**
@@ -36,13 +36,13 @@ export const generateOtp = (length: number = parseInt(env.OTP_LENGTH, 10)): stri
  * @returns Array of backup codes
  */
 export const generateBackupCodes = (count: number = 10): string[] => {
-    const codes: string[] = [];
-    for (let i = 0; i < count; i++) {
-        // Format: XXXX-XXXX (8 alphanumeric characters)
-        const code = crypto.randomBytes(4).toString('hex').toUpperCase();
-        codes.push(`${code.slice(0, 4)}-${code.slice(4, 8)}`);
-    }
-    return codes;
+  const codes: string[] = [];
+  for (let i = 0; i < count; i++) {
+    // Format: XXXX-XXXX (8 alphanumeric characters)
+    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
+    codes.push(`${code.slice(0, 4)}-${code.slice(4, 8)}`);
+  }
+  return codes;
 };
 
 /**
@@ -52,9 +52,6 @@ export const generateBackupCodes = (count: number = 10): string[] => {
  * @returns Boolean indicating if tokens match
  */
 export const compareTokens = (plainToken: string, hashedToken: string): boolean => {
-    const hashedPlain = hashToken(plainToken);
-    return crypto.timingSafeEqual(
-        Buffer.from(hashedPlain, 'hex'),
-        Buffer.from(hashedToken, 'hex')
-    );
+  const hashedPlain = hashToken(plainToken);
+  return crypto.timingSafeEqual(Buffer.from(hashedPlain, 'hex'), Buffer.from(hashedToken, 'hex'));
 };

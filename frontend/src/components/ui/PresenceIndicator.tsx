@@ -3,43 +3,48 @@
 import { usePresence } from '@/hooks/use-presence';
 
 function formatLastSeen(date: Date | null): string {
-    if (!date) return 'Unknown';
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return 'Just now';
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}h ago`;
-    const diffDays = Math.floor(diffHr / 24);
-    return `${diffDays}d ago`;
+  if (!date) return 'Unknown';
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDays = Math.floor(diffHr / 24);
+  return `${diffDays}d ago`;
 }
 
 interface PresenceIndicatorProps {
-    userId: string | null | undefined;
-    showLabel?: boolean;
-    size?: 'sm' | 'md';
+  userId: string | null | undefined;
+  showLabel?: boolean;
+  size?: 'sm' | 'md';
 }
 
-export default function PresenceIndicator({ userId, showLabel = false, size = 'sm' }: PresenceIndicatorProps) {
-    const { online, lastSeen } = usePresence(userId);
+export default function PresenceIndicator({
+  userId,
+  showLabel = false,
+  size = 'sm',
+}: PresenceIndicatorProps) {
+  const { online, lastSeen } = usePresence(userId);
 
-    const dotSize = size === 'sm' ? 'h-2 w-2' : 'h-3 w-3';
+  const dotSize = size === 'sm' ? 'h-2 w-2' : 'h-3 w-3';
 
-    return (
-        <span className="inline-flex items-center gap-1.5" title={online ? 'Online' : `Last seen ${formatLastSeen(lastSeen)}`}>
-            <span
-                className={`${dotSize} rounded-full ${
-                    online
-                        ? 'bg-[var(--success)] shadow-[0_0_4px_var(--success)]'
-                        : 'bg-[var(--text-muted)]'
-                }`}
-            />
-            {showLabel && (
-                <span className="text-xs text-[var(--text-muted)]">
-                    {online ? 'Online' : formatLastSeen(lastSeen)}
-                </span>
-            )}
+  return (
+    <span
+      className="inline-flex items-center gap-1.5"
+      title={online ? 'Online' : `Last seen ${formatLastSeen(lastSeen)}`}
+    >
+      <span
+        className={`${dotSize} rounded-full ${
+          online ? 'bg-[var(--success)] shadow-[0_0_4px_var(--success)]' : 'bg-[var(--text-muted)]'
+        }`}
+      />
+      {showLabel && (
+        <span className="text-xs text-[var(--text-muted)]">
+          {online ? 'Online' : formatLastSeen(lastSeen)}
         </span>
-    );
+      )}
+    </span>
+  );
 }

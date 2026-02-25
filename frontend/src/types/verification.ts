@@ -3,68 +3,73 @@ export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REQUESTE
 export type VerificationPriority = 'NORMAL' | 'HIGH' | 'URGENT';
 
 export interface VerificationRequest {
+  id: string;
+  userId: string;
+  type: VerificationType;
+  status: VerificationStatus;
+  documentUrl: string | null;
+  data: Record<string, unknown> | null;
+  reviewedBy: string | null;
+  adminComments: string | null;
+  reviewedAt: string | null;
+  escalatedAt: string | null;
+  escalatedBy: string | null;
+  escalationReason: string | null;
+  priority: VerificationPriority;
+  slaDeadline: string | null;
+  approvalChain: Array<{
+    level: number;
+    approverId: string;
+    approvedAt?: string;
+    comments?: string;
+  }> | null;
+  currentApprovalLevel: number | null;
+  autoEscalated: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
     id: string;
-    userId: string;
-    type: VerificationType;
-    status: VerificationStatus;
-    documentUrl: string | null;
-    data: Record<string, unknown> | null;
-    reviewedBy: string | null;
-    adminComments: string | null;
-    reviewedAt: string | null;
-    escalatedAt: string | null;
-    escalatedBy: string | null;
-    escalationReason: string | null;
-    priority: VerificationPriority;
-    slaDeadline: string | null;
-    approvalChain: Array<{ level: number; approverId: string; approvedAt?: string; comments?: string }> | null;
-    currentApprovalLevel: number | null;
-    autoEscalated: boolean;
-    createdAt: string;
-    updatedAt: string;
-    user?: {
-        id: string;
-        firstName: string | null;
-        lastName: string | null;
-        email: string;
-        avatar?: string | null;
-        role?: string;
-        companyProfile?: { companyName: string; gstNumber?: string | null } | null;
-    };
-    reviewer?: {
-        id: string;
-        firstName: string | null;
-        lastName: string | null;
-        email: string;
-    } | null;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+    avatar?: string | null;
+    role?: string;
+    companyProfile?: { companyName: string; gstNumber?: string | null } | null;
+  };
+  reviewer?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+  } | null;
 }
 
 export interface CreateVerificationRequest {
-    type: VerificationType;
-    data?: Record<string, unknown>;
+  type: VerificationType;
+  data?: Record<string, unknown>;
 }
 
 export interface ReviewVerificationRequest {
-    status: VerificationStatus;
-    comments?: string;
+  status: VerificationStatus;
+  comments?: string;
 }
 
 export interface EscalateVerificationRequest {
-    reason: string;
+  reason: string;
 }
 
 export interface VerificationStats {
-    pending: number;
-    approved: number;
-    rejected: number;
-    requestedChanges: number;
-    total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  requestedChanges: number;
+  total: number;
 }
 
 export interface VerificationFilters {
-    type?: VerificationType;
-    status?: VerificationStatus;
-    priority?: VerificationPriority;
-    page?: number;
-    limit?: number;
+  type?: VerificationType;
+  status?: VerificationStatus;
+  priority?: VerificationPriority;
+  page?: number;
+  limit?: number;
 }

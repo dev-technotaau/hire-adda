@@ -8,60 +8,60 @@ import { QUERY_KEYS } from '@/constants/config';
 import type { NotificationFilters } from '@/types/notification';
 
 export function useNotifications(filters?: NotificationFilters) {
-    return useQuery({
-        queryKey: [...QUERY_KEYS.NOTIFICATIONS.LIST, filters],
-        queryFn: () => notificationService.getNotifications(filters),
-    });
+  return useQuery({
+    queryKey: [...QUERY_KEYS.NOTIFICATIONS.LIST, filters],
+    queryFn: () => notificationService.getNotifications(filters),
+  });
 }
 
 /** Returns true when the browser tab is visible */
 function usePageVisible() {
-    const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(true);
 
-    useEffect(() => {
-        const handleVisibilityChange = () => {
-            setVisible(document.visibilityState === 'visible');
-        };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, []);
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setVisible(document.visibilityState === 'visible');
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
-    return visible;
+  return visible;
 }
 
 export function useUnreadCount() {
-    const isVisible = usePageVisible();
-    const { isAuthenticated } = useAuth();
+  const isVisible = usePageVisible();
+  const { isAuthenticated } = useAuth();
 
-    return useQuery({
-        queryKey: QUERY_KEYS.NOTIFICATIONS.UNREAD_COUNT,
-        queryFn: () => notificationService.getUnreadCount(),
-        enabled: isAuthenticated,
-        // Poll every 30s when tab is visible, pause when hidden
-        refetchInterval: isVisible ? 30_000 : false,
-        // Immediately refetch when tab becomes visible again
-        refetchOnWindowFocus: true,
-    });
+  return useQuery({
+    queryKey: QUERY_KEYS.NOTIFICATIONS.UNREAD_COUNT,
+    queryFn: () => notificationService.getUnreadCount(),
+    enabled: isAuthenticated,
+    // Poll every 30s when tab is visible, pause when hidden
+    refetchInterval: isVisible ? 30_000 : false,
+    // Immediately refetch when tab becomes visible again
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useMarkAsRead() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (id: string) => notificationService.markAsRead(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.NOTIFICATIONS.LIST });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.NOTIFICATIONS.UNREAD_COUNT });
-        },
-    });
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notificationService.markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.NOTIFICATIONS.LIST });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.NOTIFICATIONS.UNREAD_COUNT });
+    },
+  });
 }
 
 export function useMarkAllAsRead() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: () => notificationService.markAllAsRead(),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.NOTIFICATIONS.LIST });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.NOTIFICATIONS.UNREAD_COUNT });
-        },
-    });
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => notificationService.markAllAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.NOTIFICATIONS.LIST });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.NOTIFICATIONS.UNREAD_COUNT });
+    },
+  });
 }

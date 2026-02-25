@@ -1,4 +1,5 @@
-import Redis, { RedisOptions } from 'ioredis';
+import type { RedisOptions } from 'ioredis';
+import Redis from 'ioredis';
 import { env } from './env';
 import logger from './logger';
 
@@ -52,9 +53,9 @@ const createMockRedis = () => {
     del: noop,
     expire: noop,
     ttl: noop,
-    on: () => { },
+    on: () => {},
     connect: () => Promise.resolve(),
-    disconnect: () => { },
+    disconnect: () => {},
     quit: () => Promise.resolve('OK'),
     call: (..._args: unknown[]) => Promise.resolve(null),
     status: 'disabled',

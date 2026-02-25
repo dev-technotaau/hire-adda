@@ -2,10 +2,7 @@ import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import { validate } from '../validators/validate';
 import * as deviceController from '../controllers/device.controller';
-import {
-    registerFcmTokenSchema,
-    registerPushSubscriptionSchema,
-} from '../schemas/device.schema';
+import { registerFcmTokenSchema, registerPushSubscriptionSchema } from '../schemas/device.schema';
 
 const router = Router();
 
@@ -40,7 +37,11 @@ router.delete('/fcm/:tokenId', deviceController.removeFcmToken);
  *     summary: Register a web push subscription
  *     security: [{ bearerAuth: [] }]
  */
-router.post('/push-subscriptions', validate(registerPushSubscriptionSchema), deviceController.registerPushSubscription);
+router.post(
+  '/push-subscriptions',
+  validate(registerPushSubscriptionSchema),
+  deviceController.registerPushSubscription
+);
 
 /**
  * @openapi

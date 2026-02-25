@@ -13,6 +13,11 @@ router.get('/client', featureFlagController.getClientFlags);
 router.get('/', protect, restrictTo(Role.ADMIN, Role.SUPER_ADMIN), featureFlagController.getFlags);
 
 // Admin only: single flag
-router.get('/:key', protect, restrictTo(Role.ADMIN, Role.SUPER_ADMIN), featureFlagController.getFlagByKey);
+router.get(
+  '/:key',
+  protect,
+  restrictTo(Role.ADMIN, Role.SUPER_ADMIN),
+  featureFlagController.getFlagByKey
+);
 
 export default router;

@@ -4,25 +4,25 @@
 // ============================================================
 
 const BRAND = {
-    name: 'Talent Bridge',
-    primary: '#4F46E5',
-    primaryDark: '#4338CA',
-    success: '#059669',
-    successLight: '#ecfdf5',
-    warning: '#D97706',
-    warningLight: '#fffbeb',
-    error: '#DC2626',
-    errorLight: '#fef2f2',
-    text: '#1f2937',
-    textSecondary: '#6b7280',
-    textMuted: '#9ca3af',
-    border: '#e5e7eb',
-    bgPage: '#f3f4f6',
-    bgCard: '#ffffff',
-    bgMuted: '#f9fafb',
-    url: process.env.FRONTEND_URL || 'https://talentbridge.com',
-    supportEmail: 'support@talentbridge.com',
-    year: new Date().getFullYear(),
+  name: 'Talent Bridge',
+  primary: '#4F46E5',
+  primaryDark: '#4338CA',
+  success: '#059669',
+  successLight: '#ecfdf5',
+  warning: '#D97706',
+  warningLight: '#fffbeb',
+  error: '#DC2626',
+  errorLight: '#fef2f2',
+  text: '#1f2937',
+  textSecondary: '#6b7280',
+  textMuted: '#9ca3af',
+  border: '#e5e7eb',
+  bgPage: '#f3f4f6',
+  bgCard: '#ffffff',
+  bgMuted: '#f9fafb',
+  url: process.env.FRONTEND_URL || 'https://talentbridge.com',
+  supportEmail: 'support@talentbridge.com',
+  year: new Date().getFullYear(),
 };
 
 // ---- Core Layout ----
@@ -105,19 +105,19 @@ export const emailLayout = (content: string, preheader?: string): string => `<!D
 // ---- Reusable Components ----
 
 export const heading = (text: string): string =>
-    `<h1 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:${BRAND.text};line-height:1.35;">${text}</h1>`;
+  `<h1 style="margin:0 0 8px 0;font-size:24px;font-weight:700;color:${BRAND.text};line-height:1.35;">${text}</h1>`;
 
 export const subheading = (text: string): string =>
-    `<h2 style="margin:0 0 6px 0;font-size:18px;font-weight:600;color:${BRAND.text};line-height:1.4;">${text}</h2>`;
+  `<h2 style="margin:0 0 6px 0;font-size:18px;font-weight:600;color:${BRAND.text};line-height:1.4;">${text}</h2>`;
 
 export const subtitle = (text: string): string =>
-    `<p style="margin:0 0 28px 0;font-size:15px;color:${BRAND.textSecondary};line-height:1.6;">${text}</p>`;
+  `<p style="margin:0 0 28px 0;font-size:15px;color:${BRAND.textSecondary};line-height:1.6;">${text}</p>`;
 
 export const paragraph = (text: string): string =>
-    `<p style="margin:0 0 16px 0;font-size:15px;color:#374151;line-height:1.7;">${text}</p>`;
+  `<p style="margin:0 0 16px 0;font-size:15px;color:#374151;line-height:1.7;">${text}</p>`;
 
 export const greeting = (name: string): string =>
-    `<p style="margin:0 0 16px 0;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${name}</strong>,</p>`;
+  `<p style="margin:0 0 16px 0;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${name}</strong>,</p>`;
 
 export const signature = (): string => `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -145,16 +145,20 @@ export const button = (text: string, href: string, color: string = BRAND.primary
   </tr>
 </table>`;
 
-export const buttonRow = (buttons: Array<{ text: string; href: string; color?: string; variant?: 'solid' | 'outline' }>): string => `
+export const buttonRow = (
+  buttons: Array<{ text: string; href: string; color?: string; variant?: 'solid' | 'outline' }>
+): string => `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
   <tr>
     <td align="center" style="padding:28px 0 12px 0;">
-      ${buttons.map(b => {
+      ${buttons
+        .map((b) => {
           if (b.variant === 'outline') {
-              return `<a href="${b.href}" target="_blank" style="display:inline-block;padding:12px 28px;background-color:transparent;color:${b.color || BRAND.primary};font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;border:2px solid ${b.color || BRAND.primary};line-height:1.2;text-align:center;margin:0 6px;">${b.text}</a>`;
+            return `<a href="${b.href}" target="_blank" style="display:inline-block;padding:12px 28px;background-color:transparent;color:${b.color || BRAND.primary};font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;border:2px solid ${b.color || BRAND.primary};line-height:1.2;text-align:center;margin:0 6px;">${b.text}</a>`;
           }
           return `<a href="${b.href}" target="_blank" style="display:inline-block;padding:14px 28px;background-color:${b.color || BRAND.primary};color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;line-height:1.2;text-align:center;margin:0 6px;">${b.text}</a>`;
-      }).join('\n      ')}
+        })
+        .join('\n      ')}
     </td>
   </tr>
 </table>`;
@@ -181,12 +185,16 @@ export const divider = (): string => `
 
 export const infoBox = (items: Array<{ label: string; value: string }>): string => `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;border-radius:10px;border:1px solid ${BRAND.border};overflow:hidden;">
-  ${items.map((item, i) => `<tr>
+  ${items
+    .map(
+      (item, i) => `<tr>
     <td style="padding:14px 20px;${i < items.length - 1 ? `border-bottom:1px solid ${BRAND.border};` : ''}background-color:${BRAND.bgMuted};">
       <span style="display:block;font-size:12px;font-weight:500;color:${BRAND.textMuted};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">${item.label}</span>
       <span style="display:block;font-size:15px;font-weight:600;color:${BRAND.text};">${item.value}</span>
     </td>
-  </tr>`).join('\n  ')}
+  </tr>`
+    )
+    .join('\n  ')}
 </table>`;
 
 export const successBox = (text: string): string => `
@@ -226,12 +234,12 @@ export const iconCircle = (emoji: string, bgColor: string): string => `
 </table>`;
 
 export const badge = (text: string, color: string, bgColor: string): string =>
-    `<span style="display:inline-block;padding:4px 12px;background-color:${bgColor};color:${color};font-size:12px;font-weight:600;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;">${text}</span>`;
+  `<span style="display:inline-block;padding:4px 12px;background-color:${bgColor};color:${color};font-size:12px;font-weight:600;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;">${text}</span>`;
 
 export const smallText = (text: string): string =>
-    `<p style="margin:0;font-size:13px;color:${BRAND.textMuted};line-height:1.6;">${text}</p>`;
+  `<p style="margin:0;font-size:13px;color:${BRAND.textMuted};line-height:1.6;">${text}</p>`;
 
 export const linkText = (text: string, href: string): string =>
-    `<a href="${href}" style="color:${BRAND.primary};font-weight:500;text-decoration:underline;">${text}</a>`;
+  `<a href="${href}" style="color:${BRAND.primary};font-weight:500;text-decoration:underline;">${text}</a>`;
 
 export { BRAND };

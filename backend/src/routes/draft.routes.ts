@@ -2,10 +2,7 @@ import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import { validate } from '../validators/validate';
 import * as draftController from '../controllers/draft.controller';
-import {
-    saveDraftSchema,
-    listDraftsSchema,
-} from '../schemas/draft.schema';
+import { saveDraftSchema, listDraftsSchema } from '../schemas/draft.schema';
 
 const router = Router();
 

@@ -4,9 +4,9 @@ import { protect } from '../middleware/auth';
 import { restrictTo } from '../middleware/rbac';
 import { validate } from '../validators/validate';
 import {
-    createListSchema,
-    updateListSchema,
-    addCandidatesToListSchema,
+  createListSchema,
+  updateListSchema,
+  addCandidatesToListSchema,
 } from '../schemas/candidate-list.schema';
 import { Role } from '@prisma/client';
 
@@ -23,7 +23,11 @@ router.put('/:listId', validate({ body: updateListSchema }), candidateListContro
 router.delete('/:listId', candidateListController.deleteList);
 
 // List member management
-router.post('/:listId/candidates', validate({ body: addCandidatesToListSchema }), candidateListController.addCandidatesToList);
+router.post(
+  '/:listId/candidates',
+  validate({ body: addCandidatesToListSchema }),
+  candidateListController.addCandidatesToList
+);
 router.delete('/:listId/candidates/:candidateId', candidateListController.removeCandidateFromList);
 router.patch('/:listId/candidates/:candidateId/notes', candidateListController.updateMemberNotes);
 

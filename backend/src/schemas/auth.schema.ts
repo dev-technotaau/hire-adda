@@ -5,20 +5,28 @@ import { Role } from '@prisma/client';
 // Registration
 // ===============================
 export const registerSchema = z.object({
-    body: z.object({
-        email: z.string().email('Invalid email address'),
-        password: z
-            .string()
-            .min(8, 'Password must be at least 8 characters')
-            .max(128, 'Password must be at most 128 characters'),
-        firstName: z.string().min(1, 'First name is required').max(50),
-        lastName: z.string().min(1, 'Last name is required').max(50),
-        role: z.enum([Role.CANDIDATE, Role.EMPLOYER]).default(Role.CANDIDATE),
-        mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number').optional(),
-        agreedToTerms: z.boolean().refine(val => val === true, 'You must agree to terms').optional(),
-    }).refine(data => data.email || data.mobileNumber, {
-        message: "Either email or mobile number is required",
-        path: ["email"]
+  body: z
+    .object({
+      email: z.string().email('Invalid email address'),
+      password: z
+        .string()
+        .min(8, 'Password must be at least 8 characters')
+        .max(128, 'Password must be at most 128 characters'),
+      firstName: z.string().min(1, 'First name is required').max(50),
+      lastName: z.string().min(1, 'Last name is required').max(50),
+      role: z.enum([Role.CANDIDATE, Role.EMPLOYER]).default(Role.CANDIDATE),
+      mobileNumber: z
+        .string()
+        .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number')
+        .optional(),
+      agreedToTerms: z
+        .boolean()
+        .refine((val) => val === true, 'You must agree to terms')
+        .optional(),
+    })
+    .refine((data) => data.email || data.mobileNumber, {
+      message: 'Either email or mobile number is required',
+      path: ['email'],
     }),
 });
 
@@ -28,11 +36,11 @@ export type RegisterInput = z.infer<typeof registerSchema>['body'];
 // Login
 // ===============================
 export const loginSchema = z.object({
-    body: z.object({
-        email: z.string().email('Invalid email address'),
-        password: z.string().min(1, 'Password is required'),
-        mfaCode: z.string().min(6).max(9).optional(),
-    }),
+  body: z.object({
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(1, 'Password is required'),
+    mfaCode: z.string().min(6).max(9).optional(),
+  }),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>['body'];
@@ -41,9 +49,9 @@ export type LoginInput = z.infer<typeof loginSchema>['body'];
 // Email Verification
 // ===============================
 export const verifyEmailSchema = z.object({
-    body: z.object({
-        token: z.string().min(1, 'Verification token is required'),
-    }),
+  body: z.object({
+    token: z.string().min(1, 'Verification token is required'),
+  }),
 });
 
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>['body'];
@@ -52,12 +60,17 @@ export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>['body'];
 // Forgot Password
 // ===============================
 export const forgotPasswordSchema = z.object({
-    body: z.object({
-        email: z.string().email('Invalid email address').optional(),
-        mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number').optional(),
-    }).refine(data => data.email || data.mobileNumber, {
-        message: "Either email or mobile number is required",
-        path: ["email"]
+  body: z
+    .object({
+      email: z.string().email('Invalid email address').optional(),
+      mobileNumber: z
+        .string()
+        .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number')
+        .optional(),
+    })
+    .refine((data) => data.email || data.mobileNumber, {
+      message: 'Either email or mobile number is required',
+      path: ['email'],
     }),
 });
 
@@ -67,14 +80,14 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>['body'];
 // Reset Password
 // ===============================
 export const resetPasswordSchema = z.object({
-    body: z.object({
-        token: z.string().min(1, 'Reset token or OTP is required'),
-        otp: z.string().length(6, 'OTP must be 6 digits').optional(),
-        password: z
-            .string()
-            .min(8, 'Password must be at least 8 characters')
-            .max(128, 'Password must be at most 128 characters'),
-    }),
+  body: z.object({
+    token: z.string().min(1, 'Reset token or OTP is required'),
+    otp: z.string().length(6, 'OTP must be 6 digits').optional(),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .max(128, 'Password must be at most 128 characters'),
+  }),
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>['body'];
@@ -83,38 +96,38 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>['body'];
 // Change Password
 // ===============================
 export const initiateChangePasswordSchema = z.object({
-    body: z.object({
-        currentPassword: z.string().min(1, 'Current password is required'),
-    }),
+  body: z.object({
+    currentPassword: z.string().min(1, 'Current password is required'),
+  }),
 });
 
 export type InitiateChangePasswordInput = z.infer<typeof initiateChangePasswordSchema>['body'];
 
 export const confirmChangePasswordSchema = z.object({
-    body: z.object({
-        otp: z.string().length(6, 'OTP must be 6 digits'),
-        newPassword: z
-            .string()
-            .min(8, 'Password must be at least 8 characters')
-            .max(128, 'Password must be at most 128 characters'),
-        confirmPassword: z.string().min(1, 'Confirm password is required'),
-    }).refine((data) => data.newPassword === data.confirmPassword, {
-        message: "Passwords don't match",
-        path: ["confirmPassword"],
+  body: z
+    .object({
+      otp: z.string().length(6, 'OTP must be 6 digits'),
+      newPassword: z
+        .string()
+        .min(8, 'Password must be at least 8 characters')
+        .max(128, 'Password must be at most 128 characters'),
+      confirmPassword: z.string().min(1, 'Confirm password is required'),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: "Passwords don't match",
+      path: ['confirmPassword'],
     }),
 });
 
 export type ConfirmChangePasswordInput = z.infer<typeof confirmChangePasswordSchema>['body'];
 
-
-
 // ===============================
 // Refresh Token
 // ===============================
 export const refreshTokenSchema = z.object({
-    body: z.object({
-        refreshToken: z.string().min(1, 'Refresh token is required'),
-    }),
+  body: z.object({
+    refreshToken: z.string().min(1, 'Refresh token is required'),
+  }),
 });
 
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>['body'];
@@ -123,9 +136,9 @@ export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>['body'];
 // MFA Setup
 // ===============================
 export const mfaVerifySchema = z.object({
-    body: z.object({
-        token: z.string().length(6, 'MFA code must be 6 digits'),
-    }),
+  body: z.object({
+    token: z.string().length(6, 'MFA code must be 6 digits'),
+  }),
 });
 
 export type MfaVerifyInput = z.infer<typeof mfaVerifySchema>['body'];
@@ -134,10 +147,10 @@ export type MfaVerifyInput = z.infer<typeof mfaVerifySchema>['body'];
 // MFA Disable
 // ===============================
 export const mfaDisableSchema = z.object({
-    body: z.object({
-        token: z.string().length(6, 'MFA code must be 6 digits'),
-        password: z.string().min(1, 'Password is required'),
-    }),
+  body: z.object({
+    token: z.string().length(6, 'MFA code must be 6 digits'),
+    password: z.string().min(1, 'Password is required'),
+  }),
 });
 
 export type MfaDisableInput = z.infer<typeof mfaDisableSchema>['body'];
@@ -146,10 +159,10 @@ export type MfaDisableInput = z.infer<typeof mfaDisableSchema>['body'];
 // MFA Backup Code Regeneration
 // ===============================
 export const mfaRegenerateBackupSchema = z.object({
-    body: z.object({
-        token: z.string().min(6).max(6, 'MFA code must be 6 digits'),
-        password: z.string().min(1, 'Password is required'),
-    }),
+  body: z.object({
+    token: z.string().min(6).max(6, 'MFA code must be 6 digits'),
+    password: z.string().min(1, 'Password is required'),
+  }),
 });
 
 export type MfaRegenerateBackupInput = z.infer<typeof mfaRegenerateBackupSchema>['body'];
@@ -158,18 +171,18 @@ export type MfaRegenerateBackupInput = z.infer<typeof mfaRegenerateBackupSchema>
 // Mobile Verification
 // ===============================
 export const verifyMobileSchema = z.object({
-    body: z.object({
-        mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
-        otp: z.string().length(6, 'OTP must be 6 digits'),
-    }),
+  body: z.object({
+    mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
+    otp: z.string().length(6, 'OTP must be 6 digits'),
+  }),
 });
 
 export type VerifyMobileInput = z.infer<typeof verifyMobileSchema>['body'];
 
 export const resendMobileOtpSchema = z.object({
-    body: z.object({
-        mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
-    }),
+  body: z.object({
+    mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
+  }),
 });
 
 export type ResendMobileOtpInput = z.infer<typeof resendMobileOtpSchema>['body'];
@@ -178,10 +191,13 @@ export type ResendMobileOtpInput = z.infer<typeof resendMobileOtpSchema>['body']
 // WhatsApp Verification
 // ===============================
 export const verifyWhatsappSchema = z.object({
-    body: z.object({
-        mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
-        whatsappNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid WhatsApp number').optional(),
-    }),
+  body: z.object({
+    mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
+    whatsappNumber: z
+      .string()
+      .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid WhatsApp number')
+      .optional(),
+  }),
 });
 
 export type VerifyWhatsappInput = z.infer<typeof verifyWhatsappSchema>['body'];
@@ -190,10 +206,10 @@ export type VerifyWhatsappInput = z.infer<typeof verifyWhatsappSchema>['body'];
 // Change WhatsApp Number
 // ===============================
 export const changeWhatsappNumberSchema = z.object({
-    body: z.object({
-        newWhatsappNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid WhatsApp number'),
-        password: z.string().min(1, 'Password is required'),
-    }),
+  body: z.object({
+    newWhatsappNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid WhatsApp number'),
+    password: z.string().min(1, 'Password is required'),
+  }),
 });
 
 export type ChangeWhatsappNumberInput = z.infer<typeof changeWhatsappNumberSchema>['body'];
@@ -202,10 +218,10 @@ export type ChangeWhatsappNumberInput = z.infer<typeof changeWhatsappNumberSchem
 // WhatsApp OTP Confirmation
 // ===============================
 export const verifyWhatsappOtpSchema = z.object({
-    body: z.object({
-        mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
-        otp: z.string().length(6, 'OTP must be 6 digits'),
-    }),
+  body: z.object({
+    mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
+    otp: z.string().length(6, 'OTP must be 6 digits'),
+  }),
 });
 
 export type VerifyWhatsappOtpInput = z.infer<typeof verifyWhatsappOtpSchema>['body'];
@@ -214,18 +230,18 @@ export type VerifyWhatsappOtpInput = z.infer<typeof verifyWhatsappOtpSchema>['bo
 // Change Email (2-step: initiate → confirm)
 // ===============================
 export const initiateChangeEmailSchema = z.object({
-    body: z.object({
-        newEmail: z.string().email('Invalid email address'),
-        password: z.string().min(1, 'Password is required'),
-    }),
+  body: z.object({
+    newEmail: z.string().email('Invalid email address'),
+    password: z.string().min(1, 'Password is required'),
+  }),
 });
 
 export type InitiateChangeEmailInput = z.infer<typeof initiateChangeEmailSchema>['body'];
 
 export const confirmChangeEmailSchema = z.object({
-    body: z.object({
-        otp: z.string().min(4).max(8),
-    }),
+  body: z.object({
+    otp: z.string().min(4).max(8),
+  }),
 });
 
 export type ConfirmChangeEmailInput = z.infer<typeof confirmChangeEmailSchema>['body'];
@@ -234,18 +250,18 @@ export type ConfirmChangeEmailInput = z.infer<typeof confirmChangeEmailSchema>['
 // Change Mobile (2-step: initiate → confirm)
 // ===============================
 export const initiateChangeMobileSchema = z.object({
-    body: z.object({
-        newMobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
-        password: z.string().min(1, 'Password is required'),
-    }),
+  body: z.object({
+    newMobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
+    password: z.string().min(1, 'Password is required'),
+  }),
 });
 
 export type InitiateChangeMobileInput = z.infer<typeof initiateChangeMobileSchema>['body'];
 
 export const confirmChangeMobileSchema = z.object({
-    body: z.object({
-        otp: z.string().min(4).max(8),
-    }),
+  body: z.object({
+    otp: z.string().min(4).max(8),
+  }),
 });
 
 export type ConfirmChangeMobileInput = z.infer<typeof confirmChangeMobileSchema>['body'];
@@ -254,27 +270,27 @@ export type ConfirmChangeMobileInput = z.infer<typeof confirmChangeMobileSchema>
 // Resend Email Verification
 // ===============================
 export const resendEmailVerificationSchema = z.object({
-    body: z.object({
-        email: z.string().email('Invalid email address'),
-    }),
+  body: z.object({
+    email: z.string().email('Invalid email address'),
+  }),
 });
 
 // ===============================
 // Firebase Login
 // ===============================
 export const firebaseLoginSchema = z.object({
-    body: z.object({
-        idToken: z.string().min(1, 'Firebase ID token is required'),
-        role: z.enum([Role.CANDIDATE, Role.EMPLOYER]).optional(),
-    }),
+  body: z.object({
+    idToken: z.string().min(1, 'Firebase ID token is required'),
+    role: z.enum([Role.CANDIDATE, Role.EMPLOYER]).optional(),
+  }),
 });
 
 // ===============================
 // Consent Management
 // ===============================
 export const giveConsentSchema = z.object({
-    body: z.object({
-        type: z.string().min(1, 'Consent type is required'),
-        granted: z.boolean(),
-    }),
+  body: z.object({
+    type: z.string().min(1, 'Consent type is required'),
+    granted: z.boolean(),
+  }),
 });

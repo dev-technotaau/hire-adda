@@ -1,4 +1,5 @@
-import { Worker, Job } from 'bullmq';
+import type { Job } from 'bullmq';
+import { Worker } from 'bullmq';
 import { createBullMQConnection } from '../config/redis';
 import logger from '../config/logger';
 import { MATCHING_QUEUE_NAME } from './matching.queue';
@@ -7,184 +8,180 @@ import { notificationService } from '../services/notification.service';
 import { prisma } from '../config/prisma';
 
 interface MatchCandidatesData {
-    jobId: string;
+  jobId: string;
 }
 
 interface MatchJobsData {
-    userId: string;
+  userId: string;
 }
 
 type MatchingJobData = MatchCandidatesData | MatchJobsData;
 
 export const matchingWorker = new Worker<MatchingJobData>(
-    MATCHING_QUEUE_NAME,
-    async (job: Job<MatchingJobData>) => {
-        const TIMEOUT_MS = 60_000;
-        const timeoutId = setTimeout(() => { /* safety net */ }, TIMEOUT_MS);
-        try {
-            const processJob = async () => {
-                switch (job.name) {
-                    case 'match-candidates': {
-                        const { jobId } = job.data as MatchCandidatesData;
-                        logger.info(`Processing match-candidates job ${job.id} for jobId=${jobId}`);
+  MATCHING_QUEUE_NAME,
+  async (job: Job<MatchingJobData>) => {
+    const TIMEOUT_MS = 60_000;
+    const timeoutId = setTimeout(() => {
+      /* safety net */
+    }, TIMEOUT_MS);
+    try {
+      const processJob = async () => {
+        switch (job.name) {
+          case 'match-candidates': {
+            const { jobId } = job.data as MatchCandidatesData;
+            logger.info(`Processing match-candidates job ${job.id} for jobId=${jobId}`);
 
-                        const matches = await matchingService.findMatchingCandidates(jobId);
-                        logger.info(`Found ${matches.length} candidate matches for job ${jobId}`);
+            const matches = await matchingService.findMatchingCandidates(jobId);
+            logger.info(`Found ${matches.length} candidate matches for job ${jobId}`);
 
-                        // Load job details for notification
-                        const jobDetails = await prisma.jobPost.findUnique({
-                            where: { id: jobId },
-                            include: { company: true },
-                        });
+            // Load job details for notification
+            const jobDetails = await prisma.jobPost.findUnique({
+              where: { id: jobId },
+              include: { company: true },
+            });
 
-                        if (!jobDetails) {
-                            logger.warn(`Job ${jobId} not found, skipping notifications`);
-                            return { matchCount: 0 };
-                        }
+            if (!jobDetails) {
+              logger.warn(`Job ${jobId} not found, skipping notifications`);
+              return { matchCount: 0 };
+            }
 
-                        const jobTitle = jobDetails.title;
-                        const companyName = jobDetails.company?.companyName || '';
+            const jobTitle = jobDetails.title;
+            const companyName = jobDetails.company?.companyName || '';
 
-                        let notified = 0;
-                        for (const match of matches) {
-                            if (match.score >= 0.5) {
-                                try {
-                                    // Create JobCandidateMatch record
-                                    await prisma.jobCandidateMatch.upsert({
-                                        where: {
-                                            jobId_candidateId: {
-                                                jobId,
-                                                candidateId: match.userId,
-                                            },
-                                        },
-                                        update: {
-                                            matchScore: match.score,
-                                        },
-                                        create: {
-                                            jobId,
-                                            candidateId: match.userId,
-                                            matchScore: match.score,
-                                            notificationsSent: false,
-                                        },
-                                    });
+            let notified = 0;
+            for (const match of matches) {
+              if (match.score >= 0.5) {
+                try {
+                  // Create JobCandidateMatch record
+                  await prisma.jobCandidateMatch.upsert({
+                    where: {
+                      jobId_candidateId: {
+                        jobId,
+                        candidateId: match.userId,
+                      },
+                    },
+                    update: {
+                      matchScore: match.score,
+                    },
+                    create: {
+                      jobId,
+                      candidateId: match.userId,
+                      matchScore: match.score,
+                      notificationsSent: false,
+                    },
+                  });
 
-                                    // Send multi-channel notification (email, SMS, WhatsApp, FCM, web push, in-app)
-                                    await notificationService.notifyJobMatch(
-                                        match.userId,
-                                        jobTitle,
-                                        companyName,
-                                        jobId,
-                                        match.score
-                                    );
+                  // Send multi-channel notification (email, SMS, WhatsApp, FCM, web push, in-app)
+                  await notificationService.notifyJobMatch(
+                    match.userId,
+                    jobTitle,
+                    companyName,
+                    jobId,
+                    match.score
+                  );
 
-                                    // Mark as fully notified
-                                    await prisma.jobCandidateMatch.update({
-                                        where: {
-                                            jobId_candidateId: { jobId, candidateId: match.userId },
-                                        },
-                                        data: {
-                                            notificationsSent: true,
-                                            emailSent: true,
-                                            pushSent: true,
-                                            smsSent: true,
-                                            whatsappSent: true,
-                                            notifiedAt: new Date(),
-                                        },
-                                    });
+                  // Mark as fully notified
+                  await prisma.jobCandidateMatch.update({
+                    where: {
+                      jobId_candidateId: { jobId, candidateId: match.userId },
+                    },
+                    data: {
+                      notificationsSent: true,
+                      emailSent: true,
+                      pushSent: true,
+                      smsSent: true,
+                      whatsappSent: true,
+                      notifiedAt: new Date(),
+                    },
+                  });
 
-                                    notified++;
-                                } catch (error) {
-                                    logger.error(
-                                        `Failed to notify candidate ${match.userId} about job ${jobId}`,
-                                        error
-                                    );
-                                }
-                            }
-                        }
-
-                        // Notify employer about matching candidates
-                        if (notified > 0 && jobDetails.company?.userId) {
-                            notificationService.notifyMatchingCandidatesFound(
-                                jobDetails.company.userId,
-                                jobId,
-                                jobTitle,
-                                notified
-                            ).catch(() => {});
-                        }
-
-                        logger.info(`Notified ${notified} candidates for job ${jobId}`);
-                        return { matchCount: matches.length, notifiedCount: notified };
-                    }
-
-                    case 'match-jobs': {
-                        const { userId } = job.data as MatchJobsData;
-                        logger.info(`Processing match-jobs job ${job.id} for userId=${userId}`);
-
-                        const matches = await matchingService.findMatchingJobs(userId);
-                        logger.info(
-                            `Found ${matches.length} job matches for user ${userId}: ${matches
-                                .map((m) => `${m.title} (${Math.round(m.score * 100)}%)`)
-                                .join(', ')}`
-                        );
-
-                        // Notify candidate about top matching jobs (score >= 0.5)
-                        let notified = 0;
-                        for (const match of matches) {
-                            if (match.score >= 0.5) {
-                                try {
-                                    await notificationService.notifyJobMatch(
-                                        userId,
-                                        match.title,
-                                        match.companyName,
-                                        match.jobId,
-                                        match.score
-                                    );
-                                    notified++;
-                                } catch (error) {
-                                    logger.error(
-                                        `Failed to notify user ${userId} about job ${match.jobId}`,
-                                        error
-                                    );
-                                }
-                            }
-                        }
-
-                        logger.info(`Notified user ${userId} about ${notified} matching jobs`);
-                        return { matchCount: matches.length, notifiedCount: notified };
-                    }
-
-                    default:
-                        logger.warn(`Unknown matching job name: ${job.name}`);
-                        return null;
+                  notified++;
+                } catch (error) {
+                  logger.error(
+                    `Failed to notify candidate ${match.userId} about job ${jobId}`,
+                    error
+                  );
                 }
-            };
+              }
+            }
 
-            return await Promise.race([
-                processJob(),
-                new Promise<never>((_, reject) =>
-                    setTimeout(() => reject(new Error('Matching worker timeout after 60s')), TIMEOUT_MS)
-                ),
-            ]);
-        } finally {
-            clearTimeout(timeoutId);
+            // Notify employer about matching candidates
+            if (notified > 0 && jobDetails.company?.userId) {
+              notificationService
+                .notifyMatchingCandidatesFound(jobDetails.company.userId, jobId, jobTitle, notified)
+                .catch(() => {});
+            }
+
+            logger.info(`Notified ${notified} candidates for job ${jobId}`);
+            return { matchCount: matches.length, notifiedCount: notified };
+          }
+
+          case 'match-jobs': {
+            const { userId } = job.data as MatchJobsData;
+            logger.info(`Processing match-jobs job ${job.id} for userId=${userId}`);
+
+            const matches = await matchingService.findMatchingJobs(userId);
+            logger.info(
+              `Found ${matches.length} job matches for user ${userId}: ${matches
+                .map((m) => `${m.title} (${Math.round(m.score * 100)}%)`)
+                .join(', ')}`
+            );
+
+            // Notify candidate about top matching jobs (score >= 0.5)
+            let notified = 0;
+            for (const match of matches) {
+              if (match.score >= 0.5) {
+                try {
+                  await notificationService.notifyJobMatch(
+                    userId,
+                    match.title,
+                    match.companyName,
+                    match.jobId,
+                    match.score
+                  );
+                  notified++;
+                } catch (error) {
+                  logger.error(`Failed to notify user ${userId} about job ${match.jobId}`, error);
+                }
+              }
+            }
+
+            logger.info(`Notified user ${userId} about ${notified} matching jobs`);
+            return { matchCount: matches.length, notifiedCount: notified };
+          }
+
+          default:
+            logger.warn(`Unknown matching job name: ${job.name}`);
+            return null;
         }
-    },
-    {
-        connection: createBullMQConnection(),
-        concurrency: 3,
-        lockDuration: 300000, // 5 min — matching is CPU/IO heavy
-        stalledInterval: 120000,
-        limiter: {
-            max: 5,
-            duration: 1000,
-        },
+      };
+
+      return await Promise.race([
+        processJob(),
+        new Promise<never>((_resolve, reject) =>
+          setTimeout(() => reject(new Error('Matching worker timeout after 60s')), TIMEOUT_MS)
+        ),
+      ]);
+    } finally {
+      clearTimeout(timeoutId);
     }
+  },
+  {
+    connection: createBullMQConnection(),
+    concurrency: 3,
+    lockDuration: 300000, // 5 min — matching is CPU/IO heavy
+    stalledInterval: 120000,
+    limiter: {
+      max: 5,
+      duration: 1000,
+    },
+  }
 );
 
 matchingWorker.on('completed', (job) => {
-    logger.info(`Matching job ${job.id} (${job.name}) completed`);
+  logger.info(`Matching job ${job.id} (${job.name}) completed`);
 });
 
 matchingWorker.on('failed', (job, err) => {
-    logger.error(`Matching job ${job?.id} (${job?.name}) failed: ${err.message}`);
+  logger.error(`Matching job ${job?.id} (${job?.name}) failed: ${err.message}`);
 });

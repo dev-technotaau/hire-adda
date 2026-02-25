@@ -63,7 +63,8 @@ export const API = {
     SHORTLIST_CANDIDATE: (candidateId: string) => `/employers/candidates/${candidateId}/shortlist`,
     SELECT_CANDIDATE: (candidateId: string) => `/employers/candidates/${candidateId}/select`,
     BULK_EXPORT_CANDIDATES: '/employers/candidates/bulk-export',
-    CANDIDATE_MATCH_SCORE: (candidateId: string, jobId: string) => `/employers/candidates/${candidateId}/match/${jobId}`,
+    CANDIDATE_MATCH_SCORE: (candidateId: string, jobId: string) =>
+      `/employers/candidates/${candidateId}/match/${jobId}`,
     SIMILAR_CANDIDATES: (candidateId: string) => `/employers/candidates/${candidateId}/similar`,
     APPLICATIONS: '/employers/applications',
   },

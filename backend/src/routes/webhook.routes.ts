@@ -5,9 +5,9 @@ import { protect } from '../middleware/auth';
 import { restrictTo } from '../middleware/rbac';
 import { Role } from '@prisma/client';
 import {
-    createWebhookSchema,
-    updateWebhookSchema,
-    webhookIdSchema,
+  createWebhookSchema,
+  updateWebhookSchema,
+  webhookIdSchema,
 } from '../schemas/webhook.schema';
 
 const router = Router();

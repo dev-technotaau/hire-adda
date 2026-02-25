@@ -4,8 +4,15 @@ import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import {
-    Users, Search, MoreVertical, Eye, Ban,
-    CheckCircle, UserCog, Trash2, AlertCircle,
+  Users,
+  Search,
+  MoreVertical,
+  Eye,
+  Ban,
+  CheckCircle,
+  UserCog,
+  Trash2,
+  AlertCircle,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -31,418 +38,496 @@ import type { ApiError } from '@/types/api';
 type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 
 const roleOptions = [
-    { value: '', label: 'All Roles' },
-    ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label })),
+  { value: '', label: 'All Roles' },
+  ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label })),
 ];
 
 const statusOptions = [
-    { value: '', label: 'All Status' },
-    { value: 'active', label: 'Active' },
-    { value: 'suspended', label: 'Suspended' },
+  { value: '', label: 'All Status' },
+  { value: 'active', label: 'Active' },
+  { value: 'suspended', label: 'Suspended' },
 ];
 
 const roleChangeOptions = Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }));
 
 export default function UsersPage() {
-    const queryClient = useQueryClient();
-    const [page, setPage] = useState(1);
-    const [searchInput, setSearchInput] = useState('');
-    const [search, setSearch] = useState('');
-    const [roleFilter, setRoleFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const debouncedSetSearch = useCallback(
-        debounce((value: string) => {
-            setSearch(value);
-            setPage(1);
-        }, 400),
-        []
-    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedSetSearch = useCallback(
+    debounce((value: string) => {
+      setSearch(value);
+      setPage(1);
+    }, 400),
+    [],
+  );
 
-    // Modals
-    const [suspendTarget, setSuspendTarget] = useState<UserListItem | null>(null);
-    const [suspendReason, setSuspendReason] = useState('');
-    const [suspendDuration, setSuspendDuration] = useState('');
-    const [deleteTarget, setDeleteTarget] = useState<UserListItem | null>(null);
-    const [roleChangeTarget, setRoleChangeTarget] = useState<UserListItem | null>(null);
-    const [newRole, setNewRole] = useState('');
+  // Modals
+  const [suspendTarget, setSuspendTarget] = useState<UserListItem | null>(null);
+  const [suspendReason, setSuspendReason] = useState('');
+  const [suspendDuration, setSuspendDuration] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<UserListItem | null>(null);
+  const [roleChangeTarget, setRoleChangeTarget] = useState<UserListItem | null>(null);
+  const [newRole, setNewRole] = useState('');
 
-    const filters: Record<string, string | number | undefined> = {
-        page,
-        limit: PAGINATION.USERS_PER_PAGE,
-        ...(search && { search }),
-        ...(roleFilter && { role: roleFilter }),
-        ...(statusFilter && { status: statusFilter }),
-    };
+  const filters: Record<string, string | number | undefined> = {
+    page,
+    limit: PAGINATION.USERS_PER_PAGE,
+    ...(search && { search }),
+    ...(roleFilter && { role: roleFilter }),
+    ...(statusFilter && { status: statusFilter }),
+  };
 
-    const { data, isLoading } = useQuery({
-        queryKey: QUERY_KEYS.ADMIN.USERS(filters),
-        queryFn: () => adminService.getUsers(filters),
+  const { data, isLoading } = useQuery({
+    queryKey: QUERY_KEYS.ADMIN.USERS(filters),
+    queryFn: () => adminService.getUsers(filters),
+  });
+
+  const users = data?.data?.items || [];
+  const pagination = data?.data;
+
+  const suspendMutation = useMutation({
+    mutationFn: ({ id, reason, duration }: { id: string; reason: string; duration?: number }) =>
+      adminService.suspendUser(id, { reason, duration }),
+    onSuccess: () => {
+      showToast.success('User suspended successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setSuspendTarget(null);
+      setSuspendReason('');
+      setSuspendDuration('');
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to suspend user');
+    },
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: (id: string) => adminService.activateUser(id),
+    onSuccess: () => {
+      showToast.success('User activated successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to activate user');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => adminService.deleteUser(id),
+    onSuccess: () => {
+      showToast.success('User deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setDeleteTarget(null);
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to delete user');
+    },
+  });
+
+  const roleChangeMutation = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: Role }) =>
+      adminService.updateUserRole(id, { role }),
+    onSuccess: () => {
+      showToast.success('User role updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setRoleChangeTarget(null);
+      setNewRole('');
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to update role');
+    },
+  });
+
+  const handleSuspend = () => {
+    if (!suspendTarget || !suspendReason.trim()) return;
+    suspendMutation.mutate({
+      id: suspendTarget.id,
+      reason: suspendReason,
+      duration: suspendDuration ? parseInt(suspendDuration, 10) : undefined,
     });
+  };
 
-    const users = data?.data?.items || [];
-    const pagination = data?.data;
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(deleteTarget.id);
+  };
 
-    const suspendMutation = useMutation({
-        mutationFn: ({ id, reason, duration }: { id: string; reason: string; duration?: number }) =>
-            adminService.suspendUser(id, { reason, duration }),
-        onSuccess: () => {
-            showToast.success('User suspended successfully');
-            queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+  const handleRoleChange = () => {
+    if (!roleChangeTarget || !newRole) return;
+    roleChangeMutation.mutate({ id: roleChangeTarget.id, role: newRole as Role });
+  };
+
+  const getUserActions = (user: UserListItem) => [
+    {
+      label: 'View Details',
+      icon: Eye,
+      onClick: () => {
+        window.location.href = ROUTES.ADMIN.USER_DETAIL(user.id);
+      },
+    },
+    ...(user.isSuspended
+      ? [
+          {
+            label: 'Activate',
+            icon: CheckCircle,
+            onClick: () => activateMutation.mutate(user.id),
+          },
+        ]
+      : [
+          {
+            label: 'Suspend',
+            icon: Ban,
+            onClick: () => setSuspendTarget(user),
+          },
+        ]),
+    {
+      label: 'Change Role',
+      icon: UserCog,
+      onClick: () => {
+        setRoleChangeTarget(user);
+        setNewRole(user.role);
+      },
+    },
+    { label: '', onClick: () => {}, separator: true },
+    {
+      label: 'Delete',
+      icon: Trash2,
+      onClick: () => setDeleteTarget(user),
+      destructive: true,
+    },
+  ];
+
+  const getRoleBadgeVariant = (role: string): BadgeVariant => {
+    switch (role) {
+      case 'SUPER_ADMIN':
+        return 'error';
+      case 'ADMIN':
+        return 'warning';
+      case 'EMPLOYER':
+        return 'info';
+      case 'CANDIDATE':
+        return 'success';
+      default:
+        return 'neutral';
+    }
+  };
+
+  return (
+    <DashboardLayout requiredRole={['ADMIN', 'SUPER_ADMIN']}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text)]">User Management</h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            Manage all platform users, roles, and access.
+          </p>
+        </div>
+
+        {/* Filters */}
+        <Card>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <Input
+                placeholder="Search by name or email..."
+                value={searchInput}
+                onChange={(e) => {
+                  setSearchInput(e.target.value);
+                  debouncedSetSearch(e.target.value);
+                }}
+                leftIcon={<Search className="h-4 w-4" />}
+              />
+            </div>
+            <div className="w-full sm:w-48">
+              <Select
+                label="Role"
+                options={roleOptions}
+                value={roleFilter}
+                onChange={(val) => {
+                  setRoleFilter(val);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div className="w-full sm:w-48">
+              <Select
+                label="Status"
+                options={statusOptions}
+                value={statusFilter}
+                onChange={(val) => {
+                  setStatusFilter(val);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* Users Table */}
+        <Card padding="sm">
+          {isLoading ? (
+            <div className="space-y-3 p-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} variant="rect" height={48} />
+              ))}
+            </div>
+          ) : users.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">
+                      Name
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">
+                      Email
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">
+                      Role
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">
+                      Verified
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">
+                      Last Login
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium text-[var(--text-secondary)]">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {users.map((user) => (
+                    <tr key={user.id} className="transition-colors hover:bg-[var(--bg-secondary)]">
+                      <td className="px-4 py-3 font-medium text-[var(--text)]">
+                        <Link
+                          href={ROUTES.ADMIN.USER_DETAIL(user.id)}
+                          className="hover:text-primary transition-colors"
+                        >
+                          {user.firstName && user.lastName
+                            ? `${user.firstName} ${user.lastName}`
+                            : user.firstName || 'N/A'}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-[var(--text-secondary)]">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={getRoleBadgeVariant(user.role)} size="sm">
+                          {ROLE_LABELS[user.role] || user.role}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        {user.isSuspended ? (
+                          <Badge variant="error" size="sm">
+                            Suspended
+                          </Badge>
+                        ) : user.isActive ? (
+                          <Badge variant="success" size="sm">
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="neutral" size="sm">
+                            Inactive
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {user.isEmailVerified ? (
+                          <Badge variant="success" size="sm">
+                            Yes
+                          </Badge>
+                        ) : (
+                          <Badge variant="neutral" size="sm">
+                            No
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">
+                        {user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never'}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Dropdown
+                          align="right"
+                          trigger={
+                            <button
+                              type="button"
+                              className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                          }
+                          items={getUserActions(user)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState
+              icon={Users}
+              title="No users found"
+              description="Try adjusting your search or filters."
+            />
+          )}
+        </Card>
+
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <Pagination
+            currentPage={page}
+            totalPages={pagination.totalPages}
+            onPageChange={setPage}
+            totalItems={pagination.total}
+            pageSize={pagination.limit}
+          />
+        )}
+
+        {/* Suspend Modal */}
+        <Modal
+          isOpen={!!suspendTarget}
+          onClose={() => {
             setSuspendTarget(null);
             setSuspendReason('');
             setSuspendDuration('');
-        },
-        onError: (err) => {
-            const error = err as unknown as ApiError;
-            showToast.error(error.message || 'Failed to suspend user');
-        },
-    });
+          }}
+          title="Suspend User"
+          size="sm"
+          footer={
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSuspendTarget(null);
+                  setSuspendReason('');
+                  setSuspendDuration('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleSuspend}
+                isLoading={suspendMutation.isPending}
+                disabled={!suspendReason.trim()}
+              >
+                Suspend
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 shrink-0 text-[var(--warning)]" />
+              <p className="text-sm text-[var(--text-secondary)]">
+                You are about to suspend{' '}
+                <span className="font-medium text-[var(--text)]">{suspendTarget?.email}</span>. They
+                will not be able to access the platform.
+              </p>
+            </div>
+            <Input
+              label="Reason"
+              placeholder="Enter reason for suspension..."
+              value={suspendReason}
+              onChange={(e) => setSuspendReason(e.target.value)}
+              required
+            />
+            <Input
+              label="Duration (days, optional)"
+              placeholder="Leave blank for indefinite"
+              type="number"
+              value={suspendDuration}
+              onChange={(e) => setSuspendDuration(e.target.value)}
+            />
+          </div>
+        </Modal>
 
-    const activateMutation = useMutation({
-        mutationFn: (id: string) => adminService.activateUser(id),
-        onSuccess: () => {
-            showToast.success('User activated successfully');
-            queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-        },
-        onError: (err) => {
-            const error = err as unknown as ApiError;
-            showToast.error(error.message || 'Failed to activate user');
-        },
-    });
+        {/* Delete Modal */}
+        <Modal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          title="Delete User"
+          size="sm"
+          footer={
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                isLoading={deleteMutation.isPending}
+              >
+                Delete
+              </Button>
+            </div>
+          }
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-error h-5 w-5 shrink-0" />
+            <p className="text-sm text-[var(--text-secondary)]">
+              Are you sure you want to permanently delete{' '}
+              <span className="font-medium text-[var(--text)]">{deleteTarget?.email}</span>? This
+              action cannot be undone.
+            </p>
+          </div>
+        </Modal>
 
-    const deleteMutation = useMutation({
-        mutationFn: (id: string) => adminService.deleteUser(id),
-        onSuccess: () => {
-            showToast.success('User deleted successfully');
-            queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-            setDeleteTarget(null);
-        },
-        onError: (err) => {
-            const error = err as unknown as ApiError;
-            showToast.error(error.message || 'Failed to delete user');
-        },
-    });
-
-    const roleChangeMutation = useMutation({
-        mutationFn: ({ id, role }: { id: string; role: Role }) =>
-            adminService.updateUserRole(id, { role }),
-        onSuccess: () => {
-            showToast.success('User role updated successfully');
-            queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+        {/* Change Role Modal */}
+        <Modal
+          isOpen={!!roleChangeTarget}
+          onClose={() => {
             setRoleChangeTarget(null);
             setNewRole('');
-        },
-        onError: (err) => {
-            const error = err as unknown as ApiError;
-            showToast.error(error.message || 'Failed to update role');
-        },
-    });
-
-    const handleSuspend = () => {
-        if (!suspendTarget || !suspendReason.trim()) return;
-        suspendMutation.mutate({
-            id: suspendTarget.id,
-            reason: suspendReason,
-            duration: suspendDuration ? parseInt(suspendDuration, 10) : undefined,
-        });
-    };
-
-    const handleDelete = () => {
-        if (!deleteTarget) return;
-        deleteMutation.mutate(deleteTarget.id);
-    };
-
-    const handleRoleChange = () => {
-        if (!roleChangeTarget || !newRole) return;
-        roleChangeMutation.mutate({ id: roleChangeTarget.id, role: newRole as Role });
-    };
-
-    const getUserActions = (user: UserListItem) => [
-        {
-            label: 'View Details',
-            icon: Eye,
-            onClick: () => {
-                window.location.href = ROUTES.ADMIN.USER_DETAIL(user.id);
-            },
-        },
-        ...(user.isSuspended
-            ? [{
-                label: 'Activate',
-                icon: CheckCircle,
-                onClick: () => activateMutation.mutate(user.id),
-            }]
-            : [{
-                label: 'Suspend',
-                icon: Ban,
-                onClick: () => setSuspendTarget(user),
-            }]
-        ),
-        {
-            label: 'Change Role',
-            icon: UserCog,
-            onClick: () => {
-                setRoleChangeTarget(user);
-                setNewRole(user.role);
-            },
-        },
-        { label: '', onClick: () => {}, separator: true },
-        {
-            label: 'Delete',
-            icon: Trash2,
-            onClick: () => setDeleteTarget(user),
-            destructive: true,
-        },
-    ];
-
-    const getRoleBadgeVariant = (role: string): BadgeVariant => {
-        switch (role) {
-            case 'SUPER_ADMIN': return 'error';
-            case 'ADMIN': return 'warning';
-            case 'EMPLOYER': return 'info';
-            case 'CANDIDATE': return 'success';
-            default: return 'neutral';
-        }
-    };
-
-    return (
-        <DashboardLayout requiredRole={['ADMIN', 'SUPER_ADMIN']}>
-            <div className="space-y-6">
-                {/* Header */}
-                <div>
-                    <h1 className="text-2xl font-bold text-[var(--text)]">User Management</h1>
-                    <p className="mt-1 text-sm text-[var(--text-muted)]">
-                        Manage all platform users, roles, and access.
-                    </p>
-                </div>
-
-                {/* Filters */}
-                <Card>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                        <div className="flex-1">
-                            <Input
-                                placeholder="Search by name or email..."
-                                value={searchInput}
-                                onChange={(e) => { setSearchInput(e.target.value); debouncedSetSearch(e.target.value); }}
-                                leftIcon={<Search className="h-4 w-4" />}
-                            />
-                        </div>
-                        <div className="w-full sm:w-48">
-                            <Select
-                                label="Role"
-                                options={roleOptions}
-                                value={roleFilter}
-                                onChange={(val) => { setRoleFilter(val); setPage(1); }}
-                            />
-                        </div>
-                        <div className="w-full sm:w-48">
-                            <Select
-                                label="Status"
-                                options={statusOptions}
-                                value={statusFilter}
-                                onChange={(val) => { setStatusFilter(val); setPage(1); }}
-                            />
-                        </div>
-                    </div>
-                </Card>
-
-                {/* Users Table */}
-                <Card padding="sm">
-                    {isLoading ? (
-                        <div className="space-y-3 p-4">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <Skeleton key={i} variant="rect" height={48} />
-                            ))}
-                        </div>
-                    ) : users.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-[var(--border)]">
-                                        <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">Name</th>
-                                        <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">Email</th>
-                                        <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">Role</th>
-                                        <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">Status</th>
-                                        <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">Verified</th>
-                                        <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">Last Login</th>
-                                        <th className="px-4 py-3 text-right font-medium text-[var(--text-secondary)]">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[var(--border)]">
-                                    {users.map((user) => (
-                                        <tr key={user.id} className="hover:bg-[var(--bg-secondary)] transition-colors">
-                                            <td className="px-4 py-3 font-medium text-[var(--text)]">
-                                                <Link href={ROUTES.ADMIN.USER_DETAIL(user.id)} className="hover:text-primary transition-colors">
-                                                    {user.firstName && user.lastName
-                                                        ? `${user.firstName} ${user.lastName}`
-                                                        : user.firstName || 'N/A'}
-                                                </Link>
-                                            </td>
-                                            <td className="px-4 py-3 text-[var(--text-secondary)]">{user.email}</td>
-                                            <td className="px-4 py-3">
-                                                <Badge variant={getRoleBadgeVariant(user.role)} size="sm">
-                                                    {ROLE_LABELS[user.role] || user.role}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {user.isSuspended ? (
-                                                    <Badge variant="error" size="sm">Suspended</Badge>
-                                                ) : user.isActive ? (
-                                                    <Badge variant="success" size="sm">Active</Badge>
-                                                ) : (
-                                                    <Badge variant="neutral" size="sm">Inactive</Badge>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {user.isEmailVerified ? (
-                                                    <Badge variant="success" size="sm">Yes</Badge>
-                                                ) : (
-                                                    <Badge variant="neutral" size="sm">No</Badge>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-[var(--text-muted)]">
-                                                {user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never'}
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <Dropdown
-                                                    align="right"
-                                                    trigger={
-                                                        <button type="button" className="rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)] transition-colors">
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </button>
-                                                    }
-                                                    items={getUserActions(user)}
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : (
-                        <EmptyState
-                            icon={Users}
-                            title="No users found"
-                            description="Try adjusting your search or filters."
-                        />
-                    )}
-                </Card>
-
-                {/* Pagination */}
-                {pagination && pagination.totalPages > 1 && (
-                    <Pagination
-                        currentPage={page}
-                        totalPages={pagination.totalPages}
-                        onPageChange={setPage}
-                        totalItems={pagination.total}
-                        pageSize={pagination.limit}
-                    />
-                )}
-
-                {/* Suspend Modal */}
-                <Modal
-                    isOpen={!!suspendTarget}
-                    onClose={() => { setSuspendTarget(null); setSuspendReason(''); setSuspendDuration(''); }}
-                    title="Suspend User"
-                    size="sm"
-                    footer={
-                        <div className="flex justify-end gap-3">
-                            <Button variant="outline" onClick={() => { setSuspendTarget(null); setSuspendReason(''); setSuspendDuration(''); }}>
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={handleSuspend}
-                                isLoading={suspendMutation.isPending}
-                                disabled={!suspendReason.trim()}
-                            >
-                                Suspend
-                            </Button>
-                        </div>
-                    }
-                >
-                    <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                            <AlertCircle className="h-5 w-5 shrink-0 text-[var(--warning)]" />
-                            <p className="text-sm text-[var(--text-secondary)]">
-                                You are about to suspend <span className="font-medium text-[var(--text)]">{suspendTarget?.email}</span>. They will not be able to access the platform.
-                            </p>
-                        </div>
-                        <Input
-                            label="Reason"
-                            placeholder="Enter reason for suspension..."
-                            value={suspendReason}
-                            onChange={(e) => setSuspendReason(e.target.value)}
-                            required
-                        />
-                        <Input
-                            label="Duration (days, optional)"
-                            placeholder="Leave blank for indefinite"
-                            type="number"
-                            value={suspendDuration}
-                            onChange={(e) => setSuspendDuration(e.target.value)}
-                        />
-                    </div>
-                </Modal>
-
-                {/* Delete Modal */}
-                <Modal
-                    isOpen={!!deleteTarget}
-                    onClose={() => setDeleteTarget(null)}
-                    title="Delete User"
-                    size="sm"
-                    footer={
-                        <div className="flex justify-end gap-3">
-                            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-                            <Button variant="destructive" onClick={handleDelete} isLoading={deleteMutation.isPending}>
-                                Delete
-                            </Button>
-                        </div>
-                    }
-                >
-                    <div className="flex items-start gap-3">
-                        <AlertCircle className="h-5 w-5 shrink-0 text-error" />
-                        <p className="text-sm text-[var(--text-secondary)]">
-                            Are you sure you want to permanently delete <span className="font-medium text-[var(--text)]">{deleteTarget?.email}</span>? This action cannot be undone.
-                        </p>
-                    </div>
-                </Modal>
-
-                {/* Change Role Modal */}
-                <Modal
-                    isOpen={!!roleChangeTarget}
-                    onClose={() => { setRoleChangeTarget(null); setNewRole(''); }}
-                    title="Change User Role"
-                    size="sm"
-                    footer={
-                        <div className="flex justify-end gap-3">
-                            <Button variant="outline" onClick={() => { setRoleChangeTarget(null); setNewRole(''); }}>
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleRoleChange}
-                                isLoading={roleChangeMutation.isPending}
-                                disabled={!newRole || newRole === roleChangeTarget?.role}
-                            >
-                                Update Role
-                            </Button>
-                        </div>
-                    }
-                >
-                    <div className="space-y-4">
-                        <p className="text-sm text-[var(--text-secondary)]">
-                            Change the role for <span className="font-medium text-[var(--text)]">{roleChangeTarget?.email}</span>.
-                        </p>
-                        <Select
-                            label="New Role"
-                            options={roleChangeOptions}
-                            value={newRole}
-                            onChange={setNewRole}
-                        />
-                    </div>
-                </Modal>
+          }}
+          title="Change User Role"
+          size="sm"
+          footer={
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRoleChangeTarget(null);
+                  setNewRole('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRoleChange}
+                isLoading={roleChangeMutation.isPending}
+                disabled={!newRole || newRole === roleChangeTarget?.role}
+              >
+                Update Role
+              </Button>
             </div>
-        </DashboardLayout>
-    );
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--text-secondary)]">
+              Change the role for{' '}
+              <span className="font-medium text-[var(--text)]">{roleChangeTarget?.email}</span>.
+            </p>
+            <Select
+              label="New Role"
+              options={roleChangeOptions}
+              value={newRole}
+              onChange={setNewRole}
+            />
+          </div>
+        </Modal>
+      </div>
+    </DashboardLayout>
+  );
 }
