@@ -24,10 +24,13 @@ const createPool = () => {
     throw new Error('DATABASE_URL environment variable is not set');
   }
 
+  // Strip stray quotes (common copy-paste mistake in env dashboards)
+  connectionString = connectionString.replace(/^["']+|["']+$/g, '');
+
   // Strip ?pgbouncer=true — that's a Prisma-only param, pg Pool doesn't understand it
-  const url = new URL(connectionString);
-  url.searchParams.delete('pgbouncer');
-  connectionString = url.toString();
+  connectionString = connectionString
+    .replace(/[?&]pgbouncer=true/gi, '')
+    .replace(/\?$/, '');
 
   // Detect if connecting to Supabase (needs SSL)
   const isSupabase = connectionString.includes('supabase');
