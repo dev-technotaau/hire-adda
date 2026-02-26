@@ -24,12 +24,27 @@ const createPool = () => {
     throw new Error('DATABASE_URL environment variable is not set');
   }
 
-  return new Pool({
+  const pool = new Pool({
     connectionString,
-    max: parseInt(process.env.DATABASE_POOL_SIZE || '10', 10),
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: parseInt(process.env.DATABASE_POOL_TIMEOUT || '10', 10) * 1000,
+    // Supabase free tier has ~20 connection limit — keep pool small
+    max: parseInt(process.env.DATABASE_POOL_SIZE || '5', 10),
+    // Keep idle connections longer to avoid constant reconnects
+    idleTimeoutMillis: 120_000,
+    // Allow 30s for connection (Supabase free tier can be slow to wake)
+    connectionTimeoutMillis: parseInt(process.env.DATABASE_POOL_TIMEOUT || '30', 10) * 1000,
+    // Keep connections alive so Supabase doesn't terminate them
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
+    // Allow creating new connections even if all are busy (up to max)
+    allowExitOnIdle: false,
   });
+
+  // Prevent unhandled pool errors from crashing the process
+  pool.on('error', (err) => {
+    console.error('Unexpected PG pool error:', err.message);
+  });
+
+  return pool;
 };
 
 // Get or create pool

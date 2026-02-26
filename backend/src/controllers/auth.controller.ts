@@ -720,7 +720,7 @@ export const requestAccountDeletion = async (
     if (!req.user) throw new AppError('Not authorized', 401);
     await authService.requestAccountDeletion(req.user.id);
     res.status(200).json({
-      success: true,
+      status: 'success',
       message:
         'Account deletion requested. Your account will be deleted after 30 days. You can cancel by logging in before then.',
     });
@@ -741,7 +741,7 @@ export const getConsents = async (
     if (!req.user) throw new AppError('Not authorized', 401);
     const { ConsentService } = await import('../services/consent.service');
     const consents = await ConsentService.getUserConsents(req.user.id);
-    res.status(200).json({ success: true, data: consents });
+    res.status(200).json({ status: 'success', data: consents });
   } catch (error) {
     next(error);
   }
@@ -758,7 +758,7 @@ export const giveConsent = async (
     const { ConsentService } = await import('../services/consent.service');
     const ip = req.ip || req.socket.remoteAddress;
     const consent = await ConsentService.giveConsent(req.user.id, type, version, ip);
-    res.status(201).json({ success: true, data: consent });
+    res.status(201).json({ status: 'success', data: consent });
   } catch (error) {
     next(error);
   }
@@ -777,7 +777,7 @@ export const revokeConsent = async (
       req.user.id,
       type as import('../services/consent.service').ConsentType
     );
-    res.status(200).json({ success: true, message: 'Consent revoked' });
+    res.status(200).json({ status: 'success', message: 'Consent revoked' });
   } catch (error) {
     next(error);
   }
@@ -796,7 +796,7 @@ export const exportMyData = async (
     const { requestDataExport } = await import('../services/data-export.service');
     await requestDataExport(req.user.id, req.user.email);
     res.status(202).json({
-      success: true,
+      status: 'success',
       message: 'Data export request received. You will receive an email with your data shortly.',
     });
   } catch (error) {

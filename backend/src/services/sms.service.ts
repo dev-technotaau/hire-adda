@@ -6,11 +6,13 @@ import { isFeatureEnabled } from '../config/feature-flags';
 let twilioClient: twilio.Twilio | null = null;
 
 try {
-  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
+  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_PHONE_NUMBER) {
     twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
     logger.info('📱 Twilio client initialized');
+  } else if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
+    logger.warn('⚠️ TWILIO_PHONE_NUMBER missing — SMS disabled');
   } else {
-    logger.warn('⚠️ Twilio credentials missing - SMS disabled');
+    logger.warn('⚠️ Twilio credentials missing — SMS disabled');
   }
 } catch (error) {
   logger.error('❌ Twilio initialization failed:', error);

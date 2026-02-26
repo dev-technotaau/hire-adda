@@ -1,12 +1,6 @@
 import * as admin from 'firebase-admin';
 import logger from './logger';
 
-interface RemoteConfigValue {
-  asString: () => string;
-  asNumber: () => number;
-  asBoolean: () => boolean;
-}
-
 interface FeatureFlagsConfig {
   [key: string]: boolean | string | number;
 }
@@ -65,19 +59,19 @@ export const fetchFeatureFlags = async (): Promise<FeatureFlagsConfig> => {
     const flags: FeatureFlagsConfig = { ...defaultFlags };
 
     // Parse parameters from template
+    // Admin SDK returns { value: string } for explicit values
     if (template.parameters) {
       for (const [key, param] of Object.entries(template.parameters)) {
-        const defaultValue = param.defaultValue as RemoteConfigValue | undefined;
-        if (defaultValue) {
-          // Try to parse as boolean, number, or string
-          const value = defaultValue.asString?.() || '';
-          if (value === 'true' || value === 'false') {
-            flags[key] = value === 'true';
-          } else if (!isNaN(Number(value))) {
-            flags[key] = Number(value);
-          } else {
-            flags[key] = value;
-          }
+        const dv = param.defaultValue as { value?: string } | undefined;
+        const value = dv?.value;
+        if (value === undefined || value === null) continue;
+
+        if (value === 'true' || value === 'false') {
+          flags[key] = value === 'true';
+        } else if (value !== '' && !isNaN(Number(value))) {
+          flags[key] = Number(value);
+        } else {
+          flags[key] = value;
         }
       }
     }

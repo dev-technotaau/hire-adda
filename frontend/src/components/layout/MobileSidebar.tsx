@@ -4,11 +4,14 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { X, LogOut } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useUIStore } from '@/store/ui.store';
 import { ROLE_DASHBOARDS } from '@/constants/routes';
 import { ROLE_LABELS } from '@/constants/enums';
+import { QUERY_KEYS } from '@/constants/config';
+import { employerService } from '@/services/employer.service';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
 import Logo from '@/components/common/Logo';
@@ -26,6 +29,14 @@ export default function MobileSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { sidebarOpen, setSidebarOpen } = useUIStore();
+
+  const { data: companyData } = useQuery({
+    queryKey: QUERY_KEYS.EMPLOYERS.COMPANY,
+    queryFn: () => employerService.getCompany(),
+    enabled: user?.role === 'EMPLOYER',
+    staleTime: 10 * 60 * 1000,
+  });
+  const companyLogo = companyData?.data?.logo;
 
   const dashboardPath = user?.role ? ROLE_DASHBOARDS[user.role as Role] : '/';
   const navItems = getNavItems(user?.role);
@@ -97,6 +108,13 @@ export default function MobileSidebar() {
         {/* User info */}
         {user && (
           <div className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
+            {companyLogo && (
+              <img
+                src={companyLogo}
+                alt="Company"
+                className="h-8 w-8 rounded-md border border-[var(--border)] object-contain"
+              />
+            )}
             <Avatar
               src={user.avatar}
               firstName={user.firstName}

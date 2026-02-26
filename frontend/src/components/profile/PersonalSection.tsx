@@ -12,6 +12,7 @@ import DatePicker from '@/components/ui/DatePicker';
 import ImageCropper from '@/components/ui/ImageCropper';
 import { showToast } from '@/components/ui/Toast';
 import { candidateService } from '@/services/candidate.service';
+import { useAuthStore } from '@/store/auth.store';
 import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
 import {
   GENDER_LABELS,
@@ -71,10 +72,14 @@ function ProfileImageSection({ profile }: { profile: CandidateProfile | undefine
     setIsUploading(true);
     try {
       const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
-      await candidateService.uploadAvatar(file);
+      const res = await candidateService.uploadAvatar(file);
+      const newUrl = res.data?.url;
+      if (newUrl) {
+        const { user, setUser } = useAuthStore.getState();
+        if (user) setUser({ ...user, avatar: newUrl });
+      }
       showToast.success('Profile photo updated');
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.AUTH.ME });
     } catch (err) {
       const error = err as unknown as ApiError;
       showToast.error(error.message || 'Failed to upload photo');
@@ -122,9 +127,10 @@ function ProfileImageSection({ profile }: { profile: CandidateProfile | undefine
                   try {
                     setIsUploading(true);
                     await candidateService.removeAvatar();
+                    const { user, setUser } = useAuthStore.getState();
+                    if (user) setUser({ ...user, avatar: '' });
                     showToast.success('Profile photo removed');
                     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
-                    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.AUTH.ME });
                   } catch (err) {
                     const error = err as unknown as ApiError;
                     showToast.error(error?.message || 'Failed to remove photo');

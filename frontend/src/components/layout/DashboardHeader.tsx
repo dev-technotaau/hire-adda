@@ -4,11 +4,14 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Menu, ChevronDown, LogOut, ExternalLink, Keyboard, Home, Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useUIStore } from '@/store/ui.store';
 import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
 import { ROLE_LABELS } from '@/constants/enums';
+import { QUERY_KEYS } from '@/constants/config';
+import { employerService } from '@/services/employer.service';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
 import Logo from '@/components/common/Logo';
@@ -39,6 +42,14 @@ export default function DashboardHeader() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [location, setLocation] = useState('');
   const [locationInput, setLocationInput] = useState('');
+
+  const { data: companyData } = useQuery({
+    queryKey: QUERY_KEYS.EMPLOYERS.COMPANY,
+    queryFn: () => employerService.getCompany(),
+    enabled: user?.role === 'EMPLOYER',
+    staleTime: 10 * 60 * 1000,
+  });
+  const companyLogo = companyData?.data?.logo;
 
   const dashboardPath = user?.role ? ROLE_DASHBOARDS[user.role as Role] : '/';
   const hasSearchPage = user?.role === 'CANDIDATE' || user?.role === 'EMPLOYER';
@@ -138,7 +149,7 @@ export default function DashboardHeader() {
 
         {/* Center — Search section */}
         {hasSearchPage ? (
-          <div className="hidden min-w-0 flex-1 items-center gap-3 px-6 md:flex">
+          <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 px-6 md:flex">
             <div className="w-full max-w-md">
               <SearchBar
                 placeholder={searchPlaceholder}
@@ -204,6 +215,13 @@ export default function DashboardHeader() {
               aria-expanded={userMenuOpen}
               aria-haspopup="true"
             >
+              {companyLogo && (
+                <img
+                  src={companyLogo}
+                  alt="Company"
+                  className="h-8 w-8 rounded-md border border-[var(--border)] object-contain"
+                />
+              )}
               <Avatar
                 src={user.avatar}
                 firstName={user.firstName}

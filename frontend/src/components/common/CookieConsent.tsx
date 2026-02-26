@@ -6,12 +6,18 @@ import { Cookie } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Switch from '@/components/ui/Switch';
 
-const CONSENT_COOKIE = 'tb_cookie_consent';
+export const CONSENT_COOKIE = 'tb_cookie_consent';
+const OPEN_EVENT = 'tb:open-cookie-settings';
 
 interface CookiePreferences {
   necessary: boolean;
   analytics: boolean;
   marketing: boolean;
+}
+
+/** Dispatch this to re-open the cookie preferences panel from anywhere. */
+export function openCookieSettings() {
+  window.dispatchEvent(new CustomEvent(OPEN_EVENT));
 }
 
 export default function CookieConsent() {
@@ -32,11 +38,35 @@ export default function CookieConsent() {
     }
   }, []);
 
+  // Listen for re-open requests (e.g. from Footer "Manage Cookies" button)
+  useEffect(() => {
+    const handleOpen = () => {
+      const raw = Cookies.get(CONSENT_COOKIE);
+      if (raw) {
+        try {
+          const saved = JSON.parse(raw) as CookiePreferences;
+          setPrefs({ necessary: true, analytics: !!saved.analytics, marketing: !!saved.marketing });
+        } catch { /* use defaults */ }
+      }
+      setShowDetails(true);
+      setDismissing(false);
+      setVisible(true);
+    };
+    window.addEventListener(OPEN_EVENT, handleOpen);
+    return () => window.removeEventListener(OPEN_EVENT, handleOpen);
+  }, []);
+
   const dismiss = useCallback((preferences: CookiePreferences) => {
+    const prev = Cookies.get(CONSENT_COOKIE);
     Cookies.set(CONSENT_COOKIE, JSON.stringify(preferences), { expires: 365 });
     setDismissing(true);
-    // Let the slide-out animation play before unmounting
-    setTimeout(() => setVisible(false), 300);
+    setTimeout(() => {
+      setVisible(false);
+      // Reload if preferences changed so analytics scripts respect the new choice
+      if (prev && prev !== JSON.stringify(preferences)) {
+        window.location.reload();
+      }
+    }, 300);
   }, []);
 
   const acceptAll = () => {

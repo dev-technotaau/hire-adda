@@ -626,33 +626,61 @@ export class CandidateService {
       prisma.candidateProfile.findUnique({
         where: { userId },
         select: {
+          // Personal
           gender: true,
           dob: true,
+          bio: true,
+          nationality: true,
+          hometown: true,
+          // Contact
           phone: true,
+          alternateEmail: true,
+          currentLocation: true,
+          // Professional
           currentRole: true,
+          currentCompany: true,
           experienceYears: true,
+          experienceLevel: true,
+          currentIndustry: true,
+          functionalArea: true,
+          // Skills & structured data
           skills: true,
           education: true,
           experience: true,
-          resume: true,
-          headline: true,
-          preferredWorkMode: true,
-          preferredJobType: true,
-          willingToRelocate: true,
           certifications: true,
           projects: true,
           languageProficiency: true,
-          linkedinProfile: true,
-          githubProfile: true,
-          portfolioUrl: true,
           publications: true,
           patents: true,
           volunteerExperience: true,
           interests: true,
           hobbies: true,
           references: true,
+          // Resume & Headline
+          resume: true,
+          headline: true,
+          // Preferences
+          preferredWorkMode: true,
+          preferredJobType: true,
+          willingToRelocate: true,
+          noticePeriod: true,
+          workStatus: true,
+          openToWork: true,
+          preferredShift: true,
+          preferredIndustries: true,
+          preferredRoleCategories: true,
+          // Social
+          linkedinProfile: true,
+          githubProfile: true,
+          portfolioUrl: true,
+          stackOverflowProfile: true,
+          twitterProfile: true,
+          personalBlogUrl: true,
+          // Documents
           passportNumber: true,
           hasDrivingLicense: true,
+          visaStatus: true,
+          workPermitStatus: true,
         },
       }),
       prisma.user.findUnique({
@@ -672,13 +700,33 @@ export class CandidateService {
       {
         field: 'Personal Info',
         weight: 12,
-        check: !!(profile.gender && profile.dob && user.firstName && user.lastName),
+        check: !!(
+          user.firstName &&
+          user.lastName &&
+          (profile.gender || profile.dob || profile.bio || profile.nationality || profile.hometown)
+        ),
       },
-      { field: 'Contact', weight: 6, check: !!(profile.phone || (user as any).mobileNumber) },
+      {
+        field: 'Contact',
+        weight: 6,
+        check: !!(
+          profile.phone ||
+          (user as any).mobileNumber ||
+          profile.alternateEmail ||
+          profile.currentLocation
+        ),
+      },
       {
         field: 'Professional',
         weight: 12,
-        check: !!(profile.currentRole && profile.experienceYears > 0),
+        check: !!(
+          profile.currentRole ||
+          profile.experienceLevel ||
+          profile.currentCompany ||
+          profile.experienceYears > 0 ||
+          profile.currentIndustry ||
+          profile.functionalArea
+        ),
       },
       { field: 'Skills', weight: 10, check: profile.skills.length > 0 },
       {
@@ -699,7 +747,13 @@ export class CandidateService {
         check: !!(
           profile.preferredWorkMode.length > 0 ||
           profile.preferredJobType.length > 0 ||
-          profile.willingToRelocate !== null
+          profile.willingToRelocate === true ||
+          profile.noticePeriod ||
+          profile.workStatus ||
+          profile.openToWork ||
+          profile.preferredShift ||
+          profile.preferredIndustries.length > 0 ||
+          profile.preferredRoleCategories.length > 0
         ),
       },
       {
@@ -717,7 +771,14 @@ export class CandidateService {
       {
         field: 'Social Profiles',
         weight: 5,
-        check: !!(profile.linkedinProfile || profile.githubProfile || profile.portfolioUrl),
+        check: !!(
+          profile.linkedinProfile ||
+          profile.githubProfile ||
+          profile.portfolioUrl ||
+          profile.stackOverflowProfile ||
+          profile.twitterProfile ||
+          profile.personalBlogUrl
+        ),
       },
       {
         field: 'Publications/Patents/Volunteer',
@@ -737,7 +798,12 @@ export class CandidateService {
       {
         field: 'Documents',
         weight: 2,
-        check: !!(profile.passportNumber || profile.hasDrivingLicense),
+        check: !!(
+          profile.passportNumber ||
+          profile.hasDrivingLicense ||
+          profile.visaStatus ||
+          profile.workPermitStatus
+        ),
       },
     ];
 
@@ -751,43 +817,66 @@ export class CandidateService {
    * Get Candidate Dashboard Statistics
    */
   async getCandidateDashboard(userId: string) {
-    const [user, profile, applicationStats, savedJobsCount, profileViewsWeek, profileViewsMonth] =
-      await prisma.$transaction([
-        prisma.user.findUnique({
-          where: { id: userId },
-          select: {
-            isEmailVerified: true,
-            isMobileVerified: true,
-            isWhatsappVerified: true,
-            whatsappNumber: true,
-            lastActiveAt: true,
-            lastLoginAt: true,
+    const [
+      user,
+      profile,
+      applicationStats,
+      savedJobsCount,
+      profileViewsWeek,
+      profileViewsMonth,
+      recentApps,
+    ] = await prisma.$transaction([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          isEmailVerified: true,
+          isMobileVerified: true,
+          isWhatsappVerified: true,
+          whatsappNumber: true,
+          lastActiveAt: true,
+          lastLoginAt: true,
+        },
+      }),
+      prisma.candidateProfile.findUnique({
+        where: { userId },
+        select: { profileCompleteness: true, updatedAt: true },
+      }),
+      prisma.jobApplication.groupBy({
+        by: ['status'],
+        where: { candidate: { userId } },
+        orderBy: { status: 'asc' },
+        _count: { _all: true },
+      }),
+      prisma.savedJob.count({ where: { userId } }),
+      prisma.profileView.count({
+        where: {
+          profileUserId: userId,
+          createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        },
+      }),
+      prisma.profileView.count({
+        where: {
+          profileUserId: userId,
+          createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+        },
+      }),
+      prisma.jobApplication.findMany({
+        where: { candidate: { userId } },
+        orderBy: { appliedAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          status: true,
+          appliedAt: true,
+          job: {
+            select: {
+              title: true,
+              company: { select: { companyName: true } },
+            },
           },
-        }),
-        prisma.candidateProfile.findUnique({
-          where: { userId },
-          select: { profileCompleteness: true, updatedAt: true },
-        }),
-        prisma.jobApplication.groupBy({
-          by: ['status'],
-          where: { candidate: { userId } },
-          orderBy: { status: 'asc' },
-          _count: { _all: true },
-        }),
-        prisma.savedJob.count({ where: { userId } }),
-        prisma.profileView.count({
-          where: {
-            profileUserId: userId,
-            createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-          },
-        }),
-        prisma.profileView.count({
-          where: {
-            profileUserId: userId,
-            createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-          },
-        }),
-      ]);
+        },
+      }),
+    ]);
 
     const totalApplications = applicationStats.reduce(
       (sum, s) => sum + ((s._count as { _all: number })?._all ?? 0),
@@ -810,6 +899,13 @@ export class CandidateService {
       },
       savedJobsCount,
       profileViews: { week: profileViewsWeek, month: profileViewsMonth },
+      recentApplications: recentApps.map((a) => ({
+        id: a.id,
+        jobTitle: a.job.title,
+        companyName: a.job.company?.companyName || 'Unknown',
+        status: a.status,
+        appliedAt: a.appliedAt,
+      })),
     };
   }
 

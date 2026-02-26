@@ -250,8 +250,10 @@ export const initializeServices = async (): Promise<void> => {
   // ═══════════════════════════════════════════════════════════════
 
   // Twilio SMS
-  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
+  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_PHONE_NUMBER) {
     registerService('Twilio SMS', 'connected');
+  } else if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
+    registerService('Twilio SMS', 'not_configured', 'TWILIO_PHONE_NUMBER missing');
   } else {
     registerService('Twilio SMS', 'not_configured');
   }
@@ -296,7 +298,11 @@ export const initializeServices = async (): Promise<void> => {
     try {
       const { jobClient } = await import('./talent');
       if (jobClient) {
-        registerService('Google Cloud Talent', 'connected');
+        registerService(
+          'Google Cloud Talent',
+          'connected',
+          env.CLOUD_TALENT_TENANT_ID ? undefined : 'CLOUD_TALENT_TENANT_ID missing'
+        );
       } else {
         registerService('Google Cloud Talent', 'not_configured');
       }
@@ -308,7 +314,7 @@ export const initializeServices = async (): Promise<void> => {
   }
 
   // Google Document AI
-  if (env.GOOGLE_CLOUD_PROJECT_ID && env.FIREBASE_SERVICE_ACCOUNT) {
+  if (env.GOOGLE_CLOUD_PROJECT_ID && env.FIREBASE_SERVICE_ACCOUNT && env.DOCUMENT_AI_PROCESSOR_ID) {
     try {
       const { documentAIClient } = await import('./document-ai');
       if (documentAIClient) {
@@ -319,6 +325,8 @@ export const initializeServices = async (): Promise<void> => {
     } catch (error) {
       registerService('Google Document AI', 'error', (error as Error).message?.slice(0, 50));
     }
+  } else if (env.GOOGLE_CLOUD_PROJECT_ID && env.FIREBASE_SERVICE_ACCOUNT) {
+    registerService('Google Document AI', 'not_configured', 'DOCUMENT_AI_PROCESSOR_ID missing');
   } else {
     registerService('Google Document AI', 'not_configured');
   }

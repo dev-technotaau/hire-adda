@@ -52,32 +52,44 @@ export const publishEvent = async (
   key: string,
   data: any
 ): Promise<void> => {
+  if (!producer) {
+    logger.debug(`Kafka producer not available - skipping event: ${eventType}`);
+    return;
+  }
+
+  const topic = EVENT_TO_TOPIC[eventType];
+  const message = {
+    topic,
+    messages: [
+      {
+        key,
+        value: JSON.stringify({
+          ...data,
+          eventType,
+          timestamp: new Date().toISOString(),
+          source: 'talent-bridge-api',
+        }),
+      },
+    ],
+  };
+
   try {
-    if (!producer) {
-      logger.debug(`Kafka producer not available - skipping event: ${eventType}`);
-      return;
-    }
-
-    const topic = EVENT_TO_TOPIC[eventType];
-
-    await producer.send({
-      topic,
-      messages: [
-        {
-          key,
-          value: JSON.stringify({
-            ...data,
-            eventType,
-            timestamp: new Date().toISOString(),
-            source: 'talent-bridge-api',
-          }),
-        },
-      ],
-    });
-
+    await producer.send(message);
     logger.debug(`Kafka event published: ${eventType} → ${topic} [${key}]`);
-  } catch (error) {
-    // Kafka publish failures should not break the main flow
+  } catch (error: any) {
+    // If disconnected, reconnect once and retry
+    if (error?.name === 'KafkaJSError' && error?.message?.includes('disconnected')) {
+      try {
+        await producer.connect();
+        await producer.send(message);
+        logger.debug(`Kafka event published (after reconnect): ${eventType} → ${topic} [${key}]`);
+        return;
+      } catch (retryError) {
+        logger.error(`Failed to publish Kafka event ${eventType} after reconnect:`, retryError);
+        return;
+      }
+    }
+    // Non-disconnection errors — log and move on
     logger.error(`Failed to publish Kafka event ${eventType}:`, error);
   }
 };

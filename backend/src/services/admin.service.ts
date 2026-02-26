@@ -631,6 +631,7 @@ export class AdminService {
       page,
       limit,
       totalPages: Math.ceil(total / limit) || 1,
+      hasMore: page < (Math.ceil(total / limit) || 1),
     };
   }
 
@@ -746,6 +747,7 @@ export class AdminService {
       page,
       limit,
       totalPages: Math.ceil(total / limit) || 1,
+      hasMore: page < (Math.ceil(total / limit) || 1),
     };
   }
 

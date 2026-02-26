@@ -147,6 +147,21 @@ export const updateCompanyProfileSchema = z.object({
     contactPersonName: z.string().max(200).optional(),
     contactPersonDesignation: z.string().max(200).optional(),
 
+    // Notification Preferences
+    notificationPreferences: z
+      .object({
+        emailApplications: z.boolean().optional(),
+        emailMessages: z.boolean().optional(),
+        emailMarketing: z.boolean().optional(),
+        smsAlerts: z.boolean().optional(),
+        whatsappNotifications: z.boolean().optional(),
+        inAppNotifications: z.boolean().optional(),
+        fcmNotifications: z.boolean().optional(),
+        webPushNotifications: z.boolean().optional(),
+        weeklyDigest: z.boolean().optional(),
+      })
+      .optional(),
+
     // Locations
     headquarters: z.string().optional(),
     locations: z.array(z.string()).optional(),

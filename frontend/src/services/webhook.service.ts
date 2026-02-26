@@ -14,7 +14,7 @@ export const webhookService = {
     return res.data;
   },
 
-  async list(): Promise<ApiResponse<WebhookEndpoint[]>> {
+  async list(): Promise<ApiResponse<PaginatedData<WebhookEndpoint>>> {
     const res = await api.get(API.WEBHOOKS.BASE);
     return res.data;
   },

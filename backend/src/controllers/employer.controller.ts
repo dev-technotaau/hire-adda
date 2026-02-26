@@ -138,7 +138,7 @@ export const getMyCompany = async (req: Request, res: Response, next: NextFuncti
 
     res.status(200).json({
       status: 'success',
-      data: { profile },
+      data: profile,
     });
   } catch (error) {
     next(error);
@@ -158,7 +158,7 @@ export const updateMyCompany = async (req: Request, res: Response, next: NextFun
 
     res.status(200).json({
       status: 'success',
-      data: { profile },
+      data: profile,
     });
   } catch (error) {
     next(error);

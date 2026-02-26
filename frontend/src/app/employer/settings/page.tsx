@@ -1948,7 +1948,7 @@ function WebhooksTab() {
     queryFn: () => webhookService.list(),
   });
 
-  const webhooks: WebhookEndpoint[] = webhooksResponse?.data ?? [];
+  const webhooks: WebhookEndpoint[] = webhooksResponse?.data?.items ?? [];
 
   const handleCreate = async () => {
     if (!newUrl || selectedEvents.length === 0) return;

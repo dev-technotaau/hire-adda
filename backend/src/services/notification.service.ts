@@ -1101,14 +1101,14 @@ class NotificationService {
       prisma.notification.count({ where }),
     ]);
 
+    const totalPages = Math.ceil(total / limit);
     return {
-      notifications,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-      },
+      items: notifications,
+      total,
+      page,
+      limit,
+      totalPages,
+      hasMore: page < totalPages,
     };
   }
 

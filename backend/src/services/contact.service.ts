@@ -51,7 +51,8 @@ class ContactService {
       }),
       prisma.contactMessage.count({ where }),
     ]);
-    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+    const totalPages = Math.ceil(total / limit) || 1;
+    return { items, total, page, limit, totalPages, hasMore: page < totalPages };
   }
 
   async markAsRead(id: string) {

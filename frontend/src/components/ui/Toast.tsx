@@ -8,6 +8,9 @@ export function Toaster() {
   return (
     <SonnerToaster
       position="top-right"
+      expand
+      gap={8}
+      visibleToasts={5}
       toastOptions={{
         style: {
           fontFamily: 'var(--font-inter), Inter, system-ui, sans-serif',

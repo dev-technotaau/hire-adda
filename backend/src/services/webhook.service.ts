@@ -132,12 +132,14 @@ export const webhookService = {
       prisma.webhookDelivery.count({ where: { webhookId } }),
     ]);
 
+    const totalPages = Math.ceil(total / limit);
     return {
       items,
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages,
+      hasMore: page < totalPages,
     };
   },
 

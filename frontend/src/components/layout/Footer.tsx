@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ROUTES } from '@/constants/routes';
 import Logo from '@/components/common/Logo';
+import ManageCookiesButton from '@/components/common/ManageCookiesButton';
 
 const footerLinks = {
   company: [
@@ -131,6 +132,9 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <ManageCookiesButton />
+              </li>
             </ul>
           </div>
         </div>

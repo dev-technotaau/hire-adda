@@ -19,7 +19,7 @@ export const getMyProfile = async (req: Request, res: Response, next: NextFuncti
 
     res.status(200).json({
       status: 'success',
-      data: { profile },
+      data: profile,
     });
   } catch (error) {
     // If profile doesn't exist yet, return empty object or specific message?
@@ -43,7 +43,7 @@ export const updateMyProfile = async (req: Request, res: Response, next: NextFun
 
     res.status(200).json({
       status: 'success',
-      data: { profile },
+      data: profile,
     });
   } catch (error) {
     next(error);
@@ -398,7 +398,7 @@ export const getCandidateProfile = async (
       /* non-critical */
     }
 
-    res.status(200).json({ status: 'success', data: { profile } });
+    res.status(200).json({ status: 'success', data: profile });
   } catch (error) {
     next(error);
   }

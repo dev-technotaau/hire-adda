@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -114,6 +114,8 @@ export default function CandidateProfilePage() {
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>('personal');
   const [form, setForm] = useState<UpdateCandidateRequest>({});
+  const [formDirty, setFormDirty] = useState(false);
+  const initialFormRef = useRef<string>('');
   const [resumeFile, setResumeFile] = useState<File[]>([]);
   const [resumeUploaded, setResumeUploaded] = useState(false);
   const [resumeParsing, setResumeParsing] = useState(false);
@@ -145,8 +147,8 @@ export default function CandidateProfilePage() {
 
   useEffect(() => {
     if (profile) {
-      queueMicrotask(() =>
-        setForm({
+      queueMicrotask(() => {
+        const initial: UpdateCandidateRequest = {
           headline: profile.headline || '',
           pronouns: profile.pronouns || '',
           gender: profile.gender || undefined,
@@ -237,8 +239,11 @@ export default function CandidateProfilePage() {
           behanceProfile: profile.behanceProfile || '',
           mediumProfile: profile.mediumProfile || '',
           youtubeChannel: profile.youtubeChannel || '',
-        }),
-      );
+        };
+        initialFormRef.current = JSON.stringify(initial);
+        setFormDirty(false);
+        setForm(initial);
+      });
     }
   }, [profile]);
 
@@ -264,8 +269,10 @@ export default function CandidateProfilePage() {
   const updateMutation = useMutation({
     mutationFn: (data: UpdateCandidateRequest) => candidateService.updateProfile(data),
     onSuccess: () => {
+      setFormDirty(false);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.COMPLETENESS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.DASHBOARD });
       showToast.success('Profile updated successfully!');
     },
     onError: (err) => {
@@ -278,6 +285,8 @@ export default function CandidateProfilePage() {
     mutationFn: (file: File) => candidateService.uploadResume(file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.COMPLETENESS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.DASHBOARD });
     },
     onError: (err) => {
       const error = err as unknown as ApiError;
@@ -372,7 +381,11 @@ export default function CandidateProfilePage() {
     key: K,
     value: UpdateCandidateRequest[K],
   ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      setFormDirty(JSON.stringify(next) !== initialFormRef.current);
+      return next;
+    });
   };
 
   const handleSave = () => {
@@ -498,7 +511,7 @@ export default function CandidateProfilePage() {
                 <Eye className="mr-1.5 h-4 w-4" /> Preview as Employer
               </Button>
             </Link>
-            <Button onClick={handleSave} isLoading={updateMutation.isPending}>
+            <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty}>
               <Save className="mr-1.5 h-4 w-4" /> Save Changes
             </Button>
           </div>
@@ -1282,7 +1295,7 @@ export default function CandidateProfilePage() {
 
             {/* Save Button (bottom) */}
             <div className="flex justify-end">
-              <Button onClick={handleSave} isLoading={updateMutation.isPending}>
+              <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty}>
                 <Save className="mr-1.5 h-4 w-4" /> Save Changes
               </Button>
             </div>

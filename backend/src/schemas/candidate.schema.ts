@@ -9,6 +9,10 @@ import {
   ShiftType,
   JobType,
   LanguageProficiency,
+  ExperienceLevel,
+  EducationLevel,
+  SpecificDegree,
+  DrivingLicenseType,
 } from '@prisma/client';
 
 // --- Reusable sub-schemas for JSON fields ---
@@ -165,6 +169,7 @@ export const updateCandidateProfileSchema = z.object({
     // Professional
     experienceYears: z.number().min(0).max(50).optional(),
     totalExperienceMonths: z.number().int().min(0).max(600).optional(),
+    experienceLevel: z.nativeEnum(ExperienceLevel, { error: 'Invalid experience level' }).optional(),
     currentCompany: z.string().optional(),
     currentRole: z.string().optional(),
     currentIndustry: z.string().optional(),
@@ -210,6 +215,12 @@ export const updateCandidateProfileSchema = z.object({
     disabilityType: z.nativeEnum(DisabilityType, { error: 'Invalid disability type' }).optional(),
     disabilityPercentage: z.number().int().min(0).max(100).optional(),
     isPhysicallyChallenged: z.boolean().optional(),
+
+    // Education Level
+    highestEducationLevel: z
+      .nativeEnum(EducationLevel, { error: 'Invalid education level' })
+      .optional(),
+    highestDegree: z.nativeEnum(SpecificDegree, { error: 'Invalid degree' }).optional(),
 
     // Skills & Education
     skills: z.array(z.string()).optional(),
@@ -269,9 +280,14 @@ export const updateCandidateProfileSchema = z.object({
     references: z.array(referenceSchema).optional(),
 
     // Documents & Background
+    visaStatus: z.string().max(100).optional(),
+    workPermitStatus: z.string().max(100).optional(),
     passportNumber: z.string().max(20).optional(),
     passportExpiryDate: z.string().date().or(z.string().datetime()).or(z.literal('')).optional(),
     hasDrivingLicense: z.boolean().optional(),
+    drivingLicenseType: z
+      .nativeEnum(DrivingLicenseType, { error: 'Invalid driving license type' })
+      .optional(),
     ownVehicle: z.boolean().optional(),
     isVeteran: z.boolean().optional(),
     blockedCompanies: z.array(z.string().max(200)).optional(),
@@ -279,6 +295,18 @@ export const updateCandidateProfileSchema = z.object({
     // Interests & Hobbies
     interests: z.array(z.string().max(100)).optional(),
     hobbies: z.array(z.string().max(100)).optional(),
+
+    // Notification Preferences
+    notificationPreferences: z
+      .object({
+        emailNotifications: z.boolean().optional(),
+        smsNotifications: z.boolean().optional(),
+        whatsappNotifications: z.boolean().optional(),
+        inAppNotifications: z.boolean().optional(),
+        fcmNotifications: z.boolean().optional(),
+        webPushNotifications: z.boolean().optional(),
+      })
+      .optional(),
 
     // Social Profiles
     githubProfile: z.string().url().optional().or(z.literal('')),
