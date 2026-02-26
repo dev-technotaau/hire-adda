@@ -1,5 +1,6 @@
 import { Mail, Phone, UserCircle, Briefcase } from 'lucide-react';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import type { UpdateCompanyRequest } from '@/types/employer';
 
 interface ContactSectionProps {
@@ -21,12 +22,11 @@ export default function ContactSection({ form, updateField }: ContactSectionProp
           value={form.contactEmail || ''}
           onChange={(e) => updateField('contactEmail', e.target.value)}
         />
-        <Input
+        <PhoneInput
           label="Contact Phone"
-          type="tel"
-          leftIcon={<Phone className="h-4 w-4" />}
+          placeholder="9876543210"
           value={form.contactPhone || ''}
-          onChange={(e) => updateField('contactPhone', e.target.value)}
+          onValueChange={(val) => updateField('contactPhone', val)}
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

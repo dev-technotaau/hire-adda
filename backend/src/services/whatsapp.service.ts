@@ -26,9 +26,12 @@ export const sendWhatsAppMessage = async (
 
   const url = `https://graph.facebook.com/v17.0/${phoneId}/messages`;
 
+  // Meta API requires numbers without '+' prefix (e.g., 919876543210)
+  const normalizedTo = to.replace(/^\+/, '');
+
   const payload = {
     messaging_product: 'whatsapp',
-    to: to,
+    to: normalizedTo,
     type: 'template',
     template: {
       name: templateName,

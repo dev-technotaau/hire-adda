@@ -40,6 +40,7 @@ import SuggestionInput from '@/components/onboarding/SuggestionInput';
 import { useOnboarding, markOnboardingComplete } from '@/hooks/use-onboarding';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import Textarea from '@/components/ui/Textarea';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import Tag from '@/components/ui/Tag';
@@ -1668,13 +1669,11 @@ export default function EmployerOnboardingPage() {
           leftIcon={<Mail className="h-4 w-4" />}
           required
         />
-        <Input
+        <PhoneInput
           label="Contact Phone"
-          type="tel"
-          placeholder="+91 98765 43210"
+          placeholder="9876543210"
           value={data.contactPhone}
-          onChange={(e) => updateData({ contactPhone: e.target.value })}
-          leftIcon={<Phone className="h-4 w-4" />}
+          onValueChange={(val) => updateData({ contactPhone: val })}
         />
       </div>
 

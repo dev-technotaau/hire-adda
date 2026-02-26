@@ -40,6 +40,7 @@ import SuggestionInput from '@/components/onboarding/SuggestionInput';
 import { useOnboarding, markOnboardingComplete } from '@/hooks/use-onboarding';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import Textarea from '@/components/ui/Textarea';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import Tag from '@/components/ui/Tag';
@@ -1498,14 +1499,11 @@ export default function CandidateOnboardingPage() {
             placeholder="Select pronouns (optional)"
           />
 
-          <Input
+          <PhoneInput
             label="Phone Number"
-            placeholder="e.g. 9876543210"
+            placeholder="9876543210"
             value={data.phone}
-            onChange={(e) => updateData({ phone: e.target.value })}
-            type="tel"
-            helperText="We recommend starting with country code, e.g. +91"
-            leftIcon={<Phone className="h-4 w-4" />}
+            onValueChange={(val) => updateData({ phone: val })}
           />
 
           <SuggestionInput
@@ -1589,13 +1587,11 @@ export default function CandidateOnboardingPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input
+            <PhoneInput
               label="Alternate Phone"
-              placeholder="e.g. +91 9876543210"
+              placeholder="9876543210"
               value={data.alternatePhone}
-              onChange={(e) => updateData({ alternatePhone: e.target.value })}
-              type="tel"
-              leftIcon={<Phone className="h-4 w-4" />}
+              onValueChange={(val) => updateData({ alternatePhone: val })}
             />
             <Input
               label="Alternate Email"
@@ -3257,13 +3253,11 @@ export default function CandidateOnboardingPage() {
                     onChange={(e) => updateReference(i, { email: e.target.value })}
                     leftIcon={<Mail className="h-4 w-4" />}
                   />
-                  <Input
+                  <PhoneInput
                     label="Phone"
-                    type="tel"
-                    placeholder="e.g. +91 9876543210"
+                    placeholder="9876543210"
                     value={ref.phone || ''}
-                    onChange={(e) => updateReference(i, { phone: e.target.value })}
-                    leftIcon={<Phone className="h-4 w-4" />}
+                    onValueChange={(val) => updateReference(i, { phone: val })}
                   />
                 </div>
               </div>

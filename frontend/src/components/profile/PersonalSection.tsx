@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { User, MapPin, Phone, Mail, Camera, X, Loader2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import Textarea from '@/components/ui/Textarea';
 import SuggestionInput from '@/components/onboarding/SuggestionInput';
 import Select, { type SelectOption } from '@/components/ui/Select';
@@ -194,12 +195,11 @@ export default function PersonalSection({ form, updateField, profile }: Personal
             showCount
           />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input
+            <PhoneInput
               label="Phone"
-              type="tel"
-              placeholder="+91 9876543210"
+              placeholder="9876543210"
               value={form.phone || ''}
-              onChange={(e) => updateField('phone', e.target.value)}
+              onValueChange={(val) => updateField('phone', val)}
             />
             <DatePicker
               label="Date of Birth"
@@ -319,13 +319,11 @@ export default function PersonalSection({ form, updateField, profile }: Personal
           <div className="border-t border-[var(--border)] pt-4">
             <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Additional Contact</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Input
+              <PhoneInput
                 label="Alternate Phone"
-                type="tel"
-                placeholder="+91 9876543210"
-                leftIcon={<Phone className="h-4 w-4" />}
+                placeholder="9876543210"
                 value={form.alternatePhone || ''}
-                onChange={(e) => updateField('alternatePhone', e.target.value)}
+                onValueChange={(val) => updateField('alternatePhone', val)}
               />
               <Input
                 label="Alternate Email"

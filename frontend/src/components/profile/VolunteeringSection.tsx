@@ -4,6 +4,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import Textarea from '@/components/ui/Textarea';
 import SuggestionInput from '@/components/onboarding/SuggestionInput';
 import DatePicker from '@/components/ui/DatePicker';
@@ -197,11 +198,11 @@ export default function VolunteeringSection({ form, updateField }: ProfileSectio
                     value={ref.email || ''}
                     onChange={(e) => updateReference(i, { email: e.target.value })}
                   />
-                  <Input
+                  <PhoneInput
                     label="Phone"
-                    type="tel"
+                    placeholder="9876543210"
                     value={ref.phone || ''}
-                    onChange={(e) => updateReference(i, { phone: e.target.value })}
+                    onValueChange={(val) => updateReference(i, { phone: val })}
                   />
                 </div>
               </div>

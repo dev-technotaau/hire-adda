@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AuthLayout from '@/components/layout/AuthLayout';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import OtpInput from '@/components/auth/OtpInput';
 import PasswordStrength from '@/components/auth/PasswordStrength';
 import Turnstile from '@/components/auth/Turnstile';
@@ -309,14 +310,13 @@ export default function RegisterPage() {
                   {...register('email')}
                 />
 
-                <Input
+                <PhoneInput
                   label="Phone Number"
-                  type="tel"
-                  placeholder="+91 9876543210"
-                  leftIcon={<Phone className="h-4 w-4" />}
+                  placeholder="9876543210"
                   error={errors.mobileNumber?.message}
                   helperText="Optional, for OTP verification"
-                  {...register('mobileNumber')}
+                  value={watch('mobileNumber')}
+                  onValueChange={(val) => setValue('mobileNumber', val)}
                 />
 
                 <Button type="submit" fullWidth>

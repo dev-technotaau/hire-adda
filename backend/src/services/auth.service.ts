@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../config/prisma';
+import redis from '../config/redis';
 import {
   env,
   getOtpExpiryMinutes,
@@ -976,14 +977,22 @@ export const verifyWhatsapp = async (
 
   const otp = generateOtp(getOtpLength());
   const hashedOtp = hashToken(otp);
+  const expiryMinutes = getOtpExpiryMinutes();
+
+  // Store pending WhatsApp number in Redis — only persisted to DB after OTP confirmation
+  await redis.set(
+    `whatsapp:pending:${userId}`,
+    JSON.stringify({ number: separateWhatsapp, targetNumber }),
+    'EX',
+    expiryMinutes * 60,
+  );
 
   await prisma.user.update({
     where: { id: userId },
     data: {
       whatsappVerificationToken: hashedOtp,
-      whatsappVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+      whatsappVerificationExpires: new Date(Date.now() + expiryMinutes * 60 * 1000),
       mobileNumber: effectiveMobile,
-      whatsappNumber: separateWhatsapp,
       whatsappOtpResendCount: user.whatsappOtpResendCount + 1,
       whatsappOtpLastSentAt: new Date(),
     },
@@ -1024,9 +1033,20 @@ export const confirmWhatsappOtp = async (
   });
   if (!user) throw new AppError('Invalid or expired OTP', 400);
 
+  // Read pending WhatsApp number from Redis (stored during send OTP step)
+  const pendingKey = `whatsapp:pending:${userId}`;
+  const pendingData = await redis.get(pendingKey);
+  let whatsappNumber: string | null = null;
+  if (pendingData) {
+    const parsed = JSON.parse(pendingData) as { number: string | null; targetNumber: string };
+    whatsappNumber = parsed.number;
+    await redis.del(pendingKey);
+  }
+
   await prisma.user.update({
     where: { id: userId },
     data: {
+      whatsappNumber,
       isWhatsappVerified: true,
       whatsappVerificationToken: null,
       whatsappVerificationExpires: null,
@@ -1034,7 +1054,7 @@ export const confirmWhatsappOtp = async (
       whatsappOtpLastSentAt: null,
     },
   });
-  const verifiedNumber = user.whatsappNumber || user.mobileNumber;
+  const verifiedNumber = whatsappNumber || user.mobileNumber;
   logger.info(`WhatsApp verified for ${verifiedNumber}`);
 };
 
@@ -1074,17 +1094,24 @@ export const changeWhatsappNumber = async (
     }
   }
 
-  // Reset verification and generate OTP
+  // Generate OTP and store pending number in Redis (not DB) until verified
   const otp = generateOtp(getOtpLength());
   const hashedOtp = hashToken(otp);
+  const expiryMinutes = getOtpExpiryMinutes();
+
+  // Store pending WhatsApp number in Redis — only persisted to DB after OTP confirmation
+  await redis.set(
+    `whatsapp:pending:${userId}`,
+    JSON.stringify({ number: storeNumber, targetNumber }),
+    'EX',
+    expiryMinutes * 60,
+  );
 
   await prisma.user.update({
     where: { id: userId },
     data: {
-      whatsappNumber: storeNumber,
-      isWhatsappVerified: false,
       whatsappVerificationToken: hashedOtp,
-      whatsappVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+      whatsappVerificationExpires: new Date(Date.now() + expiryMinutes * 60 * 1000),
       whatsappOtpResendCount: 1,
       whatsappOtpLastSentAt: new Date(),
     },

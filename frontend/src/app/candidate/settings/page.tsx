@@ -32,6 +32,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import Tabs from '@/components/ui/Tabs';
 import Modal from '@/components/ui/Modal';
 import { showToast } from '@/components/ui/Toast';
@@ -452,13 +453,11 @@ function MobileVerificationSection() {
       {step === 'idle' && (
         <div className="max-w-md space-y-4">
           {!hasMobile && (
-            <Input
+            <PhoneInput
               label="Mobile Number"
-              type="tel"
-              placeholder="+91 9876543210"
+              placeholder="9876543210"
               value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
-              leftIcon={<Phone className="h-4 w-4" />}
+              onValueChange={setMobileNumber}
             />
           )}
           <div className="flex gap-3 pt-1">
@@ -490,14 +489,12 @@ function MobileVerificationSection() {
 
       {step === 'change' && (
         <form onSubmit={handleInitiateChange} className="max-w-md space-y-4">
-          <Input
+          <PhoneInput
             label="New Mobile Number"
-            type="tel"
-            placeholder="+91 9876543210"
+            placeholder="9876543210"
             value={mobileNumber}
-            onChange={(e) => setMobileNumber(e.target.value)}
+            onValueChange={setMobileNumber}
             error={errors.mobileNumber}
-            leftIcon={<Phone className="h-4 w-4" />}
             required
           />
           <Input
@@ -765,12 +762,11 @@ function WhatsAppVerificationSection() {
               Enter a different WhatsApp number. An OTP will be sent to verify it.
             </p>
           </div>
-          <Input
+          <PhoneInput
             label="New WhatsApp Number"
-            type="tel"
-            placeholder="+91XXXXXXXXXX"
+            placeholder="9876543210"
             value={newWhatsappNumber}
-            onChange={(e) => setNewWhatsappNumber(e.target.value)}
+            onValueChange={setNewWhatsappNumber}
             required
           />
           <Input
@@ -866,7 +862,7 @@ function WhatsAppVerificationSection() {
               onClick={() => setStep('change')}
               className="text-primary text-sm font-medium hover:underline"
             >
-              {hasMobile ? 'Use a different number for WhatsApp' : 'Add WhatsApp number'}
+              {displayNumber ? 'Change WhatsApp number' : 'Add WhatsApp number'}
             </button>
           </div>
         </div>
