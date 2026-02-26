@@ -26,17 +26,22 @@ const createPool = () => {
 
   const pool = new Pool({
     connectionString,
-    // Supabase free tier has ~20 connection limit — keep pool small
+    // Supabase free tier connection limit is tight — keep pool small
     max: parseInt(process.env.DATABASE_POOL_SIZE || '5', 10),
-    // Keep idle connections longer to avoid constant reconnects
-    idleTimeoutMillis: 120_000,
-    // Allow 30s for connection (Supabase free tier can be slow to wake)
+    // Don't keep idle connections too long — Supabase kills them after ~60s
+    idleTimeoutMillis: 30_000,
+    // Allow 30s for initial connection (Supabase can be slow to wake)
     connectionTimeoutMillis: parseInt(process.env.DATABASE_POOL_TIMEOUT || '30', 10) * 1000,
-    // Keep connections alive so Supabase doesn't terminate them
+    // Keep connections alive so Supabase/Supavisor doesn't kill them
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
     // Allow creating new connections even if all are busy (up to max)
     allowExitOnIdle: false,
+  });
+
+  // Set statement timeout on every new connection to prevent hung queries
+  pool.on('connect', (client) => {
+    client.query('SET statement_timeout = 30000').catch(() => {});
   });
 
   // Prevent unhandled pool errors from crashing the process
