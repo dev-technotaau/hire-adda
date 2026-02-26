@@ -18,7 +18,7 @@ export const checkHealth = async (_req: Request, res: Response) => {
 
   // Check Database
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRawUnsafe('SELECT 1');
     checks.database = 'up';
   } catch {
     // Database is down
@@ -81,7 +81,7 @@ export const checkReadiness = async (_req: Request, res: Response) => {
   let redisReady = false;
 
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRawUnsafe('SELECT 1');
     dbReady = true;
   } catch {
     // DB not ready

@@ -1453,18 +1453,20 @@ class SearchService {
     limit: number
   ): Promise<{ text: string; count: number }[]> {
     try {
-      const rows = await prisma.$queryRaw<{ skill: string; cnt: bigint }[]>`
-                SELECT skill, COUNT(*) as cnt
-                FROM (
-                    SELECT unnest("skillsRequired") as skill FROM "JobPost" WHERE status = 'OPEN'
-                    UNION ALL
-                    SELECT unnest("skills") as skill FROM "CandidateProfile"
-                ) sub
-                WHERE skill ILIKE ${'%' + query + '%'}
-                GROUP BY skill
-                ORDER BY cnt DESC
-                LIMIT ${limit}
-            `;
+      const rows = await prisma.$queryRawUnsafe<{ skill: string; cnt: bigint }[]>(
+        `SELECT skill, COUNT(*) as cnt
+         FROM (
+           SELECT unnest("skillsRequired") as skill FROM "JobPost" WHERE status = 'OPEN'
+           UNION ALL
+           SELECT unnest("skills") as skill FROM "CandidateProfile"
+         ) sub
+         WHERE skill ILIKE $1
+         GROUP BY skill
+         ORDER BY cnt DESC
+         LIMIT $2`,
+        `%${query}%`,
+        limit,
+      );
       return rows.map((r) => ({ text: r.skill, count: Number(r.cnt) }));
     } catch (err) {
       logger.error('Skill suggestion Prisma fallback failed', err);

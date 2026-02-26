@@ -42,7 +42,7 @@ export const initializeServices = async (): Promise<void> => {
   // PostgreSQL (Prisma)
   try {
     const { prisma } = await import('./prisma');
-    await prisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRawUnsafe('SELECT 1');
     registerService('PostgreSQL (Prisma)', 'connected');
   } catch (error) {
     registerService('PostgreSQL (Prisma)', 'error', (error as Error).message?.slice(0, 50));
