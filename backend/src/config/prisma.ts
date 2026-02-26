@@ -18,25 +18,36 @@ const globalForPrisma = globalThis as unknown as {
 
 // Create postgres connection pool
 const createPool = () => {
-  const connectionString = process.env.DATABASE_URL;
+  let connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
     throw new Error('DATABASE_URL environment variable is not set');
   }
 
+  // Strip ?pgbouncer=true — that's a Prisma-only param, pg Pool doesn't understand it
+  const url = new URL(connectionString);
+  url.searchParams.delete('pgbouncer');
+  connectionString = url.toString();
+
+  // Detect if connecting to Supabase (needs SSL)
+  const isSupabase = connectionString.includes('supabase');
+  const isLocalhost =
+    connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+
   const pool = new Pool({
     connectionString,
-    // Supabase free tier connection limit is tight — keep pool small
+    // Keep pool small for managed DB services
     max: parseInt(process.env.DATABASE_POOL_SIZE || '5', 10),
-    // Don't keep idle connections too long — Supabase kills them after ~60s
+    // Don't hold idle connections — Supabase/Supavisor kills them
     idleTimeoutMillis: 30_000,
-    // Allow 30s for initial connection (Supabase can be slow to wake)
+    // Allow 30s for initial connection (managed DBs can be slow to wake)
     connectionTimeoutMillis: parseInt(process.env.DATABASE_POOL_TIMEOUT || '30', 10) * 1000,
-    // Keep connections alive so Supabase/Supavisor doesn't kill them
+    // Keep connections alive
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
-    // Allow creating new connections even if all are busy (up to max)
     allowExitOnIdle: false,
+    // Supabase requires SSL from external hosts
+    ...(isSupabase || !isLocalhost ? { ssl: { rejectUnauthorized: false } } : {}),
   });
 
   // Set statement timeout on every new connection to prevent hung queries
