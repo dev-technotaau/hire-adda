@@ -75,9 +75,12 @@ app.use(
     origin: (origin, callback) => {
       const allowedOrigins = env.CORS_ORIGIN === '*' ? '*' : env.CORS_ORIGIN.split(',');
 
-      if (allowedOrigins === '*') {
+      // Allow requests with no origin (health checks, server-to-server, curl)
+      if (!origin) {
         callback(null, true);
-      } else if (allowedOrigins.indexOf(origin as string) !== -1) {
+      } else if (allowedOrigins === '*') {
+        callback(null, true);
+      } else if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));

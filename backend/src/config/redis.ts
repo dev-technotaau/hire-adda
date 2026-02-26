@@ -77,11 +77,21 @@ const createConnection = (): Redis => {
   return new Redis(redisConfig);
 };
 
-// Main Redis connection (for caching, pub/sub)
+// Main Redis connection (for caching, pub/sub, queues)
 export const redis = createConnection();
 
-// BullMQ connection factory (each queue/worker needs its own connection)
-export const createBullMQConnection = () => createConnection();
+// Shared worker connection — BullMQ Workers use blocking commands (BRPOPLPUSH)
+// so they need a separate connection from queues, but all workers can share ONE
+// base connection (BullMQ internally duplicates for blocking as needed).
+let _workerConnection: Redis | null = null;
+
+export const createBullMQConnection = (): Redis => {
+  if (!isRedisEnabled) return createMockRedis();
+  if (!_workerConnection) {
+    _workerConnection = createConnection();
+  }
+  return _workerConnection;
+};
 
 // BullMQ default job options from env
 export const bullmqDefaultJobOptions = {
