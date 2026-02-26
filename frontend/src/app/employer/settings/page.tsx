@@ -702,13 +702,16 @@ function WhatsAppVerificationSection() {
   };
 
   const handleResend = async () => {
-    if (!user?.mobileNumber) return;
     setIsResending(true);
     try {
+      // If changing number, resend to the new number via changeWhatsappNumber
+      // Otherwise use the standard verify flow with mobile number
       if (newWhatsappNumber && password) {
         await authService.changeWhatsappNumber({ newWhatsappNumber, password });
-      } else {
+      } else if (user?.mobileNumber) {
         await authService.verifyWhatsApp({ mobileNumber: user.mobileNumber });
+      } else {
+        return;
       }
       showToast.success('New OTP sent to WhatsApp!');
       setResendTimer(otpConfig.RESEND_COOLDOWN);
@@ -722,10 +725,11 @@ function WhatsAppVerificationSection() {
   };
 
   const handleVerify = async () => {
-    if (otp.length !== otpConfig.LENGTH || !user?.mobileNumber) return;
+    const verifyNumber = newWhatsappNumber || user?.mobileNumber;
+    if (otp.length !== otpConfig.LENGTH || !verifyNumber) return;
     setIsLoading(true);
     try {
-      await authService.verifyWhatsAppOtp({ mobileNumber: user.mobileNumber, otp });
+      await authService.verifyWhatsAppOtp({ mobileNumber: verifyNumber, otp });
       showToast.success('WhatsApp verified successfully!');
       setStep('idle');
       setOtp('');
@@ -761,13 +765,7 @@ function WhatsAppVerificationSection() {
         </div>
       </div>
 
-      {!hasMobile ? (
-        <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
-          <p className="text-sm text-[var(--text-muted)]">
-            Please add and verify your phone number first before enabling WhatsApp verification.
-          </p>
-        </div>
-      ) : isVerified && step === 'idle' ? (
+      {isVerified && step === 'idle' ? (
         <div className="space-y-4">
           <div className="flex items-center gap-3 rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
             <div className="flex-1">
@@ -887,25 +885,33 @@ function WhatsAppVerificationSection() {
       ) : (
         /* step === 'idle' && !isVerified */
         <div className="max-w-md space-y-4">
-          <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
-            <p className="text-sm text-[var(--text-muted)]">
-              WhatsApp number:{' '}
-              <span className="font-medium text-[var(--text)]">
-                {displayNumber || user.mobileNumber}
-              </span>
-              {!hasSeparateNumber && ' (same as mobile)'}
-            </p>
-          </div>
+          {displayNumber ? (
+            <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
+              <p className="text-sm text-[var(--text-muted)]">
+                WhatsApp number:{' '}
+                <span className="font-medium text-[var(--text)]">{displayNumber}</span>
+                {!hasSeparateNumber && hasMobile && ' (same as mobile)'}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
+              <p className="text-sm text-[var(--text-muted)]">
+                No WhatsApp number set. Add a number to receive WhatsApp notifications.
+              </p>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-3 pt-1">
-            <Button isLoading={isLoading} onClick={handleSendOtp}>
-              Verify WhatsApp
-            </Button>
+            {hasMobile && (
+              <Button isLoading={isLoading} onClick={handleSendOtp}>
+                Verify WhatsApp
+              </Button>
+            )}
             <button
               type="button"
               onClick={() => setStep('change')}
               className="text-primary text-sm font-medium hover:underline"
             >
-              Use a different number for WhatsApp
+              {hasMobile ? 'Use a different number for WhatsApp' : 'Add WhatsApp number'}
             </button>
           </div>
         </div>

@@ -1702,13 +1702,43 @@ class SearchService {
       }
     }
 
-    if (filters.location) filter.push({ term: { 'location.keyword': filters.location } });
+    if (filters.location) {
+      filter.push({
+        bool: {
+          should: [
+            { term: { 'location.keyword': filters.location } },
+            { match_phrase_prefix: { location: filters.location } },
+          ],
+          minimum_should_match: 1,
+        },
+      });
+    }
     if (filters.type) filter.push({ term: { type: filters.type } });
     if (filters.isRemote !== undefined) filter.push({ term: { isRemote: filters.isRemote } });
     if (filters.workMode) filter.push({ term: { workMode: filters.workMode } });
     if (filters.shiftType) filter.push({ term: { shiftType: filters.shiftType } });
-    if (filters.industry) filter.push({ term: { industry: filters.industry } });
-    if (filters.department) filter.push({ term: { department: filters.department } });
+    if (filters.industry) {
+      filter.push({
+        bool: {
+          should: [
+            { term: { industry: filters.industry } },
+            { match_phrase_prefix: { industry: filters.industry } },
+          ],
+          minimum_should_match: 1,
+        },
+      });
+    }
+    if (filters.department) {
+      filter.push({
+        bool: {
+          should: [
+            { term: { department: filters.department } },
+            { match_phrase_prefix: { department: filters.department } },
+          ],
+          minimum_should_match: 1,
+        },
+      });
+    }
     if (filters.experienceLevel) {
       filter.push({ term: { experienceLevel: filters.experienceLevel } });
     }
@@ -2029,9 +2059,13 @@ class SearchService {
         bool: {
           should: [
             { term: { 'currentLocation.keyword': filters.location } },
+            { match_phrase_prefix: { currentLocation: filters.location } },
             { term: { preferredLocations: filters.location } },
+            { match_phrase_prefix: { preferredLocations: filters.location } },
             { term: { city: filters.location } },
+            { match_phrase_prefix: { city: filters.location } },
           ],
+          minimum_should_match: 1,
         },
       });
     }
@@ -2041,7 +2075,12 @@ class SearchService {
         : [filters.excludeLocation]) {
         filter.push({
           bool: {
-            must_not: [{ term: { 'currentLocation.keyword': loc } }, { term: { city: loc } }],
+            must_not: [
+              { term: { 'currentLocation.keyword': loc } },
+              { match_phrase_prefix: { currentLocation: loc } },
+              { term: { city: loc } },
+              { match_phrase_prefix: { city: loc } },
+            ],
           },
         });
       }
