@@ -6,7 +6,7 @@ import type { WhatsappTemplate } from '../../types/notification-templates';
 
 export const welcomeWhatsapp = (name: string): WhatsappTemplate => ({
   templateName: 'welcome_message',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -18,7 +18,7 @@ export const welcomeWhatsapp = (name: string): WhatsappTemplate => ({
 
 export const otpWhatsapp = (otp: string): WhatsappTemplate => ({
   templateName: 'auth_otp',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -36,7 +36,7 @@ export const otpWhatsapp = (otp: string): WhatsappTemplate => ({
 
 export const profileCompletionWhatsapp = (name: string, progress: number): WhatsappTemplate => ({
   templateName: 'profile_completion',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -59,7 +59,7 @@ export const jobAlertWhatsapp = (
   link: string
 ): WhatsappTemplate => ({
   templateName: 'job_alert',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -84,7 +84,7 @@ export const interviewWhatsapp = (
   link: string
 ): WhatsappTemplate => ({
   templateName: 'interview_invite',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -109,7 +109,7 @@ export const applicationStatusWhatsapp = (
   jobTitle: string
 ): WhatsappTemplate => ({
   templateName: 'application_status_update',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -129,7 +129,7 @@ export const jobOfferWhatsapp = (
   link: string
 ): WhatsappTemplate => ({
   templateName: 'job_offer',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -154,7 +154,7 @@ export const jobMatchWhatsapp = (
   matchPercentage: string
 ): WhatsappTemplate => ({
   templateName: 'job_match',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -174,7 +174,7 @@ export const jobMatchWhatsapp = (
 
 export const ticketReplyWhatsapp = (ticketNumber: string, subject: string): WhatsappTemplate => ({
   templateName: 'ticket_reply',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -193,7 +193,7 @@ export const ticketReplyWhatsapp = (ticketNumber: string, subject: string): What
 
 export const adminAlertWhatsapp = (message: string): WhatsappTemplate => ({
   templateName: 'admin_alert',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -209,7 +209,7 @@ export const adminAlertWhatsapp = (message: string): WhatsappTemplate => ({
 
 export const documentRequestWhatsapp = (docName: string, link: string): WhatsappTemplate => ({
   templateName: 'document_request',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -234,7 +234,7 @@ export const newApplicationWhatsapp = (
   jobTitle: string
 ): WhatsappTemplate => ({
   templateName: 'new_application',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -252,7 +252,7 @@ export const applicationSubmittedWhatsapp = (
   companyName: string
 ): WhatsappTemplate => ({
   templateName: 'application_submitted',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -271,7 +271,7 @@ export const applicationSubmittedWhatsapp = (
 
 export const accountAlertWhatsapp = (action: string): WhatsappTemplate => ({
   templateName: 'account_alert',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',
@@ -287,7 +287,7 @@ export const accountAlertWhatsapp = (action: string): WhatsappTemplate => ({
 
 export const securityAlertWhatsapp = (action: string): WhatsappTemplate => ({
   templateName: 'security_alert',
-  languageCode: 'en_US',
+  languageCode: 'en',
   components: [
     {
       type: 'body',

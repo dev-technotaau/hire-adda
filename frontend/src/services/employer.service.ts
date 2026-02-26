@@ -91,7 +91,9 @@ export const employerService = {
   async searchCandidates(
     filters: CandidateSearchFilters,
   ): Promise<PaginatedResponse<CandidateProfile>> {
-    const qs = buildQueryString(filters as Record<string, string | undefined>);
+    // Strip UI-only keys that aren't backend params
+    const { experienceBucket: _eb, salaryBucket: _sb, ...apiFilters } = filters;
+    const qs = buildQueryString(apiFilters as Record<string, string | undefined>);
     const res = await api.get(`${API.EMPLOYERS.SEARCH_CANDIDATES}${qs}`);
     return res.data;
   },

@@ -574,6 +574,12 @@ export interface CandidateSearchFilters {
   latitude?: string;
   longitude?: string;
   radiusKm?: string;
+  experienceLevel?: string;
+  highestEducationLevel?: string;
+  drivingLicenseType?: string;
+  functionalArea?: string;
+  experienceBucket?: string;
+  salaryBucket?: string;
   sortBy?: 'relevance' | 'distance';
   page?: string;
   limit?: string;

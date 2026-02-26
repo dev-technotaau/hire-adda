@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ROUTES } from '@/constants/routes';
 import {
   Search,
   Filter,
@@ -279,7 +281,7 @@ function buildCandidateFilterSections(facets: SearchFacets): FilterSection[] {
     ...(facets.currentDepartment?.length
       ? [
           {
-            key: 'currentDepartment',
+            key: 'department',
             label: 'Department',
             type: 'multiselect' as const,
             options: Object.fromEntries(facets.currentDepartment.map((b) => [b.key, b.key])),
@@ -305,7 +307,7 @@ function buildCandidateFilterSections(facets: SearchFacets): FilterSection[] {
     ...(facets.topSkills?.length
       ? [
           {
-            key: 'skillsFacet',
+            key: 'skills',
             label: 'Popular Skills',
             type: 'multiselect' as const,
             options: Object.fromEntries(facets.topSkills.map((b) => [b.key, b.key])),
@@ -318,7 +320,7 @@ function buildCandidateFilterSections(facets: SearchFacets): FilterSection[] {
     ...(facets.topLocations?.length
       ? [
           {
-            key: 'locationFacet',
+            key: 'location',
             label: 'Top Locations',
             type: 'radio' as const,
             options: Object.fromEntries(facets.topLocations.map((b) => [b.key, b.key])),
@@ -331,7 +333,7 @@ function buildCandidateFilterSections(facets: SearchFacets): FilterSection[] {
     ...(facets.topCompanies?.length
       ? [
           {
-            key: 'companyFacet',
+            key: 'currentCompany',
             label: 'Top Companies',
             type: 'multiselect' as const,
             options: Object.fromEntries(facets.topCompanies.map((b) => [b.key, b.key])),
@@ -634,6 +636,57 @@ export default function CandidateSearchPage() {
   }, []);
 
   const handleFilterChange = (key: string, value: string | undefined) => {
+    // Translate experience bucket selections into experienceMin/Max
+    if (key === 'experienceBucket') {
+      setFilters((prev) => {
+        const next = { ...prev, experienceBucket: value, page: '1' };
+        if (!value) {
+          next.experienceMin = undefined;
+          next.experienceMax = undefined;
+        } else if (value === 'Fresher') {
+          next.experienceMin = '0';
+          next.experienceMax = '1';
+        } else if (value.endsWith('+') || value.endsWith('+ years')) {
+          const num = value.match(/^(\d+)/)?.[1];
+          next.experienceMin = num;
+          next.experienceMax = undefined;
+        } else {
+          const match = value.match(/^(\d+)-(\d+)/);
+          if (match) {
+            next.experienceMin = match[1];
+            next.experienceMax = match[2];
+          }
+        }
+        return next;
+      });
+      return;
+    }
+    // Translate salary bucket selections into salaryMin/Max
+    if (key === 'salaryBucket') {
+      setFilters((prev) => {
+        const next = { ...prev, salaryBucket: value, page: '1' };
+        if (!value) {
+          next.salaryMin = undefined;
+          next.salaryMax = undefined;
+        } else {
+          const bucketRanges: Record<string, [string | undefined, string | undefined]> = {
+            '0-3L': [undefined, '300000'],
+            '3-6L': ['300000', '600000'],
+            '6-10L': ['600000', '1000000'],
+            '10-15L': ['1000000', '1500000'],
+            '15-25L': ['1500000', '2500000'],
+            '25L+': ['2500000', undefined],
+          };
+          const range = bucketRanges[value];
+          if (range) {
+            next.salaryMin = range[0];
+            next.salaryMax = range[1];
+          }
+        }
+        return next;
+      });
+      return;
+    }
     setFilters((prev) => ({ ...prev, [key]: value, page: '1' }));
   };
 
@@ -780,7 +833,12 @@ export default function CandidateSearchPage() {
   }, []);
 
   const activeFilterCount = Object.entries(filters).filter(
-    ([key, val]) => val && !['page', 'limit', 'sortBy', 'keyword', 'location'].includes(key),
+    ([key, val]) =>
+      val &&
+      ![
+        'page', 'limit', 'sortBy', 'keyword', 'location',
+        'experienceBucket', 'salaryBucket',
+      ].includes(key),
   ).length;
 
   const filterValues = useMemo(
@@ -814,6 +872,18 @@ export default function CandidateSearchPage() {
       educationLevel: filters.educationLevel,
       itSkill: filters.itSkill,
       workPermit: filters.workPermit,
+      // Dynamic facet filter keys
+      experienceBucket: filters.experienceBucket,
+      salaryBucket: filters.salaryBucket,
+      experienceLevel: filters.experienceLevel,
+      highestEducationLevel: filters.highestEducationLevel,
+      drivingLicenseType: filters.drivingLicenseType,
+      currentIndustry: filters.currentIndustry,
+      department: filters.department,
+      functionalArea: filters.functionalArea,
+      skills: filters.skills,
+      location: filters.location,
+      currentCompany: filters.currentCompany,
     }),
     [filters],
   );
@@ -2036,10 +2106,13 @@ function CandidateCard({
             )}
           </div>
           <div className="min-w-0">
-            <p className="flex items-center gap-2 font-semibold text-[var(--text)]">
+            <Link
+              href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate.id)}
+              className="flex items-center gap-2 font-semibold text-[var(--text)] hover:text-primary hover:underline"
+            >
               <HighlightText text={name} highlight={searchKeyword} />
               <PresenceIndicator userId={candidate.userId} />
-            </p>
+            </Link>
             {candidate.headline && (
               <p className="text-sm text-[var(--text-secondary)]">
                 <HighlightText text={candidate.headline} highlight={searchKeyword} />
@@ -2456,9 +2529,12 @@ function CompactCandidateCard({
           {/* Left: Name + metadata */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="truncate font-semibold text-[var(--text)]">
+              <Link
+                href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate.id)}
+                className="truncate font-semibold text-[var(--text)] hover:text-primary hover:underline"
+              >
                 <HighlightText text={name} highlight={searchKeyword} />
-              </p>
+              </Link>
               <PresenceIndicator userId={candidate.userId} />
               {candidate.workStatus && (
                 <Badge

@@ -137,9 +137,14 @@ export default function EmployerDashboard() {
   });
 
   // Redirect first-time employers to onboarding
-  const { data: companyData, isLoading: companyLoading } = useQuery({
+  const {
+    data: companyData,
+    isLoading: companyLoading,
+    isError: companyError,
+  } = useQuery({
     queryKey: QUERY_KEYS.EMPLOYERS.COMPANY,
     queryFn: () => employerService.getCompany(),
+    retry: false,
   });
 
   const { data: completeness, isLoading: compLoading } = useQuery({
@@ -149,10 +154,9 @@ export default function EmployerDashboard() {
 
   const needsOnboarding =
     !companyLoading &&
-    companyData?.data &&
-    !companyData.data.description &&
-    !companyData.data.industry &&
-    !wasOnboardingSkipped('tb_employer_onboarding');
+    !wasOnboardingSkipped('tb_employer_onboarding') &&
+    (companyError ||
+      (companyData?.data && !companyData.data.description && !companyData.data.industry));
 
   useEffect(() => {
     if (needsOnboarding) {

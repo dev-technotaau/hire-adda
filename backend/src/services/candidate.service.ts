@@ -391,6 +391,10 @@ export class CandidateService {
       itSkill?: string;
       workPermit?: string;
       educationLevel?: string;
+      experienceLevel?: string;
+      highestEducationLevel?: string;
+      drivingLicenseType?: string;
+      functionalArea?: string;
       latitude?: number;
       longitude?: number;
       radiusKm?: number;
@@ -400,7 +404,7 @@ export class CandidateService {
     }
   ) {
     try {
-      const { hits, total } = await searchService.searchCandidates(query || filters.keyword, {
+      const { hits, total, facets } = await searchService.searchCandidates(query || filters.keyword, {
         ...filters,
         from:
           ((filters.page || PAGINATION.DEFAULT_PAGE) - 1) *
@@ -416,6 +420,7 @@ export class CandidateService {
           limit: filters.limit || PAGINATION.DEFAULT_LIMIT,
           pages: Math.ceil(total / (filters.limit || PAGINATION.DEFAULT_LIMIT)),
         },
+        facets,
       };
     } catch (error) {
       logger.warn('Elasticsearch candidate search failed, falling back to DB', error);

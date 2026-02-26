@@ -340,6 +340,7 @@ const FILTER_URL_KEYS = [
   'location',
   'type',
   'workMode',
+  'experience',
   'experienceLevel',
   'shiftType',
   'companyType',

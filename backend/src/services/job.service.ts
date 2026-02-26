@@ -128,7 +128,7 @@ interface JobSearchFilters {
   department?: string;
   salaryMin?: number;
   salaryMax?: number;
-  experience?: number;
+  experience?: string | number;
   experienceLevel?: ExperienceLevel;
   educationRequired?: EducationLevel;
   isRemote?: boolean;
@@ -386,15 +386,11 @@ export class JobService {
     const limit = filters.limit || PAGINATION.DEFAULT_LIMIT;
     const skip = (page - 1) * limit;
 
-    // 1. Try Elasticsearch
-    const hasSearchCriteria =
-      filters.keyword ||
-      filters.location ||
-      filters.type ||
-      filters.industry ||
-      filters.workMode ||
-      filters.experienceLevel ||
-      filters.tags;
+    // 1. Try Elasticsearch — use ES whenever any filter is set (not just keyword/location)
+    const ignoreKeys = new Set(['page', 'limit', 'sortBy']);
+    const hasSearchCriteria = Object.entries(filters).some(
+      ([key, val]) => !ignoreKeys.has(key) && val !== undefined && val !== null && val !== '',
+    );
     if (hasSearchCriteria) {
       try {
         const { hits, total, facets } = await searchService.searchJobs(filters.keyword, {
@@ -454,7 +450,18 @@ export class JobService {
       where.salaryMin = { ...where.salaryMin, lte: filters.salaryMax };
     }
     if (filters.experience !== undefined) {
-      where.experienceMin = { lte: filters.experience };
+      const expStr = String(filters.experience);
+      const rangeMatch = expStr.match(/^(\d+)-(\d+)$/);
+      const plusMatch = expStr.match(/^(\d+)\+$/);
+      if (rangeMatch) {
+        where.experienceMin = { lte: Number(rangeMatch[2]) };
+        where.experienceMax = { gte: Number(rangeMatch[1]) };
+      } else if (plusMatch) {
+        where.experienceMax = { gte: Number(plusMatch[1]) };
+      } else {
+        const num = Number(expStr);
+        if (!isNaN(num)) where.experienceMin = { lte: num };
+      }
     }
     if (filters.urgencyLevel) {
       where.urgencyLevel = filters.urgencyLevel;

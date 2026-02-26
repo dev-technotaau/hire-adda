@@ -698,6 +698,20 @@ function WhatsAppVerificationSection() {
     }
   };
 
+  const handleRemoveWhatsapp = async () => {
+    setIsLoading(true);
+    try {
+      await authService.removeWhatsappNumber();
+      showToast.success('WhatsApp verification removed.');
+      window.location.reload();
+    } catch (err) {
+      const error = err as ApiError;
+      showToast.error(error.message || 'Failed to remove WhatsApp verification');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleResend = async () => {
     setIsResending(true);
     try {
@@ -798,6 +812,14 @@ function WhatsAppVerificationSection() {
                 Use mobile number instead
               </button>
             )}
+            <button
+              type="button"
+              onClick={handleRemoveWhatsapp}
+              disabled={isLoading}
+              className="text-sm font-medium text-[var(--error)] hover:underline disabled:opacity-50"
+            >
+              Remove WhatsApp verification
+            </button>
           </div>
         </div>
       ) : step === 'change' ? (

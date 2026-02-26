@@ -96,6 +96,12 @@ export const searchCandidates = async (req: Request, res: Response, next: NextFu
       itSkill: typeof q.itSkill === 'string' ? q.itSkill : undefined,
       workPermit: typeof q.workPermit === 'string' ? q.workPermit : undefined,
       educationLevel: typeof q.educationLevel === 'string' ? q.educationLevel : undefined,
+      experienceLevel: typeof q.experienceLevel === 'string' ? q.experienceLevel : undefined,
+      highestEducationLevel:
+        typeof q.highestEducationLevel === 'string' ? q.highestEducationLevel : undefined,
+      drivingLicenseType:
+        typeof q.drivingLicenseType === 'string' ? q.drivingLicenseType : undefined,
+      functionalArea: typeof q.functionalArea === 'string' ? q.functionalArea : undefined,
       latitude: q.latitude ? Number(q.latitude) : undefined,
       longitude: q.longitude ? Number(q.longitude) : undefined,
       radiusKm: q.radiusKm ? Number(q.radiusKm) : undefined,
@@ -118,6 +124,7 @@ export const searchCandidates = async (req: Request, res: Response, next: NextFu
         limit: pg.limit,
         totalPages: pg.pages,
         hasMore: pg.page < pg.pages,
+        facets: result.facets || {},
       },
     });
   } catch (error) {

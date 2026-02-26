@@ -65,7 +65,7 @@ export const searchJobs = async (req: Request, res: Response, next: NextFunction
       department: typeof q.department === 'string' ? q.department : undefined,
       salaryMin: q.salaryMin ? Number(q.salaryMin) : undefined,
       salaryMax: q.salaryMax ? Number(q.salaryMax) : undefined,
-      experience: q.experience ? Number(q.experience) : undefined,
+      experience: typeof q.experience === 'string' ? q.experience : undefined,
       experienceLevel:
         typeof q.experienceLevel === 'string' ? (q.experienceLevel as any) : undefined,
       educationRequired:

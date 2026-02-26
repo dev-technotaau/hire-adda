@@ -611,6 +611,9 @@ class SearchService {
             dateOfAvailability: { type: 'date' },
             pronouns: { type: 'keyword' },
             category: { type: 'keyword' },
+            email: { type: 'keyword' },
+            phone: { type: 'keyword' },
+            alternatePhone: { type: 'keyword' },
             alternateEmail: { type: 'keyword' },
             openToWork: { type: 'keyword' },
             careerBreakType: { type: 'keyword' },
@@ -908,6 +911,9 @@ class SearchService {
       dateOfAvailability: profile.dateOfAvailability,
       pronouns: profile.pronouns,
       category: profile.category,
+      email: profile.user?.email || '',
+      phone: profile.phone || '',
+      alternatePhone: profile.alternatePhone || '',
       alternateEmail: profile.alternateEmail,
       openToWork: profile.openToWork,
       careerBreakType: profile.careerBreakType,
@@ -1745,7 +1751,21 @@ class SearchService {
     if (filters.educationRequired) {
       filter.push({ term: { educationRequired: filters.educationRequired } });
     }
-    if (filters.experience) filter.push({ range: { experienceMin: { lte: filters.experience } } });
+    if (filters.experience) {
+      // Parse range format: "3-5", "12+", or plain number
+      const expStr = String(filters.experience);
+      const rangeMatch = expStr.match(/^(\d+)-(\d+)$/);
+      const plusMatch = expStr.match(/^(\d+)\+$/);
+      if (rangeMatch) {
+        filter.push({ range: { experienceMin: { lte: Number(rangeMatch[2]) } } });
+        filter.push({ range: { experienceMax: { gte: Number(rangeMatch[1]) } } });
+      } else if (plusMatch) {
+        filter.push({ range: { experienceMax: { gte: Number(plusMatch[1]) } } });
+      } else {
+        const num = Number(expStr);
+        if (!isNaN(num)) filter.push({ range: { experienceMin: { lte: num } } });
+      }
+    }
     if (filters.salaryMin) filter.push({ range: { salaryMax: { gte: filters.salaryMin } } });
     if (filters.salaryMax) filter.push({ range: { salaryMin: { lte: filters.salaryMax } } });
     if (filters.skills?.length > 0) filter.push({ terms: { skills: filters.skills } });
@@ -2503,11 +2523,13 @@ class SearchService {
           blockedCompanies: s.blockedCompanies || [],
           interests: s.interests || [],
           hobbies: s.hobbies || [],
+          phone: s.phone || null,
+          alternatePhone: s.alternatePhone || null,
           user: {
             id: s.userId || '',
             firstName: nameParts[0] || null,
             lastName: nameParts.slice(1).join(' ') || null,
-            email: '',
+            email: s.email || '',
             avatar: null,
             isEmailVerified: s.isEmailVerified || false,
             isMobileVerified: s.isMobileVerified || false,
