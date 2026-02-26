@@ -204,6 +204,38 @@ function filterStatic(items: string[], query: string, limit: number): string[] {
   return items.filter((item) => item.toLowerCase().includes(lq)).slice(0, limit);
 }
 
+// Levenshtein distance for fuzzy static matching
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const curr = [i];
+    for (let j = 1; j <= n; j++) {
+      curr[j] = a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+    }
+    prev = curr;
+  }
+  return prev[n];
+}
+
+// Fuzzy-aware static filter: matches substring OR Levenshtein distance ≤ 2 on any word
+function filterStaticFuzzy(items: string[], query: string, limit: number): string[] {
+  const lq = query.toLowerCase();
+  const maxDist = lq.length <= 4 ? 1 : 2;
+  return items
+    .filter((item) => {
+      const li = item.toLowerCase();
+      // Exact substring match
+      if (li.includes(lq)) return true;
+      // Fuzzy match: check if any word in the item is close to the query
+      return li.split(/[\s/,.-]+/).some((word) => levenshtein(lq, word) <= maxDist);
+    })
+    .slice(0, limit);
+}
+
 // ─── Advanced Index Settings ────────────────────────────────────────────────
 
 const INDEX_SETTINGS = {
@@ -979,6 +1011,22 @@ class SearchService {
 
   // ─── Autocomplete ───────────────────────────────────────────────────
 
+  // Build a query that matches both prefix (edge_ngram) and fuzzy (typo-tolerant) results
+  private _autocompleteQuery(
+    autocompleteField: string,
+    fuzzyField: string,
+    query: string,
+    filter?: Record<string, any>
+  ) {
+    const should: any[] = [
+      { match: { [autocompleteField]: { query, operator: 'and', boost: 2 } } },
+      { match: { [fuzzyField]: { query, fuzziness: 'AUTO', prefix_length: 1 } } },
+    ];
+    const boolQuery: any = { should, minimum_should_match: 1 };
+    if (filter) boolQuery.filter = filter;
+    return { bool: boolQuery };
+  }
+
   async autocomplete(
     query: string,
     type: 'jobs' | 'candidates' | 'all' = 'all',
@@ -986,18 +1034,14 @@ class SearchService {
   ): Promise<AutocompleteResult[]> {
     if (!query || query.length < 2) return [];
     const results: AutocompleteResult[] = [];
+    const openFilter = { term: { status: JOB_STATUS.OPEN } };
 
     try {
       if (type === 'jobs' || type === 'all') {
         const [titleRes, skillRes, companyRes, locationRes] = await Promise.all([
           (elasticClient.search as any)({
             index: ELASTIC_INDICES.JOBS,
-            query: {
-              bool: {
-                must: { match: { 'title.autocomplete': { query, operator: 'and' } } },
-                filter: { term: { status: JOB_STATUS.OPEN } },
-              },
-            },
+            query: this._autocompleteQuery('title.autocomplete', 'title', query, openFilter),
             _source: false,
             size: 0,
             aggs: {
@@ -1006,24 +1050,24 @@ class SearchService {
           }),
           (elasticClient.search as any)({
             index: ELASTIC_INDICES.JOBS,
-            query: {
-              bool: {
-                must: { match: { 'skills.autocomplete': { query, operator: 'and' } } },
-                filter: { term: { status: JOB_STATUS.OPEN } },
-              },
-            },
+            query: this._autocompleteQuery(
+              'skills.autocomplete',
+              'skills.text',
+              query,
+              openFilter
+            ),
             _source: false,
             size: 0,
             aggs: { items: { terms: { field: 'skills', size: limit, order: { _count: 'desc' } } } },
           }),
           (elasticClient.search as any)({
             index: ELASTIC_INDICES.JOBS,
-            query: {
-              bool: {
-                must: { match: { 'companyName.autocomplete': { query, operator: 'and' } } },
-                filter: { term: { status: JOB_STATUS.OPEN } },
-              },
-            },
+            query: this._autocompleteQuery(
+              'companyName.autocomplete',
+              'companyName',
+              query,
+              openFilter
+            ),
             _source: false,
             size: 0,
             aggs: {
@@ -1034,12 +1078,7 @@ class SearchService {
           }),
           (elasticClient.search as any)({
             index: ELASTIC_INDICES.JOBS,
-            query: {
-              bool: {
-                must: { match: { 'location.autocomplete': { query, operator: 'and' } } },
-                filter: { term: { status: JOB_STATUS.OPEN } },
-              },
-            },
+            query: this._autocompleteQuery('location.autocomplete', 'location', query, openFilter),
             _source: false,
             size: 0,
             aggs: {
@@ -1070,14 +1109,18 @@ class SearchService {
         const [skillRes, locRes, roleRes] = await Promise.all([
           (elasticClient.search as any)({
             index: ELASTIC_INDICES.CANDIDATES,
-            query: { match: { 'skills.autocomplete': { query, operator: 'and' } } },
+            query: this._autocompleteQuery('skills.autocomplete', 'skills.text', query),
             _source: false,
             size: 0,
             aggs: { items: { terms: { field: 'skills', size: limit, order: { _count: 'desc' } } } },
           }),
           (elasticClient.search as any)({
             index: ELASTIC_INDICES.CANDIDATES,
-            query: { match: { 'currentLocation.autocomplete': { query, operator: 'and' } } },
+            query: this._autocompleteQuery(
+              'currentLocation.autocomplete',
+              'currentLocation',
+              query
+            ),
             _source: false,
             size: 0,
             aggs: {
@@ -1088,7 +1131,7 @@ class SearchService {
           }),
           (elasticClient.search as any)({
             index: ELASTIC_INDICES.CANDIDATES,
-            query: { match: { 'currentRole.autocomplete': { query, operator: 'and' } } },
+            query: this._autocompleteQuery('currentRole.autocomplete', 'currentRole', query),
             _source: false,
             size: 0,
             aggs: {
@@ -1118,22 +1161,22 @@ class SearchService {
         const perType = Math.max(2, Math.ceil(remaining / 4));
         const existingTexts = new Set(results.map((r) => r.text.toLowerCase()));
 
-        for (const t of filterStatic(COMMON_JOB_TITLES, query, perType)) {
+        for (const t of filterStaticFuzzy(COMMON_JOB_TITLES, query, perType)) {
           if (!existingTexts.has(t.toLowerCase())) {
             results.push({ text: t, type: 'job_title', count: 0 });
           }
         }
-        for (const s of filterStatic(COMMON_SKILLS, query, perType)) {
+        for (const s of filterStaticFuzzy(COMMON_SKILLS, query, perType)) {
           if (!existingTexts.has(s.toLowerCase())) {
             results.push({ text: s, type: 'skill', count: 0 });
           }
         }
-        for (const c of filterStatic(COMMON_COMPANIES, query, perType)) {
+        for (const c of filterStaticFuzzy(COMMON_COMPANIES, query, perType)) {
           if (!existingTexts.has(c.toLowerCase())) {
             results.push({ text: c, type: 'company', count: 0 });
           }
         }
-        for (const l of filterStatic(COMMON_LOCATIONS, query, perType)) {
+        for (const l of filterStaticFuzzy(COMMON_LOCATIONS, query, perType)) {
           if (!existingTexts.has(l.toLowerCase())) {
             results.push({ text: l, type: 'location', count: 0 });
           }
@@ -1482,6 +1525,14 @@ class SearchService {
 
   // ─── Search History (Redis) ─────────────────────────────────────────
 
+  private async ensureSortedSet(key: string): Promise<void> {
+    const keyType = await redis.type(key);
+    if (keyType !== 'zset' && keyType !== 'none') {
+      logger.warn(`Search history key ${key} has wrong type "${keyType}", resetting to sorted set`);
+      await redis.del(key);
+    }
+  }
+
   async addToSearchHistory(
     userId: string,
     query: string,
@@ -1489,6 +1540,8 @@ class SearchService {
   ): Promise<void> {
     try {
       const key = SEARCH_HISTORY_KEY(userId);
+      await this.ensureSortedSet(key);
+
       const member = `${query}\0${type}`; // Unique per query+type combo
       const score = Date.now();
 
@@ -1508,12 +1561,10 @@ class SearchService {
     limit: number = 10
   ): Promise<{ query: string; type: string; timestamp: number }[]> {
     try {
-      const results = await redis.zrevrange(
-        SEARCH_HISTORY_KEY(userId),
-        0,
-        limit - 1,
-        'WITHSCORES'
-      );
+      const key = SEARCH_HISTORY_KEY(userId);
+      await this.ensureSortedSet(key);
+
+      const results = await redis.zrevrange(key, 0, limit - 1, 'WITHSCORES');
       const parsed: { query: string; type: string; timestamp: number }[] = [];
       for (let i = 0; i < results.length; i += 2) {
         const [query, type] = results[i].split('\0');
