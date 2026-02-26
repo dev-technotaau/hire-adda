@@ -1,24 +1,13 @@
-import { Queue } from 'bullmq';
-import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { schedulerQueue } from './scheduler.queue';
 
-export const WEEKLY_DIGEST_QUEUE_NAME = 'weekly-digest-queue';
+export const WEEKLY_DIGEST_QUEUE_NAME = 'send-weekly-digest';
 
-export const weeklyDigestQueue = new Queue(WEEKLY_DIGEST_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 10000,
-    },
-    removeOnComplete: true,
-    removeOnFail: false,
-  },
-});
+// Re-export scheduler queue for backward compatibility
+export const weeklyDigestQueue = schedulerQueue;
 
 // Run weekly digest every Monday at 9:00 AM
-weeklyDigestQueue
+schedulerQueue
   .add(
     'send-weekly-digest',
     {},
@@ -32,8 +21,4 @@ weeklyDigestQueue
     logger.error('Failed to add repeatable weekly digest:', err);
   });
 
-weeklyDigestQueue.on('error', (err) => {
-  logger.error('Weekly Digest Queue Error:', err);
-});
-
-logger.info(`Weekly Digest Queue initialized: ${WEEKLY_DIGEST_QUEUE_NAME}`);
+logger.info(`Weekly Digest scheduled on: scheduler-queue`);

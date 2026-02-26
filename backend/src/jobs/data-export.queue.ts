@@ -1,27 +1,12 @@
-import { Queue } from 'bullmq';
-import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { schedulerQueue } from './scheduler.queue';
 
-export const DATA_EXPORT_QUEUE_NAME = 'data-export-queue';
+export const DATA_EXPORT_QUEUE_NAME = 'export-data';
 
-export const dataExportQueue = new Queue(DATA_EXPORT_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions: {
-    attempts: 2,
-    backoff: {
-      type: 'exponential',
-      delay: 5000,
-    },
-    removeOnComplete: true,
-    removeOnFail: false,
-  },
-});
+// Re-export scheduler queue for backward compatibility
+export const dataExportQueue = schedulerQueue;
 
-dataExportQueue.on('error', (err) => {
-  logger.error('Data Export Queue Error:', err);
-});
-
-logger.info(`Data Export Queue initialized: ${DATA_EXPORT_QUEUE_NAME}`);
+logger.info(`Data Export scheduled on: scheduler-queue`);
 
 // Helper function to add data export jobs
 export const addDataExportJob = async (data: {
@@ -31,7 +16,9 @@ export const addDataExportJob = async (data: {
   format?: 'csv' | 'xlsx' | 'json';
   candidateIds?: string[];
 }) => {
-  return await dataExportQueue.add('export-data', data, {
-    priority: data.exportType === 'USER_DATA' ? 1 : 2, // USER_DATA has higher priority
+  return await schedulerQueue.add('export-data', data, {
+    priority: data.exportType === 'USER_DATA' ? 1 : 2,
+    attempts: 2,
+    backoff: { type: 'exponential', delay: 5000 },
   });
 };

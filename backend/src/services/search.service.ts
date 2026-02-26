@@ -1489,18 +1489,13 @@ class SearchService {
   ): Promise<void> {
     try {
       const key = SEARCH_HISTORY_KEY(userId);
-      const entry = JSON.stringify({ query, type, timestamp: Date.now() });
-      const existing = await redis.lrange(key, 0, -1);
-      for (const item of existing) {
-        try {
-          const p = JSON.parse(item);
-          if (p.query === query && p.type === type) await redis.lrem(key, 1, item);
-        } catch {
-          /* skip */
-        }
-      }
-      await redis.lpush(key, entry);
-      await redis.ltrim(key, 0, SEARCH_HISTORY_MAX - 1);
+      const member = `${query}\0${type}`; // Unique per query+type combo
+      const score = Date.now();
+
+      // ZADD with score=timestamp — overwrites if member exists (natural dedup)
+      await (redis as any).zadd(key, score, member);
+      // Trim to keep only the most recent entries
+      await (redis as any).zremrangebyrank(key, 0, -(SEARCH_HISTORY_MAX + 1));
       await redis.expire(key, 90 * 24 * 60 * 60);
       await redis.zincrby(POPULAR_SEARCHES_KEY, 1, query.toLowerCase().trim());
     } catch (error) {
@@ -1513,8 +1508,18 @@ class SearchService {
     limit: number = 10
   ): Promise<{ query: string; type: string; timestamp: number }[]> {
     try {
-      const entries = await redis.lrange(SEARCH_HISTORY_KEY(userId), 0, limit - 1);
-      return entries.map((e: string) => JSON.parse(e));
+      const results = await redis.zrevrange(
+        SEARCH_HISTORY_KEY(userId),
+        0,
+        limit - 1,
+        'WITHSCORES'
+      );
+      const parsed: { query: string; type: string; timestamp: number }[] = [];
+      for (let i = 0; i < results.length; i += 2) {
+        const [query, type] = results[i].split('\0');
+        parsed.push({ query, type, timestamp: parseInt(results[i + 1], 10) });
+      }
+      return parsed;
     } catch (error) {
       logger.error('Failed to get search history', error);
       return [];

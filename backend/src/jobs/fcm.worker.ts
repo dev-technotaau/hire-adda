@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
-import { createBullMQConnection } from '../config/redis';
+import { redis } from '../config/redis';
 import logger from '../config/logger';
 import { FCM_QUEUE_NAME } from './fcm.queue';
 import { sendFcmNotification } from '../services/fcm.service';
@@ -66,7 +66,7 @@ export const fcmWorker = new Worker<FcmJobData>(
     }
   },
   {
-    connection: createBullMQConnection(),
+    connection: redis,
     concurrency: 5,
     lockDuration: 60000,
     limiter: {

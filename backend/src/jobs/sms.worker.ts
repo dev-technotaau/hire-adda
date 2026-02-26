@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
-import { createBullMQConnection } from '../config/redis';
+import { redis } from '../config/redis';
 import logger from '../config/logger';
 import { SMS_QUEUE_NAME } from './sms.queue';
 import { sendSMS } from '../services/sms.service';
@@ -38,7 +38,7 @@ export const smsWorker = new Worker<SmsJobData>(
     }
   },
   {
-    connection: createBullMQConnection(),
+    connection: redis,
     concurrency: 5,
     lockDuration: 60000,
     limiter: {

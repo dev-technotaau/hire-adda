@@ -69,8 +69,9 @@ export const ddosProtection = () => {
       }
 
       next();
-    } catch {
-      // Never block requests due to Redis errors
+    } catch (error) {
+      // Never block requests due to Redis errors, but log for monitoring
+      logger.warn('DDoS protection: Redis error, skipping rate check:', (error as Error).message);
       next();
     }
   };

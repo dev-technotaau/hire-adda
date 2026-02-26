@@ -1,24 +1,13 @@
-import { Queue } from 'bullmq';
-import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { schedulerQueue } from './scheduler.queue';
 
-export const JOB_EXPIRATION_QUEUE_NAME = 'job-expiration-queue';
+export const JOB_EXPIRATION_QUEUE_NAME = 'check-expired-jobs';
 
-export const jobExpirationQueue = new Queue(JOB_EXPIRATION_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 5000,
-    },
-    removeOnComplete: true,
-    removeOnFail: false,
-  },
-});
+// Re-export scheduler queue for backward compatibility
+export const jobExpirationQueue = schedulerQueue;
 
 // Add repeatable job to check for expired jobs every 6 hours
-jobExpirationQueue
+schedulerQueue
   .add(
     'check-expired-jobs',
     {},
@@ -32,8 +21,4 @@ jobExpirationQueue
     logger.error('Failed to add repeatable job expiration check:', err);
   });
 
-jobExpirationQueue.on('error', (err) => {
-  logger.error('Job Expiration Queue Error:', err);
-});
-
-logger.info(`Job Expiration Queue initialized: ${JOB_EXPIRATION_QUEUE_NAME}`);
+logger.info(`Job Expiration scheduled on: scheduler-queue`);

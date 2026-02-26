@@ -57,6 +57,7 @@ nul
 
 # Backup Files
 .env.bak
+backend/backups/
 
 # Logs
 *.log

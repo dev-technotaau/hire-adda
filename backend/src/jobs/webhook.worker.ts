@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
-import { createBullMQConnection } from '../config/redis';
+import { redis } from '../config/redis';
 import logger from '../config/logger';
 import prisma from '../config/prisma';
 import { WEBHOOK_QUEUE_NAME } from './webhook.queue';
@@ -121,7 +121,7 @@ export const webhookWorker = new Worker<WebhookJobData>(
     return { success, statusCode };
   },
   {
-    connection: createBullMQConnection(),
+    connection: redis,
     concurrency: 5,
     lockDuration: 30000,
     limiter: {

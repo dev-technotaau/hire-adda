@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
-import { createBullMQConnection } from '../config/redis';
+import { redis } from '../config/redis';
 import logger from '../config/logger';
 import { EMAIL_QUEUE_NAME } from './email.queue';
 import { sendEmail } from '../services/email.service';
@@ -38,7 +38,7 @@ export const emailWorker = new Worker<EmailJobData>(
     }
   },
   {
-    connection: createBullMQConnection(),
+    connection: redis,
     concurrency: 5,
     lockDuration: 30000,
     limiter: {

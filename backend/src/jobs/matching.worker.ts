@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
-import { createBullMQConnection } from '../config/redis';
+import { redis } from '../config/redis';
 import logger from '../config/logger';
 import { MATCHING_QUEUE_NAME } from './matching.queue';
 import { matchingService } from '../services/matching.service';
@@ -167,7 +167,7 @@ export const matchingWorker = new Worker<MatchingJobData>(
     }
   },
   {
-    connection: createBullMQConnection(),
+    connection: redis,
     concurrency: 3,
     lockDuration: 300000, // 5 min — matching is CPU/IO heavy
     stalledInterval: 120000,

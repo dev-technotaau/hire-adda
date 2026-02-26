@@ -1,24 +1,13 @@
-import { Queue } from 'bullmq';
-import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { schedulerQueue } from './scheduler.queue';
 
-export const JOB_ALERT_QUEUE_NAME = 'job-alert-queue';
+export const JOB_ALERT_QUEUE_NAME = 'process-alerts';
 
-export const jobAlertQueue = new Queue(JOB_ALERT_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 5000,
-    },
-    removeOnComplete: true,
-    removeOnFail: false,
-  },
-});
+// Re-export scheduler queue for backward compatibility
+export const jobAlertQueue = schedulerQueue;
 
 // Process job alerts every hour
-jobAlertQueue
+schedulerQueue
   .add(
     'process-alerts',
     {},
@@ -32,8 +21,4 @@ jobAlertQueue
     logger.error('Failed to add repeatable job alert processing:', err);
   });
 
-jobAlertQueue.on('error', (err) => {
-  logger.error('Job Alert Queue Error:', err);
-});
-
-logger.info(`Job Alert Queue initialized: ${JOB_ALERT_QUEUE_NAME}`);
+logger.info(`Job Alert scheduled on: scheduler-queue`);

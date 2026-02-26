@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
-import { createBullMQConnection } from '../config/redis';
+import { redis } from '../config/redis';
 import logger from '../config/logger';
 import { IN_APP_QUEUE_NAME } from './in-app.queue';
 import { getIO } from '../socket';
@@ -49,7 +49,7 @@ export const inAppWorker = new Worker<InAppJobData>(
     }
   },
   {
-    connection: createBullMQConnection(),
+    connection: redis,
     concurrency: 10, // High concurrency for real-time feel
     lockDuration: 60000,
     limiter: { max: 50, duration: 1000 },

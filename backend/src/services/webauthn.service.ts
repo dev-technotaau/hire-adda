@@ -13,6 +13,7 @@ import prisma from '../config/prisma';
 import redis from '../config/redis';
 import { env } from '../config/env';
 import logger from '../config/logger';
+import { AppError } from '../middleware/error';
 
 const RP_ID = env.WEBAUTHN_RP_ID;
 const RP_NAME = env.WEBAUTHN_RP_NAME;
@@ -28,15 +29,25 @@ async function storeChallenge(
   type: 'reg' | 'auth',
   challenge: string
 ): Promise<void> {
-  await redis.set(challengeKey(sessionId, type), challenge, 'EX', CHALLENGE_TTL);
+  try {
+    await redis.set(challengeKey(sessionId, type), challenge, 'EX', CHALLENGE_TTL);
+  } catch (error) {
+    logger.error('Failed to store WebAuthn challenge in Redis:', error);
+    throw new AppError('Authentication service unavailable', 503, 'REDIS_UNAVAILABLE');
+  }
 }
 
 async function getChallenge(sessionId: string, type: 'reg' | 'auth'): Promise<string | null> {
-  const challenge = await redis.get(challengeKey(sessionId, type));
-  if (challenge) {
-    await redis.del(challengeKey(sessionId, type));
+  try {
+    const challenge = await redis.get(challengeKey(sessionId, type));
+    if (challenge) {
+      await redis.del(challengeKey(sessionId, type));
+    }
+    return challenge;
+  } catch (error) {
+    logger.error('Failed to retrieve WebAuthn challenge from Redis:', error);
+    throw new AppError('Authentication service unavailable', 503, 'REDIS_UNAVAILABLE');
   }
-  return challenge;
 }
 
 export const webauthnService = {

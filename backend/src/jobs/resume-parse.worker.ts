@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
-import { createBullMQConnection } from '../config/redis';
+import { redis } from '../config/redis';
 import logger from '../config/logger';
 import prisma from '../config/prisma';
 import { RESUME_PARSE_QUEUE_NAME } from './resume-parse.queue';
@@ -98,7 +98,7 @@ export const resumeParseWorker = new Worker<ResumeParseJobData>(
     }
   },
   {
-    connection: createBullMQConnection(),
+    connection: redis,
     concurrency: 2,
     lockDuration: 300000, // 5 min — fetches file + calls Document AI
     stalledInterval: 120000,

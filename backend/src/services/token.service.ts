@@ -1,8 +1,12 @@
 import prisma from '../config/prisma';
+import redis from '../config/redis';
 import { hashToken, generateSecureToken } from '../utils/crypto';
 import { signRefreshToken, getTokenExpirationMs } from '../utils/jwt';
 import { env } from '../config/env';
 import logger from '../config/logger';
+
+const TOKEN_CACHE_TTL = 60; // 1 minute — short enough for timely revocation
+const tokenCacheKey = (hashedToken: string) => `token:valid:${hashedToken}`;
 
 /**
  * Create and store a new refresh token for a user
@@ -76,6 +80,9 @@ export const revokeToken = async (token: string): Promise<void> => {
     data: { isRevoked: true },
   });
 
+  // Invalidate cached validity so revocation is immediate
+  redis.del(tokenCacheKey(hashedToken)).catch(() => {});
+
   logger.debug('Refresh token revoked');
 };
 
@@ -84,10 +91,21 @@ export const revokeToken = async (token: string): Promise<void> => {
  * @param userId - User ID
  */
 export const revokeAllUserTokens = async (userId: string): Promise<void> => {
+  // Fetch hashed tokens before revoking so we can invalidate cache
+  const tokens = await prisma.refreshToken.findMany({
+    where: { userId, isRevoked: false },
+    select: { token: true },
+  });
+
   const result = await prisma.refreshToken.updateMany({
     where: { userId },
     data: { isRevoked: true },
   });
+
+  // Invalidate cached validity for all revoked tokens
+  for (const t of tokens) {
+    redis.del(tokenCacheKey(t.token)).catch(() => {});
+  }
 
   logger.info(`Revoked ${result.count} tokens for user ${userId}`);
 };
@@ -99,24 +117,27 @@ export const revokeAllUserTokens = async (userId: string): Promise<void> => {
  */
 export const isTokenValid = async (token: string): Promise<boolean> => {
   const hashedToken = hashToken(token);
+  const cacheKey = tokenCacheKey(hashedToken);
+
+  // Check Redis cache first
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached === '1') return true;
+    if (cached === '0') return false;
+  } catch {
+    // Redis down — fall through to DB
+  }
 
   const storedToken = await prisma.refreshToken.findUnique({
     where: { token: hashedToken },
   });
 
-  if (!storedToken) {
-    return false;
-  }
+  const valid = !!storedToken && !storedToken.isRevoked && storedToken.expiresAt >= new Date();
 
-  if (storedToken.isRevoked) {
-    return false;
-  }
+  // Cache the result (fire-and-forget)
+  redis.set(cacheKey, valid ? '1' : '0', 'EX', TOKEN_CACHE_TTL).catch(() => {});
 
-  if (storedToken.expiresAt < new Date()) {
-    return false;
-  }
-
-  return true;
+  return valid;
 };
 
 /**

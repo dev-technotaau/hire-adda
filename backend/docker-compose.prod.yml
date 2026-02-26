@@ -85,8 +85,10 @@ services:
       - OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g
       - DISABLE_SECURITY_PLUGIN=true
       - DISABLE_INSTALL_DEMO_CONFIG=true
+      - path.repo=/usr/share/opensearch/snapshots
     volumes:
       - opensearch_data:/usr/share/opensearch/data
+      - opensearch_snapshots:/usr/share/opensearch/snapshots
     networks:
       - talent_bridge_network
     healthcheck:
@@ -121,4 +123,5 @@ networks:
 
 volumes:
   opensearch_data:
+  opensearch_snapshots:
   redis_data:

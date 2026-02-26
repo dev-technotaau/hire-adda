@@ -139,10 +139,12 @@ services:
       - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
       - DISABLE_SECURITY_PLUGIN=true
       - DISABLE_INSTALL_DEMO_CONFIG=true
+      - path.repo=/usr/share/opensearch/snapshots
     ports:
       - "9200:9200"
     volumes:
       - opensearch_data:/usr/share/opensearch/data
+      - opensearch_snapshots:/usr/share/opensearch/snapshots
     networks:
       - talentbridge_network
     healthcheck:
@@ -190,6 +192,8 @@ volumes:
   redis_data:
     driver: local
   opensearch_data:
+    driver: local
+  opensearch_snapshots:
     driver: local
   uploads_data:
     driver: local

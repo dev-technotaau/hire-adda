@@ -10,6 +10,7 @@ import { validate } from '../validators/validate';
 import { updateCompanyProfileSchema } from '../schemas/employer.schema';
 import { createJobTemplateSchema, updateJobTemplateSchema } from '../schemas/job-template.schema';
 import { audit } from '../middleware/audit';
+import { cache } from '../middleware/cache';
 
 const router = Router();
 
@@ -53,7 +54,7 @@ router.delete('/me/logo', employerController.removeLogo);
 
 router.get('/me/profile-views', employerController.getProfileViews);
 
-router.get('/candidates/search', employerController.searchCandidates);
+router.get('/candidates/search', cache({ ttl: 60, perUser: true }), employerController.searchCandidates);
 
 router.post('/candidates/bulk-export', employerController.bulkExportCandidates);
 
@@ -69,8 +70,8 @@ router.post(
   audit('APPLICATION_SELECT', 'JobApplication'),
   jobController.selectCandidateForJob
 );
-router.get('/candidates/:candidateId/match/:jobId', employerController.getCandidateMatchScore);
-router.get('/candidates/:candidateId/similar', employerController.getSimilarCandidates);
+router.get('/candidates/:candidateId/match/:jobId', cache({ ttl: 300, perUser: true }), employerController.getCandidateMatchScore);
+router.get('/candidates/:candidateId/similar', cache({ ttl: 300, perUser: true }), employerController.getSimilarCandidates);
 
 // Job Templates CRUD
 router.get('/job-templates', jobTemplateController.getTemplates);

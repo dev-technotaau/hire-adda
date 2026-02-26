@@ -1,7 +1,9 @@
 .PHONY: dev dev-backend dev-frontend build build-backend build-frontend \
        test test-backend test-frontend lint lint-fix format \
        db-push db-migrate db-studio db-seed db-seed-dev \
-       docker-up docker-down docker-build clean install help
+       docker-up docker-down docker-build clean install help \
+       backup-db backup-db-restore backup-db-local \
+       backup-cleanup backup-status
 
 # ─── Development ─────────────────────────────────────────
 dev:                    ## Start both backend and frontend
@@ -87,6 +89,35 @@ docker-build:           ## Build Docker images
 
 docker-logs:            ## View Docker logs
 	cd backend && docker compose logs -f
+
+# ─── Backup & Recovery ──────────────────────────────────
+# Automated: BullMQ runs pg_dump → R2 daily at 2AM UTC
+# Manual: Use these commands from your local machine
+backup-db:              ## Create DB backup locally (pg_dump → ./backups/)
+	cd backend && bash scripts/db-backup.sh
+
+backup-db-restore:      ## Restore database from local backup (FILE=path/to/backup.sql.gz)
+	cd backend && bash scripts/db-restore.sh $(FILE) --confirm
+
+backup-cleanup:         ## Remove old local backups beyond retention period
+	cd backend && bash scripts/backup-cleanup.sh
+
+backup-status:          ## Show last automated backup timestamps from Redis
+	@echo "=== Backup Status (Redis) ===" && \
+	cd backend && node -e " \
+		const Redis = require('ioredis'); \
+		const r = new Redis(process.env.REDIS_URL || 'redis://localhost:6379'); \
+		Promise.all([ \
+			r.get('backup:last-success:db'), \
+			r.get('backup:last-failure:db'), \
+			r.get('backup:last-success:cleanup'), \
+		]).then(([ds,df,cl]) => { \
+			console.log('DB last success:       ', ds || 'never'); \
+			console.log('DB last failure:       ', df || 'none'); \
+			console.log('Cleanup last run:      ', cl || 'never'); \
+			r.quit(); \
+		}).catch(e => { console.error(e.message); r.quit(); }); \
+	"
 
 # ─── Maintenance ─────────────────────────────────────────
 install:                ## Install all dependencies

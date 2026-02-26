@@ -44,22 +44,42 @@ const buildRedisConfig = (): RedisOptions => {
   return config;
 };
 
-// Create a mock Redis for when Redis is disabled
-const createMockRedis = () => {
+// Create a mock Redis for when Redis is disabled.
+// Covers all Redis commands used across the codebase so services
+// degrade gracefully instead of throwing when REDIS_ENABLED=false.
+const createMockRedis = (): Redis => {
   const noop = () => Promise.resolve(null);
-  return {
+  const mock = {
+    // Basic key operations
     get: noop,
     set: noop,
     del: noop,
     expire: noop,
     ttl: noop,
-    on: () => {},
+    // Counter operations (rate-limit, DDoS protection)
+    incr: () => Promise.resolve(0),
+    // List operations (search history)
+    lpush: () => Promise.resolve(0),
+    lrange: () => Promise.resolve([]),
+    ltrim: noop,
+    lrem: () => Promise.resolve(0),
+    // Sorted set operations (popular searches, search history)
+    zadd: () => Promise.resolve(0),
+    zincrby: () => Promise.resolve('0'),
+    zrevrange: () => Promise.resolve([]),
+    zremrangebyrank: () => Promise.resolve(0),
+    // Scan (cache invalidation)
+    scan: () => Promise.resolve(['0', []]),
+    // Connection lifecycle
+    on: () => mock,
     connect: () => Promise.resolve(),
     disconnect: () => {},
     quit: () => Promise.resolve('OK'),
+    duplicate: () => createMockRedis(),
     call: (..._args: unknown[]) => Promise.resolve(null),
     status: 'disabled',
   } as unknown as Redis;
+  return mock;
 };
 
 const redisConfig = buildRedisConfig();
@@ -77,21 +97,11 @@ const createConnection = (): Redis => {
   return new Redis(redisConfig);
 };
 
-// Main Redis connection (for caching, pub/sub, queues)
+// Single Redis connection shared by the entire app (caching, queues, workers).
+// BullMQ Queues reuse this connection (shared: true internally).
+// BullMQ Workers reuse this for commands and create ONE blocking connection
+// via .duplicate(). This keeps total connections = 1 base + N workers.
 export const redis = createConnection();
-
-// Shared worker connection — BullMQ Workers use blocking commands (BRPOPLPUSH)
-// so they need a separate connection from queues, but all workers can share ONE
-// base connection (BullMQ internally duplicates for blocking as needed).
-let _workerConnection: Redis | null = null;
-
-export const createBullMQConnection = (): Redis => {
-  if (!isRedisEnabled) return createMockRedis();
-  if (!_workerConnection) {
-    _workerConnection = createConnection();
-  }
-  return _workerConnection;
-};
 
 // BullMQ default job options from env
 export const bullmqDefaultJobOptions = {

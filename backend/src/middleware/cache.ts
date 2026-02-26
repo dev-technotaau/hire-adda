@@ -44,9 +44,8 @@ export const cache = (options: CacheOptions = {}) => {
         res.status(200).json(parsed);
         return;
       }
-    } catch {
-      // Cache miss or error — continue to handler
-      logger.debug(`Cache miss for ${cacheKey}`);
+    } catch (error) {
+      logger.warn(`Cache read error for ${cacheKey}:`, (error as Error).message);
     }
 
     // Intercept res.json to cache the response
@@ -56,7 +55,7 @@ export const cache = (options: CacheOptions = {}) => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         redis
           .set(cacheKey, JSON.stringify(body), 'EX', ttl)
-          .catch((err) => logger.debug(`Cache set error: ${err.message}`));
+          .catch((err) => logger.warn(`Cache write error for ${cacheKey}:`, err.message));
       }
       res.setHeader('X-Cache', 'MISS');
       return originalJson(body);
@@ -84,8 +83,8 @@ export const invalidateCache = async (pattern: string): Promise<void> => {
         await redis.del(...keys);
       }
     } while (cursor !== '0');
-  } catch {
-    logger.debug(`Cache invalidation error for pattern ${pattern}`);
+  } catch (error) {
+    logger.warn(`Cache invalidation error for pattern ${pattern}:`, (error as Error).message);
   }
 };
 

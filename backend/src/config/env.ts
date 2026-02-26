@@ -228,6 +228,11 @@ const envSchema = z
     // Centralized Log Aggregation
     LOG_AGGREGATION_URL: z.string().optional(),
     LOG_AGGREGATION_TOKEN: z.string().optional(),
+
+    // Backup Configuration
+    BACKUP_DIR: z.string().default('./backups'),
+    BACKUP_RETENTION_DAYS: z.coerce.number().default(30),
+    OPENSEARCH_SNAPSHOT_REPO: z.string().default('talent_bridge_repo'),
   })
   .superRefine((data, ctx) => {
     // RS256 requires both private and public keys

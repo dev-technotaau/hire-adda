@@ -9,6 +9,7 @@ import { validate } from '../validators/validate';
 import { updateCandidateProfileSchema } from '../schemas/candidate.schema';
 import { createJobAlertSchema, updateJobAlertSchema } from '../schemas/job-alert.schema';
 import { audit } from '../middleware/audit';
+import { cache } from '../middleware/cache';
 
 const router = Router();
 
@@ -136,11 +137,13 @@ router.delete('/me/avatar', restrictTo(Role.CANDIDATE), candidateController.remo
 router.get(
   '/',
   restrictTo(Role.EMPLOYER, Role.ADMIN, Role.SUPER_ADMIN),
+  cache({ ttl: 60, perUser: true }),
   candidateController.searchCandidates
 );
 router.get(
   '/:id',
   restrictTo(Role.EMPLOYER, Role.ADMIN, Role.SUPER_ADMIN),
+  cache({ ttl: 300, perUser: true }),
   candidateController.getCandidateProfile
 );
 router.get('/:id/resume', candidateController.getResumeDownloadUrl);

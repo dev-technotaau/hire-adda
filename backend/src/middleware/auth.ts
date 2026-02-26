@@ -82,7 +82,6 @@ export const protect = async (req: Request, _res: Response, next: NextFunction):
     };
 
     // Debounced lastActiveAt update (every 5 min via Redis)
-    // The global updateLastActive middleware can't do this because it runs before protect
     try {
       const cacheKey = `last_active:${user.id}`;
       let shouldUpdate = true;
@@ -99,8 +98,8 @@ export const protect = async (req: Request, _res: Response, next: NextFunction):
           })
           .catch(() => {});
       }
-    } catch {
-      // Non-critical, never block the request
+    } catch (error) {
+      logger.debug('Last-active update failed:', (error as Error).message);
     }
 
     next();

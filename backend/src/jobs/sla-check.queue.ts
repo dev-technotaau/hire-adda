@@ -1,24 +1,13 @@
-import { Queue } from 'bullmq';
-import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { schedulerQueue } from './scheduler.queue';
 
-export const SLA_CHECK_QUEUE_NAME = 'sla-check-queue';
+export const SLA_CHECK_QUEUE_NAME = 'check-sla-breaches';
 
-export const slaCheckQueue = new Queue(SLA_CHECK_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 5000,
-    },
-    removeOnComplete: true,
-    removeOnFail: false,
-  },
-});
+// Re-export scheduler queue for backward compatibility
+export const slaCheckQueue = schedulerQueue;
 
 // Check SLA breaches every 15 minutes
-slaCheckQueue
+schedulerQueue
   .add(
     'check-sla-breaches',
     {},
@@ -32,8 +21,4 @@ slaCheckQueue
     logger.error('Failed to add repeatable SLA check:', err);
   });
 
-slaCheckQueue.on('error', (err) => {
-  logger.error('SLA Check Queue Error:', err);
-});
-
-logger.info(`SLA Check Queue initialized: ${SLA_CHECK_QUEUE_NAME}`);
+logger.info(`SLA Check scheduled on: scheduler-queue`);

@@ -251,10 +251,6 @@ app.use('/api', maintenanceCheck());
 import passport from './config/passport';
 app.use(passport.initialize());
 
-// Track user last active time (debounced via Redis)
-import { updateLastActive } from './middleware/last-active';
-app.use(updateLastActive());
-
 // API v1 routes (versioning)
 // Mount all versioned API routes under /api/v1
 import authRoutes from './routes/auth.routes';

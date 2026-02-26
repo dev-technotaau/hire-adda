@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
-import { createBullMQConnection } from '../config/redis';
+import { redis } from '../config/redis';
 import logger from '../config/logger';
 import type { GeocodingJobData } from './geocoding.queue';
 import { GEOCODING_QUEUE_NAME } from './geocoding.queue';
@@ -102,7 +102,7 @@ export const geocodingWorker = new Worker<GeocodingJobData>(
     }
   },
   {
-    connection: createBullMQConnection(),
+    connection: redis,
     concurrency: 1, // Respect Nominatim rate limit
     lockDuration: 60000, // 60s — lightweight HTTP call
     stalledInterval: 30000,
