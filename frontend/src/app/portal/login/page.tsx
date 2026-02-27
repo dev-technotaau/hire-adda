@@ -134,6 +134,13 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (step === 'email') handleEmailNext();
+    else if (step === 'password') handleSubmit(onSubmit)();
+    else if (step === 'mfa') handleMfaSubmit();
+  };
+
   const slideVariants = {
     enter: { x: 20, opacity: 0 },
     center: { x: 0, opacity: 1 },
@@ -163,7 +170,7 @@ export default function AdminLoginPage() {
             </div>
 
             {/* Step-wise Form */}
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <form onSubmit={handleFormSubmit}>
               <AnimatePresence mode="wait">
                 {step === 'email' && (
                   <motion.div
@@ -182,14 +189,8 @@ export default function AdminLoginPage() {
                       error={errors.email?.message}
                       autoFocus
                       {...register('email')}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleEmailNext();
-                        }
-                      }}
                     />
-                    <Button type="button" fullWidth className="mt-4" onClick={handleEmailNext}>
+                    <Button type="submit" fullWidth className="mt-4">
                       Continue
                     </Button>
                   </motion.div>
@@ -274,14 +275,13 @@ export default function AdminLoginPage() {
                       </p>
                     </div>
 
-                    <OtpInput value={mfaCode} onChange={setMfaCode} />
+                    <OtpInput value={mfaCode} onChange={setMfaCode} onComplete={handleMfaSubmit} />
 
                     <Button
-                      type="button"
+                      type="submit"
                       fullWidth
                       className="mt-6"
                       isLoading={isLoading}
-                      onClick={handleMfaSubmit}
                       disabled={mfaCode.length !== 6}
                     >
                       Verify & Sign In

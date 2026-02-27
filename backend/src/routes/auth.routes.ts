@@ -91,7 +91,13 @@ router.post('/register', verifyTurnstile, validate(registerSchema), authControll
  *       401: { description: Invalid credentials }
  *       423: { description: Account locked }
  */
-router.post('/login', verifyTurnstile, validate(loginSchema), authController.login);
+router.post(
+  '/login',
+  // Skip Turnstile on MFA retry — token was already consumed on the initial attempt
+  (req, res, next) => (req.body.mfaCode ? next() : verifyTurnstile(req, res, next)),
+  validate(loginSchema),
+  authController.login,
+);
 
 /**
  * @openapi
