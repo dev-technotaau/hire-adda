@@ -5,11 +5,10 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
 import { PATENT_STATUS_LABELS } from '@/constants/enums';
-import { PUBLISHER_SUGGESTIONS } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { PublicationEntry, PatentEntry } from '@/types/candidate';
 
@@ -82,11 +81,11 @@ export default function PublicationsSection({ form, updateField }: ProfileSectio
                   required
                 />
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SuggestionInput
+                  <ServerSuggestionInput
+                    category="publisher"
                     label="Publisher"
                     value={pub.publisher || ''}
                     onChange={(val) => updatePublication(i, { publisher: val })}
-                    suggestions={PUBLISHER_SUGGESTIONS}
                   />
                   <DatePicker
                     label="Publication Date"

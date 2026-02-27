@@ -6,9 +6,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import PhoneInput from '@/components/ui/PhoneInput';
 import Textarea from '@/components/ui/Textarea';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import DatePicker from '@/components/ui/DatePicker';
-import { COMPANY_NAME_SUGGESTIONS, VOLUNTEER_CAUSE_SUGGESTIONS } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { VolunteerEntry, ReferenceEntry } from '@/types/candidate';
 
@@ -74,11 +73,11 @@ export default function VolunteeringSection({ form, updateField }: ProfileSectio
                   </button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SuggestionInput
+                  <ServerSuggestionInput
+                    category="company"
                     label="Organization"
                     value={vol.organization}
                     onChange={(val) => updateVolunteer(i, { organization: val })}
-                    suggestions={COMPANY_NAME_SUGGESTIONS}
                     required
                   />
                   <Input
@@ -88,11 +87,11 @@ export default function VolunteeringSection({ form, updateField }: ProfileSectio
                     required
                   />
                 </div>
-                <SuggestionInput
+                <ServerSuggestionInput
+                  category="volunteer_cause"
                   label="Cause"
                   value={vol.cause || ''}
                   onChange={(val) => updateVolunteer(i, { cause: val })}
-                  suggestions={VOLUNTEER_CAUSE_SUGGESTIONS}
                   placeholder="e.g. Education, Environment"
                 />
                 <div className="grid gap-3 sm:grid-cols-2">

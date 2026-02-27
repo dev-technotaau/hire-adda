@@ -36,7 +36,7 @@ import {
   Plane,
 } from 'lucide-react';
 import OnboardingShell, { type OnboardingStep } from '@/components/onboarding/OnboardingShell';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import { useOnboarding, markOnboardingComplete } from '@/hooks/use-onboarding';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -76,27 +76,8 @@ import {
   DRIVING_LICENSE_TYPE_LABELS,
 } from '@/constants/enums';
 import {
-  SKILL_SUGGESTIONS,
-  INDUSTRY_SUGGESTIONS,
-  DEPARTMENT_SUGGESTIONS,
-  ROLE_CATEGORY_SUGGESTIONS,
-  LOCATION_SUGGESTIONS,
-  INSTITUTION_SUGGESTIONS,
-  DEGREE_SUGGESTIONS,
-  FIELD_OF_STUDY_SUGGESTIONS,
-  COMPANY_NAME_SUGGESTIONS,
-  CERTIFICATION_SUGGESTIONS,
-  LANGUAGE_SUGGESTIONS,
   INDIAN_STATES,
   VISA_STATUS_OPTIONS,
-  VOLUNTEER_CAUSE_SUGGESTIONS,
-  HOBBY_SUGGESTIONS,
-  INTEREST_SUGGESTIONS,
-  PROFESSIONAL_ORGANIZATION_SUGGESTIONS,
-  TEST_SCORE_SUGGESTIONS,
-  NATIONALITY_SUGGESTIONS,
-  COUNTRY_SUGGESTIONS,
-  PUBLISHER_SUGGESTIONS,
 } from '@/constants/suggestions';
 import { useAuth } from '@/hooks/use-auth';
 import type {
@@ -1506,12 +1487,12 @@ export default function CandidateOnboardingPage() {
             onValueChange={(val) => updateData({ phone: val })}
           />
 
-          <SuggestionInput
+          <ServerSuggestionInput
             label="Current Location"
             placeholder="Start typing your city..."
             value={data.currentLocation}
             onChange={(val) => updateData({ currentLocation: val })}
-            suggestions={LOCATION_SUGGESTIONS}
+            category="location"
             required
             leftIcon={<MapPin className="h-4 w-4" />}
           />
@@ -1560,22 +1541,22 @@ export default function CandidateOnboardingPage() {
               onChange={(val) => updateData({ maritalStatus: val })}
               placeholder="Select status"
             />
-            <SuggestionInput
+            <ServerSuggestionInput
               label="Nationality"
               placeholder="e.g. Indian"
               value={data.nationality}
               onChange={(val) => updateData({ nationality: val })}
-              suggestions={NATIONALITY_SUGGESTIONS}
+              category="nationality"
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <SuggestionInput
+            <ServerSuggestionInput
               label="Hometown"
               placeholder="e.g. Jaipur"
               value={data.hometown}
               onChange={(val) => updateData({ hometown: val })}
-              suggestions={LOCATION_SUGGESTIONS}
+              category="location"
             />
             <Select
               label="Category (Reservation)"
@@ -1620,12 +1601,12 @@ export default function CandidateOnboardingPage() {
                 onChange={(e) => updateData({ addressLine2: e.target.value })}
               />
               <div className="grid gap-4 sm:grid-cols-3">
-                <SuggestionInput
+                <ServerSuggestionInput
                   label="City"
                   placeholder="e.g. Bengaluru"
                   value={data.city}
                   onChange={(val) => updateData({ city: val })}
-                  suggestions={LOCATION_SUGGESTIONS}
+                  category="location"
                 />
                 <Select
                   label="State"
@@ -1643,12 +1624,12 @@ export default function CandidateOnboardingPage() {
                   maxLength={6}
                 />
               </div>
-              <SuggestionInput
+              <ServerSuggestionInput
                 label="Country"
                 value={data.country}
                 onChange={(val) => updateData({ country: val })}
                 placeholder="e.g. India"
-                suggestions={COUNTRY_SUGGESTIONS}
+                category="country"
               />
             </div>
           </div>
@@ -1785,47 +1766,47 @@ export default function CandidateOnboardingPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <SuggestionInput
+            <ServerSuggestionInput
               label="Current Company"
               placeholder="e.g. Google"
               value={data.currentCompany}
               onChange={(val) => updateData({ currentCompany: val })}
-              suggestions={COMPANY_NAME_SUGGESTIONS}
+              category="company"
               leftIcon={<Building2 className="h-4 w-4" />}
             />
-            <SuggestionInput
+            <ServerSuggestionInput
               label="Current Role"
               placeholder="e.g. Senior Software Engineer"
               value={data.currentRole}
               onChange={(val) => updateData({ currentRole: val })}
-              suggestions={ROLE_CATEGORY_SUGGESTIONS}
+              category="role_category"
               leftIcon={<Briefcase className="h-4 w-4" />}
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <SuggestionInput
+            <ServerSuggestionInput
               label="Industry"
               placeholder="e.g. Information Technology"
               value={data.currentIndustry}
               onChange={(val) => updateData({ currentIndustry: val })}
-              suggestions={INDUSTRY_SUGGESTIONS}
+              category="industry"
             />
-            <SuggestionInput
+            <ServerSuggestionInput
               label="Department"
               placeholder="e.g. Engineering - Software"
               value={data.currentDepartment}
               onChange={(val) => updateData({ currentDepartment: val })}
-              suggestions={DEPARTMENT_SUGGESTIONS}
+              category="department"
             />
           </div>
 
-          <SuggestionInput
+          <ServerSuggestionInput
             label="Functional Area"
             placeholder="e.g. Backend Development"
             value={data.functionalArea}
             onChange={(val) => updateData({ functionalArea: val })}
-            suggestions={DEPARTMENT_SUGGESTIONS}
+            category="department"
           />
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -1898,46 +1879,46 @@ export default function CandidateOnboardingPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <SuggestionInput
+                <ServerSuggestionInput
                   label="Company"
                   placeholder="e.g. Infosys"
                   value={exp.company}
                   onChange={(val) => updateExperience(i, { company: val })}
-                  suggestions={COMPANY_NAME_SUGGESTIONS}
+                  category="company"
                   required
                 />
-                <SuggestionInput
+                <ServerSuggestionInput
                   label="Role"
                   placeholder="e.g. Software Developer"
                   value={exp.role}
                   onChange={(val) => updateExperience(i, { role: val })}
-                  suggestions={ROLE_CATEGORY_SUGGESTIONS}
+                  category="role_category"
                   required
                 />
               </div>
 
-              <SuggestionInput
+              <ServerSuggestionInput
                 label="Location"
                 placeholder="e.g. Bangalore, Karnataka"
                 value={exp.location || ''}
                 onChange={(val) => updateExperience(i, { location: val })}
-                suggestions={LOCATION_SUGGESTIONS}
+                category="location"
               />
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <SuggestionInput
+                <ServerSuggestionInput
                   label="Industry"
                   placeholder="e.g. Information Technology"
                   value={exp.industry || ''}
                   onChange={(val) => updateExperience(i, { industry: val })}
-                  suggestions={INDUSTRY_SUGGESTIONS}
+                  category="industry"
                 />
-                <SuggestionInput
+                <ServerSuggestionInput
                   label="Department"
                   placeholder="e.g. Engineering"
                   value={exp.department || ''}
                   onChange={(val) => updateExperience(i, { department: val })}
-                  suggestions={DEPARTMENT_SUGGESTIONS}
+                  category="department"
                 />
                 <Input
                   label="Employment Type"
@@ -2100,30 +2081,30 @@ export default function CandidateOnboardingPage() {
                 </button>
               </div>
 
-              <SuggestionInput
+              <ServerSuggestionInput
                 label="Institution"
                 placeholder="e.g. IIT Bombay"
                 value={edu.institution}
                 onChange={(val) => updateEducation(i, { institution: val })}
-                suggestions={INSTITUTION_SUGGESTIONS}
+                category="institution"
                 required
               />
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <SuggestionInput
+                <ServerSuggestionInput
                   label="Degree"
                   placeholder="e.g. B.Tech"
                   value={edu.degree}
                   onChange={(val) => updateEducation(i, { degree: val })}
-                  suggestions={DEGREE_SUGGESTIONS}
+                  category="degree"
                   required
                 />
-                <SuggestionInput
+                <ServerSuggestionInput
                   label="Field of Study"
                   placeholder="e.g. Computer Science"
                   value={edu.field}
                   onChange={(val) => updateEducation(i, { field: val })}
-                  suggestions={FIELD_OF_STUDY_SUGGESTIONS}
+                  category="field_of_study"
                   required
                 />
               </div>
@@ -2218,12 +2199,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Quick-add skill tags */}
           <div>
-            <SuggestionInput
+            <ServerSuggestionInput
               label="Add Skills"
               placeholder="Type a skill and press Enter..."
               value={skillInput}
               onChange={setSkillInput}
-              suggestions={SKILL_SUGGESTIONS}
+              category="skill"
               onSelect={(val) => addSkill(val)}
               required
               helperText="Select from suggestions or type and press Enter"
@@ -2277,12 +2258,12 @@ export default function CandidateOnboardingPage() {
                   </button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <SuggestionInput
+                  <ServerSuggestionInput
                     label="Skill Name"
                     placeholder="e.g. React"
                     value={sp.skill}
                     onChange={(val) => updateSkillWithProf(i, { skill: val })}
-                    suggestions={SKILL_SUGGESTIONS}
+                    category="skill"
                   />
                   <Select
                     label="Proficiency"
@@ -2347,12 +2328,12 @@ export default function CandidateOnboardingPage() {
                   </button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SuggestionInput
+                  <ServerSuggestionInput
                     label="Technology"
                     placeholder="e.g. React"
                     value={it.technology}
                     onChange={(val) => updateITSkill(i, { technology: val })}
-                    suggestions={SKILL_SUGGESTIONS}
+                    category="skill"
                   />
                   <Input
                     label="Version"
@@ -2439,12 +2420,12 @@ export default function CandidateOnboardingPage() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SuggestionInput
+                  <ServerSuggestionInput
                     label="Certification Name"
                     placeholder="e.g. AWS Solutions Architect"
                     value={cert.name}
                     onChange={(val) => updateCertification(i, { name: val })}
-                    suggestions={CERTIFICATION_SUGGESTIONS}
+                    category="certification"
                     required
                   />
                   <Input
@@ -2613,12 +2594,12 @@ export default function CandidateOnboardingPage() {
                   </button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SuggestionInput
+                  <ServerSuggestionInput
                     label="Test Name"
                     placeholder="e.g. GRE"
                     value={ts.testName}
                     onChange={(val) => updateTestScore(i, { testName: val })}
-                    suggestions={TEST_SCORE_SUGGESTIONS}
+                    category="test_score"
                     required
                   />
                   <Input
@@ -2753,12 +2734,12 @@ export default function CandidateOnboardingPage() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SuggestionInput
+                  <ServerSuggestionInput
                     label="Language"
                     placeholder="e.g. English"
                     value={lang.language}
                     onChange={(val) => updateLanguage(i, { language: val })}
-                    suggestions={LANGUAGE_SUGGESTIONS}
+                    category="language"
                     required
                   />
                   <Select
@@ -2839,12 +2820,12 @@ export default function CandidateOnboardingPage() {
                   required
                 />
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SuggestionInput
+                  <ServerSuggestionInput
                     label="Publisher"
                     placeholder="e.g. IEEE"
                     value={pub.publisher || ''}
                     onChange={(val) => updatePublication(i, { publisher: val })}
-                    suggestions={PUBLISHER_SUGGESTIONS}
+                    category="publisher"
                   />
                   <DatePicker
                     label="Publication Date"
@@ -3014,12 +2995,12 @@ export default function CandidateOnboardingPage() {
                   </button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SuggestionInput
+                  <ServerSuggestionInput
                     label="Organization"
                     placeholder="e.g. IEEE"
                     value={mem.organization}
                     onChange={(val) => updateMembership(i, { organization: val })}
-                    suggestions={PROFESSIONAL_ORGANIZATION_SUGGESTIONS}
+                    category="professional_org"
                     required
                   />
                   <Input
@@ -3119,12 +3100,12 @@ export default function CandidateOnboardingPage() {
                   </button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SuggestionInput
+                  <ServerSuggestionInput
                     label="Organization"
                     placeholder="e.g. Red Cross"
                     value={vol.organization}
                     onChange={(val) => updateVolunteer(i, { organization: val })}
-                    suggestions={COMPANY_NAME_SUGGESTIONS}
+                    category="company"
                     required
                   />
                   <Input
@@ -3135,12 +3116,12 @@ export default function CandidateOnboardingPage() {
                     required
                   />
                 </div>
-                <SuggestionInput
+                <ServerSuggestionInput
                   label="Cause"
                   placeholder="e.g. Education"
                   value={vol.cause || ''}
                   onChange={(val) => updateVolunteer(i, { cause: val })}
-                  suggestions={VOLUNTEER_CAUSE_SUGGESTIONS}
+                  category="volunteer_cause"
                 />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <DatePicker
@@ -3362,11 +3343,11 @@ export default function CandidateOnboardingPage() {
           {/* Preferred Locations */}
           <div className="border-t border-[var(--border)] pt-4">
             <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Preferred Locations</h3>
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="Type a location and select..."
               value={locationInput}
               onChange={setLocationInput}
-              suggestions={LOCATION_SUGGESTIONS}
+              category="location"
               onSelect={(val) => addPreferredLocation(val)}
               helperText="Select from suggestions or type and click add"
             />
@@ -3400,11 +3381,11 @@ export default function CandidateOnboardingPage() {
           {/* Preferred Industries */}
           <div className="border-t border-[var(--border)] pt-4">
             <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Preferred Industries</h3>
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="Type an industry and select..."
               value={industryInput}
               onChange={setIndustryInput}
-              suggestions={INDUSTRY_SUGGESTIONS}
+              category="industry"
               onSelect={(val) => addPreferredIndustry(val)}
             />
             {industryInput.trim() && (
@@ -3439,11 +3420,11 @@ export default function CandidateOnboardingPage() {
             <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
               Preferred Role Categories
             </h3>
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="Type a role category and select..."
               value={roleCatInput}
               onChange={setRoleCatInput}
-              suggestions={ROLE_CATEGORY_SUGGESTIONS}
+              category="role_category"
               onSelect={(val) => addPreferredRoleCategory(val)}
             />
             {roleCatInput.trim() && (
@@ -3661,11 +3642,11 @@ export default function CandidateOnboardingPage() {
             <p className="mb-3 text-xs text-[var(--text-muted)]">
               Your profile will not be visible to these companies.
             </p>
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="Type a company name and select..."
               value={blockedCompanyInput}
               onChange={setBlockedCompanyInput}
-              suggestions={COMPANY_NAME_SUGGESTIONS}
+              category="company"
               onSelect={(val) => addBlockedCompany(val)}
             />
             {blockedCompanyInput.trim() && (
@@ -3717,11 +3698,11 @@ export default function CandidateOnboardingPage() {
           {/* Hobbies */}
           <div>
             <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Hobbies</h3>
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="Type a hobby and select..."
               value={hobbyInput}
               onChange={setHobbyInput}
-              suggestions={HOBBY_SUGGESTIONS}
+              category="hobby"
               onSelect={(val) => addHobby(val)}
               helperText="Select from suggestions or type and click add"
             />
@@ -3753,11 +3734,11 @@ export default function CandidateOnboardingPage() {
           {/* Interests */}
           <div className="border-t border-[var(--border)] pt-4">
             <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Interests</h3>
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="Type an interest and select..."
               value={interestInput}
               onChange={setInterestInput}
-              suggestions={INTEREST_SUGGESTIONS}
+              category="interest"
               onSelect={(val) => addInterest(val)}
               helperText="Select from suggestions or type and click add"
             />

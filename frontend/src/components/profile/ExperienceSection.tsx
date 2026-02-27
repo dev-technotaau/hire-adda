@@ -5,7 +5,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
 import {
@@ -14,14 +14,8 @@ import {
   CAREER_BREAK_TYPE_LABELS,
   OPEN_TO_WORK_LABELS,
   EXPERIENCE_LEVEL_LABELS,
+  JOB_TYPE_LABELS,
 } from '@/constants/enums';
-import {
-  COMPANY_NAME_SUGGESTIONS,
-  ROLE_CATEGORY_SUGGESTIONS,
-  INDUSTRY_SUGGESTIONS,
-  DEPARTMENT_SUGGESTIONS,
-  LOCATION_SUGGESTIONS,
-} from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { ExperienceEntry, UpdateCandidateRequest } from '@/types/candidate';
 
@@ -76,37 +70,37 @@ export default function ExperienceSection({ form, updateField }: ProfileSectionP
             }
             placeholder="Select level"
           />
-          <SuggestionInput
+          <ServerSuggestionInput
+            category="company"
             label="Current Company"
             value={form.currentCompany || ''}
             onChange={(val) => updateField('currentCompany', val)}
-            suggestions={COMPANY_NAME_SUGGESTIONS}
           />
-          <SuggestionInput
+          <ServerSuggestionInput
+            category="role_category"
             label="Current Role"
             value={form.currentRole || ''}
             onChange={(val) => updateField('currentRole', val)}
-            suggestions={ROLE_CATEGORY_SUGGESTIONS}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
-          <SuggestionInput
+          <ServerSuggestionInput
+            category="industry"
             label="Current Industry"
             value={form.currentIndustry || ''}
             onChange={(val) => updateField('currentIndustry', val)}
-            suggestions={INDUSTRY_SUGGESTIONS}
           />
-          <SuggestionInput
+          <ServerSuggestionInput
+            category="department"
             label="Current Department"
             value={form.currentDepartment || ''}
             onChange={(val) => updateField('currentDepartment', val)}
-            suggestions={DEPARTMENT_SUGGESTIONS}
           />
-          <SuggestionInput
+          <ServerSuggestionInput
+            category="department"
             label="Functional Area"
             value={form.functionalArea || ''}
             onChange={(val) => updateField('functionalArea', val)}
-            suggestions={DEPARTMENT_SUGGESTIONS}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -212,47 +206,48 @@ export default function ExperienceSection({ form, updateField }: ProfileSectionP
               </button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <SuggestionInput
+              <ServerSuggestionInput
+                category="company"
                 label="Company"
                 value={exp.company}
                 onChange={(val) => updateExperience(i, { company: val })}
-                suggestions={COMPANY_NAME_SUGGESTIONS}
                 required
               />
-              <SuggestionInput
+              <ServerSuggestionInput
+                category="role_category"
                 label="Job Title"
                 value={exp.role}
                 onChange={(val) => updateExperience(i, { role: val })}
-                suggestions={ROLE_CATEGORY_SUGGESTIONS}
                 required
               />
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <SuggestionInput
+              <ServerSuggestionInput
+                category="location"
                 label="Location"
                 value={exp.location || ''}
                 onChange={(val) => updateExperience(i, { location: val })}
-                suggestions={LOCATION_SUGGESTIONS}
               />
-              <SuggestionInput
+              <ServerSuggestionInput
+                category="industry"
                 label="Industry"
                 value={exp.industry || ''}
                 onChange={(val) => updateExperience(i, { industry: val })}
-                suggestions={INDUSTRY_SUGGESTIONS}
               />
-              <SuggestionInput
+              <ServerSuggestionInput
+                category="department"
                 label="Department"
                 value={exp.department || ''}
                 onChange={(val) => updateExperience(i, { department: val })}
-                suggestions={DEPARTMENT_SUGGESTIONS}
               />
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Input
+              <Select
                 label="Employment Type"
-                placeholder="e.g. Full-time"
+                options={toSelectOptions(JOB_TYPE_LABELS)}
                 value={exp.employmentType || ''}
-                onChange={(e) => updateExperience(i, { employmentType: e.target.value })}
+                onChange={(v) => updateExperience(i, { employmentType: v })}
+                placeholder="Select type"
               />
               <DatePicker
                 label="Start Date"

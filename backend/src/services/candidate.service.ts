@@ -917,9 +917,9 @@ export class CandidateService {
   /**
    * Get candidate public profile (for employer viewing)
    */
-  async getCandidatePublicProfile(candidateUserId: string) {
+  async getCandidatePublicProfile(idOrUserId: string) {
     const profile = await prisma.candidateProfile.findFirst({
-      where: { userId: candidateUserId },
+      where: { OR: [{ id: idOrUserId }, { userId: idOrUserId }] },
       include: {
         user: {
           select: {

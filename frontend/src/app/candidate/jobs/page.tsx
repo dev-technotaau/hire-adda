@@ -49,6 +49,9 @@ import AdvancedFilters, {
 import { showToast } from '@/components/ui/Toast';
 import { useJobSearch, useToggleSaveJob, useSavedJobs, useApplyJob } from '@/hooks/use-jobs';
 import { useSuggestLocations, useDidYouMean } from '@/hooks/use-search';
+import { useSuggest, useStaticSuggestions } from '@/hooks/use-suggestions';
+import { useFieldHistory, useAddToFieldHistory, useClearFieldHistory } from '@/hooks/use-field-history';
+import { useAuthStore } from '@/store/auth.store';
 import { savedSearchService } from '@/services/saved-search.service';
 import { candidateService } from '@/services/candidate.service';
 import { recommendationService } from '@/services/recommendation.service';
@@ -451,6 +454,12 @@ export default function JobSearchPage() {
   const { data: didYouMeanData } = useDidYouMean(keyword, 'jobs');
   const { data: locationSuggestions, isLoading: isLoadingLocations } =
     useSuggestLocations(locationQuery);
+  const { suggestions: esLocationSuggestions, isLoading: isLoadingEsLocations } = useSuggest({
+    category: 'location',
+    query: locationQuery,
+    limit: 10,
+    minChars: 2,
+  });
 
   const jobs: Job[] = data?.data?.items || [];
   const pagination = data?.data;
@@ -593,6 +602,46 @@ export default function JobSearchPage() {
     [locationSuggestions],
   );
 
+  const locationAdditionalSections = useMemo(
+    () =>
+      locationQuery.length >= 2
+        ? [
+            {
+              label: 'Suggestions',
+              options: esLocationSuggestions.map((s) => ({ label: s, value: s })),
+              isLoading: isLoadingEsLocations,
+            },
+          ]
+        : [],
+    [locationQuery, esLocationSuggestions, isLoadingEsLocations],
+  );
+
+  // ── Focus sections: Recent Locations + Popular Locations ──
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { data: locationHistory } = useFieldHistory('location');
+  const addLocationHistory = useAddToFieldHistory('location');
+  const clearLocationHistory = useClearFieldHistory('location');
+  const { suggestions: popularLocations, isLoading: isLoadingPopular } =
+    useStaticSuggestions('location', 8);
+
+  const locationFocusSections = useMemo(() => {
+    const sections: import('@/components/ui/AutoSuggest').AdditionalSuggestSection[] = [];
+    const historyItems = locationHistory?.data?.history ?? [];
+    if (isAuthenticated && historyItems.length > 0) {
+      sections.push({
+        label: 'Recent Locations',
+        options: historyItems.map((h) => ({ label: h.value, value: h.value })),
+        onClear: () => clearLocationHistory.mutate(),
+      });
+    }
+    sections.push({
+      label: 'Popular Locations',
+      options: popularLocations.map((loc) => ({ label: loc, value: loc })),
+      isLoading: isLoadingPopular,
+    });
+    return sections;
+  }, [isAuthenticated, locationHistory, popularLocations, isLoadingPopular, clearLocationHistory]);
+
   const didYouMean = didYouMeanData?.data?.suggestion;
   const userLat = filters.latitude ? Number(filters.latitude) : undefined;
   const userLng = filters.longitude ? Number(filters.longitude) : undefined;
@@ -633,10 +682,14 @@ export default function JobSearchPage() {
     setFilters((prev) => ({ ...prev, keyword: item.text || undefined, page: '1' }));
   }, []);
 
-  const handleLocationChange = useCallback((value: string | string[]) => {
-    const loc = typeof value === 'string' ? value : value[0] || '';
-    setFilters((prev) => ({ ...prev, location: loc || undefined, page: '1' }));
-  }, []);
+  const handleLocationChange = useCallback(
+    (value: string | string[]) => {
+      const loc = typeof value === 'string' ? value : value[0] || '';
+      setFilters((prev) => ({ ...prev, location: loc || undefined, page: '1' }));
+      if (loc) addLocationHistory.mutate(loc);
+    },
+    [addLocationHistory],
+  );
 
   const handleGeoLocation = useCallback((lat: string, lng: string, cityName?: string) => {
     setFilters((prev) => ({
@@ -820,6 +873,8 @@ export default function JobSearchPage() {
                 createLabel={(q) => `Search in "${q}"`}
                 minChars={2}
                 inputSize="md"
+                additionalSections={locationAdditionalSections}
+                focusSections={locationFocusSections}
               />
             </div>
           </div>

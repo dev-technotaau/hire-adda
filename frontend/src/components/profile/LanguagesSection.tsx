@@ -3,9 +3,8 @@
 import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Select from '@/components/ui/Select';
-import { LANGUAGE_SUGGESTIONS } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { LanguageEntry } from '@/types/candidate';
 
@@ -48,12 +47,12 @@ export default function LanguagesSection({ form, updateField }: ProfileSectionPr
           (form.languageProficiency || []).map((lang, i) => (
             <div key={i} className="flex items-center gap-3">
               <div className="flex-1">
-                <SuggestionInput
+                <ServerSuggestionInput
+                  category="language"
                   label={i === 0 ? 'Language' : undefined}
                   placeholder="e.g. English, Hindi"
                   value={lang.language}
                   onChange={(val) => updateLanguage(i, 'language', val)}
-                  suggestions={LANGUAGE_SUGGESTIONS}
                 />
               </div>
               <div className="w-44">

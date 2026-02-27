@@ -29,10 +29,13 @@ export const sendSMS = async (to: string, body: string): Promise<boolean> => {
     return false;
   }
 
+  // Twilio expects E.164 format: +[digits] (e.g., +919876543210)
+  const normalizedTo = '+' + to.replace(/[^\d]/g, '');
+
   await twilioClient.messages.create({
     body,
     from: env.TWILIO_PHONE_NUMBER,
-    to,
+    to: normalizedTo,
   });
   logger.info(`SMS sent to ${to}`);
   return true;

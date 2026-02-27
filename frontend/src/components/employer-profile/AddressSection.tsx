@@ -4,8 +4,8 @@ import Input from '@/components/ui/Input';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
-import { LOCATION_SUGGESTIONS, INDIAN_STATES } from '@/constants/suggestions';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
+import { INDIAN_STATES } from '@/constants/suggestions';
 import type { EmployerProfileSectionProps } from './types';
 
 const stateOptions: SelectOption[] = INDIAN_STATES.map((s) => ({ value: s, label: s }));
@@ -20,12 +20,12 @@ export default function AddressSection({
 
   return (
     <div className="space-y-4">
-      <SuggestionInput
+      <ServerSuggestionInput
+        category="location"
         label="Headquarters"
         placeholder="e.g. Bangalore, Karnataka"
         value={form.headquarters || ''}
         onChange={(v) => updateField('headquarters', v)}
-        suggestions={LOCATION_SUGGESTIONS}
         onSelect={(v) => updateField('headquarters', v)}
         leftIcon={<MapPin className="h-4 w-4" />}
       />
@@ -44,11 +44,13 @@ export default function AddressSection({
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Input
+        <ServerSuggestionInput
+          category="location"
           label="City"
           placeholder="e.g. Bangalore"
           value={form.city || ''}
-          onChange={(e) => updateField('city', e.target.value)}
+          onChange={(v) => updateField('city', v)}
+          onSelect={(v) => updateField('city', v)}
         />
         <Select
           label="State"
@@ -65,11 +67,12 @@ export default function AddressSection({
           onChange={(e) => updateField('pincode', e.target.value)}
         />
       </div>
-      <Input
+      <ServerSuggestionInput
+        category="country"
         label="Country"
         value={form.country || 'India'}
-        onChange={(e) => updateField('country', e.target.value)}
-        leftIcon={<Globe className="h-4 w-4" />}
+        onChange={(v) => updateField('country', v)}
+        onSelect={(v) => updateField('country', v)}
       />
 
       {/* Office Locations */}
@@ -82,11 +85,11 @@ export default function AddressSection({
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="location"
               placeholder="e.g. Mumbai, Maharashtra"
               value={locationInput}
               onChange={setLocationInput}
-              suggestions={LOCATION_SUGGESTIONS}
               onSelect={(v) => addToArray('locations', v, setLocationInput)}
             />
           </div>

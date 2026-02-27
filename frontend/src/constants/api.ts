@@ -190,6 +190,7 @@ export const API = {
   },
   SEARCH: {
     AUTOCOMPLETE: '/search/autocomplete',
+    SUGGEST: '/search/suggest',
     SUGGEST_SKILLS: '/search/suggest/skills',
     SUGGEST_LOCATIONS: '/search/suggest/locations',
     SUGGEST_COMPANIES: '/search/suggest/companies',
@@ -197,6 +198,7 @@ export const API = {
     DID_YOU_MEAN: '/search/did-you-mean',
     HISTORY: '/search/history',
     POPULAR: '/search/popular',
+    FIELD_HISTORY: (field: string) => `/search/field-history/${field}`,
   },
   FEATURE_FLAGS: {
     CLIENT: '/feature-flags/client',

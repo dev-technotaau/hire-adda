@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import Tag from '@/components/ui/Tag';
 import DatePicker from '@/components/ui/DatePicker';
@@ -14,13 +14,7 @@ import {
   DISABILITY_TYPE_LABELS,
   DRIVING_LICENSE_TYPE_LABELS,
 } from '@/constants/enums';
-import {
-  LOCATION_SUGGESTIONS,
-  INDUSTRY_SUGGESTIONS,
-  ROLE_CATEGORY_SUGGESTIONS,
-  COMPANY_NAME_SUGGESTIONS,
-  VISA_STATUS_OPTIONS,
-} from '@/constants/suggestions';
+import { VISA_STATUS_OPTIONS } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { UpdateCandidateRequest } from '@/types/candidate';
 
@@ -99,12 +93,12 @@ export default function PreferencesSection({ form, updateField }: ProfileSection
 
           {/* Preferred Locations */}
           <div>
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="location"
               label="Preferred Locations"
               placeholder="Type a city to add..."
               value={locationInput}
               onChange={setLocationInput}
-              suggestions={LOCATION_SUGGESTIONS}
               onSelect={(val) => {
                 addTagItem('preferredLocations', val);
                 setLocationInput('');
@@ -124,12 +118,12 @@ export default function PreferencesSection({ form, updateField }: ProfileSection
 
           {/* Preferred Industries */}
           <div>
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="industry"
               label="Preferred Industries"
               placeholder="Type an industry to add..."
               value={industryInput}
               onChange={setIndustryInput}
-              suggestions={INDUSTRY_SUGGESTIONS}
               onSelect={(val) => {
                 addTagItem('preferredIndustries', val);
                 setIndustryInput('');
@@ -149,12 +143,12 @@ export default function PreferencesSection({ form, updateField }: ProfileSection
 
           {/* Preferred Role Categories */}
           <div>
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="role_category"
               label="Preferred Role Categories"
               placeholder="Type a role to add..."
               value={roleCatInput}
               onChange={setRoleCatInput}
-              suggestions={ROLE_CATEGORY_SUGGESTIONS}
               onSelect={(val) => {
                 addTagItem('preferredRoleCategories', val);
                 setRoleCatInput('');
@@ -225,11 +219,13 @@ export default function PreferencesSection({ form, updateField }: ProfileSection
               onChange={(val) => updateField('passportExpiryDate', val)}
             />
           </div>
-          <Input
+          <ServerSuggestionInput
+            category="visa_status"
             label="Work Permit Status"
             value={form.workPermitStatus || ''}
-            onChange={(e) => updateField('workPermitStatus', e.target.value)}
-            placeholder="e.g. H1B, Work Visa"
+            onChange={(v) => updateField('workPermitStatus', v)}
+            onSelect={(v) => updateField('workPermitStatus', v)}
+            placeholder="e.g. Indian Citizen, H-1B Visa"
           />
           <Input
             label="Video Resume URL"
@@ -305,12 +301,12 @@ export default function PreferencesSection({ form, updateField }: ProfileSection
 
           {/* Blocked Companies */}
           <div>
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="company"
               label="Blocked Companies"
               placeholder="Companies you don't want to see your profile..."
               value={blockedCompanyInput}
               onChange={setBlockedCompanyInput}
-              suggestions={COMPANY_NAME_SUGGESTIONS}
               onSelect={(val) => {
                 addTagItem('blockedCompanies', val);
                 setBlockedCompanyInput('');

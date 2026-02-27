@@ -8,7 +8,7 @@ import { isFeatureEnabled } from '../config/feature-flags';
 export const sendWhatsAppMessage = async (
   to: string,
   templateName: string,
-  languageCode = 'en_US',
+  languageCode = 'en',
   components?: any[]
 ): Promise<boolean> => {
   if (!(await isFeatureEnabled('enableWhatsApp'))) {
@@ -26,8 +26,8 @@ export const sendWhatsAppMessage = async (
 
   const url = `https://graph.facebook.com/v17.0/${phoneId}/messages`;
 
-  // Meta API requires numbers without '+' prefix (e.g., 919876543210)
-  const normalizedTo = to.replace(/^\+/, '');
+  // Meta API requires digits only without '+' prefix (e.g., 919876543210)
+  const normalizedTo = to.replace(/[^\d]/g, '');
 
   const payload = {
     messaging_product: 'whatsapp',

@@ -40,7 +40,7 @@ export const whatsappWorker = new Worker<WhatsAppJobData>(
         sendWhatsAppMessage(
           job.data.to,
           job.data.templateName,
-          job.data.languageCode || 'en_US',
+          job.data.languageCode || 'en',
           components
         ),
         new Promise<never>((_resolve, reject) =>

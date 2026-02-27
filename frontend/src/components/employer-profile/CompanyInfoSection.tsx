@@ -13,13 +13,8 @@ import Input from '@/components/ui/Input';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import { COMPANY_TYPE_LABELS } from '@/constants/enums';
-import {
-  INDUSTRY_SUGGESTIONS,
-  SUB_INDUSTRY_SUGGESTIONS,
-  SKILL_SUGGESTIONS,
-} from '@/constants/suggestions';
 import type { UpdateCompanyRequest } from '@/types/employer';
 import type { EmployerProfileSectionProps } from './types';
 
@@ -63,23 +58,23 @@ export default function CompanyInfoSection({
           onChange={(v) => updateField('companyType', v as UpdateCompanyRequest['companyType'])}
           placeholder="Select type"
         />
-        <SuggestionInput
+        <ServerSuggestionInput
+          category="industry"
           label="Industry"
           placeholder="e.g. Information Technology"
           value={form.industry || ''}
           onChange={(v) => updateField('industry', v)}
-          suggestions={INDUSTRY_SUGGESTIONS}
           onSelect={(v) => updateField('industry', v)}
           leftIcon={<Briefcase className="h-4 w-4" />}
           required
         />
       </div>
-      <SuggestionInput
+      <ServerSuggestionInput
+        category="sub_industry"
         label="Sub-Industry"
         placeholder="e.g. SaaS, AI/ML, Payments"
         value={form.subIndustry || ''}
         onChange={(v) => updateField('subIndustry', v)}
-        suggestions={SUB_INDUSTRY_SUGGESTIONS}
         onSelect={(v) => updateField('subIndustry', v)}
       />
 
@@ -89,11 +84,11 @@ export default function CompanyInfoSection({
         <p className="mb-3 text-xs text-[var(--text-muted)]">Areas your company specializes in</p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="skill"
               placeholder="e.g. Cloud Computing, DevOps"
               value={specialtyInput}
               onChange={setSpecialtyInput}
-              suggestions={SKILL_SUGGESTIONS}
               onSelect={(v) => addToArray('specialties', v, setSpecialtyInput)}
             />
           </div>

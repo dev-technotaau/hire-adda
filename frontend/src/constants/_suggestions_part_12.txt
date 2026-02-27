@@ -1,0 +1,54 @@
+export const PUBLISHER_SUGGESTIONS = [
+  // Academic & Scientific Publishers
+  'IEEE', 'ACM', 'Springer', 'Elsevier', 'Wiley', 'Nature Publishing Group',
+  'Oxford University Press', 'Cambridge University Press', 'Taylor & Francis',
+  'Sage Publications', 'Emerald Publishing', 'Inderscience', 'MDPI',
+  'IOP Publishing', 'Royal Society', 'American Chemical Society (ACS)',
+  'American Physical Society (APS)', 'Royal Society of Chemistry (RSC)',
+  'Hindawi', 'Frontiers', 'PLOS', 'BMJ Publishing', 'Lancet',
+  'Cell Press', 'Annual Reviews', 'De Gruyter', 'Bentham Science',
+  'Karger', 'Thieme', 'Wolters Kluwer',
+  // Open Access & Preprint
+  'ArXiv', 'bioRxiv', 'medRxiv', 'SSRN', 'Zenodo', 'figshare',
+  'PeerJ', 'F1000Research',
+  // Research & Social
+  'ResearchGate', 'Academia.edu', 'Google Scholar', 'Semantic Scholar',
+  // Tech Publishing & Blogs
+  'Medium', 'Dev.to', 'Towards Data Science', 'HackerNoon',
+  'freeCodeCamp', 'InfoQ', 'The New Stack', 'CSS-Tricks',
+  'Smashing Magazine', 'A List Apart', 'DZone', 'SitePoint',
+  'LogRocket Blog', 'Hashnode', 'Substack',
+  // Book Publishers
+  "O'Reilly Media", 'Packt Publishing', 'Manning Publications',
+  'Apress', 'Pearson', 'McGraw-Hill', 'PHI Learning',
+  'Cengage Learning', 'S. Chand', 'Laxmi Publications',
+  'Universities Press', 'Academic Press', 'CRC Press',
+  'MIT Press', 'Princeton University Press', 'Harvard University Press',
+  // Indian Publishers
+  'IISC Press', 'NCERT', 'Tata McGraw-Hill', 'Vikas Publishing House',
+  'New Age International', 'Macmillan India',
+] as const;
+
+export const ERG_SUGGESTIONS = [
+  'Women in Tech', 'Women in Leadership', 'Women in STEM',
+  'LGBTQ+ Alliance', 'Pride Network',
+  'Black Professionals Network', 'African Diaspora Network',
+  'Asian Professionals Network', 'South Asian Network',
+  'Hispanic/Latinx Network',
+  'Veterans Network', 'Military Families Support',
+  'Parents and Caregivers', 'Working Mothers Forum', 'Working Fathers Forum',
+  'Disability Inclusion', 'Accessibility Champions',
+  'Neurodiversity Alliance', 'Mental Health Advocates',
+  'Young Professionals', 'Early Career Network',
+  'Sustainability Champions', 'Green Team',
+  'Multi-Faith Network', 'Interfaith Dialogue Group',
+  'Remote Workers Guild', 'Distributed Team Network',
+  'First-Generation Professionals', 'First-Gen College Graduates',
+  'Cultural Exchange Group', 'International Employees Network',
+  'Wellness Warriors', 'Fitness & Sports Club',
+  'Innovation & Maker Club', 'Hackathon Guild',
+  'Toastmasters Chapter', 'Book Club',
+  'Volunteer & Community Service', 'Social Impact Group',
+  'Regional Language Groups', 'Expat Support Network',
+] as const;
+

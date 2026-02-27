@@ -3,8 +3,7 @@ import { Plus } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
-import { SKILL_SUGGESTIONS, PRODUCT_SERVICE_SUGGESTIONS } from '@/constants/suggestions';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import type { EmployerProfileSectionProps } from './types';
 
 const WORKPLACE_POLICY_KEYS = ['Remote Work Policy', 'Leave Policy', 'Work Hours', 'Dress Code'];
@@ -32,11 +31,11 @@ export default function TechPoliciesSection({
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="skill"
               placeholder="e.g. React, Node.js, AWS"
               value={techInput}
               onChange={setTechInput}
-              suggestions={SKILL_SUGGESTIONS}
               onSelect={(v) => addToArray('techStack', v, setTechInput)}
             />
           </div>
@@ -73,11 +72,11 @@ export default function TechPoliciesSection({
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="product_service"
               placeholder="e.g. Enterprise Software, API Services"
               value={productInput}
               onChange={setProductInput}
-              suggestions={PRODUCT_SERVICE_SUGGESTIONS}
               onSelect={(v) => addToArray('productsServices', v, setProductInput)}
             />
           </div>

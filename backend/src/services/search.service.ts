@@ -1,6 +1,6 @@
 import elasticClient from '../config/elasticsearch';
 import logger from '../config/logger';
-import { ELASTIC_INDICES, JOB_STATUS } from '../constants';
+import { ELASTIC_INDICES, JOB_STATUS, SUGGESTION_CATEGORIES } from '../constants';
 import { redis } from '../config/redis';
 import { prisma } from '../config/prisma';
 import { JobStatus } from '@prisma/client';
@@ -327,6 +327,10 @@ const SEARCH_HISTORY_KEY = (userId: string) => `search:history:${userId}`;
 const POPULAR_SEARCHES_KEY = 'search:popular';
 const SEARCH_HISTORY_MAX = 20;
 
+const FIELD_HISTORY_KEY = (field: string, userId: string) => `field:history:${field}:${userId}`;
+const FIELD_HISTORY_MAX = 10;
+const FIELD_HISTORY_TTL = 90 * 24 * 60 * 60; // 90 days
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface AutocompleteResult {
@@ -354,6 +358,7 @@ class SearchService {
       await this.createJobIndex();
       await this.createCandidateIndex();
       await this.createEmployerIndex();
+      await this.createSuggestionsIndex();
       logger.info('Elasticsearch indices initialized');
     } catch (error) {
       logger.error('Failed to initialize Elasticsearch indices', error);
@@ -614,6 +619,8 @@ class SearchService {
             email: { type: 'keyword' },
             phone: { type: 'keyword' },
             alternatePhone: { type: 'keyword' },
+            mobileNumber: { type: 'keyword' },
+            whatsappNumber: { type: 'keyword' },
             alternateEmail: { type: 'keyword' },
             openToWork: { type: 'keyword' },
             careerBreakType: { type: 'keyword' },
@@ -761,6 +768,72 @@ class SearchService {
     }
   }
 
+  private async createSuggestionsIndex() {
+    const indexExists = await elasticClient.indices.exists({
+      index: ELASTIC_INDICES.SUGGESTIONS,
+    });
+    if (!indexExists) {
+      await (elasticClient.indices.create as any)({
+        index: ELASTIC_INDICES.SUGGESTIONS,
+        settings: {
+          analysis: {
+            analyzer: {
+              suggestion_analyzer: {
+                type: 'custom',
+                tokenizer: 'suggestion_tokenizer',
+                filter: ['lowercase'],
+              },
+              suggestion_search_analyzer: {
+                type: 'custom',
+                tokenizer: 'standard',
+                filter: ['lowercase'],
+              },
+            },
+            tokenizer: {
+              suggestion_tokenizer: {
+                type: 'edge_ngram',
+                min_gram: 1,
+                max_gram: 25,
+                token_chars: ['letter', 'digit', 'punctuation', 'symbol'],
+              },
+            },
+          },
+          number_of_shards: 1,
+          number_of_replicas: 0,
+          refresh_interval: '5s',
+          max_result_window: 10000,
+        },
+        mappings: {
+          properties: {
+            text: {
+              type: 'text',
+              analyzer: 'suggestion_analyzer',
+              search_analyzer: 'suggestion_search_analyzer',
+              fields: {
+                keyword: { type: 'keyword' },
+                raw: { type: 'text' },
+              },
+            },
+            category: { type: 'keyword' },
+            count: { type: 'integer' },
+            source: { type: 'keyword' },
+            region: { type: 'keyword' },
+            parentCategory: { type: 'keyword' },
+            metadata: { type: 'object', enabled: false },
+            isActive: { type: 'boolean' },
+            createdAt: { type: 'date' },
+            updatedAt: { type: 'date' },
+          },
+        },
+      });
+      logger.info(`Created index: ${ELASTIC_INDICES.SUGGESTIONS}`);
+      // Seed suggestions on first creation
+      this.seedSuggestions().catch((err) =>
+        logger.error('Failed to seed suggestions index', err),
+      );
+    }
+  }
+
   // ─── Document Indexing ──────────────────────────────────────────────
 
   async indexJob(job: any) {
@@ -848,6 +921,9 @@ class SearchService {
       bondDetails: job.bondDetails,
     };
     await (elasticClient.index as any)({ index: ELASTIC_INDICES.JOBS, id: job.id, document });
+
+    // Self-populate suggestions index (fire-and-forget)
+    this.bulkUpsertSuggestions(this.extractSuggestionsFromJob(job)).catch(() => {});
   }
 
   async deleteJob(jobId: string) {
@@ -914,6 +990,8 @@ class SearchService {
       email: profile.user?.email || '',
       phone: profile.phone || '',
       alternatePhone: profile.alternatePhone || '',
+      mobileNumber: profile.user?.mobileNumber || '',
+      whatsappNumber: profile.user?.whatsappNumber || '',
       alternateEmail: profile.alternateEmail,
       openToWork: profile.openToWork,
       careerBreakType: profile.careerBreakType,
@@ -959,6 +1037,9 @@ class SearchService {
       id: profile.id,
       document,
     });
+
+    // Self-populate suggestions index (fire-and-forget)
+    this.bulkUpsertSuggestions(this.extractSuggestionsFromCandidate(profile)).catch(() => {});
   }
 
   async deleteCandidate(candidateId: string) {
@@ -1013,6 +1094,9 @@ class SearchService {
       id: company.id,
       document,
     });
+
+    // Self-populate suggestions index (fire-and-forget)
+    this.bulkUpsertSuggestions(this.extractSuggestionsFromEmployer(company)).catch(() => {});
   }
 
   // ─── Autocomplete ───────────────────────────────────────────────────
@@ -1590,6 +1674,49 @@ class SearchService {
       await redis.del(SEARCH_HISTORY_KEY(userId));
     } catch (error) {
       logger.error('Failed to clear search history', error);
+    }
+  }
+
+  // ─── Generic Field History (location, skill, company) ──────────────
+
+  async addToFieldHistory(userId: string, field: string, value: string): Promise<void> {
+    try {
+      const key = FIELD_HISTORY_KEY(field, userId);
+      await this.ensureSortedSet(key);
+      const score = Date.now();
+      await (redis as any).zadd(key, score, value);
+      await (redis as any).zremrangebyrank(key, 0, -(FIELD_HISTORY_MAX + 1));
+      await redis.expire(key, FIELD_HISTORY_TTL);
+    } catch (error) {
+      logger.error(`Failed to add field history [${field}]`, error);
+    }
+  }
+
+  async getFieldHistory(
+    userId: string,
+    field: string,
+    limit: number = 10
+  ): Promise<{ value: string; timestamp: number }[]> {
+    try {
+      const key = FIELD_HISTORY_KEY(field, userId);
+      await this.ensureSortedSet(key);
+      const results = await redis.zrevrange(key, 0, limit - 1, 'WITHSCORES');
+      const parsed: { value: string; timestamp: number }[] = [];
+      for (let i = 0; i < results.length; i += 2) {
+        parsed.push({ value: results[i], timestamp: parseInt(results[i + 1], 10) });
+      }
+      return parsed;
+    } catch (error) {
+      logger.error(`Failed to get field history [${field}]`, error);
+      return [];
+    }
+  }
+
+  async clearFieldHistory(userId: string, field: string): Promise<void> {
+    try {
+      await redis.del(FIELD_HISTORY_KEY(field, userId));
+    } catch (error) {
+      logger.error(`Failed to clear field history [${field}]`, error);
     }
   }
 
@@ -2536,6 +2663,8 @@ class SearchService {
             isEmailVerified: s.isEmailVerified || false,
             isMobileVerified: s.isMobileVerified || false,
             isWhatsappVerified: s.isWhatsappVerified || false,
+            mobileNumber: s.mobileNumber || null,
+            whatsappNumber: s.whatsappNumber || null,
             lastActiveAt: s.lastActiveAt || null,
           },
           _score: hit._score,
@@ -2628,6 +2757,393 @@ class SearchService {
       total: result.hits.total.value,
       facets,
     };
+  }
+
+  // ─── Unified Suggestions (suggestions index) ───────────────────────
+
+  /**
+   * Query the suggestions index for a given category.
+   * Falls back to static seed data if ES is unavailable.
+   */
+  async suggest(
+    query: string,
+    category: string,
+    limit: number = 15,
+    region?: string,
+  ): Promise<{ text: string; count: number }[]> {
+    return tracer.startActiveSpan('search.suggest', async (span) => {
+      try {
+        span.setAttribute('suggestion.category', category);
+        span.setAttribute('suggestion.query', query);
+
+        const filters: any[] = [
+          { term: { category } },
+          { term: { isActive: true } },
+        ];
+        if (region) {
+          filters.push({ term: { region } });
+        }
+
+        const esQuery =
+          query.length > 0
+            ? {
+                bool: {
+                  must: {
+                    match: {
+                      text: { query, analyzer: 'suggestion_search_analyzer' },
+                    },
+                  },
+                  filter: filters,
+                },
+              }
+            : { bool: { filter: filters } };
+
+        const result = await (elasticClient.search as any)({
+          index: ELASTIC_INDICES.SUGGESTIONS,
+          query: esQuery,
+          size: limit,
+          sort:
+            query.length > 0
+              ? ['_score', { count: 'desc' }]
+              : [{ count: 'desc' }, { 'text.keyword': 'asc' }],
+          _source: ['text', 'count'],
+        });
+
+        const hits = (result.hits?.hits || []).map((h: any) => ({
+          text: h._source.text,
+          count: h._source.count || 0,
+        }));
+
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
+        return hits;
+      } catch (error) {
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        span.end();
+        logger.error(`Suggestion error for category=${category}`, error);
+        return this._suggestFallbackStatic(query, category, limit);
+      }
+    });
+  }
+
+  /**
+   * Fallback: filter static seed data when ES is unavailable.
+   */
+  private _suggestFallbackStatic(
+    query: string,
+    category: string,
+    limit: number,
+  ): { text: string; count: number }[] {
+    try {
+      // Dynamic import would be async; use require for sync fallback
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { SEED_SUGGESTIONS } = require('../data/seed-suggestions');
+      const items: string[] = SEED_SUGGESTIONS[category] || [];
+      if (items.length === 0) return [];
+      const filtered = query.length > 0 ? filterStaticFuzzy(items, query, limit) : items.slice(0, limit);
+      return filtered.map((text) => ({ text, count: 0 }));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Bulk-upsert multiple suggestions for a given category.
+   * Used by self-population hooks after indexing jobs/candidates/employers.
+   */
+  private async bulkUpsertSuggestions(
+    items: { category: string; text: string; region?: string; parentCategory?: string }[],
+  ): Promise<void> {
+    const validItems = items.filter((i) => i.text && i.text.trim().length >= 2);
+    if (validItems.length === 0) return;
+
+    const now = new Date().toISOString();
+    const operations: any[] = [];
+    for (const item of validItems) {
+      const cleanText = item.text.trim();
+      const id = `${item.category}:${cleanText.toLowerCase().replace(/[\s,]+/g, '_')}`;
+      operations.push({
+        update: { _index: ELASTIC_INDICES.SUGGESTIONS, _id: id },
+      });
+      operations.push({
+        script: {
+          source: 'ctx._source.count += 1; ctx._source.updatedAt = params.now',
+          params: { now },
+        },
+        upsert: {
+          text: cleanText,
+          category: item.category,
+          count: 1,
+          source: 'user',
+          isActive: true,
+          region: item.region || null,
+          parentCategory: item.parentCategory || null,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+    }
+
+    // Bulk in chunks of 500 operations (250 items)
+    for (let i = 0; i < operations.length; i += 500) {
+      const chunk = operations.slice(i, i + 500);
+      await (elasticClient.bulk as any)({ operations: chunk }).catch((err: any) =>
+        logger.warn('Bulk suggestion upsert partial failure', err?.message),
+      );
+    }
+  }
+
+  /**
+   * Extract suggestion-worthy values from a job document and upsert into suggestions index.
+   */
+  private extractSuggestionsFromJob(job: any): { category: string; text: string }[] {
+    const items: { category: string; text: string }[] = [];
+    const C = SUGGESTION_CATEGORIES;
+
+    if (job.title) items.push({ category: C.JOB_TITLE, text: job.title });
+    if (job.location) items.push({ category: C.LOCATION, text: job.location });
+    if (job.industry) items.push({ category: C.INDUSTRY, text: job.industry });
+    if (job.department) items.push({ category: C.DEPARTMENT, text: job.department });
+    if (job.roleCategory) items.push({ category: C.ROLE_CATEGORY, text: job.roleCategory });
+
+    for (const skill of job.skillsRequired || []) {
+      items.push({ category: C.SKILL, text: skill });
+    }
+    for (const skill of job.niceToHaveSkills || []) {
+      items.push({ category: C.SKILL, text: skill });
+    }
+    for (const cert of job.certificationsRequired || []) {
+      items.push({ category: C.CERTIFICATION, text: cert });
+    }
+    for (const lang of job.languagesRequired || []) {
+      const langText = typeof lang === 'string' ? lang : lang?.language;
+      if (langText) items.push({ category: C.LANGUAGE, text: langText });
+    }
+    for (const perk of job.jobPerks || []) {
+      items.push({ category: C.BENEFIT, text: perk });
+    }
+    for (const spec of job.degreeSpecializations || []) {
+      items.push({ category: C.FIELD_OF_STUDY, text: spec });
+    }
+    for (const loc of job.additionalLocations || []) {
+      items.push({ category: C.LOCATION, text: loc });
+    }
+
+    return items;
+  }
+
+  /**
+   * Extract suggestion-worthy values from a candidate profile and upsert into suggestions index.
+   */
+  private extractSuggestionsFromCandidate(profile: any): { category: string; text: string }[] {
+    const items: { category: string; text: string }[] = [];
+    const C = SUGGESTION_CATEGORIES;
+
+    if (profile.currentRole) items.push({ category: C.ROLE_CATEGORY, text: profile.currentRole });
+    if (profile.currentCompany) items.push({ category: C.COMPANY, text: profile.currentCompany });
+    if (profile.currentLocation) items.push({ category: C.LOCATION, text: profile.currentLocation });
+    if (profile.currentIndustry) items.push({ category: C.INDUSTRY, text: profile.currentIndustry });
+    if (profile.currentDepartment) items.push({ category: C.DEPARTMENT, text: profile.currentDepartment });
+    if (profile.nationality) items.push({ category: C.NATIONALITY, text: profile.nationality });
+
+    for (const skill of profile.skills || []) {
+      items.push({ category: C.SKILL, text: skill });
+    }
+    for (const lang of profile.languages || []) {
+      items.push({ category: C.LANGUAGE, text: lang });
+    }
+    for (const hobby of profile.hobbies || []) {
+      items.push({ category: C.HOBBY, text: hobby });
+    }
+    for (const interest of profile.interests || []) {
+      items.push({ category: C.INTEREST, text: interest });
+    }
+
+    // Nested structures
+    for (const edu of (profile.education as any[]) || []) {
+      if (edu?.institution) items.push({ category: C.INSTITUTION, text: edu.institution });
+      if (edu?.degree) items.push({ category: C.DEGREE, text: edu.degree });
+      if (edu?.fieldOfStudy) items.push({ category: C.FIELD_OF_STUDY, text: edu.fieldOfStudy });
+      if (edu?.specialization) items.push({ category: C.FIELD_OF_STUDY, text: edu.specialization });
+    }
+    for (const cert of (profile.certifications as any[]) || []) {
+      if (cert?.name) items.push({ category: C.CERTIFICATION, text: cert.name });
+    }
+    for (const ts of (profile.testScores as any[]) || []) {
+      if (ts?.testName) items.push({ category: C.TEST_SCORE, text: ts.testName });
+    }
+    for (const pub of (profile.publications as any[]) || []) {
+      if (pub?.publisher) items.push({ category: C.PUBLISHER, text: pub.publisher });
+    }
+    for (const vol of (profile.volunteerExperience as any[]) || []) {
+      if (vol?.cause) items.push({ category: C.VOLUNTEER_CAUSE, text: vol.cause });
+    }
+    for (const mem of (profile.professionalMemberships as any[]) || []) {
+      if (mem?.organization) items.push({ category: C.PROFESSIONAL_ORG, text: mem.organization });
+    }
+
+    return items;
+  }
+
+  /**
+   * Extract suggestion-worthy values from an employer profile and upsert into suggestions index.
+   */
+  private extractSuggestionsFromEmployer(company: any): { category: string; text: string }[] {
+    const items: { category: string; text: string }[] = [];
+    const C = SUGGESTION_CATEGORIES;
+
+    if (company.companyName) items.push({ category: C.COMPANY, text: company.companyName });
+    if (company.industry) items.push({ category: C.INDUSTRY, text: company.industry });
+    if (company.subIndustry) items.push({ category: C.SUB_INDUSTRY, text: company.subIndustry });
+    if (company.headquarters) items.push({ category: C.LOCATION, text: company.headquarters });
+
+    for (const skill of company.techStack || []) {
+      items.push({ category: C.SKILL, text: skill });
+    }
+    for (const benefit of company.benefits || []) {
+      items.push({ category: C.BENEFIT, text: benefit });
+    }
+    for (const value of company.coreValues || []) {
+      items.push({ category: C.CORE_VALUE, text: value });
+    }
+    for (const investor of company.investors || []) {
+      items.push({ category: C.INVESTOR, text: investor });
+    }
+    for (const product of company.productsServices || []) {
+      items.push({ category: C.PRODUCT_SERVICE, text: product });
+    }
+
+    return items;
+  }
+
+  /**
+   * Seed the suggestions index from static seed data + world cities.
+   */
+  async seedSuggestions(): Promise<void> {
+    return tracer.startActiveSpan('search.seedSuggestions', async (span) => {
+      try {
+        logger.info('Seeding suggestions index...');
+
+        // Import seed data
+        const { SEED_SUGGESTIONS } = await import('../data/seed-suggestions');
+        let totalSeeded = 0;
+
+        const operations: any[] = [];
+        const now = new Date().toISOString();
+
+        // Seed all categories from static data
+        for (const [category, items] of Object.entries(SEED_SUGGESTIONS)) {
+          for (const text of items as string[]) {
+            const cleanText = (text as string).trim();
+            if (cleanText.length < 1) continue;
+            const id = `${category}:${cleanText.toLowerCase().replace(/[\s,]+/g, '_')}`;
+            operations.push({ index: { _index: ELASTIC_INDICES.SUGGESTIONS, _id: id } });
+            operations.push({
+              text: cleanText,
+              category,
+              count: 0,
+              source: 'seed',
+              isActive: true,
+              region: category === 'location' ? 'IN' : null,
+              createdAt: now,
+              updatedAt: now,
+            });
+          }
+        }
+
+        // Seed Indian cities from shared frontend data (overrides inline location array)
+        try {
+          // Dynamic import from frontend workspace — path resolved at runtime
+          const frontendCitiesPath = require('path').resolve(
+            __dirname, '..', '..', '..', 'frontend', 'src', 'constants', 'indian-cities',
+          );
+          const { INDIAN_CITIES } = await import(frontendCitiesPath);
+          for (const text of INDIAN_CITIES as string[]) {
+            const cleanText = (text as string).trim();
+            if (cleanText.length < 1) continue;
+            const id = `location:${cleanText.toLowerCase().replace(/[\s,]+/g, '_')}`;
+            operations.push({ index: { _index: ELASTIC_INDICES.SUGGESTIONS, _id: id } });
+            operations.push({
+              text: cleanText,
+              category: 'location',
+              count: 0,
+              source: 'seed',
+              isActive: true,
+              region: 'IN',
+              createdAt: now,
+              updatedAt: now,
+            });
+          }
+          logger.info(`Added ${(INDIAN_CITIES as string[]).length} Indian cities from frontend data`);
+        } catch {
+          logger.warn('Frontend Indian cities data not found, using inline seed locations');
+        }
+
+        // Seed world cities
+        try {
+          const { WORLD_CITIES } = await import('../data/world-cities');
+          for (const city of WORLD_CITIES) {
+            const cleanText = city.text.trim();
+            if (cleanText.length < 1) continue;
+            const id = `location:${cleanText.toLowerCase().replace(/[\s,]+/g, '_')}`;
+            operations.push({ index: { _index: ELASTIC_INDICES.SUGGESTIONS, _id: id } });
+            operations.push({
+              text: cleanText,
+              category: 'location',
+              count: 0,
+              source: 'seed',
+              isActive: true,
+              region: city.region,
+              parentCategory: city.state || null,
+              createdAt: now,
+              updatedAt: now,
+            });
+          }
+        } catch {
+          logger.warn('World cities data not found, skipping international cities');
+        }
+
+        // Bulk index in chunks of 2000 (1000 items)
+        for (let i = 0; i < operations.length; i += 2000) {
+          const chunk = operations.slice(i, i + 2000);
+          try {
+            await (elasticClient.bulk as any)({ operations: chunk });
+            totalSeeded += chunk.length / 2;
+          } catch (err) {
+            logger.warn('Seed suggestions bulk chunk failed', err);
+          }
+        }
+
+        logger.info(`Seeded ${totalSeeded} suggestions into ES`);
+        span.setAttribute('suggestions.seeded', totalSeeded);
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
+      } catch (error) {
+        logger.error('Failed to seed suggestions', error);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        span.end();
+      }
+    });
+  }
+
+  /**
+   * Force re-seed the suggestions index (admin/reindex).
+   */
+  async backfillSuggestions(): Promise<void> {
+    try {
+      const exists = await elasticClient.indices.exists({
+        index: ELASTIC_INDICES.SUGGESTIONS,
+      });
+      if (exists) {
+        await (elasticClient.indices.delete as any)({
+          index: ELASTIC_INDICES.SUGGESTIONS,
+        });
+        logger.info('Deleted suggestions index for re-seed');
+      }
+      await this.createSuggestionsIndex();
+    } catch (error) {
+      logger.error('Failed to backfill suggestions', error);
+    }
   }
 
   // ─── Reindex All ────────────────────────────────────────────────────

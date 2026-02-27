@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
-import { BENEFIT_SUGGESTIONS } from '@/constants/suggestions';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import type { EmployerProfileSectionProps } from './types';
 
 const QUICK_BENEFITS = [
@@ -33,11 +32,11 @@ export default function BenefitsSection({
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="benefit"
               placeholder="e.g. Health Insurance"
               value={benefitInput}
               onChange={setBenefitInput}
-              suggestions={BENEFIT_SUGGESTIONS}
               onSelect={(v) => addToArray('benefits', v, setBenefitInput)}
             />
           </div>

@@ -8,6 +8,10 @@ import {
   suggestQuery,
   didYouMeanQuery,
   popularQuery,
+  unifiedSuggestQuery,
+  fieldHistoryParams,
+  fieldHistoryQuery,
+  fieldHistoryBody,
 } from '../validators/search.validators';
 import * as searchController from '../controllers/search.controller';
 
@@ -18,6 +22,7 @@ router.use(searchLimiter);
 
 // Public routes (no auth required) — with query param validation
 router.get('/autocomplete', validate({ query: autocompleteQuery }), cache({ ttl: 300 }), searchController.autocomplete);
+router.get('/suggest', validate({ query: unifiedSuggestQuery }), cache({ ttl: 600 }), searchController.suggest);
 router.get('/suggest/skills', validate({ query: suggestQuery }), cache({ ttl: 600 }), searchController.suggestSkills);
 router.get(
   '/suggest/locations',
@@ -39,5 +44,25 @@ router.get('/popular', validate({ query: popularQuery }), cache({ ttl: 600 }), s
 router.get('/history', protect, searchController.getSearchHistory);
 router.post('/history', protect, searchController.addToSearchHistory);
 router.delete('/history', protect, searchController.clearSearchHistory);
+
+// Field-specific history (generic: location, skill, company)
+router.get(
+  '/field-history/:field',
+  protect,
+  validate({ params: fieldHistoryParams, query: fieldHistoryQuery }),
+  searchController.getFieldHistory
+);
+router.post(
+  '/field-history/:field',
+  protect,
+  validate({ params: fieldHistoryParams, body: fieldHistoryBody }),
+  searchController.addToFieldHistory
+);
+router.delete(
+  '/field-history/:field',
+  protect,
+  validate({ params: fieldHistoryParams }),
+  searchController.clearFieldHistory
+);
 
 export default router;

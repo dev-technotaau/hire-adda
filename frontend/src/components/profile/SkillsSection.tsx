@@ -5,10 +5,9 @@ import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Select from '@/components/ui/Select';
 import Tag from '@/components/ui/Tag';
-import { SKILL_SUGGESTIONS } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { SkillWithProficiency, ITSkillEntry } from '@/types/candidate';
 
@@ -71,11 +70,11 @@ export default function SkillsSection({ form, updateField }: ProfileSectionProps
         <div className="space-y-4">
           <div className="flex gap-2">
             <div className="flex-1">
-              <SuggestionInput
+              <ServerSuggestionInput
+                category="skill"
                 placeholder="Add a skill (e.g. React, Python)"
                 value={skillInput}
                 onChange={setSkillInput}
-                suggestions={SKILL_SUGGESTIONS}
                 onSelect={(val) => {
                   if (val && !form.skills?.includes(val)) {
                     updateField('skills', [...(form.skills || []), val]);
@@ -124,12 +123,12 @@ export default function SkillsSection({ form, updateField }: ProfileSectionProps
             (form.skillsWithProficiency || []).map((sp, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="flex-1">
-                  <SuggestionInput
+                  <ServerSuggestionInput
+                    category="skill"
                     label={i === 0 ? 'Skill' : undefined}
                     placeholder="e.g. React"
                     value={sp.skill}
                     onChange={(val) => updateSkillWithProficiency(i, { skill: val })}
-                    suggestions={SKILL_SUGGESTIONS}
                   />
                 </div>
                 <div className="w-40">
@@ -194,12 +193,12 @@ export default function SkillsSection({ form, updateField }: ProfileSectionProps
             (form.itSkills || []).map((it, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="flex-1">
-                  <SuggestionInput
+                  <ServerSuggestionInput
+                    category="skill"
                     label={i === 0 ? 'Technology' : undefined}
                     placeholder="e.g. Docker"
                     value={it.technology}
                     onChange={(val) => updateITSkill(i, { technology: val })}
-                    suggestions={SKILL_SUGGESTIONS}
                   />
                 </div>
                 <div className="w-28">

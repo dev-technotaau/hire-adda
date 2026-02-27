@@ -10,7 +10,7 @@ import {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import { X, Check, ChevronDown } from 'lucide-react';
+import { X, Check, ChevronDown, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Tag from '@/components/ui/Tag';
 import Spinner from '@/components/ui/Spinner';
@@ -27,6 +27,18 @@ export interface SuggestOption {
 export interface AutoSuggestRef {
   focus: () => void;
   clear: () => void;
+}
+
+/** Additional suggestion section rendered below main suggestions */
+export interface AdditionalSuggestSection {
+  /** Section header label (e.g. "Suggestions") */
+  label: string;
+  /** Options to display in this section */
+  options: SuggestOption[];
+  /** Whether this section is loading */
+  isLoading?: boolean;
+  /** Callback to clear this section (renders a "Clear" button in header) */
+  onClear?: () => void;
 }
 
 interface AutoSuggestProps {
@@ -68,6 +80,10 @@ interface AutoSuggestProps {
   className?: string;
   /** Debounce delay in ms */
   debounceMs?: number;
+  /** Additional suggestion sections rendered below main suggestions */
+  additionalSections?: AdditionalSuggestSection[];
+  /** Sections shown when focused with empty input (mutually exclusive with additionalSections) */
+  focusSections?: AdditionalSuggestSection[];
 }
 
 /* ---------- size styles ---------- */
@@ -102,6 +118,8 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
       inputSize = 'md',
       className,
       debounceMs = 200,
+      additionalSections = [],
+      focusSections = [],
     },
     ref,
   ) => {
@@ -215,7 +233,16 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
     );
 
     /* ---- build navigable items list ---- */
-    const filteredSuggestions = suggestions.filter((s) => !selectedValues.includes(s.value));
+    const query = inputValue.trim().toLowerCase();
+    const allFiltered = suggestions.filter(
+      (s) =>
+        !selectedValues.includes(s.value) &&
+        (!query ||
+          s.label.toLowerCase().includes(query) ||
+          s.value.toLowerCase().includes(query)),
+    );
+    const filteredSuggestions = allFiltered.slice(0, 50);
+    const hasMoreResults = allFiltered.length > 50;
 
     const showCreate =
       allowCreate &&
@@ -227,7 +254,41 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
       ) &&
       !selectedValues.includes(inputValue.trim());
 
-    const totalItems = filteredSuggestions.length + (showCreate ? 1 : 0);
+    /* ---- additional sections: filter out already-shown & selected items ---- */
+    const mainValueSet = new Set([
+      ...selectedValues.map((v) => v.toLowerCase()),
+      ...filteredSuggestions.map((s) => s.value.toLowerCase()),
+    ]);
+    const filteredAdditionalSections = additionalSections.map((section) => ({
+      ...section,
+      options: section.options
+        .filter((o) => !mainValueSet.has(o.value.toLowerCase()))
+        .slice(0, 10),
+    }));
+    const additionalItemCount = filteredAdditionalSections.reduce(
+      (sum, s) => sum + s.options.length,
+      0,
+    );
+
+    /* ---- focus sections (shown when focused + empty input) ---- */
+    const selectedSet = new Set(selectedValues.map((v) => v.toLowerCase()));
+    const filteredFocusSections = focusSections.map((section) => ({
+      ...section,
+      options: section.options
+        .filter((o) => !selectedSet.has(o.value.toLowerCase()))
+        .slice(0, 10),
+    }));
+    const focusItemCount = filteredFocusSections.reduce(
+      (sum, s) => sum + s.options.length,
+      0,
+    );
+    const hasFocusContent =
+      focusItemCount > 0 || filteredFocusSections.some((s) => s.isLoading);
+    const showFocusState = isOpen && inputValue === '' && hasFocusContent;
+
+    const totalItems = showFocusState
+      ? focusItemCount
+      : filteredSuggestions.length + (showCreate ? 1 : 0) + additionalItemCount;
 
     /* ---- keyboard ---- */
     const handleKeyDown = useCallback(
@@ -254,10 +315,30 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
           case 'Enter': {
             e.preventDefault();
             if (activeIndex >= 0) {
-              if (activeIndex < filteredSuggestions.length) {
+              if (showFocusState) {
+                // Navigate focus sections
+                let offset = 0;
+                for (const section of filteredFocusSections) {
+                  if (activeIndex < offset + section.options.length) {
+                    handleSelect(section.options[activeIndex - offset].value);
+                    break;
+                  }
+                  offset += section.options.length;
+                }
+              } else if (activeIndex < filteredSuggestions.length) {
                 handleSelect(filteredSuggestions[activeIndex].value);
-              } else if (showCreate) {
+              } else if (showCreate && activeIndex === filteredSuggestions.length) {
                 handleCreate(inputValue);
+              } else {
+                // Additional section items
+                let offset = filteredSuggestions.length + (showCreate ? 1 : 0);
+                for (const section of filteredAdditionalSections) {
+                  if (activeIndex < offset + section.options.length) {
+                    handleSelect(section.options[activeIndex - offset].value);
+                    break;
+                  }
+                  offset += section.options.length;
+                }
               }
             } else if (allowCreate && inputValue.trim()) {
               handleCreate(inputValue);
@@ -288,6 +369,9 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
         totalItems,
         activeIndex,
         filteredSuggestions,
+        filteredAdditionalSections,
+        filteredFocusSections,
+        showFocusState,
         showCreate,
         handleSelect,
         handleCreate,
@@ -332,10 +416,14 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
     }, [totalItems]);
 
     const inputId = label?.toLowerCase().replace(/\s+/g, '-');
+    const anyAdditionalContent =
+      additionalItemCount > 0 ||
+      filteredAdditionalSections.some((s) => s.isLoading);
     const showDropdown =
-      isOpen &&
-      inputValue.length >= minChars &&
-      (filteredSuggestions.length > 0 || showCreate || isLoading);
+      showFocusState ||
+      (isOpen &&
+        inputValue.length >= minChars &&
+        (filteredSuggestions.length > 0 || showCreate || isLoading || anyAdditionalContent));
 
     return (
       <div className={cn('relative w-full', className)} ref={containerRef}>
@@ -452,6 +540,79 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
               'animate-in fade-in-0 slide-in-from-top-1 duration-150',
             )}
           >
+            {/* ---- Focus sections (empty input + focused) ---- */}
+            {showFocusState && (
+              <>
+                {filteredFocusSections.map((section) => {
+                  if (section.options.length === 0 && !section.isLoading) return null;
+                  const sectionStartIdx = filteredFocusSections
+                    .slice(0, filteredFocusSections.indexOf(section))
+                    .reduce((sum, s) => sum + s.options.length, 0);
+
+                  return (
+                    <div key={section.label}>
+                      <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5">
+                        <span className="text-xs font-medium tracking-wide text-[var(--text-muted)] uppercase">
+                          {section.label}
+                        </span>
+                        {section.onClear && section.options.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              section.onClear!();
+                            }}
+                            className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-error transition-colors"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      {section.isLoading && section.options.length === 0 && (
+                        <div className="flex items-center justify-center gap-2 p-2 text-xs text-[var(--text-muted)]">
+                          <Spinner size="sm" />
+                          <span>Loading...</span>
+                        </div>
+                      )}
+                      {section.options.map((option, i) => {
+                        const globalIdx = sectionStartIdx + i;
+                        return (
+                          <button
+                            key={option.value}
+                            ref={(el) => {
+                              itemRefs.current[globalIdx] = el;
+                            }}
+                            id={`autosuggest-option-${globalIdx}`}
+                            role="option"
+                            aria-selected={activeIndex === globalIdx}
+                            onClick={() => handleSelect(option.value)}
+                            onMouseEnter={() => setActiveIndex(globalIdx)}
+                            className={cn(
+                              'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
+                              activeIndex === globalIdx
+                                ? 'text-primary bg-[var(--primary-light)]'
+                                : 'text-[var(--text)] hover:bg-[var(--bg-secondary)]',
+                            )}
+                          >
+                            <div className="min-w-0 flex-1 truncate">{option.label}</div>
+                            {option.count !== undefined && (
+                              <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                                {option.count.toLocaleString()}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+            {/* ---- Typing-state content ---- */}
+            {!showFocusState && (
+              <>
             {/* Loading */}
             {isLoading && filteredSuggestions.length === 0 && !showCreate && (
               <div className="flex items-center justify-center gap-2 p-3 text-sm text-[var(--text-muted)]">
@@ -512,6 +673,13 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
               );
             })}
 
+            {/* More results indicator */}
+            {hasMoreResults && (
+              <div className="border-t border-[var(--border)] px-3 py-2 text-center text-xs text-[var(--text-muted)]">
+                {allFiltered.length - 50} more results — type to narrow down
+              </div>
+            )}
+
             {/* Create option */}
             {showCreate && (
               <button
@@ -537,15 +705,75 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
               </button>
             )}
 
+            {/* Additional suggestion sections */}
+            {filteredAdditionalSections.map((section) => {
+              if (section.options.length === 0 && !section.isLoading) return null;
+              const sectionStartIdx =
+                filteredSuggestions.length +
+                (showCreate ? 1 : 0) +
+                filteredAdditionalSections
+                  .slice(
+                    0,
+                    filteredAdditionalSections.indexOf(section),
+                  )
+                  .reduce((sum, s) => sum + s.options.length, 0);
+
+              return (
+                <div key={section.label}>
+                  <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5">
+                    <span className="text-xs font-medium tracking-wide text-[var(--text-muted)] uppercase">
+                      {section.label}
+                    </span>
+                  </div>
+                  {section.isLoading && section.options.length === 0 && (
+                    <div className="flex items-center justify-center gap-2 p-2 text-xs text-[var(--text-muted)]">
+                      <Spinner size="sm" />
+                      <span>Loading...</span>
+                    </div>
+                  )}
+                  {section.options.map((option, i) => {
+                    const globalIdx = sectionStartIdx + i;
+                    const isSelected = selectedValues.includes(option.value);
+                    return (
+                      <button
+                        key={option.value}
+                        ref={(el) => {
+                          itemRefs.current[globalIdx] = el;
+                        }}
+                        id={`autosuggest-option-${globalIdx}`}
+                        role="option"
+                        aria-selected={isSelected || activeIndex === globalIdx}
+                        onClick={() => handleSelect(option.value)}
+                        onMouseEnter={() => setActiveIndex(globalIdx)}
+                        className={cn(
+                          'flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors',
+                          activeIndex === globalIdx
+                            ? 'text-primary bg-[var(--primary-light)]'
+                            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+                        )}
+                      >
+                        <div className="min-w-0 flex-1 truncate">
+                          <OptionHighlight text={option.label} query={inputValue} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+
             {/* No results (non-loading, non-create) */}
             {!isLoading &&
               filteredSuggestions.length === 0 &&
               !showCreate &&
+              !anyAdditionalContent &&
               inputValue.length >= minChars && (
                 <div className="p-3 text-center text-sm text-[var(--text-muted)]">
                   No matches found
                 </div>
               )}
+              </>
+            )}
           </div>
         )}
       </div>

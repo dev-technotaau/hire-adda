@@ -6,6 +6,8 @@ import type {
   SuggestionItem,
   SearchHistoryItem,
   PopularSearch,
+  UnifiedSuggestion,
+  FieldHistoryItem,
 } from '@/types/search';
 
 export const searchService = {
@@ -73,10 +75,40 @@ export const searchService = {
     await api.delete(API.SEARCH.HISTORY);
   },
 
+  // ─── Field History (generic per-field, per-user) ──────────────────
+
+  async getFieldHistory(
+    field: string,
+    limit: number = 10,
+  ): Promise<ApiResponse<{ history: FieldHistoryItem[] }>> {
+    const res = await api.get(API.SEARCH.FIELD_HISTORY(field), { params: { limit } });
+    return res.data;
+  },
+
+  async addToFieldHistory(field: string, value: string): Promise<void> {
+    await api.post(API.SEARCH.FIELD_HISTORY(field), { value });
+  },
+
+  async clearFieldHistory(field: string): Promise<void> {
+    await api.delete(API.SEARCH.FIELD_HISTORY(field));
+  },
+
   async getPopularSearches(
     limit: number = 10,
   ): Promise<ApiResponse<{ searches: PopularSearch[] }>> {
     const res = await api.get(API.SEARCH.POPULAR, { params: { limit } });
+    return res.data;
+  },
+
+  async suggest(
+    q: string,
+    category: string,
+    limit: number = 15,
+    region?: string,
+  ): Promise<ApiResponse<{ suggestions: UnifiedSuggestion[] }>> {
+    const res = await api.get(API.SEARCH.SUGGEST, {
+      params: { q, category, limit, ...(region && { region }) },
+    });
     return res.data;
   },
 };

@@ -129,6 +129,13 @@ export const register = async (
 
   logger.info(`New user registered: ${email} (${role})`);
 
+  // Create company profile for employers if companyName was provided
+  if (role === 'EMPLOYER' && data.companyName) {
+    await prisma.companyProfile
+      .create({ data: { userId: user.id, companyName: data.companyName } })
+      .catch((err) => logger.error('Failed to create company profile during registration', err));
+  }
+
   // Send verification email with OTP
   try {
     const emailContent = verifyEmailTemplate(verificationOtp);
@@ -955,11 +962,17 @@ export const verifyWhatsapp = async (
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new AppError('User not found', 404);
   if (!user.mobileNumber && !mobileNumber) throw new AppError('No mobile number provided', 400);
-  if (user.isWhatsappVerified) throw new AppError('WhatsApp already verified', 400);
-
-  // If a separate whatsappNumber is provided and different from mobileNumber, store it
+  // Allow re-verification when switching from mobile to separate number (or vice versa)
   const effectiveMobile = mobileNumber || user.mobileNumber!;
   const targetNumber = whatsappNumber || effectiveMobile;
+
+  // Block only if already verified with the SAME target number
+  if (user.isWhatsappVerified) {
+    const currentWhatsapp = user.whatsappNumber || user.mobileNumber;
+    if (targetNumber === currentWhatsapp) {
+      throw new AppError('WhatsApp already verified with this number', 400);
+    }
+  }
   const separateWhatsapp =
     whatsappNumber && whatsappNumber !== effectiveMobile ? whatsappNumber : null;
 
@@ -992,7 +1005,6 @@ export const verifyWhatsapp = async (
     data: {
       whatsappVerificationToken: hashedOtp,
       whatsappVerificationExpires: new Date(Date.now() + expiryMinutes * 60 * 1000),
-      mobileNumber: effectiveMobile,
       whatsappOtpResendCount: user.whatsappOtpResendCount + 1,
       whatsappOtpLastSentAt: new Date(),
     },
@@ -1107,12 +1119,14 @@ export const changeWhatsappNumber = async (
     expiryMinutes * 60,
   );
 
+  // Reset WhatsApp verified state so the old number is no longer "active"
   await prisma.user.update({
     where: { id: userId },
     data: {
+      isWhatsappVerified: false,
       whatsappVerificationToken: hashedOtp,
       whatsappVerificationExpires: new Date(Date.now() + expiryMinutes * 60 * 1000),
-      whatsappOtpResendCount: 1,
+      whatsappOtpResendCount: user.whatsappOtpResendCount + 1,
       whatsappOtpLastSentAt: new Date(),
     },
   });

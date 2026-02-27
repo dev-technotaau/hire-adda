@@ -4,9 +4,8 @@ import Input from '@/components/ui/Input';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import { FUNDING_STAGE_LABELS } from '@/constants/enums';
-import { INVESTOR_SUGGESTIONS } from '@/constants/suggestions';
 import type { UpdateCompanyRequest, FundingStage } from '@/types/employer';
 import type { ArrayKey } from './types';
 
@@ -162,11 +161,11 @@ export default function AwardsFundingSection({
             </p>
             <div className="flex gap-2">
               <div className="flex-1">
-                <SuggestionInput
+                <ServerSuggestionInput
+                  category="investor"
                   placeholder="e.g. Sequoia Capital India"
                   value={investorInput}
                   onChange={setInvestorInput}
-                  suggestions={INVESTOR_SUGGESTIONS}
                   onSelect={(v) => addToArray('investors', v, setInvestorInput)}
                 />
               </div>

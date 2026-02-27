@@ -19,6 +19,7 @@ export const registerSchema = z.object({
         .string()
         .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number')
         .optional(),
+      companyName: z.string().min(1).max(200).optional(),
       agreedToTerms: z
         .boolean()
         .refine((val) => val === true, 'You must agree to terms')

@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import Card from '@/components/ui/Card';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Tag from '@/components/ui/Tag';
-import { HOBBY_SUGGESTIONS, INTEREST_SUGGESTIONS } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 
 export default function InterestsSection({ form, updateField }: ProfileSectionProps) {
@@ -30,11 +29,11 @@ export default function InterestsSection({ form, updateField }: ProfileSectionPr
         {/* Hobbies */}
         <div>
           <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Hobbies</h3>
-          <SuggestionInput
+          <ServerSuggestionInput
+            category="hobby"
             placeholder="Add a hobby..."
             value={hobbyInput}
             onChange={setHobbyInput}
-            suggestions={HOBBY_SUGGESTIONS}
             onSelect={(val) => {
               addHobby(val);
               setHobbyInput('');
@@ -60,11 +59,11 @@ export default function InterestsSection({ form, updateField }: ProfileSectionPr
         {/* Interests */}
         <div>
           <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Interests</h3>
-          <SuggestionInput
+          <ServerSuggestionInput
+            category="interest"
             placeholder="Add an interest..."
             value={interestInput}
             onChange={setInterestInput}
-            suggestions={INTEREST_SUGGESTIONS}
             onSelect={(val) => {
               addInterest(val);
               setInterestInput('');

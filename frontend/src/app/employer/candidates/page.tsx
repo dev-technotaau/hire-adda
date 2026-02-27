@@ -48,6 +48,7 @@ import DatePicker from '@/components/ui/DatePicker';
 import EmptyState from '@/components/ui/EmptyState';
 import SearchBar from '@/components/ui/SearchBar';
 import AutoSuggest from '@/components/ui/AutoSuggest';
+import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
 import AdvancedFilters, {
   ActiveFilterTags,
   type FilterSection,
@@ -67,6 +68,9 @@ import {
   useSuggestCompanies,
   useDidYouMean,
 } from '@/hooks/use-search';
+import { useSuggest, useStaticSuggestions } from '@/hooks/use-suggestions';
+import { useFieldHistory, useAddToFieldHistory, useClearFieldHistory } from '@/hooks/use-field-history';
+import { useAuthStore } from '@/store/auth.store';
 import {
   WORK_MODE_LABELS,
   WORK_STATUS_LABELS,
@@ -89,6 +93,8 @@ import {
   FUNCTIONAL_AREA_LABELS,
   DRIVING_LICENSE_TYPE_LABELS,
 } from '@/constants/enums';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import { formatRelativeDate, cn } from '@/lib/utils';
 import HighlightText from '@/components/ui/HighlightText';
 import PresenceIndicator from '@/components/ui/PresenceIndicator';
@@ -101,6 +107,10 @@ import type { ApiError, SearchFacets } from '@/types/api';
 import dynamic from 'next/dynamic';
 
 const CandidateMapView = dynamic(() => import('@/components/candidates/MapView'), { ssr: false });
+
+
+const toSelectOptions = (map: Record<string, string>) =>
+  Object.entries(map).map(([value, label]) => ({ value, label }));
 
 /** Build filter sections from static config + live facets. */
 function buildCandidateFilterSections(facets: SearchFacets): FilterSection[] {
@@ -408,6 +418,17 @@ export default function CandidateSearchPage() {
   const { data: companySuggestions, isLoading: isLoadingCompanies } =
     useSuggestCompanies(companyQuery);
 
+  // ES suggestions index — additive sections for search dropdowns
+  const { suggestions: esLocationSugs, isLoading: esLocLoading } = useSuggest({
+    category: 'location', query: locationQuery, limit: 10, minChars: 2,
+  });
+  const { suggestions: esSkillSugs, isLoading: esSkillLoading } = useSuggest({
+    category: 'skill', query: skillsQuery, limit: 10, minChars: 1,
+  });
+  const { suggestions: esCompanySugs, isLoading: esCompanyLoading } = useSuggest({
+    category: 'company', query: companyQuery, limit: 10, minChars: 2,
+  });
+
   // Pre-populate saved candidate IDs on mount
   const { data: savedCandidatesData } = useQuery({
     queryKey: QUERY_KEYS.EMPLOYERS.SAVED_CANDIDATES,
@@ -617,6 +638,14 @@ export default function CandidateSearchPage() {
     return (recommendedData?.data || []).filter((rc) => !candidates.some((c) => c.id === rc.id));
   }, [recommendedData, candidates]);
 
+  // ── Field history hooks (must be before handlers that reference them) ──
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { data: locationHistory } = useFieldHistory('location');
+  const addLocationHistory = useAddToFieldHistory('location');
+  const clearLocationHistory = useClearFieldHistory('location');
+  const { suggestions: popularLocations, isLoading: isLoadingPopular } =
+    useStaticSuggestions('location', 8);
+
   const handleKeywordSearch = useCallback((query: string) => {
     setKeyword(query);
     setFilters((prev) => ({
@@ -626,14 +655,18 @@ export default function CandidateSearchPage() {
     }));
   }, []);
 
-  const handleLocationChange = useCallback((value: string | string[]) => {
-    const loc = typeof value === 'string' ? value : value[0] || '';
-    setFilters((prev) => ({
-      ...prev,
-      location: loc || undefined,
-      page: '1',
-    }));
-  }, []);
+  const handleLocationChange = useCallback(
+    (value: string | string[]) => {
+      const loc = typeof value === 'string' ? value : value[0] || '';
+      setFilters((prev) => ({
+        ...prev,
+        location: loc || undefined,
+        page: '1',
+      }));
+      if (loc) addLocationHistory.mutate(loc);
+    },
+    [addLocationHistory],
+  );
 
   const handleFilterChange = (key: string, value: string | undefined) => {
     // Translate experience bucket selections into experienceMin/Max
@@ -918,6 +951,67 @@ export default function CandidateSearchPage() {
     [companySuggestions],
   );
 
+  // Additional suggestion sections from ES suggestions index
+  const locationAdditionalSections = useMemo(
+    () =>
+      locationQuery.length >= 2
+        ? [
+            {
+              label: 'Suggestions',
+              options: esLocationSugs.map((s) => ({ label: s, value: s })),
+              isLoading: esLocLoading,
+            },
+          ]
+        : [],
+    [locationQuery, esLocationSugs, esLocLoading],
+  );
+
+  // ── Focus sections: Recent Locations + Popular Locations ──
+  const locationFocusSections = useMemo(() => {
+    const sections: import('@/components/ui/AutoSuggest').AdditionalSuggestSection[] = [];
+    const historyItems = locationHistory?.data?.history ?? [];
+    if (isAuthenticated && historyItems.length > 0) {
+      sections.push({
+        label: 'Recent Locations',
+        options: historyItems.map((h) => ({ label: h.value, value: h.value })),
+        onClear: () => clearLocationHistory.mutate(),
+      });
+    }
+    sections.push({
+      label: 'Popular Locations',
+      options: popularLocations.map((loc) => ({ label: loc, value: loc })),
+      isLoading: isLoadingPopular,
+    });
+    return sections;
+  }, [isAuthenticated, locationHistory, popularLocations, isLoadingPopular, clearLocationHistory]);
+
+  const skillAdditionalSections = useMemo(
+    () =>
+      skillsQuery.length >= 1
+        ? [
+            {
+              label: 'Suggestions',
+              options: esSkillSugs.map((s) => ({ label: s, value: s })),
+              isLoading: esSkillLoading,
+            },
+          ]
+        : [],
+    [skillsQuery, esSkillSugs, esSkillLoading],
+  );
+  const companyAdditionalSections = useMemo(
+    () =>
+      companyQuery.length >= 2
+        ? [
+            {
+              label: 'Suggestions',
+              options: esCompanySugs.map((s) => ({ label: s, value: s })),
+              isLoading: esCompanyLoading,
+            },
+          ]
+        : [],
+    [companyQuery, esCompanySugs, esCompanyLoading],
+  );
+
   const didYouMean = didYouMeanData?.data?.suggestion;
 
   const handleResumeDownload = useCallback(async (candidateUserId: string) => {
@@ -965,6 +1059,8 @@ export default function CandidateSearchPage() {
                 createLabel={(q) => `Search in "${q}"`}
                 minChars={2}
                 inputSize="md"
+                additionalSections={locationAdditionalSections}
+                focusSections={locationFocusSections}
               />
             </div>
           </div>
@@ -1059,6 +1155,7 @@ export default function CandidateSearchPage() {
               maxSelections={15}
               minChars={1}
               inputSize="sm"
+              additionalSections={skillAdditionalSections}
             />
             <AutoSuggest
               label="Current Company"
@@ -1077,31 +1174,36 @@ export default function CandidateSearchPage() {
               createLabel={(q) => `Search "${q}"`}
               minChars={2}
               inputSize="sm"
+              additionalSections={companyAdditionalSections}
             />
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Designation
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Senior Developer"
-                value={filters.designation || ''}
-                onChange={(e) => handleFilterChange('designation', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                IT Skill / Technology
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Docker, AWS"
-                value={filters.itSkill || ''}
-                onChange={(e) => handleFilterChange('itSkill', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
-            </div>
+            <ServerAutoSuggest
+              category="role_category"
+              label="Designation"
+              placeholder="e.g. Senior Developer"
+              value={filters.designation || ''}
+              onChange={(v) =>
+                handleFilterChange(
+                  'designation',
+                  (typeof v === 'string' ? v : v[0]) || undefined,
+                )
+              }
+              allowCreate
+              inputSize="sm"
+            />
+            <ServerAutoSuggest
+              category="skill"
+              label="IT Skill / Technology"
+              placeholder="e.g. Docker, AWS"
+              value={filters.itSkill || ''}
+              onChange={(v) =>
+                handleFilterChange(
+                  'itSkill',
+                  (typeof v === 'string' ? v : v[0]) || undefined,
+                )
+              }
+              allowCreate
+              inputSize="sm"
+            />
           </div>
         </Card>
 
@@ -1111,42 +1213,41 @@ export default function CandidateSearchPage() {
             Exclude from results
           </p>
           <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Exclude Keywords
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. intern, fresher"
-                value={filters.excludeKeywords || ''}
-                onChange={(e) => handleFilterChange('excludeKeywords', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Exclude Company
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. CompetitorCo"
-                value={filters.excludeCompany || ''}
-                onChange={(e) => handleFilterChange('excludeCompany', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Exclude Location
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. City to exclude"
-                value={filters.excludeLocation || ''}
-                onChange={(e) => handleFilterChange('excludeLocation', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
-            </div>
+            <Input
+              label="Exclude Keywords"
+              placeholder="e.g. intern, fresher"
+              value={filters.excludeKeywords || ''}
+              onChange={(e) => handleFilterChange('excludeKeywords', e.target.value || undefined)}
+              inputSize="sm"
+            />
+            <ServerAutoSuggest
+              category="company"
+              label="Exclude Company"
+              placeholder="e.g. CompetitorCo"
+              value={filters.excludeCompany || ''}
+              onChange={(v) =>
+                handleFilterChange(
+                  'excludeCompany',
+                  (typeof v === 'string' ? v : v[0]) || undefined,
+                )
+              }
+              allowCreate
+              inputSize="sm"
+            />
+            <ServerAutoSuggest
+              category="location"
+              label="Exclude Location"
+              placeholder="e.g. City to exclude"
+              value={filters.excludeLocation || ''}
+              onChange={(v) =>
+                handleFilterChange(
+                  'excludeLocation',
+                  (typeof v === 'string' ? v : v[0]) || undefined,
+                )
+              }
+              allowCreate
+              inputSize="sm"
+            />
           </div>
         </Card>
 
@@ -1225,83 +1326,84 @@ export default function CandidateSearchPage() {
         {/* Education, certifications, department, industry, work permit */}
         <Card>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Education
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. B.Tech, MBA"
-                value={filters.education || ''}
-                onChange={(e) => handleFilterChange('education', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Education Level
-              </label>
-              <select
-                value={filters.educationLevel || ''}
-                onChange={(e) => handleFilterChange('educationLevel', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] focus:ring-2 focus:outline-none"
-              >
-                <option value="">Any level</option>
-                {Object.entries(EDUCATION_LEVEL_SEARCH_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Certifications
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. AWS, PMP"
-                value={filters.certifications || ''}
-                onChange={(e) => handleFilterChange('certifications', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Department
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Engineering"
-                value={filters.department || ''}
-                onChange={(e) => handleFilterChange('department', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Industry
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. IT, Finance"
-                value={filters.currentIndustry || ''}
-                onChange={(e) => handleFilterChange('currentIndustry', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Work Permit / Visa
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. US, H1B, EU"
-                value={filters.workPermit || ''}
-                onChange={(e) => handleFilterChange('workPermit', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
-            </div>
+            <ServerAutoSuggest
+              category="field_of_study"
+              label="Education"
+              placeholder="e.g. B.Tech, MBA"
+              value={filters.education || ''}
+              onChange={(v) =>
+                handleFilterChange(
+                  'education',
+                  (typeof v === 'string' ? v : v[0]) || undefined,
+                )
+              }
+              allowCreate
+              inputSize="sm"
+            />
+            <Select
+              label="Education Level"
+              options={toSelectOptions(EDUCATION_LEVEL_SEARCH_LABELS)}
+              value={filters.educationLevel || ''}
+              onChange={(v) => handleFilterChange('educationLevel', v || undefined)}
+              placeholder="Any level"
+              searchable
+            />
+            <ServerAutoSuggest
+              category="certification"
+              label="Certifications"
+              placeholder="e.g. AWS, PMP"
+              value={filters.certifications || ''}
+              onChange={(v) =>
+                handleFilterChange(
+                  'certifications',
+                  (typeof v === 'string' ? v : v[0]) || undefined,
+                )
+              }
+              allowCreate
+              inputSize="sm"
+            />
+            <ServerAutoSuggest
+              category="department"
+              label="Department"
+              placeholder="e.g. Engineering"
+              value={filters.department || ''}
+              onChange={(v) =>
+                handleFilterChange(
+                  'department',
+                  (typeof v === 'string' ? v : v[0]) || undefined,
+                )
+              }
+              allowCreate
+              inputSize="sm"
+            />
+            <ServerAutoSuggest
+              category="industry"
+              label="Industry"
+              placeholder="e.g. IT, Finance"
+              value={filters.currentIndustry || ''}
+              onChange={(v) =>
+                handleFilterChange(
+                  'currentIndustry',
+                  (typeof v === 'string' ? v : v[0]) || undefined,
+                )
+              }
+              allowCreate
+              inputSize="sm"
+            />
+            <ServerAutoSuggest
+              category="visa_status"
+              label="Work Permit / Visa"
+              placeholder="e.g. Indian Citizen, H-1B Visa"
+              value={filters.workPermit || ''}
+              onChange={(v) =>
+                handleFilterChange(
+                  'workPermit',
+                  (typeof v === 'string' ? v : v[0]) || undefined,
+                )
+              }
+              allowCreate
+              inputSize="sm"
+            />
           </div>
         </Card>
 
@@ -2289,18 +2391,18 @@ function CandidateCard({
                         <Mail className="h-3.5 w-3.5" /> Email
                       </a>
                     )}
-                    {candidate.phone && (
+                    {(candidate.user?.mobileNumber || candidate.phone) && (
                       <a
-                        href={`tel:${candidate.phone}`}
+                        href={`tel:${candidate.user?.mobileNumber || candidate.phone}`}
                         onClick={() => setContactOpen(false)}
                         className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
                       >
                         <Phone className="h-3.5 w-3.5" /> Call
                       </a>
                     )}
-                    {(candidate.phone || candidate.alternatePhone) && (
+                    {(candidate.user?.whatsappNumber || candidate.user?.mobileNumber || candidate.phone) && (
                       <a
-                        href={`https://wa.me/${(candidate.phone || candidate.alternatePhone || '').replace(/\D/g, '')}`}
+                        href={`https://wa.me/${(candidate.user?.whatsappNumber || candidate.user?.mobileNumber || candidate.phone || '').replace(/\D/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setContactOpen(false)}
@@ -2308,6 +2410,9 @@ function CandidateCard({
                       >
                         <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                       </a>
+                    )}
+                    {!candidate.user?.email && !candidate.user?.mobileNumber && !candidate.user?.whatsappNumber && !candidate.phone && (
+                      <p className="px-3 py-2 text-xs text-[var(--text-muted)]">No contact info available</p>
                     )}
                   </div>
                 </>

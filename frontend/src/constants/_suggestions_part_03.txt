@@ -1,0 +1,120 @@
+export const ROLE_CATEGORY_SUGGESTIONS = [
+  // Software Engineering
+  'Software Developer', 'Software Engineer', 'Full Stack Developer', 'Frontend Developer',
+  'Backend Developer', 'Mobile Developer', 'iOS Developer', 'Android Developer',
+  'Embedded Systems Engineer', 'Firmware Engineer', 'Platform Engineer', 'Infrastructure Engineer',
+  'DevOps Engineer', 'Cloud Engineer', 'Site Reliability Engineer', 'Systems Engineer',
+  'Database Administrator', 'Network Engineer', 'Systems Administrator', 'Security Engineer',
+  'AppSec Engineer', 'Penetration Tester', 'Staff Engineer', 'Principal Engineer',
+  'Distinguished Engineer', 'Fellow', 'Technical Lead', 'Engineering Manager',
+  'VP of Engineering', 'CTO', 'Solutions Architect', 'Enterprise Architect',
+  'Technical Architect', 'Cloud Architect', 'Software Architect', 'Hardware Engineer',
+  'VLSI Design Engineer', 'Game Developer', 'Game Designer', 'AR/VR Developer',
+  'Blockchain Developer', 'Smart Contract Developer', 'Web3 Developer',
+  // Data & AI
+  'Data Scientist', 'Data Analyst', 'Data Engineer', 'ML Engineer', 'AI Researcher',
+  'NLP Engineer', 'Computer Vision Engineer', 'MLOps Engineer', 'AI/ML Ops Engineer',
+  'Applied Scientist', 'Research Scientist', 'Prompt Engineer', 'AI Product Manager',
+  'Business Intelligence Analyst', 'Analytics Engineer', 'Data Architect',
+  'Statistician', 'Quantitative Analyst', 'Decision Scientist',
+  // Product & Design
+  'Product Manager', 'Senior Product Manager', 'Group Product Manager',
+  'Director of Product', 'VP of Product', 'Chief Product Officer',
+  'Technical Product Manager', 'Platform Product Manager', 'Growth Product Manager',
+  'UI/UX Designer', 'Product Designer', 'Graphic Designer', 'UX Researcher',
+  'Interaction Designer', 'Visual Designer', 'Motion Designer', 'Brand Designer',
+  'Design Lead', 'Design Manager', 'VP of Design', 'Head of Design',
+  'UX Writer', 'Content Designer',
+  // Project & Program Management
+  'Project Manager', 'Technical Program Manager', 'Program Director',
+  'Scrum Master', 'Agile Coach', 'Delivery Manager', 'Release Manager',
+  'PMO Lead', 'Portfolio Manager',
+  // QA & Testing
+  'QA Engineer', 'SDET', 'Test Lead', 'Automation Engineer', 'QA Manager',
+  'Performance Test Engineer', 'Security Tester', 'QA Architect',
+  // Business & Analysis
+  'Business Analyst', 'Systems Analyst', 'Functional Consultant',
+  'Requirements Analyst', 'Process Analyst', 'Operations Analyst',
+  'Management Consultant', 'Strategy Consultant', 'Technology Consultant',
+  // Sales & Business Development
+  'Sales Executive', 'Senior Sales Executive', 'Account Manager',
+  'Key Account Manager', 'Business Development Manager', 'Sales Manager',
+  'Regional Sales Manager', 'Area Sales Manager', 'Territory Manager',
+  'VP of Sales', 'Chief Revenue Officer', 'Sales Director', 'National Sales Head',
+  'Inside Sales Representative', 'Field Sales Representative',
+  'Solutions Engineer', 'Pre-Sales Consultant', 'Sales Engineer',
+  'Channel Partner Manager', 'Alliance Manager',
+  // Marketing & Communications
+  'Marketing Manager', 'Digital Marketing Specialist', 'SEO Specialist',
+  'SEM Specialist', 'Performance Marketer', 'Growth Hacker', 'Growth Manager',
+  'Brand Manager', 'Social Media Manager', 'Content Strategist',
+  'Content Writer', 'Copywriter', 'PR Manager', 'Communications Manager',
+  'Product Marketing Manager', 'Marketing Analyst', 'Email Marketing Specialist',
+  'VP of Marketing', 'Chief Marketing Officer', 'Marketing Director',
+  'Creative Director', 'Art Director',
+  // Customer & Support
+  'Customer Success Manager', 'Customer Experience Manager',
+  'Customer Support Executive', 'Support Engineer', 'Technical Support Engineer',
+  'Customer Engineer', 'Implementation Specialist', 'Customer Onboarding Manager',
+  'Service Delivery Manager', 'Escalation Manager',
+  // Human Resources
+  'HR Manager', 'HR Director', 'CHRO', 'Recruiter', 'Senior Recruiter',
+  'Talent Acquisition Specialist', 'Talent Acquisition Lead',
+  'HR Business Partner', 'HRBP', 'Compensation & Benefits Analyst',
+  'Payroll Specialist', 'HR Operations Manager', 'People Operations Manager',
+  'Learning & Development Manager', 'Training Manager',
+  'Organizational Development Manager', 'Employee Engagement Manager',
+  'Talent Development Specialist', 'HR Analytics Manager',
+  // Finance & Accounting
+  'Finance Manager', 'Financial Analyst', 'Senior Financial Analyst',
+  'FP&A Analyst', 'Chartered Accountant', 'Tax Consultant',
+  'Audit Manager', 'Internal Auditor', 'Controller', 'CFO',
+  'Treasury Manager', 'Credit Analyst', 'Risk Analyst',
+  'Investment Banker', 'Equity Research Analyst', 'Fund Manager',
+  'Accounts Manager', 'Billing Specialist', 'Revenue Analyst',
+  // Operations & Supply Chain
+  'Operations Manager', 'Director of Operations', 'COO',
+  'Supply Chain Manager', 'Procurement Manager', 'Warehouse Manager',
+  'Logistics Coordinator', 'Logistics Manager', 'Inventory Manager',
+  'Demand Planner', 'Supply Planner', 'Transportation Manager',
+  // Legal & Compliance
+  'Legal Counsel', 'Corporate Lawyer', 'Compliance Officer',
+  'Compliance Manager', 'Legal Manager', 'General Counsel',
+  'IP Attorney', 'Contract Manager', 'Company Secretary',
+  // Admin & Facilities
+  'Office Manager', 'Executive Assistant', 'Admin Manager',
+  'Facilities Manager', 'Receptionist',
+  // C-Suite & Leadership
+  'CEO', 'COO', 'CFO', 'CTO', 'CMO', 'CHRO', 'CIO', 'CDO', 'CPO',
+  'Chief Data Officer', 'Chief Information Officer', 'Chief Revenue Officer',
+  'Chief Strategy Officer', 'Chief Compliance Officer', 'Chief Legal Officer',
+  'Managing Director', 'General Manager', 'AVP', 'VP', 'SVP', 'EVP',
+  'Director', 'Senior Director', 'Associate Director',
+  // Developer Relations & Technical Writing
+  'Developer Relations (DevRel)', 'Developer Advocate', 'Technical Writer',
+  'Documentation Engineer', 'Technical Editor',
+  // Consulting & Advisory
+  'Consultant', 'Senior Consultant', 'Principal Consultant',
+  'Practice Lead', 'Engagement Manager',
+  // Research & Academia
+  'Researcher', 'Research Fellow', 'Postdoctoral Researcher',
+  'Professor', 'Assistant Professor', 'Lecturer',
+  // Entry Level
+  'Intern', 'Trainee', 'Apprentice', 'Graduate Engineer Trainee',
+  'Management Trainee', 'Fresher',
+  // Manufacturing & Quality
+  'Production Manager', 'Plant Manager', 'Quality Manager', 'Quality Engineer',
+  'Manufacturing Engineer', 'Process Engineer', 'Maintenance Engineer',
+  'Safety Officer', 'EHS Manager', 'Six Sigma Specialist',
+  // Instructional & Learning
+  'Instructional Designer', 'Learning Experience Designer',
+  'Curriculum Developer', 'E-Learning Developer',
+  // Healthcare
+  'Clinical Research Associate', 'Medical Science Liaison',
+  'Pharmacovigilance Specialist', 'Regulatory Affairs Specialist',
+  'Medical Coder', 'Health Informatics Specialist',
+  // Robotics & Automation
+  'Robotics Engineer', 'Automation Engineer', 'Controls Engineer',
+  'RPA Developer', 'PLC Programmer',
+] as const;
+

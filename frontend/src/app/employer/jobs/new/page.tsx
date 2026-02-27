@@ -23,6 +23,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
 import DatePicker from '@/components/ui/DatePicker';
 import Textarea from '@/components/ui/Textarea';
 import Select, { type SelectOption } from '@/components/ui/Select';
@@ -54,6 +55,7 @@ import {
   POSTING_VISIBILITY_LABELS,
   APPLY_METHOD_LABELS,
   DIVERSITY_TAG_OPTIONS,
+  SALARY_CURRENCY_LABELS,
 } from '@/constants/enums';
 import { formatSalaryAsLPA } from '@/utils/format';
 import type { CreateJobRequest, SpecificDegree, NoticePeriodPreference } from '@/types/job';
@@ -63,6 +65,7 @@ import type { FormDraft } from '@/types/draft';
 function toSelectOptions(labels: Record<string, string>): SelectOption[] {
   return Object.entries(labels).map(([value, label]) => ({ value, label }));
 }
+
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -90,14 +93,7 @@ export default function PostJobPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(0);
   const [form, setForm] = useState<CreateJobRequest>(initialForm);
-  const [skillInput, setSkillInput] = useState('');
-  const [niceSkillInput, setNiceSkillInput] = useState('');
-  const [certInput, setCertInput] = useState('');
   const [tagInput, setTagInput] = useState('');
-  const [perkInput, setPerkInput] = useState('');
-  const [langInput, setLangInput] = useState('');
-  const [addLocInput, setAddLocInput] = useState('');
-  const [degreeSpecInput, setDegreeSpecInput] = useState('');
 
   // Template state
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
@@ -499,17 +495,21 @@ export default function PostJobPage() {
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input
+                <ServerAutoSuggest
+                  category="industry"
                   label="Industry"
                   placeholder="e.g. Information Technology"
                   value={form.industry || ''}
-                  onChange={(e) => updateField('industry', e.target.value)}
+                  onChange={(v) => updateField('industry', v as string)}
+                  allowCreate
                 />
-                <Input
+                <ServerAutoSuggest
+                  category="department"
                   label="Department"
                   placeholder="e.g. Engineering"
                   value={form.department || ''}
-                  onChange={(e) => updateField('department', e.target.value)}
+                  onChange={(v) => updateField('department', v as string)}
+                  allowCreate
                 />
               </div>
               <Select
@@ -521,17 +521,21 @@ export default function PostJobPage() {
                 }
                 placeholder="Select level"
               />
-              <Input
+              <ServerAutoSuggest
+                category="field_of_study"
                 label="Preferred Education Field"
                 placeholder="e.g. Computer Science, MBA"
                 value={form.preferredEducationField || ''}
-                onChange={(e) => updateField('preferredEducationField', e.target.value)}
+                onChange={(v) => updateField('preferredEducationField', v as string)}
+                allowCreate
               />
-              <Input
+              <ServerAutoSuggest
+                category="role_category"
                 label="Role Category"
                 placeholder="e.g. Engineering, Marketing"
                 value={form.roleCategory || ''}
-                onChange={(e) => updateField('roleCategory', e.target.value)}
+                onChange={(v) => updateField('roleCategory', v as string)}
+                allowCreate
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Select
@@ -596,43 +600,15 @@ export default function PostJobPage() {
                   ))}
                 </div>
               </div>
-              {/* Degree Specializations */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Degree Specializations
-                </label>
-                <div className="mb-2 flex gap-2">
-                  <Input
-                    placeholder="e.g. Computer Science, Electronics"
-                    value={degreeSpecInput}
-                    onChange={(e) => setDegreeSpecInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addToArray('degreeSpecializations', degreeSpecInput, setDegreeSpecInput);
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() =>
-                      addToArray('degreeSpecializations', degreeSpecInput, setDegreeSpecInput)
-                    }
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(form.degreeSpecializations || []).map((d) => (
-                    <Tag
-                      key={d}
-                      label={d}
-                      onRemove={() => removeFromArray('degreeSpecializations', d)}
-                    />
-                  ))}
-                </div>
-              </div>
+              <ServerAutoSuggest
+                category="field_of_study"
+                label="Degree Specializations"
+                placeholder="e.g. Computer Science, Electronics"
+                multiple
+                allowCreate
+                value={form.degreeSpecializations || []}
+                onChange={(v) => updateField('degreeSpecializations', v as string[])}
+              />
             </div>
           )}
 
@@ -701,11 +677,12 @@ export default function PostJobPage() {
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input
+                <Select
                   label="Currency"
-                  placeholder="INR"
+                  options={toSelectOptions(SALARY_CURRENCY_LABELS)}
                   value={form.currency || ''}
-                  onChange={(e) => updateField('currency', e.target.value)}
+                  onChange={(v) => updateField('currency', v)}
+                  placeholder="Select currency"
                 />
                 <div className="flex items-end pb-1">
                   <Switch
@@ -733,12 +710,13 @@ export default function PostJobPage() {
           {step === 3 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-[var(--text)]">Location & Work Mode</h2>
-              <Input
+              <ServerAutoSuggest
+                category="location"
                 label="Location"
                 placeholder="e.g. Bangalore, Karnataka"
-                leftIcon={<MapPin className="h-4 w-4" />}
                 value={form.location}
-                onChange={(e) => updateField('location', e.target.value)}
+                onChange={(v) => updateField('location', v as string)}
+                allowCreate
                 required
               />
               <div className="grid gap-4 sm:grid-cols-2">
@@ -778,41 +756,15 @@ export default function PostJobPage() {
                   updateField('travelRequirementPercent', parseInt(e.target.value) || undefined)
                 }
               />
-              {/* Additional Locations */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Additional Locations
-                </label>
-                <div className="mb-2 flex gap-2">
-                  <Input
-                    placeholder="e.g. Mumbai, Delhi NCR"
-                    value={addLocInput}
-                    onChange={(e) => setAddLocInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addToArray('additionalLocations', addLocInput, setAddLocInput);
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() => addToArray('additionalLocations', addLocInput, setAddLocInput)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(form.additionalLocations || []).map((l) => (
-                    <Tag
-                      key={l}
-                      label={l}
-                      onRemove={() => removeFromArray('additionalLocations', l)}
-                    />
-                  ))}
-                </div>
-              </div>
+              <ServerAutoSuggest
+                category="location"
+                label="Additional Locations"
+                placeholder="e.g. Mumbai, Delhi NCR"
+                multiple
+                allowCreate
+                value={form.additionalLocations || []}
+                onChange={(v) => updateField('additionalLocations', v as string[])}
+              />
               <Switch
                 label="Accommodation provided"
                 checked={form.accommodationProvided || false}
@@ -897,152 +849,46 @@ export default function PostJobPage() {
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-[var(--text)]">Skills, Tags & More</h2>
 
-              {/* Required Skills */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Required Skills *
-                </label>
-                <div className="mb-2 flex gap-2">
-                  <Input
-                    placeholder="e.g. React, TypeScript"
-                    value={skillInput}
-                    onChange={(e) => setSkillInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addToArray('skillsRequired', skillInput, setSkillInput);
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() => addToArray('skillsRequired', skillInput, setSkillInput)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {form.skillsRequired.map((s) => (
-                    <Tag
-                      key={s}
-                      label={s}
-                      variant="primary"
-                      onRemove={() => removeFromArray('skillsRequired', s)}
-                    />
-                  ))}
-                </div>
-              </div>
+              <ServerAutoSuggest
+                category="skill"
+                label="Required Skills"
+                placeholder="e.g. React, TypeScript"
+                multiple
+                allowCreate
+                required
+                value={form.skillsRequired}
+                onChange={(v) => updateField('skillsRequired', v as string[])}
+              />
 
-              {/* Nice to Have Skills */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Nice-to-Have Skills
-                </label>
-                <div className="mb-2 flex gap-2">
-                  <Input
-                    placeholder="e.g. GraphQL, Docker"
-                    value={niceSkillInput}
-                    onChange={(e) => setNiceSkillInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addToArray('niceToHaveSkills', niceSkillInput, setNiceSkillInput);
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() =>
-                      addToArray('niceToHaveSkills', niceSkillInput, setNiceSkillInput)
-                    }
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(form.niceToHaveSkills || []).map((s) => (
-                    <Tag
-                      key={s}
-                      label={s}
-                      onRemove={() => removeFromArray('niceToHaveSkills', s)}
-                    />
-                  ))}
-                </div>
-              </div>
+              <ServerAutoSuggest
+                category="skill"
+                label="Nice-to-Have Skills"
+                placeholder="e.g. GraphQL, Docker"
+                multiple
+                allowCreate
+                value={form.niceToHaveSkills || []}
+                onChange={(v) => updateField('niceToHaveSkills', v as string[])}
+              />
 
-              {/* Certifications */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Certifications Required
-                </label>
-                <div className="mb-2 flex gap-2">
-                  <Input
-                    placeholder="e.g. AWS Solutions Architect"
-                    value={certInput}
-                    onChange={(e) => setCertInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addToArray('certificationsRequired', certInput, setCertInput);
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() => addToArray('certificationsRequired', certInput, setCertInput)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(form.certificationsRequired || []).map((c) => (
-                    <Tag
-                      key={c}
-                      label={c}
-                      onRemove={() => removeFromArray('certificationsRequired', c)}
-                    />
-                  ))}
-                </div>
-              </div>
+              <ServerAutoSuggest
+                category="certification"
+                label="Certifications Required"
+                placeholder="e.g. AWS Solutions Architect"
+                multiple
+                allowCreate
+                value={form.certificationsRequired || []}
+                onChange={(v) => updateField('certificationsRequired', v as string[])}
+              />
 
-              {/* Languages Required */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Languages Required
-                </label>
-                <div className="mb-2 flex gap-2">
-                  <Input
-                    placeholder="e.g. English, Hindi"
-                    value={langInput}
-                    onChange={(e) => setLangInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addToArray('languagesRequired', langInput, setLangInput);
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() => addToArray('languagesRequired', langInput, setLangInput)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(form.languagesRequired || []).map((l) => (
-                    <Tag
-                      key={l}
-                      label={l}
-                      onRemove={() => removeFromArray('languagesRequired', l)}
-                    />
-                  ))}
-                </div>
-              </div>
+              <ServerAutoSuggest
+                category="language"
+                label="Languages Required"
+                placeholder="e.g. English, Hindi"
+                multiple
+                allowCreate
+                value={form.languagesRequired || []}
+                onChange={(v) => updateField('languagesRequired', v as string[])}
+              />
 
               {/* Tags */}
               <div>
@@ -1074,37 +920,15 @@ export default function PostJobPage() {
                 </div>
               </div>
 
-              {/* Job Perks */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Job Perks
-                </label>
-                <div className="mb-2 flex gap-2">
-                  <Input
-                    placeholder="e.g. Free meals, Gym membership"
-                    value={perkInput}
-                    onChange={(e) => setPerkInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addToArray('jobPerks', perkInput, setPerkInput);
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() => addToArray('jobPerks', perkInput, setPerkInput)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(form.jobPerks || []).map((p) => (
-                    <Tag key={p} label={p} onRemove={() => removeFromArray('jobPerks', p)} />
-                  ))}
-                </div>
-              </div>
+              <ServerAutoSuggest
+                category="benefit"
+                label="Job Perks"
+                placeholder="e.g. Free meals, Gym membership"
+                multiple
+                allowCreate
+                value={form.jobPerks || []}
+                onChange={(v) => updateField('jobPerks', v as string[])}
+              />
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <Select

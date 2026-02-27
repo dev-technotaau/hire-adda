@@ -1,33 +1,19 @@
 'use client';
 
-import { forwardRef, useState, useRef, useEffect, type InputHTMLAttributes, type ChangeEvent } from 'react';
-import { ChevronDown } from 'lucide-react';
+import {
+  forwardRef,
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+  type InputHTMLAttributes,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from 'react';
+import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const COUNTRY_CODES = [
-  { code: '+91', flag: '\u{1F1EE}\u{1F1F3}', label: 'India' },
-  { code: '+1', flag: '\u{1F1FA}\u{1F1F8}', label: 'US/Canada' },
-  { code: '+44', flag: '\u{1F1EC}\u{1F1E7}', label: 'UK' },
-  { code: '+61', flag: '\u{1F1E6}\u{1F1FA}', label: 'Australia' },
-  { code: '+971', flag: '\u{1F1E6}\u{1F1EA}', label: 'UAE' },
-  { code: '+966', flag: '\u{1F1F8}\u{1F1E6}', label: 'Saudi Arabia' },
-  { code: '+65', flag: '\u{1F1F8}\u{1F1EC}', label: 'Singapore' },
-  { code: '+49', flag: '\u{1F1E9}\u{1F1EA}', label: 'Germany' },
-  { code: '+33', flag: '\u{1F1EB}\u{1F1F7}', label: 'France' },
-  { code: '+81', flag: '\u{1F1EF}\u{1F1F5}', label: 'Japan' },
-  { code: '+86', flag: '\u{1F1E8}\u{1F1F3}', label: 'China' },
-  { code: '+82', flag: '\u{1F1F0}\u{1F1F7}', label: 'South Korea' },
-  { code: '+55', flag: '\u{1F1E7}\u{1F1F7}', label: 'Brazil' },
-  { code: '+27', flag: '\u{1F1FF}\u{1F1E6}', label: 'South Africa' },
-  { code: '+234', flag: '\u{1F1F3}\u{1F1EC}', label: 'Nigeria' },
-  { code: '+254', flag: '\u{1F1F0}\u{1F1EA}', label: 'Kenya' },
-  { code: '+60', flag: '\u{1F1F2}\u{1F1FE}', label: 'Malaysia' },
-  { code: '+63', flag: '\u{1F1F5}\u{1F1ED}', label: 'Philippines' },
-  { code: '+977', flag: '\u{1F1F3}\u{1F1F5}', label: 'Nepal' },
-  { code: '+94', flag: '\u{1F1F1}\u{1F1F0}', label: 'Sri Lanka' },
-  { code: '+880', flag: '\u{1F1E7}\u{1F1E9}', label: 'Bangladesh' },
-  { code: '+92', flag: '\u{1F1F5}\u{1F1F0}', label: 'Pakistan' },
-] as const;
+import { COUNTRY_CODES, type CountryCode } from '@/constants/country-codes';
 
 interface PhoneInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
   label?: string;
@@ -49,14 +35,15 @@ const sizeStyles = {
   lg: 'h-12 text-base',
 };
 
+// Pre-sort by code length descending for detection
+const SORTED_CODES = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
+
 /** Detect country code from a full phone number */
 function detectCode(number: string): string | null {
   if (!number) return null;
   const cleaned = number.replace(/\s+/g, '');
   if (!cleaned.startsWith('+')) return null;
-  // Match longest code first (e.g., +971 before +97 before +9)
-  const sorted = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
-  for (const c of sorted) {
+  for (const c of SORTED_CODES) {
     if (cleaned.startsWith(c.code)) return c.code;
   }
   return null;
@@ -92,7 +79,12 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
     const detectedCode = value ? detectCode(value) : null;
     const [selectedCode, setSelectedCode] = useState(detectedCode || defaultCode);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const [highlightIndex, setHighlightIndex] = useState(-1);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
+    const phoneInputRef = useRef<HTMLInputElement | null>(null);
 
     // Sync selectedCode when value changes externally
     useEffect(() => {
@@ -101,6 +93,16 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         if (code && code !== selectedCode) setSelectedCode(code);
       }
     }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Focus search input when dropdown opens
+    useEffect(() => {
+      if (dropdownOpen) {
+        setSearch('');
+        setHighlightIndex(-1);
+        // Small delay so the dropdown renders first
+        requestAnimationFrame(() => searchInputRef.current?.focus());
+      }
+    }, [dropdownOpen]);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -114,13 +116,35 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
       return () => document.removeEventListener('mousedown', handler);
     }, [dropdownOpen]);
 
+    // Filter countries by search query
+    const filtered = useMemo(() => {
+      if (!search.trim()) return COUNTRY_CODES;
+      const q = search.trim().toLowerCase();
+      return COUNTRY_CODES.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.code.includes(q) ||
+          c.iso.toLowerCase().includes(q),
+      );
+    }, [search]);
+
+    // Scroll highlighted item into view
+    useEffect(() => {
+      if (highlightIndex < 0 || !listRef.current) return;
+      const items = listRef.current.querySelectorAll('[data-country-item]');
+      items[highlightIndex]?.scrollIntoView({ block: 'nearest' });
+    }, [highlightIndex]);
+
     const localValue = value ? stripCode(value, selectedCode) : '';
     const currentCountry = COUNTRY_CODES.find((c) => c.code === selectedCode) || COUNTRY_CODES[0];
 
-    const emitChange = (local: string, code: string) => {
-      const fullNumber = local ? `${code}${local}` : '';
-      onValueChange?.(fullNumber);
-    };
+    const emitChange = useCallback(
+      (local: string, code: string) => {
+        const fullNumber = local ? `${code}${local}` : '';
+        onValueChange?.(fullNumber);
+      },
+      [onValueChange],
+    );
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
       const local = e.target.value.replace(/[^\d]/g, '');
@@ -135,11 +159,56 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
       onValueChange?.(fullNumber);
     };
 
-    const handleCodeSelect = (code: string) => {
-      setSelectedCode(code);
-      setDropdownOpen(false);
-      emitChange(localValue, code);
+    const handleCodeSelect = useCallback(
+      (c: CountryCode) => {
+        setSelectedCode(c.code);
+        setDropdownOpen(false);
+        setSearch('');
+        // Re-focus the phone number input after selection
+        requestAnimationFrame(() => phoneInputRef.current?.focus());
+        emitChange(localValue, c.code);
+      },
+      [emitChange, localValue],
+    );
+
+    const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setHighlightIndex((prev) => (prev < filtered.length - 1 ? prev + 1 : 0));
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setHighlightIndex((prev) => (prev > 0 ? prev - 1 : filtered.length - 1));
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (highlightIndex >= 0 && highlightIndex < filtered.length) {
+            handleCodeSelect(filtered[highlightIndex]);
+          } else if (filtered.length === 1) {
+            handleCodeSelect(filtered[0]);
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          setDropdownOpen(false);
+          phoneInputRef.current?.focus();
+          break;
+        case 'Tab':
+          setDropdownOpen(false);
+          break;
+      }
     };
+
+    // Merge refs
+    const setRefs = useCallback(
+      (node: HTMLInputElement | null) => {
+        phoneInputRef.current = node;
+        if (typeof ref === 'function') ref(node);
+        else if (ref) (ref as React.MutableRefObject<HTMLInputElement | null>).current = node;
+      },
+      [ref],
+    );
 
     return (
       <div className="w-full">
@@ -163,38 +232,85 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
               onClick={() => !props.disabled && setDropdownOpen(!dropdownOpen)}
               className={cn(
                 'flex shrink-0 items-center gap-1 border-r border-[var(--border)] bg-[var(--bg-secondary)] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)]',
-                inputSize === 'sm' ? 'h-8 px-2 text-sm' : inputSize === 'lg' ? 'h-12 px-3 text-base' : 'h-10 px-2.5 text-sm',
+                inputSize === 'sm'
+                  ? 'h-8 px-2 text-sm'
+                  : inputSize === 'lg'
+                    ? 'h-12 px-3 text-base'
+                    : 'h-10 px-2.5 text-sm',
                 props.disabled && 'pointer-events-none',
               )}
-              aria-label="Select country code"
+              aria-label={`Select country code, current: ${currentCountry.name} ${selectedCode}`}
+              aria-expanded={dropdownOpen}
+              aria-haspopup="listbox"
               tabIndex={-1}
             >
               <span>{currentCountry.flag}</span>
               <span>{selectedCode}</span>
-              <ChevronDown className="h-3 w-3 opacity-50" />
+              <ChevronDown
+                className={cn('h-3 w-3 opacity-50 transition-transform', dropdownOpen && 'rotate-180')}
+              />
             </button>
             {dropdownOpen && (
-              <div className="absolute top-full left-0 z-50 mt-1 max-h-60 w-56 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--bg)] py-1 shadow-lg">
-                {COUNTRY_CODES.map((c) => (
-                  <button
-                    key={c.code}
-                    type="button"
-                    onClick={() => handleCodeSelect(c.code)}
-                    className={cn(
-                      'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-secondary)]',
-                      c.code === selectedCode && 'bg-primary/5 text-primary font-medium',
-                    )}
-                  >
-                    <span>{c.flag}</span>
-                    <span className="flex-1 truncate">{c.label}</span>
-                    <span className="text-[var(--text-muted)]">{c.code}</span>
-                  </button>
-                ))}
+              <div className="absolute top-full left-0 z-50 mt-1 w-72 rounded-lg border border-[var(--border)] bg-[var(--bg)] shadow-lg">
+                {/* Search input */}
+                <div className="border-b border-[var(--border)] p-2">
+                  <div className="flex items-center gap-2 rounded-md bg-[var(--bg-secondary)] px-2.5">
+                    <Search className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setHighlightIndex(-1);
+                      }}
+                      onKeyDown={handleSearchKeyDown}
+                      placeholder="Search country or code..."
+                      className="w-full bg-transparent py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none"
+                      aria-label="Search countries"
+                    />
+                  </div>
+                </div>
+                {/* Country list */}
+                <div
+                  ref={listRef}
+                  className="max-h-60 overflow-y-auto py-1"
+                  role="listbox"
+                  aria-label="Country codes"
+                >
+                  {filtered.length === 0 ? (
+                    <p className="px-3 py-4 text-center text-sm text-[var(--text-muted)]">
+                      No countries found
+                    </p>
+                  ) : (
+                    filtered.map((c, idx) => (
+                      <button
+                        key={`${c.iso}-${c.code}`}
+                        type="button"
+                        data-country-item
+                        role="option"
+                        aria-selected={c.code === selectedCode}
+                        onClick={() => handleCodeSelect(c)}
+                        onMouseEnter={() => setHighlightIndex(idx)}
+                        className={cn(
+                          'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
+                          idx === highlightIndex && 'bg-[var(--bg-secondary)]',
+                          c.code === selectedCode && 'text-primary font-medium',
+                          idx !== highlightIndex && 'hover:bg-[var(--bg-secondary)]',
+                        )}
+                      >
+                        <span className="shrink-0">{c.flag}</span>
+                        <span className="flex-1 truncate">{c.name}</span>
+                        <span className="shrink-0 text-[var(--text-muted)]">{c.code}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
             )}
           </div>
           <input
-            ref={ref}
+            ref={setRefs}
             id={inputId}
             type="tel"
             value={localValue}

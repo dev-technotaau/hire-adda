@@ -3,8 +3,7 @@ import { Plus } from 'lucide-react';
 import Textarea from '@/components/ui/Textarea';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
-import { CORE_VALUE_SUGGESTIONS, ERG_SUGGESTIONS } from '@/constants/suggestions';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import type { EmployerProfileSectionProps } from './types';
 
 export default function CultureSection({
@@ -55,11 +54,11 @@ export default function CultureSection({
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="core_value"
               placeholder="e.g. Innovation, Integrity"
               value={coreValueInput}
               onChange={setCoreValueInput}
-              suggestions={CORE_VALUE_SUGGESTIONS}
               onSelect={(v) => addToArray('coreValues', v, setCoreValueInput)}
             />
           </div>
@@ -96,11 +95,11 @@ export default function CultureSection({
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="erg"
               placeholder="e.g. Women in Tech, LGBTQ+ Alliance"
               value={ergInput}
               onChange={setErgInput}
-              suggestions={ERG_SUGGESTIONS}
               onSelect={(v) => addToArray('employeeResourceGroups', v, setErgInput)}
             />
           </div>

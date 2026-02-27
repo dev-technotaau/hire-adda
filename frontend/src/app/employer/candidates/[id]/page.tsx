@@ -267,6 +267,9 @@ export default function EmployerCandidateDetailPage() {
                         <MessageCircle className="h-4 w-4" /> WhatsApp
                       </a>
                     )}
+                    {!profile?.user?.email && !profile?.phone && !profile?.user?.mobileNumber && !profile?.user?.whatsappNumber && (
+                      <p className="px-3 py-2 text-sm text-[var(--text-muted)]">No contact info available</p>
+                    )}
                   </div>
                 </>
               )}

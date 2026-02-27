@@ -5,9 +5,8 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import DatePicker from '@/components/ui/DatePicker';
-import { TEST_SCORE_SUGGESTIONS } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { CourseCompletionEntry, TestScoreEntry } from '@/types/candidate';
 
@@ -137,11 +136,11 @@ export default function CoursesSection({ form, updateField }: ProfileSectionProp
                   </button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SuggestionInput
+                  <ServerSuggestionInput
+                    category="test_score"
                     label="Test Name"
                     value={test.testName}
                     onChange={(val) => updateTestScore(i, { testName: val })}
-                    suggestions={TEST_SCORE_SUGGESTIONS}
                     required
                   />
                   <Input

@@ -36,7 +36,7 @@ import {
   Briefcase as BriefcaseBusiness,
 } from 'lucide-react';
 import OnboardingShell, { type OnboardingStep } from '@/components/onboarding/OnboardingShell';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import { useOnboarding, markOnboardingComplete } from '@/hooks/use-onboarding';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -51,17 +51,8 @@ import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
 import { COMPANY_TYPE_LABELS, FUNDING_STAGE_LABELS } from '@/constants/enums';
 import {
-  INDUSTRY_SUGGESTIONS,
-  LOCATION_SUGGESTIONS,
   INDIAN_STATES,
-  BENEFIT_SUGGESTIONS,
-  SKILL_SUGGESTIONS,
   REVENUE_RANGE_OPTIONS,
-  SUB_INDUSTRY_SUGGESTIONS,
-  CORE_VALUE_SUGGESTIONS,
-  INVESTOR_SUGGESTIONS,
-  PRODUCT_SERVICE_SUGGESTIONS,
-  ERG_SUGGESTIONS,
 } from '@/constants/suggestions';
 import { useAuth } from '@/hooks/use-auth';
 import type {
@@ -821,23 +812,23 @@ export default function EmployerOnboardingPage() {
         />
       </div>
 
-      <SuggestionInput
+      <ServerSuggestionInput
         label="Industry"
         placeholder="e.g. Information Technology"
         value={data.industry}
         onChange={(v) => updateData({ industry: v })}
-        suggestions={INDUSTRY_SUGGESTIONS}
+        category="industry"
         onSelect={(v) => updateData({ industry: v })}
         leftIcon={<Briefcase className="h-4 w-4" />}
         required
       />
 
-      <SuggestionInput
+      <ServerSuggestionInput
         label="Sub-Industry"
         placeholder="e.g. SaaS, AI/ML, Payments"
         value={data.subIndustry}
         onChange={(v) => updateData({ subIndustry: v })}
-        suggestions={SUB_INDUSTRY_SUGGESTIONS}
+        category="sub_industry"
         onSelect={(v) => updateData({ subIndustry: v })}
         leftIcon={<BriefcaseBusiness className="h-4 w-4" />}
       />
@@ -848,11 +839,11 @@ export default function EmployerOnboardingPage() {
         <p className="mb-3 text-xs text-[var(--text-muted)]">Areas your company specializes in</p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="e.g. Cloud Computing, DevOps, AI/ML"
               value={specialtyInput}
               onChange={setSpecialtyInput}
-              suggestions={SKILL_SUGGESTIONS}
+              category="skill"
               onSelect={addSpecialty}
             />
           </div>
@@ -1026,11 +1017,11 @@ export default function EmployerOnboardingPage() {
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="e.g. Innovation, Integrity"
               value={coreValueInput}
               onChange={setCoreValueInput}
-              suggestions={CORE_VALUE_SUGGESTIONS}
+              category="core_value"
               onSelect={addCoreValue}
             />
           </div>
@@ -1063,11 +1054,11 @@ export default function EmployerOnboardingPage() {
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="e.g. Women in Tech, LGBTQ+ Alliance"
               value={ergInput}
               onChange={setErgInput}
-              suggestions={ERG_SUGGESTIONS}
+              category="erg"
               onSelect={addErg}
             />
           </div>
@@ -1131,11 +1122,11 @@ export default function EmployerOnboardingPage() {
 
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="e.g. Health Insurance"
               value={benefitInput}
               onChange={setBenefitInput}
-              suggestions={BENEFIT_SUGGESTIONS}
+              category="benefit"
               onSelect={addBenefit}
             />
           </div>
@@ -1208,11 +1199,11 @@ export default function EmployerOnboardingPage() {
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="e.g. React, Node.js, AWS"
               value={techInput}
               onChange={setTechInput}
-              suggestions={SKILL_SUGGESTIONS}
+              category="skill"
               onSelect={addTech}
             />
           </div>
@@ -1246,11 +1237,11 @@ export default function EmployerOnboardingPage() {
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="e.g. Enterprise Software, API Services"
               value={productInput}
               onChange={setProductInput}
-              suggestions={PRODUCT_SERVICE_SUGGESTIONS}
+              category="product_service"
               onSelect={addProduct}
             />
           </div>
@@ -1575,11 +1566,11 @@ export default function EmployerOnboardingPage() {
         <p className="mb-3 text-xs text-[var(--text-muted)]">Add your key investors and backers</p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="e.g. Sequoia Capital India"
               value={investorInput}
               onChange={setInvestorInput}
-              suggestions={INVESTOR_SUGGESTIONS}
+              category="investor"
               onSelect={addInvestor}
             />
           </div>
@@ -1699,12 +1690,12 @@ export default function EmployerOnboardingPage() {
 
   const renderAddress = () => (
     <div className="space-y-6">
-      <SuggestionInput
+      <ServerSuggestionInput
         label="Headquarters"
         placeholder="e.g. Bangalore, Karnataka"
         value={data.headquarters}
         onChange={(v) => updateData({ headquarters: v })}
-        suggestions={LOCATION_SUGGESTIONS}
+        category="location"
         onSelect={(v) => updateData({ headquarters: v })}
         leftIcon={<MapPin className="h-4 w-4" />}
       />
@@ -1764,11 +1755,11 @@ export default function EmployerOnboardingPage() {
         </p>
         <div className="flex gap-2">
           <div className="flex-1">
-            <SuggestionInput
+            <ServerSuggestionInput
               placeholder="e.g. Mumbai, Maharashtra"
               value={locationInput}
               onChange={setLocationInput}
-              suggestions={LOCATION_SUGGESTIONS}
+              category="location"
               onSelect={addLocation}
             />
           </div>

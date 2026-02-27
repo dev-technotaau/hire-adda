@@ -195,6 +195,98 @@ export const addToSearchHistory = async (
   }
 };
 
+// ─── Field History (generic per-field, per-user) ────────────────────
+
+/**
+ * Get field history
+ * GET /api/v1/search/field-history/:field?limit=10
+ */
+export const getFieldHistory = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    const { field } = req.params;
+    const limit = Math.min(Number(req.query.limit) || 10, 20);
+
+    const history = await searchService.getFieldHistory(req.user.id, field as string, limit);
+
+    res.status(200).json({ status: 'success', data: { history } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Add to field history
+ * POST /api/v1/search/field-history/:field  { value }
+ */
+export const addToFieldHistory = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    const { field } = req.params;
+    const { value } = req.body;
+
+    await searchService.addToFieldHistory(req.user.id, field as string, value);
+
+    res.status(200).json({ status: 'success', message: 'Added to field history' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Clear field history
+ * DELETE /api/v1/search/field-history/:field
+ */
+export const clearFieldHistory = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    const { field } = req.params;
+
+    await searchService.clearFieldHistory(req.user.id, field as string);
+
+    res.status(200).json({ status: 'success', message: 'Field history cleared' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Unified suggestions — serves all 29 suggestion categories from the suggestions index
+ * GET /api/v1/search/suggest?q=reac&category=skill&limit=15
+ * GET /api/v1/search/suggest?q=mum&category=location&region=IN&limit=10
+ * GET /api/v1/search/suggest?q=&category=revenue_range&limit=50
+ */
+export const suggest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const q = (req.query.q as string) || '';
+    const category = req.query.category as string;
+    const limit = Math.min(Number(req.query.limit) || 15, 100);
+    const region = req.query.region as string | undefined;
+
+    const results = await searchService.suggest(q, category, limit, region);
+
+    res.status(200).json({ status: 'success', data: { suggestions: results } });
+  } catch (error) {
+    next(error);
+  }
+};
+
 /**
  * Popular searches (trending)
  * GET /api/v1/search/popular?limit=10

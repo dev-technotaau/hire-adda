@@ -66,6 +66,14 @@ export default function AdminLoginPage() {
         ...(mfaRequired && { mfaCode }),
       };
       const res = await login(loginData, turnstileToken || undefined);
+
+      // Handle MFA requirement — backend returns requireMfa flag without user data
+      if (res.data.requireMfa) {
+        setMfaRequired(true);
+        setStep('mfa');
+        return;
+      }
+
       const role = res.data.user.role as Role;
 
       if (!ADMIN_ROLES.includes(role)) {

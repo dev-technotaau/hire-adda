@@ -4,7 +4,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
 import {
@@ -13,11 +13,6 @@ import {
   EDUCATION_LEVEL_LABELS,
   SPECIFIC_DEGREE_LABELS,
 } from '@/constants/enums';
-import {
-  INSTITUTION_SUGGESTIONS,
-  DEGREE_SUGGESTIONS,
-  FIELD_OF_STUDY_SUGGESTIONS,
-} from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { EducationEntry, UpdateCandidateRequest } from '@/types/candidate';
 
@@ -98,27 +93,27 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
                 </button>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <SuggestionInput
+                <ServerSuggestionInput
+                  category="institution"
                   label="Institution"
                   value={edu.institution}
                   onChange={(val) => updateEducation(i, { institution: val })}
-                  suggestions={INSTITUTION_SUGGESTIONS}
                   required
                 />
-                <SuggestionInput
+                <ServerSuggestionInput
+                  category="degree"
                   label="Degree"
                   value={edu.degree}
                   onChange={(val) => updateEducation(i, { degree: val })}
-                  suggestions={DEGREE_SUGGESTIONS}
                   required
                 />
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <SuggestionInput
+                <ServerSuggestionInput
+                  category="field_of_study"
                   label="Field of Study"
                   value={edu.field}
                   onChange={(val) => updateEducation(i, { field: val })}
-                  suggestions={FIELD_OF_STUDY_SUGGESTIONS}
                   required
                 />
                 <DatePicker
@@ -145,10 +140,12 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
                   }
                   placeholder="Select type"
                 />
-                <Input
+                <ServerSuggestionInput
+                  category="field_of_study"
                   label="Specialization"
                   value={edu.specialization || ''}
-                  onChange={(e) => updateEducation(i, { specialization: e.target.value })}
+                  onChange={(v) => updateEducation(i, { specialization: v })}
+                  onSelect={(v) => updateEducation(i, { specialization: v })}
                   placeholder="e.g. Machine Learning"
                 />
                 <Select

@@ -7,7 +7,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import PhoneInput from '@/components/ui/PhoneInput';
 import Textarea from '@/components/ui/Textarea';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
 import ImageCropper from '@/components/ui/ImageCropper';
@@ -21,12 +21,7 @@ import {
   PRONOUN_OPTIONS,
   RESERVATION_CATEGORY_LABELS,
 } from '@/constants/enums';
-import {
-  NATIONALITY_SUGGESTIONS,
-  LOCATION_SUGGESTIONS,
-  INDIAN_STATES,
-  COUNTRY_SUGGESTIONS,
-} from '@/constants/suggestions';
+import { INDIAN_STATES } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { CandidateProfile, UpdateCandidateRequest } from '@/types/candidate';
 import type { ApiError } from '@/types/api';
@@ -227,20 +222,20 @@ export default function PersonalSection({ form, updateField, profile }: Personal
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="nationality"
               label="Nationality"
               placeholder="e.g. Indian"
               value={form.nationality || ''}
               onChange={(val) => updateField('nationality', val)}
-              suggestions={NATIONALITY_SUGGESTIONS}
             />
-            <SuggestionInput
+            <ServerSuggestionInput
+              category="location"
               label="Current Location"
               placeholder="e.g. Bangalore, Karnataka"
               leftIcon={<MapPin className="h-4 w-4" />}
               value={form.currentLocation || ''}
               onChange={(val) => updateField('currentLocation', val)}
-              suggestions={LOCATION_SUGGESTIONS}
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -259,12 +254,12 @@ export default function PersonalSection({ form, updateField, profile }: Personal
               placeholder="Select category"
             />
           </div>
-          <SuggestionInput
+          <ServerSuggestionInput
+            category="location"
             label="Hometown"
             placeholder="e.g. Jaipur, Rajasthan"
             value={form.hometown || ''}
             onChange={(val) => updateField('hometown', val)}
-            suggestions={LOCATION_SUGGESTIONS}
           />
 
           {/* Address */}
@@ -284,12 +279,12 @@ export default function PersonalSection({ form, updateField, profile }: Personal
                 onChange={(e) => updateField('addressLine2', e.target.value)}
               />
               <div className="grid gap-4 sm:grid-cols-3">
-                <SuggestionInput
+                <ServerSuggestionInput
+                  category="location"
                   label="City"
                   placeholder="e.g. Mumbai"
                   value={form.city || ''}
                   onChange={(val) => updateField('city', val)}
-                  suggestions={LOCATION_SUGGESTIONS}
                 />
                 <Select
                   label="State"
@@ -305,12 +300,12 @@ export default function PersonalSection({ form, updateField, profile }: Personal
                   onChange={(e) => updateField('pincode', e.target.value)}
                 />
               </div>
-              <SuggestionInput
+              <ServerSuggestionInput
+                category="country"
                 label="Country"
                 placeholder="e.g. India"
                 value={form.country || ''}
                 onChange={(val) => updateField('country', val)}
-                suggestions={COUNTRY_SUGGESTIONS}
               />
             </div>
           </div>

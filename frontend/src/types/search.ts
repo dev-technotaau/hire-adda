@@ -22,6 +22,16 @@ export interface PopularSearch {
   count: number;
 }
 
+export interface FieldHistoryItem {
+  value: string;
+  timestamp: number;
+}
+
+export interface UnifiedSuggestion {
+  text: string;
+  count: number;
+}
+
 export interface FacetBucket {
   key: string;
   count: number;

@@ -19,6 +19,8 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 import SearchBar from '@/components/ui/SearchBar';
 import AutoSuggest from '@/components/ui/AutoSuggest';
 import { useSuggestLocations } from '@/hooks/use-search';
+import { useSuggest, useStaticSuggestions } from '@/hooks/use-suggestions';
+import { useFieldHistory, useAddToFieldHistory, useClearFieldHistory } from '@/hooks/use-field-history';
 import type { Role } from '@/types/auth';
 import type { AutocompleteResult } from '@/types/search';
 
@@ -70,6 +72,51 @@ export default function DashboardHeader() {
     [locationSuggestions],
   );
 
+  const { suggestions: esSuggestions, isLoading: isLoadingEsSuggestions } = useSuggest({
+    category: 'location',
+    query: locationInput,
+    limit: 10,
+    minChars: 2,
+  });
+  const locationAdditionalSections = useMemo(
+    () =>
+      locationInput.length >= 2
+        ? [
+            {
+              label: 'Suggestions',
+              options: esSuggestions.map((s) => ({ label: s, value: s })),
+              isLoading: isLoadingEsSuggestions,
+            },
+          ]
+        : [],
+    [locationInput, esSuggestions, isLoadingEsSuggestions],
+  );
+
+  // ── Focus sections: Recent Locations + Popular Locations ──
+  const { data: locationHistory } = useFieldHistory('location');
+  const addLocationHistory = useAddToFieldHistory('location');
+  const clearLocationHistory = useClearFieldHistory('location');
+  const { suggestions: popularLocations, isLoading: isLoadingPopular } =
+    useStaticSuggestions('location', 8);
+
+  const locationFocusSections = useMemo(() => {
+    const sections: import('@/components/ui/AutoSuggest').AdditionalSuggestSection[] = [];
+    const historyItems = locationHistory?.data?.history ?? [];
+    if (user && historyItems.length > 0) {
+      sections.push({
+        label: 'Recent Locations',
+        options: historyItems.map((h) => ({ label: h.value, value: h.value })),
+        onClear: () => clearLocationHistory.mutate(),
+      });
+    }
+    sections.push({
+      label: 'Popular Locations',
+      options: popularLocations.map((loc) => ({ label: loc, value: loc })),
+      isLoading: isLoadingPopular,
+    });
+    return sections;
+  }, [user, locationHistory, popularLocations, isLoadingPopular, clearLocationHistory]);
+
   // Close user menu on route change (adjust-state-during-render pattern)
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (prevPathname !== pathname) {
@@ -117,10 +164,14 @@ export default function DashboardHeader() {
     [navigateToSearch],
   );
 
-  const handleLocationChange = useCallback((value: string | string[]) => {
-    const loc = typeof value === 'string' ? value : value[0] || '';
-    setLocation(loc);
-  }, []);
+  const handleLocationChange = useCallback(
+    (value: string | string[]) => {
+      const loc = typeof value === 'string' ? value : value[0] || '';
+      setLocation(loc);
+      if (loc) addLocationHistory.mutate(loc);
+    },
+    [addLocationHistory],
+  );
 
   const openCommandPalette = () => {
     document.dispatchEvent(
@@ -170,6 +221,8 @@ export default function DashboardHeader() {
                 allowCreate
                 createLabel={(q) => `Search in "${q}"`}
                 minChars={2}
+                additionalSections={locationAdditionalSections}
+                focusSections={locationFocusSections}
               />
             </div>
           </div>

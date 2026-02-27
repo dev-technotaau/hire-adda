@@ -1,0 +1,277 @@
+/**
+ * Auto-suggestion data for onboarding and profile forms.
+ * Comprehensive lists based on Indian job market (Naukri/Indeed style).
+ */
+
+import { INDIAN_CITIES } from './indian-cities';
+
+export const SKILL_SUGGESTIONS = [
+  // Programming Languages
+  'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'Go', 'Rust', 'Ruby', 'PHP',
+  'Swift', 'Kotlin', 'Scala', 'R', 'MATLAB', 'Dart', 'Perl', 'Lua', 'Haskell', 'Elixir',
+  'Clojure', 'F#', 'Objective-C', 'Assembly', 'COBOL', 'Fortran', 'Shell Script', 'Bash',
+  'PowerShell', 'Groovy', 'Julia', 'Erlang', 'OCaml', 'Zig', 'Nim', 'Crystal', 'V',
+  'Solidity', 'Move', 'ABAP', 'Apex', 'PL/SQL', 'T-SQL', 'VBA', 'LabVIEW', 'Prolog',
+  'Lisp', 'Scheme', 'Smalltalk', 'Ada', 'RPG', 'ActionScript', 'CoffeeScript', 'Mojo',
+  // Frontend Frameworks & Libraries
+  'React', 'Angular', 'Vue.js', 'Next.js', 'Svelte', 'SvelteKit', 'Nuxt.js', 'Remix',
+  'Astro', 'Qwik', 'Solid.js', 'Preact', 'Lit', 'Alpine.js', 'HTMX', 'Ember.js',
+  'Backbone.js', 'Stimulus', 'Turbo', 'Hotwire', 'Gatsby',
+  // Frontend Core & Styling
+  'HTML5', 'CSS3', 'Tailwind CSS', 'Bootstrap', 'SASS', 'LESS', 'PostCSS', 'CSS Modules',
+  'Styled Components', 'Emotion', 'Vanilla Extract', 'UnoCSS', 'Windi CSS', 'Bulma',
+  'Foundation', 'Semantic UI', 'Tachyons', 'Panda CSS',
+  // State Management & Data Fetching
+  'Redux', 'Zustand', 'MobX', 'Recoil', 'Jotai', 'Valtio', 'XState', 'TanStack Query',
+  'SWR', 'Apollo Client', 'Relay', 'URQL', 'RTK Query', 'Pinia', 'Vuex', 'NgRx', 'Akita',
+  // UI Component Libraries
+  'Material UI', 'Chakra UI', 'Ant Design', 'Radix UI', 'Shadcn UI', 'Mantine',
+  'PrimeReact', 'Headless UI', 'DaisyUI', 'NextUI', 'Park UI', 'Ark UI', 'Vuetify',
+  'Quasar', 'Element Plus', 'Naive UI', 'PrimeVue', 'Blueprint.js', 'Fluent UI',
+  // Animation & Visualization
+  'Framer Motion', 'GSAP', 'Three.js', 'D3.js', 'Chart.js', 'Recharts', 'Highcharts',
+  'ApexCharts', 'Plotly', 'ECharts', 'Lottie', 'React Spring', 'Motion One',
+  'Anime.js', 'PixiJS', 'Fabric.js', 'Konva.js', 'Victory', 'Nivo', 'Visx',
+  // Build Tools & Bundlers
+  'Webpack', 'Vite', 'esbuild', 'Rollup', 'Turbopack', 'Parcel', 'SWC', 'Bun',
+  'Babel', 'Biome', 'tsup', 'unbuild', 'Rspack', 'Farm',
+  // jQuery & Legacy / Utility
+  'jQuery', 'Lodash', 'Underscore.js', 'Moment.js', 'date-fns', 'Day.js', 'Ramda', 'Immer',
+  // Backend Frameworks
+  'Node.js', 'Express.js', 'Django', 'Flask', 'Spring Boot', 'ASP.NET', 'ASP.NET Core',
+  'FastAPI', 'Ruby on Rails', 'Laravel', 'NestJS', 'Gin', 'Fiber', 'Actix', 'Phoenix',
+  'Hono', 'Koa', 'Fastify', 'Strapi', 'AdonisJS', 'Sails.js', 'Hapi', 'Rocket',
+  'Axum', 'Warp', 'Echo', 'Chi', 'Ktor', 'Micronaut', 'Quarkus', 'Helidon',
+  'Dropwizard', 'Play Framework', 'Grails', 'CakePHP', 'Symfony', 'CodeIgniter',
+  'Yii', 'Slim', 'Lumen', 'Vapor', 'Deno', 'Bun Runtime', 'Spring MVC',
+  'Spring WebFlux', 'Vert.x',
+  // ORM & Database Tools
+  'Prisma', 'Drizzle', 'TypeORM', 'Sequelize', 'Mongoose', 'Hibernate', 'SQLAlchemy',
+  'Django ORM', 'ActiveRecord', 'Entity Framework', 'GORM', 'Diesel', 'Knex.js',
+  'Objection.js', 'MikroORM', 'Tortoise ORM', 'Peewee', 'Bookshelf.js', 'jOOQ',
+  'MyBatis', 'Dapper', 'Ecto',
+  // API & Communication
+  'REST API', 'GraphQL', 'gRPC', 'tRPC', 'Protocol Buffers', 'WebSocket', 'Socket.IO',
+  'Server-Sent Events', 'MQTT', 'AMQP', 'OpenAPI', 'Swagger', 'Postman', 'Insomnia',
+  'Hoppscotch', 'OAuth', 'JWT', 'SAML', 'OpenID Connect', 'Webhook', 'JSON-RPC',
+  'Thrift', 'Avro', 'FlatBuffers', 'MessagePack',
+  // Databases
+  'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Elasticsearch', 'DynamoDB', 'Cassandra',
+  'Oracle Database', 'SQL Server', 'Firebase', 'Supabase', 'CockroachDB', 'PlanetScale',
+  'Neo4j', 'InfluxDB', 'TimescaleDB', 'MariaDB', 'SQLite', 'Pinecone', 'Weaviate',
+  'Qdrant', 'Milvus', 'ChromaDB', 'Couchbase', 'ArangoDB', 'RavenDB', 'ScyllaDB',
+  'ClickHouse', 'Druid', 'Presto', 'Trino', 'Apache HBase', 'FaunaDB', 'SurrealDB',
+  'TiDB', 'YugabyteDB', 'Vitess', 'Memcached', 'Amazon Redshift', 'Google BigQuery',
+  'Azure Synapse', 'Snowflake', 'Databricks', 'SingleStore', 'Neon',
+  // Cloud Platforms
+  'AWS', 'Azure', 'Google Cloud', 'DigitalOcean', 'Vercel', 'Netlify', 'Cloudflare',
+  'Heroku', 'Render', 'Railway', 'Fly.io', 'Linode', 'Vultr', 'OVHcloud',
+  'Oracle Cloud', 'IBM Cloud', 'Alibaba Cloud', 'Hetzner',
+  // AWS Services
+  'AWS EC2', 'AWS S3', 'AWS Lambda', 'AWS ECS', 'AWS EKS', 'AWS RDS', 'AWS DynamoDB',
+  'AWS SQS', 'AWS SNS', 'AWS CloudFront', 'AWS Route 53', 'AWS API Gateway',
+  'AWS Cognito', 'AWS Step Functions', 'AWS Kinesis', 'AWS Glue', 'AWS Athena',
+  'AWS SageMaker', 'AWS CloudWatch', 'AWS IAM', 'AWS VPC', 'AWS ElastiCache',
+  'AWS Bedrock', 'AWS CodePipeline', 'AWS CDK',
+  // Azure Services
+  'Azure App Service', 'Azure Functions', 'Azure AKS', 'Azure Cosmos DB',
+  'Azure Blob Storage', 'Azure Service Bus', 'Azure Event Hub', 'Azure Active Directory',
+  'Azure DevOps', 'Azure Logic Apps', 'Azure Cognitive Services',
+  // GCP Services
+  'Google Compute Engine', 'Google Cloud Functions', 'Google Cloud Run',
+  'Google Cloud Storage', 'Google Pub/Sub', 'Google Cloud Spanner',
+  'Google Vertex AI', 'Google Cloud Dataflow', 'Firebase Cloud Functions',
+  'Firebase Realtime Database', 'Firebase Firestore', 'Firebase Auth',
+  // DevOps & Infrastructure
+  'Docker', 'Kubernetes', 'Terraform', 'Ansible', 'Pulumi', 'CloudFormation',
+  'Helm', 'ArgoCD', 'FluxCD', 'Jenkins', 'GitHub Actions', 'GitLab CI', 'CircleCI',
+  'Travis CI', 'Drone CI', 'Tekton', 'Spinnaker', 'Harness', 'Buildkite',
+  'TeamCity', 'Bamboo', 'Azure Pipelines', 'AWS CodeBuild',
+  'Nginx', 'Apache', 'Caddy', 'Traefik', 'HAProxy', 'Envoy', 'Istio', 'Linkerd',
+  'Consul', 'Vault', 'Nomad', 'Packer', 'Vagrant', 'Chef', 'Puppet', 'SaltStack',
+  // Monitoring & Observability
+  'Datadog', 'Grafana', 'Prometheus', 'New Relic', 'PagerDuty', 'Splunk', 'ELK Stack',
+  'Jaeger', 'Zipkin', 'OpenTelemetry', 'Sentry', 'Honeycomb', 'Loki', 'Tempo',
+  'VictoriaMetrics', 'Dynatrace', 'AppDynamics', 'Nagios', 'Zabbix', 'Uptime Kuma',
+  // CI/CD & Git
+  'CI/CD', 'Git', 'GitHub', 'GitLab', 'Bitbucket', 'Gitea', 'Perforce', 'SVN',
+  'Trunk Based Development', 'GitFlow', 'Monorepo', 'Nx', 'Lerna', 'Turborepo',
+  // Linux & OS
+  'Linux', 'Ubuntu', 'CentOS', 'RHEL', 'Debian', 'Alpine Linux', 'Amazon Linux',
+  'Windows Server', 'macOS', 'FreeBSD',
+  // Mobile Development
+  'React Native', 'Flutter', 'iOS Development', 'Android Development', 'SwiftUI',
+  'Jetpack Compose', 'Expo', 'Capacitor', 'Ionic', 'Xamarin', 'MAUI',
+  'KMM (Kotlin Multiplatform)', 'Tauri', 'Electron', 'Progressive Web Apps',
+  'App Clips', 'Instant Apps', 'Core Data', 'Room Database', 'Realm',
+  'ARKit', 'ARCore', 'Core ML', 'TensorFlow Lite', 'Firebase Mobile',
+  // Machine Learning & AI
+  'Machine Learning', 'Deep Learning', 'Natural Language Processing', 'Computer Vision',
+  'TensorFlow', 'PyTorch', 'scikit-learn', 'Keras', 'XGBoost', 'LightGBM', 'CatBoost',
+  'Hugging Face', 'LangChain', 'LlamaIndex', 'OpenAI API', 'Anthropic API',
+  'Generative AI', 'Prompt Engineering', 'RAG', 'Fine-Tuning', 'RLHF',
+  'Stable Diffusion', 'Midjourney', 'DALL-E', 'GPT', 'LLM', 'Transformers',
+  'BERT', 'YOLO', 'OpenCV', 'Detectron2', 'SpaCy', 'NLTK', 'Gensim',
+  'FastAI', 'JAX', 'Flax', 'MLflow', 'Kubeflow', 'Ray', 'Weights & Biases',
+  'DVC', 'Label Studio', 'Roboflow', 'AutoML', 'Feature Store', 'Model Registry',
+  'ONNX', 'TensorRT', 'Triton Inference Server', 'BentoML', 'Seldon', 'vLLM',
+  'Ollama', 'LangSmith', 'LangGraph', 'CrewAI', 'AutoGen', 'Semantic Kernel',
+  // Data Science & Analytics
+  'Data Science', 'Data Analysis', 'Pandas', 'NumPy', 'SciPy', 'Matplotlib',
+  'Seaborn', 'Plotly', 'Bokeh', 'Streamlit', 'Gradio', 'Dash', 'Jupyter Notebook',
+  'Google Colab', 'Kaggle', 'Tableau', 'Power BI', 'Looker', 'Metabase', 'Superset',
+  'Qlik', 'MicroStrategy', 'TIBCO Spotfire', 'SAS', 'SPSS', 'Stata',
+  'Data Visualization', 'Statistical Analysis', 'A/B Testing', 'Experimentation',
+  // Data Engineering
+  'Data Engineering', 'ETL', 'ELT', 'Apache Spark', 'Apache Hadoop', 'Apache Kafka',
+  'Apache Airflow', 'Apache Flink', 'Apache Beam', 'Apache NiFi', 'Apache Hive',
+  'Apache Pig', 'dbt', 'Fivetran', 'Airbyte', 'Stitch', 'Talend', 'Informatica',
+  'Dagster', 'Prefect', 'Luigi', 'Mage AI', 'Delta Lake', 'Apache Iceberg',
+  'Apache Hudi', 'Data Lakehouse', 'Data Warehouse', 'Data Lake', 'Data Mesh',
+  'Data Catalog', 'Data Governance', 'Data Quality', 'Great Expectations',
+  // Design Tools
+  'Figma', 'Adobe XD', 'Sketch', 'Adobe Photoshop', 'Adobe Illustrator', 'Adobe InDesign',
+  'Adobe After Effects', 'Adobe Premiere Pro', 'Adobe Lightroom', 'Canva', 'InVision',
+  'Zeplin', 'Abstract', 'Principle', 'ProtoPie', 'Axure', 'Balsamiq', 'Marvel',
+  'Whimsical', 'Miro', 'FigJam', 'Maze', 'UserTesting', 'Hotjar', 'FullStory',
+  'Pendo', 'Mixpanel', 'Amplitude', 'Heap',
+  // Design Skills
+  'UI/UX Design', 'Wireframing', 'Prototyping', 'Design Systems', 'User Research',
+  'Usability Testing', 'Information Architecture', 'Interaction Design', 'Visual Design',
+  'Design Thinking', 'Accessibility (WCAG)', 'Responsive Design', 'Mobile-First Design',
+  'Motion Design', 'Iconography', 'Typography', 'Color Theory', 'Brand Design',
+  // Testing & QA
+  'Jest', 'Selenium', 'Cypress', 'Playwright', 'JUnit', 'Postman', 'API Testing',
+  'Performance Testing', 'Load Testing', 'Vitest', 'Mocha', 'Chai', 'TestNG',
+  'Appium', 'k6', 'JMeter', 'Gatling', 'Robot Framework', 'Cucumber', 'BDD', 'TDD',
+  'Pytest', 'RSpec', 'Jasmine', 'Karma', 'WebdriverIO', 'TestCafe', 'Detox',
+  'Maestro', 'Espresso', 'XCTest', 'Storybook Testing', 'Visual Regression Testing',
+  'Chaos Engineering', 'Gremlin', 'Litmus', 'Contract Testing', 'Pact',
+  'SonarQube', 'Snyk', 'OWASP ZAP', 'Burp Suite', 'Artillery', 'Locust',
+  // Security
+  'Cybersecurity', 'Network Security', 'Application Security', 'Cloud Security',
+  'DevSecOps', 'SAST', 'DAST', 'IAST', 'Penetration Testing', 'Vulnerability Assessment',
+  'SIEM', 'SOC', 'Incident Response', 'Threat Modeling', 'Encryption', 'PKI',
+  'IAM', 'Zero Trust', 'Firewall', 'IDS/IPS', 'WAF', 'DLP', 'Endpoint Security',
+  'OWASP Top 10', 'NIST Framework', 'ISO 27001', 'SOC 2', 'PCI DSS', 'GDPR', 'HIPAA',
+  'CrowdStrike', 'Palo Alto Networks', 'Fortinet', 'Wireshark', 'Nmap', 'Metasploit',
+  'Kali Linux', 'HashiCorp Vault', 'AWS KMS', 'Azure Key Vault',
+  // Messaging & Queues
+  'RabbitMQ', 'Apache Kafka', 'Amazon SQS', 'Azure Service Bus', 'Google Pub/Sub',
+  'Apache Pulsar', 'NATS', 'ZeroMQ', 'ActiveMQ', 'Celery', 'BullMQ', 'Sidekiq',
+  'Amazon Kinesis', 'Redis Streams',
+  // Search
+  'Elasticsearch', 'Apache Solr', 'Algolia', 'Meilisearch', 'Typesense', 'OpenSearch',
+  // CMS & Headless CMS
+  'WordPress', 'Drupal', 'Strapi', 'Contentful', 'Sanity', 'Ghost', 'Directus',
+  'Payload CMS', 'KeystoneJS', 'Prismic', 'Storyblok', 'DatoCMS', 'Hygraph',
+  // Project Management & Collaboration
+  'Project Management', 'Agile', 'Scrum', 'JIRA', 'Confluence', 'Kanban', 'Lean',
+  'OKRs', 'Monday.com', 'Asana', 'Trello', 'Notion', 'Linear', 'ClickUp',
+  'Basecamp', 'Shortcut', 'Wrike', 'Smartsheet', 'Airtable', 'Coda',
+  'Microsoft Teams', 'Slack', 'Zoom', 'Google Workspace', 'Microsoft 365',
+  // Soft Skills & Management
+  'Team Leadership', 'Communication', 'Problem Solving', 'Critical Thinking',
+  'Stakeholder Management', 'Risk Management', 'Change Management', 'Strategic Planning',
+  'Negotiation', 'Presentation Skills', 'Time Management', 'Conflict Resolution',
+  'Decision Making', 'Emotional Intelligence', 'Cross-functional Collaboration',
+  'Vendor Management', 'Budget Management', 'Performance Management',
+  'Coaching & Mentoring', 'Public Speaking', 'Business Writing',
+  // Business & Enterprise Tools
+  'SAP', 'SAP HANA', 'SAP S/4HANA', 'SAP BW', 'SAP FICO', 'SAP MM', 'SAP SD',
+  'SAP ABAP', 'Salesforce', 'Salesforce Lightning', 'Salesforce CPQ', 'HubSpot',
+  'Zoho', 'ServiceNow', 'Workday', 'Oracle ERP', 'Oracle Fusion', 'Dynamics 365',
+  'NetSuite', 'Zendesk', 'Freshdesk', 'Freshworks', 'Intercom',
+  'Tally', 'QuickBooks', 'Xero', 'FreshBooks',
+  // Marketing & Advertising
+  'Digital Marketing', 'SEO', 'SEM', 'Content Marketing', 'Social Media Marketing',
+  'Email Marketing', 'Affiliate Marketing', 'Influencer Marketing',
+  'Google Ads', 'Meta Ads', 'LinkedIn Ads', 'Twitter Ads', 'Google Analytics',
+  'Google Tag Manager', 'Google Search Console', 'Mailchimp', 'SendGrid',
+  'Marketo', 'Pardot', 'Klaviyo', 'ActiveCampaign', 'ConvertKit',
+  'Semrush', 'Ahrefs', 'Moz', 'Screaming Frog', 'Hootsuite', 'Buffer',
+  'Sprout Social', 'Later', 'Brandwatch', 'BuzzSumo',
+  'Content Writing', 'Copywriting', 'Technical Writing', 'Blog Writing',
+  'Creative Writing', 'UX Writing', 'Storytelling', 'Brand Strategy',
+  // Sales & CRM
+  'Sales', 'Business Development', 'Account Management', 'Key Account Management',
+  'Inside Sales', 'Field Sales', 'Channel Sales', 'Solution Selling',
+  'Consultative Selling', 'SPIN Selling', 'MEDDIC', 'Challenger Sale',
+  'Pipeline Management', 'Lead Generation', 'Cold Calling', 'Cold Emailing',
+  'Sales Enablement', 'Sales Operations', 'Revenue Operations',
+  'Salesforce CRM', 'HubSpot CRM', 'Pipedrive', 'Zoho CRM', 'Freshsales',
+  'Outreach', 'SalesLoft', 'Apollo.io', 'ZoomInfo', 'LinkedIn Sales Navigator',
+  // Finance & Accounting
+  'Financial Analysis', 'Financial Modeling', 'Accounting', 'Audit',
+  'Tax Planning', 'GST', 'Income Tax', 'Transfer Pricing', 'IFRS', 'Indian GAAP',
+  'US GAAP', 'Cost Accounting', 'Management Accounting', 'Treasury Management',
+  'Risk Management', 'Credit Analysis', 'Equity Research', 'Fixed Income',
+  'Derivatives', 'Portfolio Management', 'Mutual Funds', 'Investment Banking',
+  'M&A', 'Valuation', 'DCF Analysis', 'LBO Modeling', 'Private Equity',
+  'Venture Capital', 'Excel', 'Advanced Excel', 'Excel VBA', 'Power Query',
+  'Power Pivot', 'Bloomberg Terminal', 'Reuters Eikon', 'Capital IQ', 'PitchBook',
+  'SAP FICO', 'Oracle Financials', 'QuickBooks', 'Tally ERP',
+  // HR & People
+  'Human Resource Management', 'Talent Acquisition', 'Recruitment', 'Sourcing',
+  'Employer Branding', 'Employee Engagement', 'Performance Management',
+  'Compensation & Benefits', 'Payroll', 'HRIS', 'HRMS', 'Learning & Development',
+  'Organizational Development', 'Succession Planning', 'Workforce Planning',
+  'HR Analytics', 'People Analytics', 'POSH', 'Labor Laws',
+  'Workday HCM', 'SAP SuccessFactors', 'BambooHR', 'Darwinbox', 'Keka',
+  'Greenhouse', 'Lever', 'iCIMS', 'Taleo', 'SmartRecruiters',
+  // Legal
+  'Contract Law', 'Corporate Law', 'Intellectual Property', 'Patent Law',
+  'Trademark', 'Copyright', 'Data Privacy', 'GDPR Compliance', 'DPDP Act',
+  'Legal Research', 'Legal Drafting', 'Litigation', 'Arbitration', 'Mediation',
+  'M&A Legal', 'Due Diligence', 'Regulatory Compliance', 'Anti-Trust',
+  // Healthcare & Pharma
+  'Clinical Research', 'Clinical Trials', 'Drug Discovery', 'Pharmacovigilance',
+  'GxP', 'GMP', 'GLP', 'GCP', 'FDA Regulations', 'ICH Guidelines',
+  'Medical Coding', 'ICD-10', 'CPT Coding', 'HIPAA', 'HL7', 'FHIR',
+  'EMR/EHR', 'Epic Systems', 'Cerner', 'Medical Writing', 'Regulatory Affairs',
+  'Biostatistics', 'SAS (Clinical)', 'CTMS', 'EDC', 'CDISC', 'SDTM', 'ADaM',
+  // Manufacturing & Engineering
+  'AutoCAD', 'SolidWorks', 'CATIA', 'ANSYS', 'CREO', 'PTC Windchill',
+  'Siemens NX', 'Inventor', 'Fusion 360', 'MATLAB Simulink', 'Altium Designer',
+  'KiCad', 'Eagle', 'OrCAD', 'Cadence', 'Synopsys', 'VHDL', 'Verilog',
+  'Six Sigma', 'Lean Manufacturing', 'Kaizen', 'TPM', '5S', 'Kanban Manufacturing',
+  'Value Stream Mapping', 'SPC', 'FMEA', 'APQP', 'PPAP', 'Control Plans',
+  'ISO 9001', 'ISO 14001', 'ISO 45001', 'IATF 16949', 'AS9100',
+  'PLC Programming', 'SCADA', 'HMI', 'DCS', 'Ladder Logic', 'Allen-Bradley',
+  'Siemens PLC', 'Industrial Automation', 'CNC Programming', 'G-code',
+  '3D Printing', 'Additive Manufacturing', 'Injection Molding', 'Die Casting',
+  'Sheet Metal Design', 'GD&T', 'FEA', 'CFD', 'Thermal Analysis',
+  // Supply Chain & Logistics
+  'Supply Chain Management', 'Demand Planning', 'Inventory Management',
+  'Warehouse Management', 'Transportation Management', 'Logistics Planning',
+  'Procurement', 'Vendor Management', 'SAP SCM', 'Oracle SCM',
+  'S&OP', 'CPFR', 'Just-in-Time', 'EOQ', 'ABC Analysis',
+  // Blockchain & Web3
+  'Blockchain', 'Ethereum', 'Solidity', 'Web3.js', 'Ethers.js', 'Hardhat',
+  'Truffle', 'Foundry', 'IPFS', 'Smart Contracts', 'DeFi', 'NFT', 'DAO',
+  'Layer 2', 'Polygon', 'Solana', 'Rust (Solana)', 'Cosmos', 'Polkadot',
+  'Hyperledger Fabric', 'Chainlink', 'The Graph', 'Wagmi', 'RainbowKit',
+  // Game Development
+  'Unity', 'Unreal Engine', 'Godot', 'Blender', 'Maya', 'Cinema 4D',
+  'Substance Painter', 'ZBrush', 'Houdini', 'Game Design', 'Level Design',
+  'Shader Programming', 'HLSL', 'GLSL', 'DirectX', 'OpenGL', 'Vulkan',
+  'Metal', 'WebGL', 'WebGPU', 'PlayFab', 'Photon', 'Mirror Networking',
+  // Payment & E-Commerce
+  'Stripe', 'Razorpay', 'PayPal', 'PayU', 'CCAvenue', 'Paytm Gateway',
+  'Shopify', 'Magento', 'WooCommerce', 'BigCommerce', 'Twilio',
+  // Miscellaneous / Cross-Domain
+  'Microservices', 'System Design', 'Distributed Systems', 'Event-Driven Architecture',
+  'Domain-Driven Design', 'CQRS', 'Event Sourcing', 'Saga Pattern',
+  'DSA', 'OOP', 'Functional Programming', 'Design Patterns', 'SOLID Principles',
+  'Clean Architecture', 'Hexagonal Architecture', 'Serverless', 'Edge Computing',
+  'WebAssembly', 'PWA', 'Web Performance', 'Core Web Vitals', 'CDN',
+  'Caching Strategies', 'Rate Limiting', 'API Gateway', 'Service Mesh',
+  'Feature Flags', 'Blue-Green Deployment', 'Canary Deployment', 'A/B Testing',
+  'Chaos Engineering', 'Disaster Recovery', 'High Availability', 'Scalability',
+  'CAP Theorem', 'Consensus Algorithms', 'Load Balancing', 'Auto Scaling',
+  'Multi-tenancy', 'SaaS Architecture', 'API Versioning', 'Rate Limiting',
+  'Idempotency', 'Circuit Breaker', 'Retry Patterns', 'Backpressure',
+  'Customer Service', 'Technical Support', 'IT Support', 'ITIL',
+  'RPA', 'UiPath', 'Automation Anywhere', 'Blue Prism',
+] as const;
+

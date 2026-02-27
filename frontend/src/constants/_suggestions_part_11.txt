@@ -1,0 +1,141 @@
+export const INVESTOR_SUGGESTIONS = [
+  // Indian VCs (25)
+  'Sequoia Capital India', 'Accel Partners', 'Matrix Partners India',
+  'Nexus Venture Partners', 'Blume Ventures', 'Elevation Capital',
+  'Peak XV Partners', 'Tiger Global', 'Lightspeed India',
+  'India Quotient', 'Chiratae Ventures', 'Kalaari Capital',
+  'Jungle Ventures', '3one4 Capital', 'Prime Venture Partners',
+  'Stellaris Venture Partners', 'Fireside Ventures',
+  'Venture Highway', 'Endiya Partners', 'Iron Pillar',
+  'WaterBridge Ventures', 'Together Fund', 'Better Capital',
+  'Titan Capital', '100X.VC', 'Sauce.vc',
+  'iSeed Ventures', 'First Cheque', 'Antler India',
+  'Y Combinator India', 'Techstars India',
+  // Global VCs (25)
+  'Andreessen Horowitz (a16z)', 'Y Combinator', 'General Catalyst',
+  'Insight Partners', 'GGV Capital', 'Falcon Edge', 'Coatue Management',
+  'B Capital Group', 'DST Global', 'SoftBank Vision Fund',
+  'Steadview Capital', 'Norwest Venture Partners', 'Ribbit Capital',
+  'QED Investors', 'Greenoaks Capital', 'D1 Capital Partners',
+  'Addition', 'BOND', 'Craft Ventures', 'Founders Fund',
+  'Greylock Partners', 'Index Ventures', 'Khosla Ventures',
+  'Kleiner Perkins', 'NEA (New Enterprise Associates)',
+  'Lightspeed Venture Partners', 'Benchmark', 'Bessemer Venture Partners',
+  'IVP (Institutional Venture Partners)', 'Sequoia Capital Global',
+  // Sovereign Wealth & PE
+  'Goldman Sachs', 'Morgan Stanley', 'Temasek', 'GIC',
+  'Abu Dhabi Investment Authority (ADIA)', 'Mubadala',
+  'CPP Investments', 'Ontario Teachers Pension Plan',
+  'Warburg Pincus', 'KKR', 'Blackstone', 'Carlyle Group',
+  'TPG Capital', 'Apax Partners', 'Advent International',
+  'ChrysCapital', 'Multiples Alternate Asset Management',
+  'India Infoline (IIFL)', 'Edelweiss Private Equity',
+] as const;
+
+export const PRODUCT_SERVICE_SUGGESTIONS = [
+  // Software & Platforms
+  'Enterprise Software', 'Mobile Applications', 'Web Applications',
+  'Progressive Web Apps', 'Desktop Applications', 'Browser Extensions',
+  'API Services', 'API Gateway', 'Integration Platform',
+  'Microservices Platform', 'Serverless Platform',
+  'Cloud Solutions', 'Cloud Migration Services', 'Multi-Cloud Management',
+  // Data & AI
+  'Data Platform', 'Data Warehouse', 'Data Lake',
+  'AI/ML Platform', 'MLOps Platform', 'AI Chatbot',
+  'Recommendation Engine', 'Search Engine',
+  'Analytics Dashboard', 'BI Platform', 'Real-Time Analytics',
+  // Business Applications
+  'CRM Software', 'ERP Solutions', 'HRMS', 'ATS (Applicant Tracking)',
+  'LMS (Learning Management)', 'CMS (Content Management)',
+  'PIM (Product Information Management)',
+  'Marketing Automation', 'Email Marketing Platform',
+  'Customer Support Platform', 'Help Desk Software',
+  'Live Chat Software', 'Survey & Feedback Platform',
+  // Commerce & Payments
+  'Payment Gateway', 'Payment Processing', 'Billing & Invoicing',
+  'Subscription Management', 'E-Commerce Platform',
+  'Marketplace Platform', 'POS System',
+  // Operations & Logistics
+  'Supply Chain Management', 'Inventory Management',
+  'Warehouse Management System', 'Fleet Management',
+  'Route Optimization', 'Order Management',
+  'Accounting Software', 'Tax Compliance Software',
+  // Collaboration & Productivity
+  'Project Management Tool', 'Communication Platform',
+  'Video Conferencing', 'Team Collaboration',
+  'Document Management', 'Digital Signature',
+  'Workflow Automation', 'RPA Platform',
+  // Security & Infrastructure
+  'Security Solutions', 'Identity Management', 'Endpoint Security',
+  'Network Security', 'Cloud Security', 'SIEM Platform',
+  'IoT Platform', 'Edge Computing Platform',
+  'CDN Services', 'DNS Services',
+  // Blockchain
+  'Blockchain Solutions', 'Smart Contract Platform',
+  'Cryptocurrency Exchange', 'NFT Marketplace',
+  // Services
+  'Consulting Services', 'Managed Services', 'Staff Augmentation',
+  'Digital Transformation', 'Cloud Consulting',
+  'Data Engineering Services', 'QA & Testing Services',
+  'DevOps Services', 'Design Services', 'Training Services',
+] as const;
+
+export const NATIONALITY_SUGGESTIONS = [
+  'Indian', 'American', 'British', 'Canadian', 'Australian',
+  'German', 'French', 'Japanese', 'Chinese', 'Korean',
+  'Singaporean', 'Emirati', 'Saudi', 'Dutch', 'Swedish',
+  'Swiss', 'Irish', 'New Zealander', 'Malaysian', 'Bangladeshi',
+  'Nepalese', 'Sri Lankan', 'Pakistani', 'South African', 'Brazilian',
+  'Israeli', 'Thai', 'Filipino', 'Indonesian', 'Vietnamese',
+  'Italian', 'Spanish', 'Russian', 'Danish', 'Norwegian',
+  'Finnish', 'Belgian', 'Austrian', 'Polish', 'Czech',
+  'Portuguese', 'Taiwanese', 'Qatari', 'Kuwaiti', 'Omani',
+  'Bahraini', 'Kenyan', 'Nigerian', 'Egyptian', 'Turkish',
+  'Mexican', 'Argentine', 'Chilean', 'Colombian', 'Peruvian',
+  'Ukrainian', 'Romanian', 'Hungarian', 'Greek', 'Bulgarian',
+  'Serbian', 'Croatian', 'Slovak', 'Latvian', 'Estonian',
+  'Lithuanian', 'Luxembourger', 'Maltese',
+] as const;
+
+export const COUNTRY_SUGGESTIONS = [
+  // South Asia
+  'India', 'Bangladesh', 'Nepal', 'Sri Lanka', 'Pakistan',
+  'Bhutan', 'Maldives', 'Afghanistan',
+  // East Asia
+  'China', 'Japan', 'South Korea', 'Taiwan', 'Hong Kong', 'Macau', 'Mongolia',
+  // Southeast Asia
+  'Singapore', 'Malaysia', 'Indonesia', 'Thailand', 'Vietnam',
+  'Philippines', 'Myanmar', 'Cambodia', 'Laos',
+  // Middle East
+  'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Oman',
+  'Bahrain', 'Israel', 'Jordan', 'Lebanon', 'Iraq', 'Iran',
+  // North America
+  'United States', 'Canada', 'Mexico',
+  // Europe - Western
+  'United Kingdom', 'Germany', 'France', 'Netherlands', 'Belgium',
+  'Switzerland', 'Austria', 'Luxembourg', 'Ireland',
+  // Europe - Northern
+  'Sweden', 'Norway', 'Denmark', 'Finland', 'Iceland',
+  // Europe - Southern
+  'Italy', 'Spain', 'Portugal', 'Greece', 'Malta', 'Cyprus',
+  // Europe - Eastern
+  'Poland', 'Czech Republic', 'Hungary', 'Romania', 'Bulgaria',
+  'Ukraine', 'Russia', 'Serbia', 'Croatia', 'Slovenia',
+  'Slovakia', 'Latvia', 'Lithuania', 'Estonia',
+  // Oceania
+  'Australia', 'New Zealand', 'Fiji',
+  // South America
+  'Brazil', 'Argentina', 'Chile', 'Colombia', 'Peru',
+  'Uruguay', 'Ecuador', 'Venezuela', 'Bolivia', 'Paraguay',
+  // Africa
+  'South Africa', 'Nigeria', 'Kenya', 'Egypt', 'Ethiopia',
+  'Ghana', 'Tanzania', 'Morocco', 'Tunisia', 'Rwanda',
+  'Mauritius', 'Seychelles', 'Botswana', 'Namibia',
+  // Central America & Caribbean
+  'Costa Rica', 'Panama', 'Jamaica', 'Trinidad & Tobago',
+  // Central Asia
+  'Kazakhstan', 'Uzbekistan',
+  // Turkey
+  'Turkey',
+] as const;
+

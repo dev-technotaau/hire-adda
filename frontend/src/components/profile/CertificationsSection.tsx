@@ -4,9 +4,8 @@ import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import SuggestionInput from '@/components/onboarding/SuggestionInput';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import DatePicker from '@/components/ui/DatePicker';
-import { CERTIFICATION_SUGGESTIONS } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { CertificationEntry } from '@/types/candidate';
 
@@ -58,11 +57,11 @@ export default function CertificationsSection({ form, updateField }: ProfileSect
                 </button>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <SuggestionInput
+                <ServerSuggestionInput
+                  category="certification"
                   label="Certification Name"
                   value={cert.name}
                   onChange={(val) => updateCertification(i, { name: val })}
-                  suggestions={CERTIFICATION_SUGGESTIONS}
                   required
                 />
                 <Input
