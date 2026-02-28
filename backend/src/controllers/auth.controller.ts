@@ -283,8 +283,7 @@ export const mfaSetup = async (req: Request, res: Response, next: NextFunction):
       status: 'success',
       message: 'MFA setup initiated. Scan the QR code with your authenticator app.',
       data: {
-        qrCode: result.qrCodeUrl,
-        // Secret is optional - some users prefer manual entry
+        qrCodeUrl: result.qrCodeUrl,
         secret: result.secret,
       },
     });

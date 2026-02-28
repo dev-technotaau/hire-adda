@@ -7,6 +7,7 @@ import {
   greeting,
   signature,
   button,
+  infoBox,
   successBox,
   dangerBox,
   divider,
@@ -115,6 +116,40 @@ export const documentVerificationStatus = (
       `Your document ${docName} has been ${status}.`
     ),
     text: `Your document ${docName} has been ${status}.${reason ? ` Reason: ${reason}.` : ''} ${!isApproved ? `Please re-upload at ${BRAND.url}/profile/documents` : ''}`,
+  };
+};
+
+/**
+ * Verification request submitted notification.
+ */
+export const verificationSubmitted = (
+  firstName: string | null,
+  verificationType: string
+): EmailTemplate => {
+  const name = firstName || 'there';
+  const typeLabel = verificationType.toLowerCase();
+
+  return {
+    subject: `Verification Request Submitted — ${verificationType}`,
+    html: emailLayout(
+      `
+          ${iconCircle('&#128196;', '#eef2ff')}
+          ${heading('Verification Request Submitted')}
+          ${subtitle('Your request is now under review.')}
+          ${greeting(name)}
+          ${paragraph(`Your <strong>${typeLabel}</strong> verification request has been submitted and is now under review.`)}
+          ${infoBox([
+            { label: 'Verification Type', value: verificationType },
+            { label: 'Status', value: 'Under Review' },
+            { label: 'Estimated Time', value: '1–2 business days' },
+          ])}
+          ${paragraph("We'll notify you once the review is complete.")}
+          ${button('Check Status', `${BRAND.url}/candidate/verification`)}
+          ${signature()}
+      `,
+      `Your ${typeLabel} verification request has been submitted.`
+    ),
+    text: `Hi ${name}, your ${typeLabel} verification request has been submitted and is under review. We'll notify you once the review is complete. Check status: ${BRAND.url}/candidate/verification`,
   };
 };
 

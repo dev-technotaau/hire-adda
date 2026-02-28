@@ -5,6 +5,7 @@ import {
   useRef,
   useCallback,
   useEffect,
+  useMemo,
   type KeyboardEvent,
   type ChangeEvent,
 } from 'react';
@@ -29,6 +30,7 @@ import {
   useAddToSearchHistory,
   useClearSearchHistory,
 } from '@/hooks/use-search';
+import { useSuggest } from '@/hooks/use-suggestions';
 import { useAuthStore } from '@/store/auth.store';
 import Spinner from '@/components/ui/Spinner';
 import type { AutocompleteResult, SuggestionType } from '@/types/search';
@@ -137,21 +139,49 @@ export default function SearchBar({
   const history = historyData?.data?.history ?? [];
   const popular = popularData?.data?.searches ?? [];
 
+  /* ---- seeded suggestions from suggestions index ---- */
+  const { suggestions: seedSkills, isLoading: isLoadingSeedSkills } = useSuggest({
+    category: 'skill',
+    query: debouncedQuery,
+    limit: 5,
+    minChars: 2,
+  });
+  const { suggestions: seedJobTitles, isLoading: isLoadingSeedTitles } = useSuggest({
+    category: 'job_title',
+    query: debouncedQuery,
+    limit: 5,
+    minChars: 2,
+  });
+  const isLoadingSeedSuggestions = isLoadingSeedSkills || isLoadingSeedTitles;
+
+  const seededSuggestions = useMemo(() => {
+    if (debouncedQuery.length < 2) return [];
+    const existingTexts = new Set(suggestions.map((s) => s.text.toLowerCase()));
+    const items: { text: string; category: string }[] = [];
+    for (const s of seedJobTitles) {
+      if (!existingTexts.has(s.toLowerCase())) items.push({ text: s, category: 'job_title' });
+    }
+    for (const s of seedSkills) {
+      if (!existingTexts.has(s.toLowerCase())) items.push({ text: s, category: 'skill' });
+    }
+    return items.slice(0, 8);
+  }, [debouncedQuery, suggestions, seedJobTitles, seedSkills]);
+
   /* ---- build flat list of navigable items ---- */
   const getNavigableItems = useCallback((): Array<{
     id: string;
     label: string;
-    type: 'suggestion' | 'history' | 'popular';
+    type: 'suggestion' | 'history' | 'popular' | 'seeded';
     data?: AutocompleteResult;
   }> => {
     const items: Array<{
       id: string;
       label: string;
-      type: 'suggestion' | 'history' | 'popular';
+      type: 'suggestion' | 'history' | 'popular' | 'seeded';
       data?: AutocompleteResult;
     }> = [];
 
-    if (debouncedQuery.length >= 2 && suggestions.length > 0) {
+    if (debouncedQuery.length >= 2) {
       suggestions.forEach((s, i) => {
         items.push({
           id: `suggestion-${i}`,
@@ -159,6 +189,9 @@ export default function SearchBar({
           type: 'suggestion',
           data: s,
         });
+      });
+      seededSuggestions.forEach((s, i) => {
+        items.push({ id: `seeded-${i}`, label: s.text, type: 'seeded' });
       });
     } else if (!debouncedQuery) {
       // Show history first, then popular
@@ -175,7 +208,7 @@ export default function SearchBar({
     }
 
     return items;
-  }, [debouncedQuery, suggestions, isAuthenticated, history, popular]);
+  }, [debouncedQuery, suggestions, seededSuggestions, isAuthenticated, history, popular]);
 
   const navigableItems = getNavigableItems();
 
@@ -350,7 +383,7 @@ export default function SearchBar({
   }, [defaultValue]);
 
   const styles = SIZE_STYLES[size];
-  const showDropdown = isOpen && (navigableItems.length > 0 || isLoadingAutocomplete);
+  const showDropdown = isOpen && (navigableItems.length > 0 || isLoadingAutocomplete || isLoadingSeedSuggestions);
 
   /* ---- grouped suggestions for rendering ---- */
   const groupedSuggestions = suggestions.reduce<Record<SuggestionType, AutocompleteResult[]>>(
@@ -460,60 +493,105 @@ export default function SearchBar({
           )}
         >
           {/* Loading state */}
-          {isLoadingAutocomplete && debouncedQuery.length >= 2 && suggestions.length === 0 && (
+          {isLoadingAutocomplete && debouncedQuery.length >= 2 && suggestions.length === 0 && seededSuggestions.length === 0 && (
             <div className="flex items-center justify-center gap-2 p-4 text-[var(--text-muted)]">
               <Spinner size="sm" />
               <span>Searching...</span>
             </div>
           )}
 
-          {/* Autocomplete suggestions (grouped by type) */}
-          {debouncedQuery.length >= 2 && suggestions.length > 0 && (
+          {/* Autocomplete + seeded suggestions */}
+          {debouncedQuery.length >= 2 && (suggestions.length > 0 || seededSuggestions.length > 0 || isLoadingSeedSuggestions) && (
             <div className="py-1">
-              {(Object.entries(groupedSuggestions) as [SuggestionType, AutocompleteResult[]][]).map(
-                ([type, items]) => {
-                  const Icon = TYPE_ICONS[type];
-                  return (
-                    <div key={type}>
-                      <div className="px-3 py-1.5 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
-                        {TYPE_LABELS[type]}
-                      </div>
-                      {items.map((item) => {
-                        const idx = flatIndexCounter++;
-                        return (
-                          <button
-                            key={`${type}-${item.text}`}
-                            ref={(el) => {
-                              itemRefs.current[idx] = el;
-                            }}
-                            id={navigableItems[idx]?.id}
-                            role="option"
-                            aria-selected={activeIndex === idx}
-                            onClick={() => handleSelectSuggestion(item)}
-                            onMouseEnter={() => setActiveIndex(idx)}
-                            className={cn(
-                              'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors',
-                              activeIndex === idx
-                                ? 'text-primary bg-[var(--primary-light)]'
-                                : 'text-[var(--text)] hover:bg-[var(--bg-secondary)]',
-                            )}
-                          >
-                            <Icon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
-                            <span className="flex-1 truncate">
-                              <HighlightMatch text={item.text} query={debouncedQuery} />
-                            </span>
-                            {item.count !== undefined && item.count > 0 && (
-                              <span className="shrink-0 text-xs text-[var(--text-muted)]">
-                                {item.count.toLocaleString()}
+              {/* Autocomplete suggestions (grouped by type) */}
+              {suggestions.length > 0 &&
+                (Object.entries(groupedSuggestions) as [SuggestionType, AutocompleteResult[]][]).map(
+                  ([type, items]) => {
+                    const Icon = TYPE_ICONS[type];
+                    return (
+                      <div key={type}>
+                        <div className="px-3 py-1.5 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+                          {TYPE_LABELS[type]}
+                        </div>
+                        {items.map((item) => {
+                          const idx = flatIndexCounter++;
+                          return (
+                            <button
+                              key={`${type}-${item.text}`}
+                              ref={(el) => {
+                                itemRefs.current[idx] = el;
+                              }}
+                              id={navigableItems[idx]?.id}
+                              role="option"
+                              aria-selected={activeIndex === idx}
+                              onClick={() => handleSelectSuggestion(item)}
+                              onMouseEnter={() => setActiveIndex(idx)}
+                              className={cn(
+                                'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors',
+                                activeIndex === idx
+                                  ? 'text-primary bg-[var(--primary-light)]'
+                                  : 'text-[var(--text)] hover:bg-[var(--bg-secondary)]',
+                              )}
+                            >
+                              <Icon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+                              <span className="flex-1 truncate">
+                                <HighlightMatch text={item.text} query={debouncedQuery} />
                               </span>
-                            )}
-                            <ArrowRight className="h-3 w-3 shrink-0 text-[var(--text-muted)] opacity-0 group-hover:opacity-100" />
-                          </button>
-                        );
-                      })}
+                              {item.count !== undefined && item.count > 0 && (
+                                <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                                  {item.count.toLocaleString()}
+                                </span>
+                              )}
+                              <ArrowRight className="h-3 w-3 shrink-0 text-[var(--text-muted)] opacity-0 group-hover:opacity-100" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  },
+                )}
+
+              {/* Seeded suggestions section */}
+              {(seededSuggestions.length > 0 || isLoadingSeedSuggestions) && (
+                <div>
+                  <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+                    Suggestions
+                  </div>
+                  {isLoadingSeedSuggestions && seededSuggestions.length === 0 && (
+                    <div className="flex items-center justify-center gap-2 p-2 text-xs text-[var(--text-muted)]">
+                      <Spinner size="sm" />
+                      <span>Loading...</span>
                     </div>
-                  );
-                },
+                  )}
+                  {seededSuggestions.map((item) => {
+                    const idx = flatIndexCounter++;
+                    const Icon = item.category === 'skill' ? Sparkles : Briefcase;
+                    return (
+                      <button
+                        key={`seeded-${item.text}`}
+                        ref={(el) => {
+                          itemRefs.current[idx] = el;
+                        }}
+                        id={navigableItems[idx]?.id}
+                        role="option"
+                        aria-selected={activeIndex === idx}
+                        onClick={() => handleSubmit(item.text)}
+                        onMouseEnter={() => setActiveIndex(idx)}
+                        className={cn(
+                          'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors',
+                          activeIndex === idx
+                            ? 'text-primary bg-[var(--primary-light)]'
+                            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+                        <span className="flex-1 truncate">
+                          <HighlightMatch text={item.text} query={debouncedQuery} />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
 
               {/* Search for full query */}
@@ -627,7 +705,7 @@ export default function SearchBar({
           )}
 
           {/* No results */}
-          {debouncedQuery.length >= 2 && !isLoadingAutocomplete && suggestions.length === 0 && (
+          {debouncedQuery.length >= 2 && !isLoadingAutocomplete && !isLoadingSeedSuggestions && suggestions.length === 0 && seededSuggestions.length === 0 && (
             <div className="p-4 text-center text-sm text-[var(--text-muted)]">
               No suggestions found for &quot;{debouncedQuery}&quot;
             </div>

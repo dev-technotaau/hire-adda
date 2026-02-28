@@ -1458,24 +1458,6 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
               </div>
             </div>
 
-            {/* Backup Codes */}
-            {mfaSetup.backupCodes.length > 0 && (
-              <div>
-                <p className="mb-2 text-sm font-medium text-[var(--text)]">Backup Codes</p>
-                <p className="mb-2 text-xs text-[var(--text-muted)]">
-                  Save these codes in a safe place. You can use them to access your account if you
-                  lose your authenticator device.
-                </p>
-                <div className="grid grid-cols-2 gap-2 rounded-lg bg-[var(--bg-secondary)] p-3">
-                  {mfaSetup.backupCodes.map((code) => (
-                    <code key={code} className="font-mono text-sm text-[var(--text)]">
-                      {code}
-                    </code>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Verification Code Input */}
             <div>
               <label className="mb-2 block text-sm font-medium text-[var(--text)]">

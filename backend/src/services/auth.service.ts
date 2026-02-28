@@ -1051,7 +1051,9 @@ export const confirmWhatsappOtp = async (
   let whatsappNumber: string | null = null;
   if (pendingData) {
     const parsed = JSON.parse(pendingData) as { number: string | null; targetNumber: string };
-    whatsappNumber = parsed.number;
+    // parsed.number is null when WhatsApp uses the same number as mobile.
+    // If mobile is also null, store the actual targetNumber so notifications can reach the user.
+    whatsappNumber = parsed.number ?? (user.mobileNumber ? null : parsed.targetNumber);
     await redis.del(pendingKey);
   }
 
@@ -1119,11 +1121,11 @@ export const changeWhatsappNumber = async (
     expiryMinutes * 60,
   );
 
-  // Reset WhatsApp verified state so the old number is no longer "active"
+  // Keep old WhatsApp verification active until confirmWhatsappOtp switches to the new number.
+  // This way notifications keep flowing to the old number during the OTP window.
   await prisma.user.update({
     where: { id: userId },
     data: {
-      isWhatsappVerified: false,
       whatsappVerificationToken: hashedOtp,
       whatsappVerificationExpires: new Date(Date.now() + expiryMinutes * 60 * 1000),
       whatsappOtpResendCount: user.whatsappOtpResendCount + 1,

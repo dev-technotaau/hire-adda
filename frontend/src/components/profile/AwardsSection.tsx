@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import DatePicker from '@/components/ui/DatePicker';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import type { ProfileSectionProps } from './types';
 import type { AwardEntry } from '@/types/candidate';
 
@@ -55,10 +56,11 @@ export default function AwardsSection({ form, updateField }: ProfileSectionProps
                   onChange={(e) => updateAward(i, { title: e.target.value })}
                   required
                 />
-                <Input
+                <ServerSuggestionInput
+                  category="company"
                   label="Issuer"
                   value={award.issuer || ''}
-                  onChange={(e) => updateAward(i, { issuer: e.target.value })}
+                  onChange={(val) => updateAward(i, { issuer: val })}
                 />
               </div>
               <DatePicker

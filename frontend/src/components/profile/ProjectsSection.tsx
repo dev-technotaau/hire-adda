@@ -5,8 +5,8 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
-import Tag from '@/components/ui/Tag';
 import DatePicker from '@/components/ui/DatePicker';
+import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
 import type { ProfileSectionProps } from './types';
 import type { ProjectEntry } from '@/types/candidate';
 
@@ -91,42 +91,15 @@ export default function ProjectsSection({ form, updateField }: ProfileSectionPro
                   onChange={(val) => updateProject(i, 'endDate', val)}
                 />
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Technologies
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add technology (press Enter)"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const val = (e.target as HTMLInputElement).value.trim();
-                        if (val && !(proj.technologies || []).includes(val)) {
-                          updateProject(i, 'technologies', [...(proj.technologies || []), val]);
-                          (e.target as HTMLInputElement).value = '';
-                        }
-                      }
-                    }}
-                  />
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {(proj.technologies || []).map((tech) => (
-                    <Tag
-                      key={tech}
-                      label={tech}
-                      variant="primary"
-                      onRemove={() =>
-                        updateProject(
-                          i,
-                          'technologies',
-                          (proj.technologies || []).filter((t) => t !== tech),
-                        )
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
+              <ServerAutoSuggest
+                category="skill"
+                label="Technologies"
+                placeholder="Add technology..."
+                multiple
+                allowCreate
+                value={proj.technologies || []}
+                onChange={(v) => updateProject(i, 'technologies', v as string[])}
+              />
             </div>
           ))
         )}

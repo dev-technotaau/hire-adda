@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon",
     "dev:debug": "cross-env DEBUG=* nodemon",
-    "build": "prisma generate && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && copyfiles -u 1 src/templates/**/*.hbs dist/ && npm run sentry:sourcemaps",
+    "build": "prisma generate && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && copyfiles -u 1 \"src/templates/**/*.hbs\" \"src/data/*.json\" dist/ && npm run sentry:sourcemaps",
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "start:dev": "concurrently \"npm run dev\" \"npm run db:studio\"",
     "clean": "rimraf dist",

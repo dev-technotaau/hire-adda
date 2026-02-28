@@ -412,3 +412,32 @@ export const matchingCandidatesFound = (
   ),
   text: `Hi ${employerName}, we found ${matchCount} candidate${matchCount === 1 ? '' : 's'} for your ${jobTitle} position. Review them at ${BRAND.url}/employer/jobs/${jobId}/applications`,
 });
+
+/**
+ * Application withdrawn notification sent to the employer.
+ */
+export const applicationWithdrawn = (
+  employerName: string,
+  candidateName: string,
+  jobTitle: string
+): EmailTemplate => ({
+  subject: `Application Withdrawn: ${candidateName} — ${jobTitle}`,
+  html: emailLayout(
+    `
+        ${iconCircle('&#128221;', BRAND.warningLight)}
+        ${heading('Application Withdrawn')}
+        ${greeting(employerName)}
+        ${paragraph(`<strong>${candidateName}</strong> has withdrawn their application for the <strong>${jobTitle}</strong> position.`)}
+        ${infoBox([
+          { label: 'Candidate', value: candidateName },
+          { label: 'Position', value: jobTitle },
+          { label: 'Status', value: 'Withdrawn' },
+        ])}
+        ${paragraph('You can view other applicants in your dashboard.')}
+        ${button('View Applicants', `${BRAND.url}/employer/applications`)}
+        ${signature()}
+    `,
+    `${candidateName} has withdrawn their application for ${jobTitle}.`
+  ),
+  text: `Hi ${employerName}, ${candidateName} has withdrawn their application for ${jobTitle}. View other applicants at ${BRAND.url}/employer/applications`,
+});

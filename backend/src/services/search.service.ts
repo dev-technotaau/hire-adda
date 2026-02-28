@@ -3051,13 +3051,9 @@ class SearchService {
           }
         }
 
-        // Seed Indian cities from shared frontend data (overrides inline location array)
+        // Seed Indian cities from local data copy
         try {
-          // Dynamic import from frontend workspace — path resolved at runtime
-          const frontendCitiesPath = require('path').resolve(
-            __dirname, '..', '..', '..', 'frontend', 'src', 'constants', 'indian-cities',
-          );
-          const { INDIAN_CITIES } = await import(frontendCitiesPath);
+          const { INDIAN_CITIES } = await import('../data/indian-cities');
           for (const text of INDIAN_CITIES as string[]) {
             const cleanText = (text as string).trim();
             if (cleanText.length < 1) continue;
@@ -3149,7 +3145,7 @@ class SearchService {
   // ─── Reindex All ────────────────────────────────────────────────────
 
   async reindexAll() {
-    const indices = [ELASTIC_INDICES.JOBS, ELASTIC_INDICES.CANDIDATES, ELASTIC_INDICES.EMPLOYERS];
+    const indices = [ELASTIC_INDICES.JOBS, ELASTIC_INDICES.CANDIDATES, ELASTIC_INDICES.EMPLOYERS, ELASTIC_INDICES.SUGGESTIONS];
     for (const index of indices) {
       try {
         const exists = await elasticClient.indices.exists({ index });

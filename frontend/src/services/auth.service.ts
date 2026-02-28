@@ -131,7 +131,7 @@ export const authService = {
     return res.data;
   },
 
-  async mfaEnable(data: MfaVerifyRequest): Promise<ApiResponse<null>> {
+  async mfaEnable(data: MfaVerifyRequest): Promise<ApiResponse<{ backupCodes: string[] }>> {
     const res = await api.post(API.AUTH.MFA_ENABLE, data);
     return res.data;
   },

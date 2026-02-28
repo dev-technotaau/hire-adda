@@ -63,10 +63,11 @@ export default function MembershipsSection({ form, updateField }: ProfileSection
                   onChange={(val) => updateMembership(i, { organization: val })}
                   required
                 />
-                <Input
+                <ServerSuggestionInput
+                  category="role_category"
                   label="Role"
                   value={mem.role || ''}
-                  onChange={(e) => updateMembership(i, { role: e.target.value })}
+                  onChange={(val) => updateMembership(i, { role: val })}
                 />
               </div>
               <div className="grid gap-3 sm:grid-cols-3">

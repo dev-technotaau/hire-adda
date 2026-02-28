@@ -1973,11 +1973,12 @@ export default function CandidateOnboardingPage() {
                   }
                   placeholder="e.g. 10"
                 />
-                <Input
+                <ServerSuggestionInput
+                  category="role_category"
                   label="Reporting To"
                   placeholder="e.g. Engineering Manager"
                   value={exp.reportingTo || ''}
-                  onChange={(e) => updateExperience(i, { reportingTo: e.target.value })}
+                  onChange={(val) => updateExperience(i, { reportingTo: val })}
                 />
                 <Input
                   label="Annual CTC"
@@ -2119,11 +2120,12 @@ export default function CandidateOnboardingPage() {
                   }
                   placeholder="Select course type"
                 />
-                <Input
+                <ServerSuggestionInput
+                  category="field_of_study"
                   label="Specialization"
                   placeholder="e.g. Data Science"
                   value={edu.specialization || ''}
-                  onChange={(e) => updateEducation(i, { specialization: e.target.value })}
+                  onChange={(val) => updateEducation(i, { specialization: val })}
                 />
               </div>
 
@@ -2428,11 +2430,12 @@ export default function CandidateOnboardingPage() {
                     category="certification"
                     required
                   />
-                  <Input
+                  <ServerSuggestionInput
+                    category="company"
                     label="Issuing Organization"
                     placeholder="e.g. Amazon Web Services"
                     value={cert.issuer}
-                    onChange={(e) => updateCertification(i, { issuer: e.target.value })}
+                    onChange={(val) => updateCertification(i, { issuer: val })}
                     required
                   />
                 </div>
@@ -2530,11 +2533,12 @@ export default function CandidateOnboardingPage() {
                     onChange={(e) => updateCourse(i, { name: e.target.value })}
                     required
                   />
-                  <Input
+                  <ServerSuggestionInput
+                    category="company"
                     label="Provider"
                     placeholder="e.g. Coursera"
                     value={course.provider || ''}
-                    onChange={(e) => updateCourse(i, { provider: e.target.value })}
+                    onChange={(val) => updateCourse(i, { provider: val })}
                   />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -3204,19 +3208,21 @@ export default function CandidateOnboardingPage() {
                     onChange={(e) => updateReference(i, { name: e.target.value })}
                     required
                   />
-                  <Input
+                  <ServerSuggestionInput
+                    category="role_category"
                     label="Designation"
                     placeholder="e.g. Engineering Manager"
                     value={ref.designation || ''}
-                    onChange={(e) => updateReference(i, { designation: e.target.value })}
+                    onChange={(val) => updateReference(i, { designation: val })}
                   />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Input
+                  <ServerSuggestionInput
+                    category="company"
                     label="Organization"
                     placeholder="e.g. Google"
                     value={ref.organization || ''}
-                    onChange={(e) => updateReference(i, { organization: e.target.value })}
+                    onChange={(val) => updateReference(i, { organization: val })}
                   />
                   <Input
                     label="Relationship"

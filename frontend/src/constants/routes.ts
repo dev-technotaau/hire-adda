@@ -71,6 +71,7 @@ export const ROUTES = {
     TICKET_DETAIL: (id: string) => `/admin/tickets/${id}`,
     MODERATION: '/admin/moderation',
     APPLICATIONS: '/admin/applications',
+    EMAIL_TEMPLATES: '/admin/email-templates',
   },
   SUPER_ADMIN: {
     DASHBOARD: '/super-admin',

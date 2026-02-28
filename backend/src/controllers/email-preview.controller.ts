@@ -218,6 +218,135 @@ const TEMPLATE_REGISTRY: Record<
     sampleArgs: () => ['John Doe'],
     description: 'All sessions revoked notification',
   },
+
+  // Onboarding — verification submitted
+  'onboarding.verificationSubmitted': {
+    module: '../templates/email/onboarding',
+    export: 'verificationSubmitted',
+    sampleArgs: () => ['Jane Smith', 'Government ID'],
+    description: 'Verification request submitted notification',
+  },
+
+  // Job — application withdrawn
+  'job.applicationWithdrawn': {
+    module: '../templates/email/job',
+    export: 'applicationWithdrawn',
+    sampleArgs: () => ['Mike Johnson', 'Jane Smith', 'Senior React Developer'],
+    description: 'Application withdrawn notification (to employer)',
+  },
+
+  // Ticket templates
+  'ticket.confirmation': {
+    module: '../templates/email/ticket',
+    export: 'ticketConfirmation',
+    sampleArgs: () => ['TKT-20260215-001', 'Cannot access my profile settings', 'candidate'],
+    description: 'Ticket confirmation sent to user',
+  },
+  'ticket.newAdmin': {
+    module: '../templates/email/ticket',
+    export: 'ticketNewAdmin',
+    sampleArgs: () => [
+      'TKT-20260215-001',
+      'Cannot access my profile settings',
+      'Jane Smith',
+      ' (Candidate)',
+      'abc-123-def',
+    ],
+    description: 'New ticket notification to admin',
+  },
+  'ticket.replyAdmin': {
+    module: '../templates/email/ticket',
+    export: 'ticketReplyAdmin',
+    sampleArgs: () => [
+      'TKT-20260215-001',
+      'Cannot access my profile settings',
+      'Jane Smith',
+      'I tried clearing my cache and it still does not work. Can you please look into this?',
+      'abc-123-def',
+    ],
+    description: 'Ticket reply notification to admin',
+  },
+  'ticket.replyUser': {
+    module: '../templates/email/ticket',
+    export: 'ticketReplyUser',
+    sampleArgs: () => [
+      'TKT-20260215-001',
+      'Cannot access my profile settings',
+      'Thank you for reaching out. We have identified the issue and are working on a fix. Please try again in 30 minutes.',
+      'candidate',
+      'abc-123-def',
+    ],
+    description: 'Ticket reply notification to registered user',
+  },
+  'ticket.replyGuest': {
+    module: '../templates/email/ticket',
+    export: 'ticketReplyGuest',
+    sampleArgs: () => [
+      'TKT-20260215-001',
+      'Question about job posting',
+      'Thank you for your inquiry. The position is still open and accepting applications.',
+    ],
+    description: 'Ticket reply notification to guest user',
+  },
+  'ticket.statusChange': {
+    module: '../templates/email/ticket',
+    export: 'ticketStatusChange',
+    sampleArgs: () => [
+      'TKT-20260215-001',
+      'Cannot access my profile settings',
+      'resolved',
+      'candidate',
+      'abc-123-def',
+      ' Please rate your experience.',
+    ],
+    description: 'Ticket status change notification',
+  },
+  'ticket.escalation': {
+    module: '../templates/email/ticket',
+    export: 'ticketEscalation',
+    sampleArgs: () => ['TKT-20260215-001', 'Cannot access my profile settings', 'abc-123-def'],
+    description: 'Ticket escalation — user rated Not Satisfied',
+  },
+
+  // Data export templates
+  'export.userData': {
+    module: '../templates/email/data-export',
+    export: 'userDataExportReady',
+    sampleArgs: () => ['February 16, 2026 at 3:00 PM IST'],
+    description: 'User data (GDPR) export ready notification',
+  },
+  'export.candidates': {
+    module: '../templates/email/data-export',
+    export: 'candidateExportReady',
+    sampleArgs: () => ['Mike', 25, 'xlsx', 'https://example.com/download/candidates.xlsx', 'candidates-1708100000.xlsx'],
+    description: 'Candidate export ready for download',
+  },
+
+  // Weekly digest
+  'digest.weekly': {
+    module: '../templates/email/weekly-digest',
+    export: 'weeklyHiringDigest',
+    sampleArgs: () => [
+      'Mike Johnson',
+      'TechCorp Solutions',
+      { newApplications: 12, activeJobs: 5, interviewsScheduled: 3, hires: 1 },
+    ],
+    description: 'Weekly hiring digest for employers',
+  },
+
+  // Contact form
+  'contact.formSubmission': {
+    module: '../templates/email/contact',
+    export: 'contactFormSubmission',
+    sampleArgs: () => [
+      'Priya Sharma',
+      'priya@example.com',
+      'Inquiry about enterprise plan',
+      'Hello, I am interested in your enterprise hiring plan. Could you share pricing details and schedule a demo?',
+      'msg-abc-123',
+    ],
+    description: 'Contact form submission notification to support',
+  },
 };
 
 /**

@@ -3,6 +3,7 @@ import logger from '../config/logger';
 import { collectUserData } from '../services/data-export.service';
 import { emailQueue } from './email.queue';
 import { prisma } from '../config/prisma';
+import { userDataExportReady, candidateExportReady } from '../templates/email/data-export';
 
 interface DataExportJob {
   userId: string;
@@ -27,19 +28,11 @@ export async function handleDataExport(job: Job<DataExportJob>) {
           const data = await collectUserData(userId);
           const jsonStr = JSON.stringify(data, null, 2);
 
+          const exportEmail = userDataExportReady(data.exportedAt);
           await emailQueue.add('send-email', {
             to: email!,
-            subject: 'Your Data Export - Talent Bridge',
-            html: `
-                                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                    <h2>Your Data Export is Ready</h2>
-                                    <p>Hi,</p>
-                                    <p>As requested, we've compiled all your personal data from Talent Bridge.</p>
-                                    <p>Your exported data is attached below as a JSON file. This includes your profile information, saved jobs, notifications, consent records, devices, and activity logs.</p>
-                                    <p>This data was exported on <strong>${data.exportedAt}</strong>.</p>
-                                    <p>If you did not request this export, please contact us immediately.</p>
-                                </div>
-                            `,
+            subject: exportEmail.subject,
+            html: exportEmail.html,
             attachments: [
               {
                 filename: `talent-bridge-data-export-${new Date().toISOString().split('T')[0]}.json`,
@@ -151,24 +144,11 @@ export async function handleDataExport(job: Job<DataExportJob>) {
             throw new Error('User email not found');
           }
 
+          const candidateEmail = candidateExportReady(user.firstName, candidates.length, format || 'xlsx', url, filename);
           await emailQueue.add('send-email', {
             to: user.email,
-            subject: 'Your Candidate Export is Ready',
-            html: `
-                                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                    <h2>Your Candidate Export is Ready</h2>
-                                    <p>Hi${user.firstName ? ` ${user.firstName}` : ''},</p>
-                                    <p>Your export of <strong>${candidates.length} candidate(s)</strong> is now ready for download.</p>
-                                    <p style="margin: 30px 0;">
-                                        <a href="${url}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                                            Download ${(format || 'xlsx').toUpperCase()} File
-                                        </a>
-                                    </p>
-                                    <p style="color: #666; font-size: 12px;">
-                                        This link will expire in 7 days. File name: ${filename}
-                                    </p>
-                                </div>
-                            `,
+            subject: candidateEmail.subject,
+            html: candidateEmail.html,
           });
 
           logger.info(

@@ -80,10 +80,11 @@ export default function VolunteeringSection({ form, updateField }: ProfileSectio
                     onChange={(val) => updateVolunteer(i, { organization: val })}
                     required
                   />
-                  <Input
+                  <ServerSuggestionInput
+                    category="role_category"
                     label="Role"
                     value={vol.role}
-                    onChange={(e) => updateVolunteer(i, { role: e.target.value })}
+                    onChange={(val) => updateVolunteer(i, { role: val })}
                     required
                   />
                 </div>
@@ -171,17 +172,19 @@ export default function VolunteeringSection({ form, updateField }: ProfileSectio
                     onChange={(e) => updateReference(i, { name: e.target.value })}
                     required
                   />
-                  <Input
+                  <ServerSuggestionInput
+                    category="role_category"
                     label="Designation"
                     value={ref.designation || ''}
-                    onChange={(e) => updateReference(i, { designation: e.target.value })}
+                    onChange={(val) => updateReference(i, { designation: val })}
                   />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Input
+                  <ServerSuggestionInput
+                    category="company"
                     label="Organization"
                     value={ref.organization || ''}
-                    onChange={(e) => updateReference(i, { organization: e.target.value })}
+                    onChange={(val) => updateReference(i, { organization: val })}
                   />
                   <Input
                     label="Relationship"

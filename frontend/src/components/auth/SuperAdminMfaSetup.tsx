@@ -21,6 +21,7 @@ export default function SuperAdminMfaSetup() {
 
   const [step, setStep] = useState<Step>('idle');
   const [mfaSetup, setMfaSetup] = useState<MfaSetupResponse | null>(null);
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [setupLoading, setSetupLoading] = useState(false);
   const [verifyCode, setVerifyCode] = useState('');
   const [enableLoading, setEnableLoading] = useState(false);
@@ -48,7 +49,8 @@ export default function SuperAdminMfaSetup() {
     }
     setEnableLoading(true);
     try {
-      await authService.mfaEnable({ token: verifyCode });
+      const res = await authService.mfaEnable({ token: verifyCode });
+      setBackupCodes(res.data?.backupCodes ?? []);
       setStep('backup-codes');
       showToast.success('MFA enabled successfully!');
     } catch (err) {
@@ -157,7 +159,7 @@ export default function SuperAdminMfaSetup() {
                   <label className="mb-2 block text-sm font-medium text-[var(--text)]">
                     Verification Code
                   </label>
-                  <OtpInput value={verifyCode} onChange={setVerifyCode} />
+                  <OtpInput value={verifyCode} onChange={setVerifyCode} onComplete={handleEnable} />
                 </div>
 
                 <Button
@@ -187,7 +189,7 @@ export default function SuperAdminMfaSetup() {
                     lose your authenticator device.
                   </p>
                   <div className="grid grid-cols-2 gap-2 rounded-lg bg-[var(--bg-secondary)] p-3">
-                    {(mfaSetup?.backupCodes ?? []).map((code) => (
+                    {backupCodes.map((code) => (
                       <code key={code} className="font-mono text-sm text-[var(--text)]">
                         {code}
                       </code>

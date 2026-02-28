@@ -24,6 +24,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import DatePicker from '@/components/ui/DatePicker';
 import Textarea from '@/components/ui/Textarea';
 import Select, { type SelectOption } from '@/components/ui/Select';
@@ -442,11 +443,12 @@ export default function PostJobPage() {
           {step === 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-[var(--text)]">Basic Information</h2>
-              <Input
+              <ServerSuggestionInput
+                category="job_title"
                 label="Job Title"
                 placeholder="e.g. Senior Software Engineer"
                 value={form.title}
-                onChange={(e) => updateField('title', e.target.value)}
+                onChange={(val) => updateField('title', val)}
                 required
               />
               <div className="grid gap-4 sm:grid-cols-2">

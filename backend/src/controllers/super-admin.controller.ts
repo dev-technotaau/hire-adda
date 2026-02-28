@@ -205,7 +205,7 @@ export const setupAdminMfa = async (req: Request, res: Response, next: NextFunct
     const result = await generateMfaSecret(target.id, target.email);
     res
       .status(200)
-      .json({ status: 'success', data: { qrCode: result.qrCodeUrl, secret: result.secret } });
+      .json({ status: 'success', data: { qrCodeUrl: result.qrCodeUrl, secret: result.secret } });
   } catch (error) {
     next(error);
   }

@@ -11,6 +11,15 @@ import { notificationService } from './notification.service';
 import { emailService } from './email.service';
 import { AppError } from '../middleware/error';
 import logger from '../config/logger';
+import {
+  ticketConfirmation,
+  ticketNewAdmin,
+  ticketReplyAdmin,
+  ticketReplyUser,
+  ticketReplyGuest,
+  ticketStatusChange,
+  ticketEscalation,
+} from '../templates/email/ticket';
 
 class TicketService {
   /**
@@ -691,14 +700,7 @@ class TicketService {
           channels: ['in_app', 'fcm', 'web_push', 'email'],
           emailOptions: {
             to: admin.email,
-            subject: `[New Ticket] ${ticket.ticketNumber}: ${ticket.subject}`,
-            html: `
-                        <h3>New Support Ticket</h3>
-                        <p><strong>Ticket:</strong> ${ticket.ticketNumber}</p>
-                        <p><strong>From:</strong> ${senderName}${roleLabel}</p>
-                        <p><strong>Subject:</strong> ${ticket.subject}</p>
-                        <p><a href="${process.env.FRONTEND_URL}/admin/tickets/${ticket.id}">View Ticket</a></p>
-                    `,
+            ...ticketNewAdmin(ticket.ticketNumber, ticket.subject, senderName, roleLabel, ticket.id),
           },
         })
         .catch(() => {});
@@ -731,13 +733,7 @@ class TicketService {
           channels: ['in_app', 'fcm', 'web_push', 'email'],
           emailOptions: {
             to: admin.email,
-            subject: `[Reply] ${ticket.ticketNumber}: ${ticket.subject}`,
-            html: `
-                        <h3>New Reply on ${ticket.ticketNumber}</h3>
-                        <p><strong>From:</strong> ${senderName}</p>
-                        <p>${messageBody.replace(/\n/g, '<br />')}</p>
-                        <p><a href="${process.env.FRONTEND_URL}/admin/tickets/${ticket.id}">View Ticket</a></p>
-                    `,
+            ...ticketReplyAdmin(ticket.ticketNumber, ticket.subject, senderName, messageBody, ticket.id),
           },
         })
         .catch(() => {});
@@ -768,7 +764,6 @@ class TicketService {
     // Registered user — full multi-channel notification
     if (ticket.userId && ticket.user) {
       const helpPath = ticket.user.role === Role.EMPLOYER ? 'employer' : 'candidate';
-      const emailSubject = replySubject || `Re: ${ticket.subject}`;
 
       notificationService
         .send({
@@ -781,13 +776,7 @@ class TicketService {
           channels: ['in_app', 'fcm', 'web_push', 'email'],
           emailOptions: {
             to: ticket.user.email,
-            subject: emailSubject,
-            html: `
-                        <h3>Your ticket ${ticket.ticketNumber} received a reply</h3>
-                        ${replySubject ? `<p><strong>Re:</strong> ${replySubject}</p>` : ''}
-                        ${messageBody}
-                        <p><a href="${process.env.FRONTEND_URL}/${helpPath}/help/${ticket.id}">View Ticket</a></p>
-                    `,
+            ...ticketReplyUser(ticket.ticketNumber, ticket.subject, messageBody, helpPath, ticket.id, replySubject),
           },
         })
         .catch(() => {});
@@ -825,18 +814,12 @@ class TicketService {
 
     // Guest ticket — email only
     if (ticket.guestEmail && !ticket.userId) {
-      const emailSubject = replySubject || `Re: ${ticket.subject}`;
-
+      const guestEmail = ticketReplyGuest(ticket.ticketNumber, ticket.subject, messageBody, replySubject);
       emailService
         .sendEmail({
           to: ticket.guestEmail,
-          subject: emailSubject,
-          html: `
-                    <h3>Reply to your support ticket ${ticket.ticketNumber}</h3>
-                    ${replySubject ? `<p><strong>Re:</strong> ${replySubject}</p>` : ''}
-                    ${messageBody}
-                    <p style="color: #888;">You can reply to this ticket by visiting our contact page.</p>
-                `,
+          subject: guestEmail.subject,
+          html: guestEmail.html,
         })
         .catch((err) => logger.warn('Failed to send guest ticket reply email', { error: err }));
     }
@@ -874,12 +857,7 @@ class TicketService {
         channels: ['in_app', 'fcm', 'web_push', 'email'],
         emailOptions: {
           to: ticket.user.email,
-          subject: `[${statusLabel}] ${ticket.ticketNumber}: ${ticket.subject}`,
-          html: `
-                    <h3>Ticket ${ticket.ticketNumber} — ${statusLabel}</h3>
-                    <p>Your ticket "${ticket.subject}" has been marked as <strong>${statusLabel}</strong>.${extraMessage}</p>
-                    <p><a href="${process.env.FRONTEND_URL}/${helpPath}/help/${ticket.id}">View Ticket</a></p>
-                `,
+          ...ticketStatusChange(ticket.ticketNumber, ticket.subject, statusLabel, helpPath, ticket.id, extraMessage),
         },
       })
       .catch(() => {});
@@ -907,14 +885,7 @@ class TicketService {
           channels: ['in_app', 'fcm', 'web_push', 'email'],
           emailOptions: {
             to: sa.email,
-            subject: `[ESCALATION] ${ticket.ticketNumber}: Not Satisfied`,
-            html: `
-                        <h3 style="color: #e53e3e;">Ticket Escalation</h3>
-                        <p>A user has rated ticket <strong>${ticket.ticketNumber}</strong> as <strong>Not Satisfied</strong>.</p>
-                        <p><strong>Subject:</strong> ${ticket.subject}</p>
-                        <p>The ticket has been automatically reopened.</p>
-                        <p><a href="${process.env.FRONTEND_URL}/admin/tickets/${ticket.id}">View Ticket</a></p>
-                    `,
+            ...ticketEscalation(ticket.ticketNumber, ticket.subject, ticket.id),
           },
         })
         .catch(() => {});
@@ -930,30 +901,11 @@ class TicketService {
     const helpPath =
       role === Role.EMPLOYER ? 'employer' : role === Role.CANDIDATE ? 'candidate' : '';
 
+    const confirmation = ticketConfirmation(ticketNumber, subject, helpPath);
     await emailService.sendEmail({
       to: email,
-      subject: `Ticket Created: ${ticketNumber}`,
-      html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #4F46E5;">We've Received Your Support Ticket</h2>
-                    <p>Hello,</p>
-                    <p>Thank you for contacting Talent Bridge support. We have successfully received your ticket and our team will review it shortly.</p>
-
-                    <div style="background-color: #F3F4F6; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 0;"><strong>Ticket Number:</strong> ${ticketNumber}</p>
-                        <p style="margin: 8px 0 0 0;"><strong>Subject:</strong> ${subject}</p>
-                    </div>
-
-                    <p>Our support team typically responds within 24 hours during business days. You will be notified via email and in-app notification when we reply.</p>
-
-                    ${helpPath ? `<p><a href="${process.env.FRONTEND_URL}/${helpPath}/help" style="color: #4F46E5; text-decoration: none;">View your tickets →</a></p>` : ''}
-
-                    <p style="color: #6B7280; font-size: 14px; margin-top: 24px;">
-                        Best regards,<br/>
-                        Talent Bridge Support Team
-                    </p>
-                </div>
-            `,
+      subject: confirmation.subject,
+      html: confirmation.html,
     });
   }
 }

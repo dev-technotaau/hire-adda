@@ -36,7 +36,8 @@ import {
   accountDeletionRequested as deletionRequestedEmailTemplate,
 } from '../templates/email/auth';
 import { passwordChanged as passwordChangedEmailTemplate } from '../templates/email/security';
-import { documentVerificationStatus as verificationStatusEmailTemplate } from '../templates/email/onboarding';
+import { documentVerificationStatus as verificationStatusEmailTemplate, verificationSubmitted as verificationSubmittedEmailTemplate } from '../templates/email/onboarding';
+import { applicationWithdrawn as appWithdrawnEmailTemplate } from '../templates/email/job';
 
 const tracer = trace.getTracer('notification-service');
 
@@ -203,9 +204,9 @@ class NotificationService {
 
     if (emailOptions) channels.push('email');
 
-    const whatsappTarget = user.whatsappNumber || user.mobileNumber;
+    const whatsappTarget = this.getWhatsappTarget(user, candidateUserId, 'notifyJobMatch');
     let whatsappOptions;
-    if (user.isWhatsappVerified && whatsappTarget) {
+    if (whatsappTarget) {
       const waTmpl = jobMatchWhatsapp(jobTitle, companyName, `${Math.round(matchScore * 100)}%`);
       whatsappOptions = {
         to: whatsappTarget,
@@ -279,8 +280,8 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
-    const whatsappTarget = user.whatsappNumber || user.mobileNumber;
-    if (user.isWhatsappVerified && whatsappTarget) {
+    const whatsappTarget = this.getWhatsappTarget(user, employerUserId, 'notifyNewApplication');
+    if (whatsappTarget) {
       channels.push('whatsapp');
       const tmpl = newApplicationWhatsapp(candidateName, jobTitle);
       whatsappOptions = {
@@ -364,8 +365,8 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
-    const statusWhatsappTarget = user.whatsappNumber || user.mobileNumber;
-    if (user.isWhatsappVerified && statusWhatsappTarget) {
+    const statusWhatsappTarget = this.getWhatsappTarget(user, candidateUserId, 'notifyApplicationStatusChange');
+    if (statusWhatsappTarget) {
       channels.push('whatsapp');
       const jobLink = `${process.env.FRONTEND_URL}/candidate/jobs/${jobId}`;
       // Use specific templates for interview/offer, generic for other statuses
@@ -448,8 +449,8 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
-    const whatsappTarget = user.whatsappNumber || user.mobileNumber;
-    if (user.isWhatsappVerified && whatsappTarget) {
+    const whatsappTarget = this.getWhatsappTarget(user, candidateUserId, 'notifyApplicationSubmitted');
+    if (whatsappTarget) {
       channels.push('whatsapp');
       const tmpl = applicationSubmittedWhatsapp(jobTitle, companyName);
       whatsappOptions = {
@@ -509,8 +510,8 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
-    const whatsappTarget = user.whatsappNumber || user.mobileNumber;
-    if (user.isWhatsappVerified && whatsappTarget) {
+    const whatsappTarget = this.getWhatsappTarget(user, userId, 'notifyPasswordChanged');
+    if (whatsappTarget) {
       channels.push('whatsapp');
       const tmpl = securityAlertWhatsapp(`Password changed on ${time}`);
       whatsappOptions = {
@@ -570,8 +571,8 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
-    const whatsappTarget = user.whatsappNumber || user.mobileNumber;
-    if (user.isWhatsappVerified && whatsappTarget) {
+    const whatsappTarget = this.getWhatsappTarget(user, userId, 'notifyUserSuspended');
+    if (whatsappTarget) {
       channels.push('whatsapp');
       const tmpl = accountAlertWhatsapp(
         `Your account has been suspended${reason ? `. Reason: ${reason}` : ''}`
@@ -632,8 +633,8 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
-    const whatsappTarget = user.whatsappNumber || user.mobileNumber;
-    if (user.isWhatsappVerified && whatsappTarget) {
+    const whatsappTarget = this.getWhatsappTarget(user, userId, 'notifyUserActivated');
+    if (whatsappTarget) {
       channels.push('whatsapp');
       const tmpl = accountAlertWhatsapp('Your account has been reactivated. You can now sign in');
       whatsappOptions = {
@@ -671,19 +672,42 @@ class NotificationService {
   async notifyVerificationSubmitted(userId: string, verificationType: string): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, firstName: true, isEmailVerified: true },
+      select: {
+        email: true,
+        firstName: true,
+        mobileNumber: true,
+        whatsappNumber: true,
+        isEmailVerified: true,
+        isWhatsappVerified: true,
+      },
     });
 
     const channels: NotificationChannel[] = ['in_app', 'fcm', 'web_push'];
     let emailOptions;
+    let whatsappOptions;
 
     if (user?.isEmailVerified) {
       channels.push('email');
+      const verifyEmail = verificationSubmittedEmailTemplate(user.firstName, verificationType);
       emailOptions = {
         to: user.email,
-        subject: `Verification Request Submitted — ${verificationType}`,
-        html: `<p>Hi ${user.firstName || 'there'},</p><p>Your <strong>${verificationType.toLowerCase()}</strong> verification request has been submitted and is now under review.</p><p>We'll notify you once the review is complete. This usually takes 1-2 business days.</p><p><a href="${process.env.FRONTEND_URL}/candidate/verification">Check Status</a></p>`,
-        text: `Your ${verificationType.toLowerCase()} verification request has been submitted and is under review. We'll notify you once the review is complete.`,
+        subject: verifyEmail.subject,
+        html: verifyEmail.html,
+        text: verifyEmail.text,
+      };
+    }
+
+    const whatsappTarget = user ? this.getWhatsappTarget(user, userId, 'notifyVerificationSubmitted') : null;
+    if (whatsappTarget) {
+      channels.push('whatsapp');
+      const waTmpl = documentRequestWhatsapp(
+        `${verificationType} verification submitted`,
+        `${process.env.FRONTEND_URL}/candidate/verification`
+      );
+      whatsappOptions = {
+        to: whatsappTarget,
+        templateName: waTmpl.templateName,
+        components: waTmpl.components,
       };
     }
 
@@ -696,6 +720,7 @@ class NotificationService {
       link: '/candidate/verification',
       channels,
       emailOptions,
+      whatsappOptions,
     });
   }
 
@@ -731,8 +756,8 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
-    const whatsappTarget = user.whatsappNumber || user.mobileNumber;
-    if (user.isWhatsappVerified && whatsappTarget) {
+    const whatsappTarget = this.getWhatsappTarget(user, userId, 'notifyVerificationReviewed');
+    if (whatsappTarget) {
       channels.push('whatsapp');
       const verLink = `${process.env.FRONTEND_URL}/candidate/verification`;
       const tmpl = documentRequestWhatsapp(`${verificationType} verification ${status}`, verLink);
@@ -838,8 +863,8 @@ class NotificationService {
       }
 
       // WhatsApp notification
-      const whatsappTarget = admin.whatsappNumber || admin.mobileNumber;
-      if (admin.isWhatsappVerified && whatsappTarget) {
+      const whatsappTarget = this.getWhatsappTarget(admin, admin.id, 'notifyAdminsNewVerification');
+      if (whatsappTarget) {
         channels.push('whatsapp');
         const tmpl = adminAlertWhatsapp(
           `${verificationType} verification request from ${userName}`
@@ -882,17 +907,38 @@ class NotificationService {
   async notifyAccountDeletionRequested(userId: string): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, firstName: true, isEmailVerified: true },
+      select: {
+        email: true,
+        firstName: true,
+        mobileNumber: true,
+        whatsappNumber: true,
+        isEmailVerified: true,
+        isWhatsappVerified: true,
+      },
     });
     if (!user) return;
 
     const channels: NotificationChannel[] = ['in_app'];
     let emailOptions;
+    let whatsappOptions;
 
     if (user.isEmailVerified) {
       channels.push('email');
       const tmpl = deletionRequestedEmailTemplate(user.firstName || 'there');
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
+    }
+
+    const whatsappTarget = this.getWhatsappTarget(user, userId, 'notifyAccountDeletionRequested');
+    if (whatsappTarget) {
+      channels.push('whatsapp');
+      const waTmpl = accountAlertWhatsapp(
+        'Your account deletion request has been received. It will be deleted in 30 days. Log in to cancel'
+      );
+      whatsappOptions = {
+        to: whatsappTarget,
+        templateName: waTmpl.templateName,
+        components: waTmpl.components,
+      };
     }
 
     await this.send({
@@ -905,6 +951,8 @@ class NotificationService {
       link: '/settings',
       channels,
       emailOptions,
+      whatsappOptions,
+      isEssential: true,
     });
   }
 
@@ -914,17 +962,36 @@ class NotificationService {
   async notifyJobPosted(employerUserId: string, jobTitle: string, jobId: string): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: employerUserId },
-      select: { email: true, firstName: true, isEmailVerified: true },
+      select: {
+        email: true,
+        firstName: true,
+        mobileNumber: true,
+        whatsappNumber: true,
+        isEmailVerified: true,
+        isWhatsappVerified: true,
+      },
     });
     if (!user) return;
 
     const channels: NotificationChannel[] = ['in_app'];
     let emailOptions;
+    let whatsappOptions;
 
     if (user.isEmailVerified) {
       channels.push('email');
       const tmpl = jobPostedEmailTemplate(user.firstName || 'Hiring Manager', jobTitle, jobId);
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
+    }
+
+    const whatsappTarget = this.getWhatsappTarget(user, employerUserId, 'notifyJobPosted');
+    if (whatsappTarget) {
+      channels.push('whatsapp');
+      const waTmpl = accountAlertWhatsapp(`Your job posting "${jobTitle}" is now live`);
+      whatsappOptions = {
+        to: whatsappTarget,
+        templateName: waTmpl.templateName,
+        components: waTmpl.components,
+      };
     }
 
     await this.send({
@@ -937,6 +1004,7 @@ class NotificationService {
       metadata: { jobId },
       channels,
       emailOptions,
+      whatsappOptions,
     });
   }
 
@@ -957,17 +1025,36 @@ class NotificationService {
     for (const applicantUserId of uniqueUserIds) {
       const user = await prisma.user.findUnique({
         where: { id: applicantUserId },
-        select: { email: true, firstName: true, isEmailVerified: true },
+        select: {
+          email: true,
+          firstName: true,
+          mobileNumber: true,
+          whatsappNumber: true,
+          isEmailVerified: true,
+          isWhatsappVerified: true,
+        },
       });
       if (!user) continue;
 
       const channels: NotificationChannel[] = ['in_app'];
       let emailOptions;
+      let whatsappOptions;
 
       if (user.isEmailVerified) {
         channels.push('email');
         const tmpl = jobClosedEmailTemplate(user.firstName || 'Candidate', jobTitle, companyName);
         emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
+      }
+
+      const whatsappTarget = this.getWhatsappTarget(user, applicantUserId, 'notifyJobClosed');
+      if (whatsappTarget) {
+        channels.push('whatsapp');
+        const waTmpl = applicationStatusWhatsapp('closed', companyName, jobTitle);
+        whatsappOptions = {
+          to: whatsappTarget,
+          templateName: waTmpl.templateName,
+          components: waTmpl.components,
+        };
       }
 
       await this.send({
@@ -980,6 +1067,7 @@ class NotificationService {
         metadata: { jobId },
         channels,
         emailOptions,
+        whatsappOptions,
       }).catch(() => {});
     }
   }
@@ -996,12 +1084,20 @@ class NotificationService {
     if (matchCount === 0) return;
     const user = await prisma.user.findUnique({
       where: { id: employerUserId },
-      select: { email: true, firstName: true, isEmailVerified: true },
+      select: {
+        email: true,
+        firstName: true,
+        mobileNumber: true,
+        whatsappNumber: true,
+        isEmailVerified: true,
+        isWhatsappVerified: true,
+      },
     });
     if (!user) return;
 
     const channels: NotificationChannel[] = ['in_app', 'fcm', 'web_push'];
     let emailOptions;
+    let whatsappOptions;
 
     if (user.isEmailVerified) {
       channels.push('email');
@@ -1014,6 +1110,19 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
+    const whatsappTarget = this.getWhatsappTarget(user, employerUserId, 'notifyMatchingCandidatesFound');
+    if (whatsappTarget) {
+      channels.push('whatsapp');
+      const waTmpl = adminAlertWhatsapp(
+        `${matchCount} matching candidate${matchCount === 1 ? '' : 's'} found for "${jobTitle}"`
+      );
+      whatsappOptions = {
+        to: whatsappTarget,
+        templateName: waTmpl.templateName,
+        components: waTmpl.components,
+      };
+    }
+
     await this.send({
       userId: employerUserId,
       title: 'Matching Candidates Found',
@@ -1024,6 +1133,7 @@ class NotificationService {
       metadata: { jobId, matchCount },
       channels,
       emailOptions,
+      whatsappOptions,
     });
   }
 
@@ -1038,19 +1148,40 @@ class NotificationService {
   ): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: employerUserId },
-      select: { email: true, firstName: true, mobileNumber: true, isEmailVerified: true },
+      select: {
+        email: true,
+        firstName: true,
+        mobileNumber: true,
+        whatsappNumber: true,
+        isEmailVerified: true,
+        isWhatsappVerified: true,
+      },
     });
     if (!user) return;
 
     const channels: NotificationChannel[] = ['in_app', 'fcm', 'web_push'];
     let emailOptions;
+    let whatsappOptions;
+
     if (user.isEmailVerified) {
       channels.push('email');
+      const withdrawnEmail = appWithdrawnEmailTemplate(user.firstName || 'Hiring Manager', candidateName, jobTitle);
       emailOptions = {
         to: user.email,
-        subject: `Application Withdrawn: ${candidateName} — ${jobTitle}`,
-        html: `<p>Hi ${user.firstName || 'Hiring Manager'},</p><p><strong>${candidateName}</strong> has withdrawn their application for the <strong>${jobTitle}</strong> position.</p><p>You can view other applicants in your dashboard.</p>`,
-        text: `${candidateName} withdrew their application for ${jobTitle}.`,
+        subject: withdrawnEmail.subject,
+        html: withdrawnEmail.html,
+        text: withdrawnEmail.text,
+      };
+    }
+
+    const whatsappTarget = this.getWhatsappTarget(user, employerUserId, 'notifyApplicationWithdrawn');
+    if (whatsappTarget) {
+      channels.push('whatsapp');
+      const waTmpl = newApplicationWhatsapp(candidateName, jobTitle);
+      whatsappOptions = {
+        to: whatsappTarget,
+        templateName: waTmpl.templateName,
+        components: waTmpl.components,
       };
     }
 
@@ -1072,6 +1203,7 @@ class NotificationService {
       metadata: { jobId, candidateName },
       channels,
       emailOptions,
+      whatsappOptions,
       smsOptions,
     });
   }
@@ -1139,6 +1271,26 @@ class NotificationService {
     return prisma.notification.count({
       where: { userId, isRead: false },
     });
+  }
+
+  // ===========================
+  // WhatsApp target resolution
+  // ===========================
+
+  /** Resolve the WhatsApp target number for a user. Returns the number if verified, or null. */
+  private getWhatsappTarget(
+    user: { whatsappNumber: string | null; mobileNumber: string | null; isWhatsappVerified: boolean },
+    userId: string,
+    method: string
+  ): string | null {
+    const target = user.whatsappNumber || user.mobileNumber;
+    if (user.isWhatsappVerified && !target) {
+      logger.warn(
+        `[${method}] WhatsApp verified but no target number for user ${userId} ` +
+          `(whatsappNumber=${user.whatsappNumber}, mobileNumber=${user.mobileNumber})`
+      );
+    }
+    return user.isWhatsappVerified && target ? target : null;
   }
 
   // ===========================
@@ -1392,8 +1544,8 @@ class NotificationService {
     }
 
     let whatsappOptions;
-    const whatsappTarget = user?.whatsappNumber || user?.mobileNumber;
-    if (user?.isWhatsappVerified && whatsappTarget) {
+    const whatsappTarget = user ? this.getWhatsappTarget(user, userId, 'sendNewDeviceAlert') : null;
+    if (whatsappTarget) {
       channels.push('whatsapp');
       const tmpl = securityAlertWhatsapp(`New login from ${deviceName} at ${location}`);
       whatsappOptions = {

@@ -4,6 +4,7 @@ import { AppError } from '../middleware/error';
 import { jobService } from './job.service';
 import { notificationService, type NotificationChannel } from './notification.service';
 import logger from '../config/logger';
+import { jobAlertWhatsapp } from '../templates/whatsapp';
 import type { Prisma } from '@prisma/client';
 
 interface CreateAlertData {
@@ -187,23 +188,24 @@ export const jobAlertService = {
             };
           }
 
-          const whatsappTarget = alert.user.whatsappNumber || alert.user.mobileNumber;
-          if (alert.user.isWhatsappVerified && whatsappTarget) {
+          const waTarget = alert.user.whatsappNumber || alert.user.mobileNumber;
+          if (alert.user.isWhatsappVerified && !waTarget) {
+            logger.warn(
+              `[processJobAlerts] WhatsApp verified but no target number for user ${alert.userId} ` +
+                `(whatsappNumber=${alert.user.whatsappNumber}, mobileNumber=${alert.user.mobileNumber})`
+            );
+          }
+          if (alert.user.isWhatsappVerified && waTarget) {
             channels.push('whatsapp');
             const topJob = (result.jobs || [])[0];
+            const waTmpl = jobAlertWhatsapp(
+              topJob?.title || 'New Job',
+              topJob?.company?.companyName || 'a company',
+              `${frontendUrl}/candidate/job-alerts`
+            );
             whatsappOptions = {
-              to: whatsappTarget,
-              templateName: 'job_alert',
-              components: [
-                {
-                  type: 'body' as const,
-                  parameters: [
-                    { type: 'text' as const, text: topJob?.title || 'New Job' },
-                    { type: 'text' as const, text: topJob?.company?.companyName || 'a company' },
-                    { type: 'text' as const, text: `${frontendUrl}/candidate/job-alerts` },
-                  ],
-                },
-              ],
+              to: waTarget,
+              ...waTmpl,
             };
           }
 

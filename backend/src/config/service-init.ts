@@ -118,9 +118,8 @@ export const initializeServices = async (): Promise<void> => {
       const health = await elasticClient.cluster.health();
       registerService('Elasticsearch', 'connected', health.status);
 
-      // Initialize indices and backfill existing data
-      await searchService.initializeIndices();
-      searchService.backfillIfEmpty().catch((err) => logger.error('ES backfill failed:', err));
+      // Full reindex on every startup: delete → recreate → seed suggestions → backfill from DB
+      await searchService.reindexAll();
     } catch (error) {
       registerService('Elasticsearch', 'error', (error as Error).message?.slice(0, 50));
     }

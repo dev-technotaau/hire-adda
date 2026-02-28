@@ -288,10 +288,11 @@ export default function ExperienceSection({ form, updateField }: ProfileSectionP
                   updateExperience(i, { teamSize: parseInt(e.target.value) || undefined })
                 }
               />
-              <Input
+              <ServerSuggestionInput
+                category="role_category"
                 label="Reporting To"
                 value={exp.reportingTo || ''}
-                onChange={(e) => updateExperience(i, { reportingTo: e.target.value })}
+                onChange={(val) => updateExperience(i, { reportingTo: val })}
               />
               <Input
                 label="Annual CTC"

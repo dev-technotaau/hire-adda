@@ -2,6 +2,7 @@ import prisma from '../config/prisma';
 import { emailQueue } from '../jobs/email.queue';
 import { ticketService } from './ticket.service';
 import logger from '../config/logger';
+import { contactFormSubmission } from '../templates/email/contact';
 
 class ContactService {
   async submitMessage(data: { name: string; email: string; subject: string; message: string }) {
@@ -20,20 +21,12 @@ class ContactService {
       );
 
     // Notify admins via email queue (rate-limited, fire-and-forget)
+    const contactEmail = contactFormSubmission(data.name, data.email, data.subject, data.message, contact.id);
     emailQueue
       .add('send-email', {
         to: 'support@talentbridge.com',
-        subject: `[Contact Form] ${data.subject} — from ${data.name}`,
-        html: `
-                <h3>New Contact Form Submission</h3>
-                <p><strong>Name:</strong> ${data.name}</p>
-                <p><strong>Email:</strong> ${data.email}</p>
-                <p><strong>Subject:</strong> ${data.subject}</p>
-                <hr />
-                <p>${data.message.replace(/\n/g, '<br />')}</p>
-                <hr />
-                <p style="color: #888; font-size: 12px;">Message ID: ${contact.id}</p>
-            `,
+        subject: contactEmail.subject,
+        html: contactEmail.html,
       })
       .catch((err) => logger.warn('Failed to enqueue contact notification email', { error: err }));
 

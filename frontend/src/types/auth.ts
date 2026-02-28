@@ -84,7 +84,6 @@ export interface VerifyMobileRequest {
 export interface MfaSetupResponse {
   secret: string;
   qrCodeUrl: string;
-  backupCodes: string[];
 }
 
 export interface MfaVerifyRequest {

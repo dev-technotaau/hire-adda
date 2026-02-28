@@ -10,6 +10,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import DatePicker from '@/components/ui/DatePicker';
 import Textarea from '@/components/ui/Textarea';
 import Select, { type SelectOption } from '@/components/ui/Select';
@@ -325,11 +326,12 @@ export default function EditJobPage() {
         <Card>
           <h2 className="mb-4 text-base font-semibold text-[var(--text)]">Basic Information</h2>
           <div className="space-y-4">
-            <Input
+            <ServerSuggestionInput
+              category="job_title"
               label="Job Title"
               required
               value={form.title || ''}
-              onChange={(e) => handleChange('title', e.target.value)}
+              onChange={(val) => handleChange('title', val)}
               placeholder="e.g. Senior Software Engineer"
             />
             <div className="grid gap-4 sm:grid-cols-2">

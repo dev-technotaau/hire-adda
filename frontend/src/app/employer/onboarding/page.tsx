@@ -918,12 +918,12 @@ export default function EmployerOnboardingPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input
+        <ServerSuggestionInput
+          category="company"
           label="Parent Company"
           placeholder="e.g. Alphabet Inc."
           value={data.parentCompany}
-          onChange={(e) => updateData({ parentCompany: e.target.value })}
-          leftIcon={<Building2 className="h-4 w-4" />}
+          onChange={(val) => updateData({ parentCompany: val })}
           helperText="Leave blank if not a subsidiary"
         />
         <Input
@@ -1677,12 +1677,12 @@ export default function EmployerOnboardingPage() {
           leftIcon={<UserCircle className="h-4 w-4" />}
           helperText="Primary point of contact for candidates"
         />
-        <Input
+        <ServerSuggestionInput
+          category="role_category"
           label="Contact Person Designation"
           placeholder="e.g. HR Manager, Talent Acquisition Lead"
           value={data.contactPersonDesignation}
-          onChange={(e) => updateData({ contactPersonDesignation: e.target.value })}
-          leftIcon={<Briefcase className="h-4 w-4" />}
+          onChange={(val) => updateData({ contactPersonDesignation: val })}
         />
       </div>
     </div>

@@ -5,6 +5,6 @@ module.exports = defineConfig({
     schema: 'prisma/schema.prisma',
     datasource: {
         provider: 'postgresql',
-        url: process.env.DIRECT_URL,
+        url: process.env.DIRECT_URL || process.env.DATABASE_URL,
     },
 });

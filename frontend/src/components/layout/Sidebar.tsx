@@ -21,6 +21,7 @@ import {
   ChevronRight,
   FileBarChart,
   HelpCircle,
+  Mail,
   MessageSquare,
   ToggleLeft,
   Sparkles,
@@ -76,6 +77,7 @@ const adminNav: NavItem[] = [
   { label: 'Analytics', href: ROUTES.ADMIN.ANALYTICS, icon: BarChart3 },
   { label: 'Audit Logs', href: ROUTES.ADMIN.AUDIT_LOGS, icon: ClipboardList },
   { label: 'Reports', href: ROUTES.ADMIN.REPORTS, icon: FileBarChart },
+  { label: 'Email Templates', href: ROUTES.ADMIN.EMAIL_TEMPLATES, icon: Mail },
   { label: 'Support Tickets', href: ROUTES.ADMIN.TICKETS, icon: MessageSquare },
   { label: 'Settings', href: ROUTES.ADMIN.SETTINGS, icon: Settings },
 ];
@@ -84,9 +86,16 @@ const superAdminNav: NavItem[] = [
   { label: 'Dashboard', href: ROUTES.SUPER_ADMIN.DASHBOARD, icon: LayoutDashboard },
   { label: 'Manage Users', href: ROUTES.SUPER_ADMIN.USERS, icon: Users },
   { label: 'Manage Admins', href: ROUTES.SUPER_ADMIN.ADMINS, icon: Shield },
+  { label: 'Jobs', href: ROUTES.ADMIN.JOBS, icon: Briefcase },
+  { label: 'Applications', href: ROUTES.ADMIN.APPLICATIONS, icon: FileText },
+  { label: 'Verifications', href: ROUTES.ADMIN.VERIFICATIONS, icon: ShieldCheck },
+  { label: 'Moderation', href: ROUTES.ADMIN.MODERATION, icon: Shield },
   { label: 'Platform Analytics', href: ROUTES.SUPER_ADMIN.ANALYTICS, icon: BarChart3 },
-  { label: 'Feature Flags', href: ROUTES.SUPER_ADMIN.FEATURE_FLAGS, icon: ToggleLeft },
+  { label: 'Audit Logs', href: ROUTES.ADMIN.AUDIT_LOGS, icon: ClipboardList },
+  { label: 'Reports', href: ROUTES.ADMIN.REPORTS, icon: FileBarChart },
+  { label: 'Email Templates', href: ROUTES.ADMIN.EMAIL_TEMPLATES, icon: Mail },
   { label: 'Ticket Analytics', href: ROUTES.SUPER_ADMIN.TICKETS, icon: BarChart3 },
+  { label: 'Feature Flags', href: ROUTES.SUPER_ADMIN.FEATURE_FLAGS, icon: ToggleLeft },
   { label: 'System Config', href: ROUTES.SUPER_ADMIN.CONFIG, icon: Settings },
   { label: 'Security', href: ROUTES.SUPER_ADMIN.SETTINGS, icon: Shield },
 ];
@@ -100,7 +109,7 @@ export function getNavItems(role: string | undefined): NavItem[] {
     case 'ADMIN':
       return [...adminNav];
     case 'SUPER_ADMIN':
-      return [...adminNav, ...superAdminNav];
+      return [...superAdminNav];
     default:
       return [];
   }
