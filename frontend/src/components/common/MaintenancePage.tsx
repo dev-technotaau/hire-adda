@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Wrench, RefreshCw, Mail, Clock } from 'lucide-react';
 import { APP_CONFIG } from '@/constants/config';
@@ -55,8 +55,17 @@ export default function MaintenancePage(props: MaintenancePageProps = {}) {
       return;
     }
 
+    const target = new Date(estimatedReturnTime).getTime();
+
+    // Guard: if the date is invalid or already in the past on mount, skip countdown
+    // (prevents reload loop when estimatedReturnTime is stale / past)
+    if (Number.isNaN(target) || target <= Date.now()) {
+      queueMicrotask(() => setCountdown(null));
+      return;
+    }
+
     function updateCountdown() {
-      const diff = new Date(estimatedReturnTime!).getTime() - Date.now();
+      const diff = target - Date.now();
       if (diff <= 0) {
         setCountdown(null);
         window.location.reload();
@@ -75,16 +84,25 @@ export default function MaintenancePage(props: MaintenancePageProps = {}) {
   }, [estimatedReturnTime]);
 
   // Auto-refresh: poll feature flags with raw fetch (bypasses Axios 503 interceptor)
+  const reloadTriggered = useRef(false);
   useEffect(() => {
     async function checkMaintenance() {
+      if (reloadTriggered.current) return;
       try {
-        // Try BFF proxy first (first-party cookies), fall back to direct backend
-        const res = await fetch('/api/proxy/feature-flags/client', {
+        // Bust any HTTP cache so we get fresh data from backend
+        const url = `/api/proxy/feature-flags/client?_t=${Date.now()}`;
+        const res = await fetch(url, {
           credentials: 'include',
-        }).catch(() => fetch(`${APP_CONFIG.apiUrl}/feature-flags/client`));
+          cache: 'no-store',
+        }).catch(() =>
+          fetch(`${APP_CONFIG.apiUrl}/feature-flags/client?_t=${Date.now()}`, {
+            cache: 'no-store',
+          }),
+        );
         if (res.ok) {
           const json = await res.json();
           if (json?.data?.maintenanceMode === false) {
+            reloadTriggered.current = true;
             window.location.reload();
           }
         }
