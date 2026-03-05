@@ -63,7 +63,7 @@ const publicPaths = [
   '/disclaimer',
 ];
 // Auth paths where authenticated users should be redirected away (no reason to visit)
-const guestOnlyPaths = ['/auth/login', '/auth/register', '/auth/forgot-password'];
+const guestOnlyPaths = ['/auth/login', '/auth/register', '/auth/forgot-password', '/portal/login'];
 // Auth paths accessible regardless of auth state (needed post-login)
 const authPaths = [...guestOnlyPaths, '/auth/reset-password', '/auth/verify-email'];
 
@@ -99,11 +99,6 @@ function getRoleFromToken(token: string): string | null {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public paths
-  if (publicPaths.includes(pathname)) {
-    return nextWithCsp();
-  }
-
   // Allow static assets, API routes, etc.
   if (
     pathname.startsWith('/_next') ||
@@ -114,16 +109,28 @@ export function proxy(request: NextRequest) {
     return nextWithCsp();
   }
 
-  // Check auth via cookie/token
-  // Note: In a real app, you'd verify JWT here. For client-side auth with localStorage,
-  // the middleware provides basic path-level protection; actual auth verification
-  // happens client-side in the DashboardLayout component.
   const token = request.cookies.get('tb_access_token')?.value;
 
-  // Auth paths: allow all through, but redirect authenticated users away from guest-only pages
+  // Homepage: authenticated users go to their dashboard, guests see landing page
+  if (pathname === '/') {
+    if (token) {
+      const role = getRoleFromToken(token);
+      const dashboard = role && roleDashboards[role];
+      if (dashboard) {
+        return NextResponse.redirect(new URL(dashboard, request.url));
+      }
+    }
+    return nextWithCsp();
+  }
+
+  // Other public paths (about, contact, etc.) — no auth check needed
+  if (publicPaths.includes(pathname)) {
+    return nextWithCsp();
+  }
+
+  // Auth/portal paths: redirect authenticated users away from login/register pages
   if (authPaths.some((p) => pathname.startsWith(p))) {
     if (token && guestOnlyPaths.some((p) => pathname.startsWith(p))) {
-      // Decode JWT to get role and redirect to the correct dashboard
       const role = getRoleFromToken(token);
       const dashboard = (role && roleDashboards[role]) || '/';
       return NextResponse.redirect(new URL(dashboard, request.url));
