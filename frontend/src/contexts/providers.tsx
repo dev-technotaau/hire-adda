@@ -70,7 +70,12 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
 
   // If API already triggered maintenance (503 interceptor), show immediately
   if (apiTriggered && !isBypassed) {
-    return <MaintenancePage />;
+    return (
+      <MaintenancePage
+        message={flags?.maintenanceMessage as string}
+        estimatedReturnTime={flags?.maintenanceReturnTime as string}
+      />
+    );
   }
 
   // Block rendering ONLY on initial load (ref ensures this never re-triggers)
@@ -82,7 +87,7 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
     );
   }
 
-  // Feature-flag path: pass message/timer directly as props (no store sync needed)
+  // Feature-flag path: pass message/timer directly as props
   if (maintenanceFlag && !isBypassed) {
     return (
       <MaintenancePage
