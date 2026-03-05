@@ -4,6 +4,8 @@ import { getAllFlags, getFlag } from '../config/feature-flags';
 // Public subset of flags exposed to frontend
 const CLIENT_VISIBLE_FLAGS = [
   'maintenanceMode',
+  'maintenanceMessage',
+  'maintenanceReturnTime',
   'enableBetaFeatures',
   'enableElasticsearch',
   'enableAIMatching',

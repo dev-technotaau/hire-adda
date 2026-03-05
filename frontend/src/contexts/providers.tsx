@@ -12,7 +12,7 @@ import { useSocket } from '@/hooks/use-socket';
 import { onAuthMessage } from '@/lib/auth-channel';
 import { pageView, fbPageView } from '@/lib/analytics';
 import { pushService } from '@/services/push.service';
-import { useFeatureFlags, useFeatureFlag } from '@/hooks/use-feature-flags';
+import { useFeatureFlags } from '@/hooks/use-feature-flags';
 import { onFCMMessage } from '@/lib/firebase';
 import { showToast } from '@/components/ui/Toast';
 import MaintenancePage from '@/components/common/MaintenancePage';
@@ -39,9 +39,22 @@ function AuthHydrator({ children }: { children: ReactNode }) {
 const BYPASS_STORAGE_KEY = 'tb_maintenance_bypass';
 
 function MaintenanceGate({ children }: { children: ReactNode }) {
-  const maintenanceFlag = useFeatureFlag('maintenanceMode', false);
+  const { data: flags, isPending } = useFeatureFlags();
+  const maintenanceFlag = flags?.maintenanceMode === true;
   const apiTriggered = useMaintenanceStore((s) => s.isMaintenanceMode);
+  const setMaintenanceMode = useMaintenanceStore((s) => s.setMaintenanceMode);
   const user = useAuthStore((s) => s.user);
+
+  // Sync feature-flag message/timer into the maintenance store so MaintenancePage can read them
+  useEffect(() => {
+    if (maintenanceFlag) {
+      setMaintenanceMode(
+        true,
+        (flags?.maintenanceMessage as string) || undefined,
+        (flags?.maintenanceReturnTime as string) || undefined,
+      );
+    }
+  }, [maintenanceFlag, flags?.maintenanceMessage, flags?.maintenanceReturnTime, setMaintenanceMode]);
 
   // Admin bypass: ADMIN/SUPER_ADMIN users skip maintenance
   const isAdminRole = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
@@ -61,10 +74,23 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const isActive = maintenanceFlag || apiTriggered;
   const isBypassed = isAdminRole || hasBypassKey;
 
-  if (isActive && !isBypassed) {
+  // If API already triggered maintenance, show immediately (no need to wait for flags)
+  if (apiTriggered && !isBypassed) {
+    return <MaintenancePage />;
+  }
+
+  // Block rendering until feature flags are loaded to prevent homepage flash
+  if (isPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--border)] border-t-[var(--primary)]" />
+      </div>
+    );
+  }
+
+  if (maintenanceFlag && !isBypassed) {
     return <MaintenancePage />;
   }
 
