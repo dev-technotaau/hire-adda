@@ -26,12 +26,12 @@ function nextWithCsp(): NextResponse {
 
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://challenges.cloudflare.com${firebaseDbOrigin ? ` ${firebaseDbOrigin}` : ''}`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "img-src 'self' data: blob: https://res.cloudinary.com https://assets.talentbridge.com https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com https://challenges.cloudflare.com https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com${firebaseDbOrigin ? ` ${firebaseDbOrigin}` : ''}`,
-    "frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com",
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://challenges.cloudflare.com https://vercel.live${firebaseDbOrigin ? ` ${firebaseDbOrigin}` : ''}`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live",
+    "img-src 'self' data: blob: https://res.cloudinary.com https://assets.talentbridge.com https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com https://vercel.live https://vercel.com",
+    "font-src 'self' https://fonts.gstatic.com https://vercel.live",
+    `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com https://challenges.cloudflare.com https://vercel.live https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com${firebaseDbOrigin ? ` ${firebaseDbOrigin}` : ''}`,
+    "frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com https://vercel.live",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "object-src 'none'",

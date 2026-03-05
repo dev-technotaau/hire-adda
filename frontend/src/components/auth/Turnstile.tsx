@@ -14,15 +14,18 @@ export default function Turnstile({ onSuccess, onError, onExpire }: TurnstilePro
   if (!SITE_KEY) return null;
 
   return (
-    <div className="mt-2 flex justify-center">
+    <div className="mt-4 flex justify-center">
       <TurnstileWidget
         siteKey={SITE_KEY}
         onSuccess={onSuccess}
-        onError={onError}
+        onError={() => {
+          console.error('[Turnstile] Challenge failed');
+          onError?.();
+        }}
         onExpire={onExpire}
         options={{
           theme: 'light',
-          size: 'flexible',
+          size: 'normal',
         }}
       />
     </div>
