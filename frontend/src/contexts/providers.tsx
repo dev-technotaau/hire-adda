@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { getQueryClient } from '@/lib/query-client';
@@ -44,6 +44,10 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
   const apiTriggered = useMaintenanceStore((s) => s.isMaintenanceMode);
   const user = useAuthStore((s) => s.user);
 
+  // One-shot ref: once feature flags resolve, never show the spinner again
+  const resolved = useRef(false);
+  if (!isPending) resolved.current = true;
+
   // Admin bypass: ADMIN/SUPER_ADMIN users skip maintenance
   const isAdminRole = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
@@ -69,8 +73,8 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
     return <MaintenancePage />;
   }
 
-  // Block rendering until feature flags are loaded to prevent homepage flash
-  if (isPending) {
+  // Block rendering ONLY on initial load (ref ensures this never re-triggers)
+  if (!resolved.current) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--border)] border-t-[var(--primary)]" />
