@@ -18,7 +18,8 @@ const tokenCacheKey = (hashedToken: string) => `token:valid:${hashedToken}`;
 export const createRefreshToken = async (
   userId: string,
   userAgent?: string,
-  ipAddress?: string
+  ipAddress?: string,
+  sessionId?: string
 ): Promise<string> => {
   // Generate a unique token ID
   const tokenId = generateSecureToken(16);
@@ -28,6 +29,7 @@ export const createRefreshToken = async (
     userId,
     email: '', // Will be filled by auth service
     role: '', // Will be filled by auth service
+    sessionId: sessionId || '',
   });
 
   // Calculate expiration date
@@ -46,6 +48,7 @@ export const createRefreshToken = async (
       expiresAt,
       userAgent,
       ipAddress,
+      sessionId,
     },
   });
 

@@ -27,6 +27,7 @@ export const FILE_LIMITS = {
   RESUME_MAX_SIZE: 5 * 1024 * 1024, // 5MB
   AVATAR_MAX_SIZE: 5 * 1024 * 1024, // 5MB
   LOGO_MAX_SIZE: 5 * 1024 * 1024, // 5MB
+  COVER_MAX_SIZE: 5 * 1024 * 1024, // 5MB
   RESUME_TYPES: [
     'application/pdf',
     'application/msword',
@@ -128,6 +129,7 @@ export const QUERY_KEYS = {
     SAVED_CANDIDATES: ['employers', 'saved-candidates'],
     APPLICATIONS: ['employers', 'applications'],
     ANALYTICS: (filters: Record<string, unknown>) => ['employers', 'analytics', filters],
+    PUBLIC_PROFILE: (id: string) => ['employers', 'public-profile', id],
   },
   NOTIFICATIONS: {
     LIST: ['notifications', 'list'],

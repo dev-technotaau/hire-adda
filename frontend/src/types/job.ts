@@ -190,6 +190,7 @@ export interface JobCompany {
   userId?: string;
   companyName: string;
   logo: string | null;
+  coverImage?: string | null;
   tagline: string | null;
   industry: string | null;
   subIndustry: string | null;
@@ -294,6 +295,7 @@ export interface CreateJobRequest {
   numberOfOpenings?: number;
   urgencyLevel?: UrgencyLevel;
   isFeatured?: boolean;
+  isPremium?: boolean;
   tags?: string[];
   jobPerks?: string[];
   travelRequirementPercent?: number;
@@ -337,6 +339,7 @@ export interface CreateJobRequest {
   applyMethod?: ApplyMethod;
   externalApplyUrl?: string;
   scheduledPublishAt?: string;
+  expiresAt?: string;
   screeningQuestions?: ScreeningQuestionInput[];
 }
 

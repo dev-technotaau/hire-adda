@@ -40,6 +40,7 @@ function Avatar({ src, alt, firstName, lastName, size = 'md', className }: Avata
         <img
           src={src}
           alt={alt || `${firstName || ''} ${lastName || ''}`.trim() || 'Avatar'}
+          loading="lazy"
           onError={() => setImgError(true)}
           className="h-full w-full object-cover"
         />

@@ -97,13 +97,13 @@ export default function RegisterPage() {
     setIsVerifying(true);
     try {
       const res = await authService.verifyEmail({ token: otp });
-      const { user, accessToken, refreshToken } = res.data;
       showToast.success('Email verified! Taking you to your dashboard...');
       setStep('success');
 
-      // Store tokens directly — no separate login call needed
-      storeLogin(user, accessToken, refreshToken);
-      const role = user.role as Role;
+      // Tokens are set as httpOnly cookies by the BFF — just store user
+      const verifiedUser = res.data.user;
+      storeLogin(verifiedUser);
+      const role = verifiedUser.role as Role;
       setTimeout(() => {
         router.push(ROLE_DASHBOARDS[role]);
       }, 1500);

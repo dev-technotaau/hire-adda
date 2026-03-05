@@ -133,3 +133,27 @@ export const getSignedDownloadUrl = async (
     throw new Error('Failed to generate signed URL');
   }
 };
+
+/**
+ * Downloads a file from R2 and returns its contents as a Buffer.
+ * Used by background workers (e.g. bulk resume ZIP export).
+ */
+export const downloadFileFromR2 = async (key: string): Promise<Buffer> => {
+  if (!r2Client) throw new Error('R2 storage is not configured');
+  try {
+    const command = new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+    });
+    const response = await r2Client.send(command);
+    const stream = response.Body as NodeJS.ReadableStream;
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk as Uint8Array));
+    }
+    return Buffer.concat(chunks);
+  } catch (error) {
+    logger.error('R2 Download Error:', error);
+    throw new Error('Failed to download file from storage');
+  }
+};

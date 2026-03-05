@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -17,6 +17,7 @@ import Turnstile from '@/components/auth/Turnstile';
 import { showToast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useAuthStore } from '@/store/auth.store';
+import { authService } from '@/services/auth.service';
 import { webauthnService } from '@/services/webauthn.service';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { loginSchema, type LoginFormData } from '@/validators/auth';
@@ -25,7 +26,7 @@ import { cn } from '@/lib/utils';
 import type { Role } from '@/types/auth';
 import type { ApiError } from '@/types/api';
 
-type Step = 'email' | 'password' | 'mfa';
+type Step = 'email' | 'password' | 'mfa' | 'mfa-recovery';
 
 const TRUSTED_DEVICE_COOKIE = 'tb_mfa_trust';
 const TRUSTED_DEVICE_DAYS = 30;
@@ -62,6 +63,11 @@ export default function LoginPage() {
   // Passkey + MFA flow state
   const [passkeyCredential, setPasskeyCredential] = useState<unknown>(null);
   const [passkeyMfaRequired, setPasskeyMfaRequired] = useState(false);
+  // MFA recovery state
+  const [recoveryStep, setRecoveryStep] = useState<'request' | 'verify'>('request');
+  const [recoveryOtp, setRecoveryOtp] = useState('');
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
 
   const {
     register,
@@ -71,7 +77,7 @@ export default function LoginPage() {
     trigger,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '', rememberMe: false },
+    defaultValues: { email: '', password: '', rememberMe: true },
   });
 
   const handleEmailNext = async () => {
@@ -146,7 +152,7 @@ export default function LoginPage() {
         return;
       }
 
-      storeLogin(authData.user, authData.accessToken, authData.refreshToken);
+      storeLogin(authData.user);
       showToast.success('Welcome back!');
       const role = authData.user.role as Role;
       router.push(redirect || ROLE_DASHBOARDS[role]);
@@ -168,7 +174,7 @@ export default function LoginPage() {
       const authData = verifyRes.data;
       if (!authData) throw new Error('Authentication failed');
 
-      storeLogin(authData.user, authData.accessToken, authData.refreshToken);
+      storeLogin(authData.user);
       showToast.success('Welcome back!');
       const role = authData.user.role as Role;
       router.push(redirect || ROLE_DASHBOARDS[role]);
@@ -180,11 +186,60 @@ export default function LoginPage() {
     }
   };
 
+  // MFA Recovery: request OTP
+  const handleRecoveryRequest = useCallback(async () => {
+    const email = getValues('email');
+    if (!email) return;
+    setRecoveryLoading(true);
+    try {
+      await authService.mfaRecoveryRequest(email);
+      showToast.success('Recovery code sent to your email.');
+      setRecoveryStep('verify');
+      setResendTimer(30);
+    } catch (err) {
+      const error = err as ApiError;
+      showToast.error(error.message || 'Failed to send recovery code');
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }, [getValues]);
+
+  // MFA Recovery: verify OTP → login
+  const handleRecoveryVerify = async () => {
+    if (recoveryOtp.length !== 6) return;
+    const email = getValues('email');
+    if (!email) return;
+    setRecoveryLoading(true);
+    try {
+      const res = await authService.mfaRecoveryVerify({ email, otp: recoveryOtp });
+      const user = res.data?.user;
+      if (user) {
+        storeLogin(user);
+        showToast.success('MFA has been disabled. You are now logged in.');
+        const role = user.role as Role;
+        router.push(redirect || ROLE_DASHBOARDS[role]);
+      }
+    } catch (err) {
+      const error = err as ApiError;
+      showToast.error(error.message || 'Invalid or expired recovery code');
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
+  // Resend timer countdown
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const timer = setTimeout(() => setResendTimer((t) => t - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendTimer]);
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 'email') handleEmailNext();
     else if (step === 'password') handleSubmit(onSubmit)();
     else if (step === 'mfa') handleMfaSubmit();
+    else if (step === 'mfa-recovery') handleRecoveryVerify();
   };
 
   const slideVariants = {
@@ -392,6 +447,108 @@ export default function LoginPage() {
                     Back to login
                   </button>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('mfa-recovery');
+                    setRecoveryStep('request');
+                    setRecoveryOtp('');
+                    setMfaCode('');
+                  }}
+                  className="mt-4 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                >
+                  Can&apos;t access authenticator?
+                </button>
+              </motion.div>
+            )}
+
+            {step === 'mfa-recovery' && (
+              <motion.div
+                key="mfa-recovery"
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.2 }}
+              >
+                {recoveryStep === 'request' ? (
+                  <>
+                    <div className="mb-6 text-center">
+                      <h3 className="text-lg font-semibold text-[var(--text)]">
+                        Account Recovery
+                      </h3>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        We&apos;ll send a 6-digit recovery code to{' '}
+                        <strong className="text-[var(--text-secondary)]">
+                          {getValues('email')?.replace(/(.{2})(.*)(@.*)/, '$1***$3')}
+                        </strong>
+                      </p>
+                    </div>
+
+                    <p className="mb-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+                      This will <strong>disable two-factor authentication</strong> on your
+                      account. You can re-enable it after signing in.
+                    </p>
+
+                    <Button
+                      type="button"
+                      fullWidth
+                      onClick={handleRecoveryRequest}
+                      isLoading={recoveryLoading}
+                    >
+                      Send Recovery Code
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-6 text-center">
+                      <h3 className="text-lg font-semibold text-[var(--text)]">
+                        Enter Recovery Code
+                      </h3>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        Check your email for the 6-digit recovery code
+                      </p>
+                    </div>
+
+                    <OtpInput
+                      value={recoveryOtp}
+                      onChange={setRecoveryOtp}
+                      onComplete={handleRecoveryVerify}
+                    />
+
+                    <Button
+                      type="submit"
+                      fullWidth
+                      className="mt-4"
+                      isLoading={recoveryLoading}
+                      disabled={recoveryOtp.length !== 6}
+                    >
+                      Verify & Sign In
+                    </Button>
+
+                    <button
+                      type="button"
+                      onClick={handleRecoveryRequest}
+                      disabled={resendTimer > 0 || recoveryLoading}
+                      className="mt-3 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-50"
+                    >
+                      {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend code'}
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('mfa');
+                    setRecoveryStep('request');
+                    setRecoveryOtp('');
+                  }}
+                  className="mt-3 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                >
+                  Back to MFA
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

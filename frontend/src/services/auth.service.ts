@@ -1,4 +1,5 @@
 import api from '@/lib/api';
+import axios from 'axios';
 import { API } from '@/constants/api';
 import type { ApiResponse } from '@/types/api';
 import type {
@@ -13,7 +14,6 @@ import type {
   MfaSetupResponse,
   MfaVerifyRequest,
   User,
-  TokenPair,
 } from '@/types/auth';
 
 /**
@@ -30,7 +30,6 @@ function getDeviceFingerprint(): string {
     Intl.DateTimeFormat().resolvedOptions().timeZone,
     navigator.language,
   ].join('|');
-  // Simple hash (djb2)
   let hash = 5381;
   for (let i = 0; i < raw.length; i++) {
     hash = ((hash << 5) + hash + raw.charCodeAt(i)) & 0xffffffff;
@@ -38,49 +37,76 @@ function getDeviceFingerprint(): string {
   return hash.toString(16);
 }
 
+/** Auth response with tokens stripped (BFF sets them as httpOnly cookies) */
+type BffAuthResponse = Omit<AuthResponse, 'accessToken' | 'refreshToken'>;
+
 export const authService = {
+  // ─── Auth endpoints go through BFF routes (not the generic proxy) ───
+
   async register(
     data: RegisterRequest,
     turnstileToken?: string,
   ): Promise<ApiResponse<RegisterResponse>> {
-    const res = await api.post(API.AUTH.REGISTER, {
-      ...data,
-      ...(turnstileToken && { 'cf-turnstile-response': turnstileToken }),
-    });
+    const res = await axios.post(
+      '/api/auth/register',
+      {
+        ...data,
+        ...(turnstileToken && { 'cf-turnstile-response': turnstileToken }),
+      },
+      { withCredentials: true },
+    );
     return res.data;
   },
 
-  async login(data: LoginRequest, turnstileToken?: string): Promise<ApiResponse<AuthResponse>> {
-    const res = await api.post(
-      API.AUTH.LOGIN,
+  async login(
+    data: LoginRequest,
+    turnstileToken?: string,
+  ): Promise<ApiResponse<BffAuthResponse>> {
+    const res = await axios.post(
+      '/api/auth/login',
       {
         ...data,
         ...(turnstileToken && { 'cf-turnstile-response': turnstileToken }),
       },
       {
+        withCredentials: true,
         headers: { 'X-Device-Fingerprint': getDeviceFingerprint() },
       },
     );
     return res.data;
   },
 
-  async logout(refreshToken?: string): Promise<ApiResponse<null>> {
-    const res = await api.post(API.AUTH.LOGOUT, { refreshToken });
+  async logout(): Promise<ApiResponse<null>> {
+    const res = await axios.post('/api/auth/logout', {}, { withCredentials: true });
     return res.data;
   },
 
   async getMe(): Promise<ApiResponse<User>> {
-    const res = await api.get(API.AUTH.ME);
+    const res = await axios.get('/api/auth/me', { withCredentials: true });
     return res.data;
   },
 
-  async refreshToken(refreshToken: string): Promise<ApiResponse<TokenPair>> {
-    const res = await api.post(API.AUTH.REFRESH_TOKEN, { refreshToken });
+  async refresh(): Promise<ApiResponse<null>> {
+    const res = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
     return res.data;
   },
 
-  async verifyEmail(data: VerifyEmailRequest): Promise<ApiResponse<AuthResponse>> {
-    const res = await api.post(API.AUTH.VERIFY_EMAIL, data);
+  async firebaseLogin(
+    idToken: string,
+    role?: string,
+  ): Promise<ApiResponse<BffAuthResponse & { isNewUser: boolean }>> {
+    const res = await axios.post(
+      '/api/auth/firebase-login',
+      { idToken, role },
+      { withCredentials: true },
+    );
+    return res.data;
+  },
+
+  // ─── Non-token endpoints go through the generic proxy ───
+
+  async verifyEmail(data: VerifyEmailRequest): Promise<ApiResponse<BffAuthResponse>> {
+    const res = await axios.post('/api/auth/verify-email', data, { withCredentials: true });
     return res.data;
   },
 
@@ -151,6 +177,19 @@ export const authService = {
 
   async mfaBackupCodeCount(): Promise<ApiResponse<{ count: number }>> {
     const res = await api.get(API.AUTH.MFA_BACKUP_CODE_COUNT);
+    return res.data;
+  },
+
+  async mfaRecoveryRequest(email: string): Promise<ApiResponse<null>> {
+    const res = await api.post(API.AUTH.MFA_RECOVERY_REQUEST, { email });
+    return res.data;
+  },
+
+  async mfaRecoveryVerify(data: {
+    email: string;
+    otp: string;
+  }): Promise<ApiResponse<BffAuthResponse>> {
+    const res = await axios.post('/api/auth/mfa-recovery', data, { withCredentials: true });
     return res.data;
   },
 
@@ -226,20 +265,29 @@ export const authService = {
     return res.data;
   },
 
-  async firebaseLogin(
-    idToken: string,
-    role?: string,
-  ): Promise<ApiResponse<AuthResponse & { isNewUser: boolean }>> {
-    const res = await api.post(API.AUTH.FIREBASE_LOGIN, { idToken, role });
+  async exportMyData(): Promise<ApiResponse<null>> {
+    const res = await api.get(API.AUTH.DATA_EXPORT);
     return res.data;
   },
 
+  async updateProfile(data: {
+    firstName: string;
+    lastName: string;
+  }): Promise<ApiResponse<{ user: User }>> {
+    const res = await axios.patch('/api/auth/me/profile', data, { withCredentials: true });
+    return res.data;
+  },
+
+  // ─── Social auth URLs (still point to backend for OAuth redirects) ───
+
   getGoogleAuthUrl(role?: string): string {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
     const params = role ? `?role=${role}` : '';
-    return `${api.defaults.baseURL}${API.AUTH.GOOGLE}${params}`;
+    return `${apiUrl}${API.AUTH.GOOGLE}${params}`;
   },
 
   getLinkedInAuthUrl(): string {
-    return `${api.defaults.baseURL}${API.AUTH.LINKEDIN}`;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+    return `${apiUrl}${API.AUTH.LINKEDIN}`;
   },
 };

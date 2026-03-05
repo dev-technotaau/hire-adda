@@ -86,7 +86,7 @@ const superAdminNav: NavItem[] = [
   { label: 'Dashboard', href: ROUTES.SUPER_ADMIN.DASHBOARD, icon: LayoutDashboard },
   { label: 'Manage Users', href: ROUTES.SUPER_ADMIN.USERS, icon: Users },
   { label: 'Manage Admins', href: ROUTES.SUPER_ADMIN.ADMINS, icon: Shield },
-  { label: 'Jobs', href: ROUTES.ADMIN.JOBS, icon: Briefcase },
+  { label: 'Jobs', href: ROUTES.SUPER_ADMIN.JOBS, icon: Briefcase },
   { label: 'Applications', href: ROUTES.ADMIN.APPLICATIONS, icon: FileText },
   { label: 'Verifications', href: ROUTES.ADMIN.VERIFICATIONS, icon: ShieldCheck },
   { label: 'Moderation', href: ROUTES.ADMIN.MODERATION, icon: Shield },

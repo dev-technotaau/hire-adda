@@ -1,4 +1,6 @@
 import type { Role } from './auth';
+import type { CandidateProfile } from './candidate';
+import type { CompanyProfile } from './employer';
 
 export interface AdminStats {
   totalUsers: number;
@@ -70,6 +72,9 @@ export interface UserDetail extends UserListItem {
   isWhatsappVerified: boolean;
   loginAttempts: number;
   updatedAt: string;
+  lastActiveAt: string | null;
+  candidateProfile?: CandidateProfile; // Full candidate profile data
+  companyProfile?: CompanyProfile; // Full employer profile data
 }
 
 export interface AuditLog {
@@ -157,6 +162,11 @@ export interface UserSession {
   isActive: boolean;
   createdAt: string;
   lastSeenAt: string | null;
+  deviceName?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  location?: string | null;
+  lastActivityAt?: string | null;
 }
 
 export interface DailyActiveUsersData {
@@ -180,4 +190,82 @@ export interface ApplicationStats {
   total: number;
   byStatus: Record<string, number>;
   dailyTrend: Array<{ date: string; count: number }>;
+}
+
+export interface ExportJob {
+  jobId: string;
+  exportType: 'USER_DATA' | 'CANDIDATE_EXPORT' | 'RESUME_EXPORT';
+  format: string | null;
+  candidateCount: number;
+  userId: string;
+  userName: string | null;
+  userEmail: string | null;
+  userRole: string | null;
+  status: string;
+  createdAt: string | null;
+  processedAt: string | null;
+  finishedAt: string | null;
+  failedReason: string | null;
+  attempts: number;
+}
+
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  candidateId: string;
+  status: string;
+  appliedAt: string;
+  matchScore: number | null;
+  coverLetter: string | null;
+  job: {
+    id: string;
+    title: string;
+    location: string;
+    type: string;
+    status: string;
+    company: {
+      id: string;
+      companyName: string;
+      logo: string | null;
+      industry: string | null;
+    };
+  };
+  candidate: {
+    userId: string;
+    headline?: string | null;
+    user: {
+      email: string;
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+}
+
+export interface JobPost {
+  id: string;
+  title: string;
+  status: string;
+  createdAt: string;
+  _applicationCount: number;
+  _savedCount: number;
+  company: {
+    id: string;
+    companyName: string;
+    logo: string | null;
+    industry: string | null;
+    companySize: string | null;
+  };
+}
+
+export interface VerificationRequest {
+  id: string;
+  userId: string;
+  type: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  documentUrl: string | null;
+  data: Record<string, unknown> | null;
+  createdAt: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  adminComments: string | null;
 }

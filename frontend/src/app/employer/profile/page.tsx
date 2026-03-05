@@ -1,16 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
-import { Building2, Save, Upload, X } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, Eye, ImageIcon, Save, Upload, X, Loader2, Camera } from 'lucide-react';
+import { ROUTES } from '@/constants/routes';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Skeleton from '@/components/ui/Skeleton';
 import { showToast } from '@/components/ui/Toast';
+import ImageCropper from '@/components/ui/ImageCropper';
 import { employerService } from '@/services/employer.service';
+import { authService } from '@/services/auth.service';
+import { useAuthStore } from '@/store/auth.store';
+import { FILE_LIMITS } from '@/constants/config';
 import { QUERY_KEYS } from '@/constants/config';
 import type { UpdateCompanyRequest, FundingStage } from '@/types/employer';
 import type { ApiError } from '@/types/api';
@@ -73,6 +80,110 @@ const SECTION_HEADERS: Record<Section, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Name Section Component
+// ---------------------------------------------------------------------------
+
+function NameSection() {
+  const queryClient = useQueryClient();
+  const { user, setUser } = useAuthStore();
+  const [firstName, setFirstName] = useState(user?.firstName || '');
+  const [lastName, setLastName] = useState(user?.lastName || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string }>({});
+
+  const validate = () => {
+    const newErrors: { firstName?: string; lastName?: string } = {};
+
+    if (!firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    } else if (firstName.length > 50) {
+      newErrors.firstName = 'First name must be at most 50 characters';
+    } else if (!/^[a-zA-Z\s'-]+$/.test(firstName)) {
+      newErrors.firstName = 'First name can only contain letters, spaces, hyphens, and apostrophes';
+    }
+
+    if (!lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    } else if (lastName.length > 50) {
+      newErrors.lastName = 'Last name must be at most 50 characters';
+    } else if (!/^[a-zA-Z\s'-]+$/.test(lastName)) {
+      newErrors.lastName = 'Last name can only contain letters, spaces, hyphens, and apostrophes';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+
+    try {
+      setIsSaving(true);
+      const res = await authService.updateProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
+      if (res.data?.user) {
+        setUser(res.data.user);
+      }
+      showToast.success('Name updated successfully');
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.AUTH.ME });
+    } catch (err) {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to update name');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const hasChanges = firstName !== (user?.firstName || '') || lastName !== (user?.lastName || '');
+
+  return (
+    <Card padding="sm">
+      <div>
+        <p className="mb-2 font-medium text-[var(--text)]">Your Name</p>
+        <p className="mb-3 text-xs text-[var(--text-muted)]">
+          Update your personal name for account identification
+        </p>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="First Name"
+              placeholder="Enter your first name"
+              value={firstName}
+              onChange={(e) => {
+                setFirstName(e.target.value);
+                if (errors.firstName) setErrors({ ...errors, firstName: undefined });
+              }}
+              error={errors.firstName}
+              required
+            />
+            <Input
+              label="Last Name"
+              placeholder="Enter your last name"
+              value={lastName}
+              onChange={(e) => {
+                setLastName(e.target.value);
+                if (errors.lastName) setErrors({ ...errors, lastName: undefined });
+              }}
+              error={errors.lastName}
+              required
+            />
+          </div>
+          {hasChanges && (
+            <div className="flex justify-end">
+              <Button onClick={handleSave} disabled={isSaving} isLoading={isSaving} size="sm">
+                Save Name
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page Component
 // ---------------------------------------------------------------------------
 
@@ -81,6 +192,18 @@ export default function CompanyProfilePage() {
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>('company');
   const [form, setForm] = useState<UpdateCompanyRequest>({});
+  const [formDirty, setFormDirty] = useState(false);
+  const initialFormRef = useRef<string>('');
+
+  // Logo cropper state
+  const [logoCropperOpen, setLogoCropperOpen] = useState(false);
+  const [selectedLogoImage, setSelectedLogoImage] = useState<string | null>(null);
+  const [isLogoUploading, setIsLogoUploading] = useState(false);
+
+  // Cover image cropper state
+  const [coverCropperOpen, setCoverCropperOpen] = useState(false);
+  const [selectedCoverImage, setSelectedCoverImage] = useState<string | null>(null);
+  const [isCoverUploading, setIsCoverUploading] = useState(false);
 
   // Deep-link: read ?section= and ?focus= query params
   useEffect(() => {
@@ -120,8 +243,8 @@ export default function CompanyProfilePage() {
 
   useEffect(() => {
     if (company) {
-      queueMicrotask(() =>
-        setForm({
+      queueMicrotask(() => {
+        const initial: UpdateCompanyRequest = {
           companyName: company.companyName || '',
           companyType: company.companyType || undefined,
           tagline: company.tagline || '',
@@ -157,9 +280,25 @@ export default function CompanyProfilePage() {
           employeeResourceGroups: company.employeeResourceGroups || [],
           csrInitiatives: company.csrInitiatives || '',
           benefits: company.benefits || [],
-          workplacePolicies: company.workplacePolicies || {},
+          structuredPerks:
+            (company.structuredPerks as Array<{ category: string; perks: string[] }>) || [],
+          // Backend stores as Array<{ title, description }> — convert to Record for UI
+          workplacePolicies: Array.isArray(company.workplacePolicies)
+            ? Object.fromEntries(
+                (company.workplacePolicies as Array<{ title: string; description?: string }>).map(
+                  (p) => [p.title, p.description || ''],
+                ),
+              )
+            : (company.workplacePolicies || {}),
           interviewProcess: company.interviewProcess || '',
-          awardsRecognitions: company.awardsRecognitions || [],
+          // Backend uses 'issuingOrg' — convert to 'issuer' for UI
+          awardsRecognitions: (company.awardsRecognitions || []).map(
+            (a: Record<string, unknown>) => ({
+              title: (a.title as string) || '',
+              year: a.year as number | undefined,
+              issuer: (a.issuingOrg as string) || (a.issuer as string) || '',
+            }),
+          ),
           leadershipTeam: company.leadershipTeam || [],
           employeeTestimonials: company.employeeTestimonials || [],
           socialLinks: company.socialLinks || {
@@ -182,8 +321,11 @@ export default function CompanyProfilePage() {
           country: company.country || 'India',
           headquarters: company.headquarters || '',
           locations: company.locations || [],
-        }),
-      );
+        };
+        initialFormRef.current = JSON.stringify(initial);
+        setFormDirty(false);
+        setForm(initial);
+      });
     }
   }, [company]);
 
@@ -194,6 +336,7 @@ export default function CompanyProfilePage() {
   const updateMutation = useMutation({
     mutationFn: (data: UpdateCompanyRequest) => employerService.updateCompany(data),
     onSuccess: () => {
+      setFormDirty(false);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPANY });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPLETENESS });
       showToast.success('Company profile updated!');
@@ -209,10 +352,13 @@ export default function CompanyProfilePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPANY });
       showToast.success('Logo uploaded!');
+      setIsLogoUploading(false);
+      setSelectedLogoImage(null);
     },
     onError: (err) => {
       const error = err as unknown as ApiError;
       showToast.error(error.message || 'Failed to upload logo');
+      setIsLogoUploading(false);
     },
   });
 
@@ -228,6 +374,97 @@ export default function CompanyProfilePage() {
     },
   });
 
+  const coverImageMutation = useMutation({
+    mutationFn: (file: File) => employerService.uploadCoverImage(file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPANY });
+      showToast.success('Cover image uploaded!');
+      setIsCoverUploading(false);
+      setSelectedCoverImage(null);
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to upload cover image');
+      setIsCoverUploading(false);
+    },
+  });
+
+  const removeCoverImageMutation = useMutation({
+    mutationFn: () => employerService.removeCoverImage(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPANY });
+      showToast.success('Cover image removed');
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error?.message || 'Failed to remove cover image');
+    },
+  });
+
+  // -----------------------------------------------------------------------
+  // Logo handlers
+  // -----------------------------------------------------------------------
+
+  const handleLogoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!(FILE_LIMITS.IMAGE_TYPES as readonly string[]).includes(file.type)) {
+      showToast.error('Please select a JPG, PNG, or WebP image');
+      return;
+    }
+    if (file.size > FILE_LIMITS.LOGO_MAX_SIZE) {
+      showToast.error('Logo must be under 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedLogoImage(reader.result as string);
+      setLogoCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleLogoCropComplete = async (blob: Blob) => {
+    setIsLogoUploading(true);
+    const file = new File([blob], 'logo.jpg', { type: 'image/jpeg' });
+    logoMutation.mutate(file);
+  };
+
+  // -----------------------------------------------------------------------
+  // Cover Image handlers
+  // -----------------------------------------------------------------------
+
+  const handleCoverFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!(FILE_LIMITS.IMAGE_TYPES as readonly string[]).includes(file.type)) {
+      showToast.error('Please select a JPG, PNG, or WebP image');
+      return;
+    }
+    if (file.size > FILE_LIMITS.COVER_MAX_SIZE) {
+      showToast.error('Cover image must be under 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedCoverImage(reader.result as string);
+      setCoverCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCoverCropComplete = async (blob: Blob) => {
+    setIsCoverUploading(true);
+    const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
+    coverImageMutation.mutate(file);
+  };
+
   // -----------------------------------------------------------------------
   // Field helpers
   // -----------------------------------------------------------------------
@@ -236,7 +473,11 @@ export default function CompanyProfilePage() {
     key: K,
     value: UpdateCompanyRequest[K],
   ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      setFormDirty(JSON.stringify(next) !== initialFormRef.current);
+      return next;
+    });
   };
 
   const addToArray = (key: ArrayKey, value: string, clearFn: (v: string) => void) => {
@@ -259,7 +500,35 @@ export default function CompanyProfilePage() {
     );
   };
 
-  const handleSave = () => updateMutation.mutate(form);
+  const handleSave = () => {
+    // Transform fields to match backend schema before sending
+    const { workplacePolicies, awardsRecognitions, structuredPerks, ...rest } = form;
+
+    const payload = {
+      ...rest,
+      // Filter out empty categories
+      structuredPerks: structuredPerks?.length
+        ? structuredPerks.filter((p) => p.category.trim())
+        : undefined,
+      // Backend expects Array<{ title, description }> not Record<string, string>
+      workplacePolicies: workplacePolicies
+        ? Object.entries(workplacePolicies as Record<string, string>)
+            .filter(([, desc]) => desc.trim())
+            .map(([title, description]) => ({ title, description }))
+        : undefined,
+      // Backend uses 'issuingOrg', frontend uses 'issuer'
+      awardsRecognitions: awardsRecognitions?.length
+        ? awardsRecognitions
+            .filter((a) => a.title.trim())
+            .map(({ issuer, ...award }) => ({
+              ...award,
+              issuingOrg: issuer || undefined,
+            }))
+        : undefined,
+    };
+
+    updateMutation.mutate(payload as UpdateCompanyRequest);
+  };
 
   // -----------------------------------------------------------------------
   // Loading state
@@ -321,60 +590,181 @@ export default function CompanyProfilePage() {
             <h1 className="text-2xl font-bold text-[var(--text)]">Company Profile</h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">Manage your company information</p>
           </div>
-          <Button onClick={handleSave} isLoading={updateMutation.isPending}>
-            <Save className="mr-1.5 h-4 w-4" /> Save Changes
-          </Button>
+          <div className="flex gap-2">
+            <Link href={ROUTES.EMPLOYER.PROFILE_PREVIEW}>
+              <Button variant="outline">
+                <Eye className="mr-1.5 h-4 w-4" /> Preview as Candidate
+              </Button>
+            </Link>
+            <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty}>
+              <Save className="mr-1.5 h-4 w-4" /> Save Changes
+            </Button>
+          </div>
         </div>
+
+        {/* Name */}
+        <NameSection />
 
         {/* Logo */}
         <Card padding="sm">
-          <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--bg-tertiary)]">
-              {company?.logo ? (
-                <img
-                  src={company.logo}
-                  alt={company?.companyName || 'Company logo'}
-                  className="h-full w-full object-contain"
-                />
-              ) : (
-                <Building2 className="h-10 w-10 text-[var(--text-muted)]" />
-              )}
-            </div>
-            <div className="flex-1">
-              <p className="font-medium text-[var(--text)]">
-                {company?.companyName || 'Your Company'}
-              </p>
-              <p className="text-sm text-[var(--text-muted)]">
-                Upload a company logo (PNG, JPG, max 5MB)
-              </p>
-              <div className="mt-2 flex gap-2">
+          <div>
+            <p className="mb-2 font-medium text-[var(--text)]">Company Logo</p>
+            <p className="mb-3 text-xs text-[var(--text-muted)]">
+              Upload your company logo (aspect ratio 1:1, max 5MB)
+            </p>
+            <div className="flex items-center gap-4">
+              <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--bg-tertiary)]">
+                {company?.logo ? (
+                  <img
+                    src={company.logo}
+                    alt={company?.companyName || 'Company logo'}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <Building2 className="h-10 w-10 text-[var(--text-muted)]" />
+                )}
+                {isLogoUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
+                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
                 <label className="cursor-pointer">
                   <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) logoMutation.mutate(file);
-                    }}
+                    accept=".jpg,.jpeg,.png,.webp"
+                    onChange={handleLogoFileSelect}
+                    className="sr-only"
+                    disabled={isLogoUploading}
                   />
-                  <span className="pointer-events-none inline-flex items-center rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]">
-                    <Upload className="mr-1 h-3.5 w-3.5" />{' '}
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]">
+                    <Camera className="h-4 w-4" />
                     {company?.logo ? 'Change Logo' : 'Upload Logo'}
                   </span>
                 </label>
                 {company?.logo && (
                   <button
-                    onClick={() => removeLogoMutation.mutate()}
-                    disabled={removeLogoMutation.isPending}
-                    className="inline-flex items-center rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--error)] disabled:opacity-50"
+                    onClick={async () => {
+                      try {
+                        setIsLogoUploading(true);
+                        await removeLogoMutation.mutateAsync();
+                      } catch (err) {
+                        // Error already handled in mutation
+                      } finally {
+                        setIsLogoUploading(false);
+                      }
+                    }}
+                    disabled={isLogoUploading}
+                    className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                    title="Remove logo"
                   >
-                    <X className="mr-1 h-3.5 w-3.5" /> Remove
+                    <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
             </div>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
+              JPG, PNG, or WebP. Max 5MB. Will be cropped to 1:1 aspect ratio (400x400px).
+            </p>
           </div>
+
+          {selectedLogoImage && (
+            <ImageCropper
+              isOpen={logoCropperOpen}
+              onClose={() => {
+                setLogoCropperOpen(false);
+                setSelectedLogoImage(null);
+              }}
+              imageSrc={selectedLogoImage}
+              onCropComplete={handleLogoCropComplete}
+              aspectRatio={1}
+              circularCrop={true}
+              outputWidth={400}
+              outputHeight={400}
+            />
+          )}
+        </Card>
+
+        {/* Cover Image */}
+        <Card padding="sm">
+          <div>
+            <p className="mb-2 font-medium text-[var(--text)]">Cover Image</p>
+            <p className="mb-3 text-xs text-[var(--text-muted)]">
+              Upload a banner image for your company profile (aspect ratio 3:1, max 10MB)
+            </p>
+            <div className="flex items-center gap-4">
+              <div className="relative flex h-32 w-48 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--bg-tertiary)]">
+                {company?.coverImage ? (
+                  <img
+                    src={company.coverImage}
+                    alt="Company cover"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <ImageIcon className="h-12 w-12 text-[var(--text-muted)]" />
+                )}
+                {isCoverUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50">
+                    <Loader2 className="h-6 w-6 animate-spin text-white" />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp"
+                    onChange={handleCoverFileSelect}
+                    className="sr-only"
+                    disabled={isCoverUploading}
+                  />
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]">
+                    <Camera className="h-4 w-4" />
+                    {company?.coverImage ? 'Change Cover' : 'Upload Cover'}
+                  </span>
+                </label>
+                {company?.coverImage && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        setIsCoverUploading(true);
+                        await removeCoverImageMutation.mutateAsync();
+                      } catch (err) {
+                        // Error already handled in mutation
+                      } finally {
+                        setIsCoverUploading(false);
+                      }
+                    }}
+                    disabled={isCoverUploading}
+                    className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                    title="Remove cover"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
+              JPG, PNG, or WebP. Max 5MB. Will be cropped to 3:1 aspect ratio (1200x400px).
+            </p>
+          </div>
+
+          {selectedCoverImage && (
+            <ImageCropper
+              isOpen={coverCropperOpen}
+              onClose={() => {
+                setCoverCropperOpen(false);
+                setSelectedCoverImage(null);
+              }}
+              imageSrc={selectedCoverImage}
+              onCropComplete={handleCoverCropComplete}
+              aspectRatio={3}
+              circularCrop={false}
+              outputWidth={1200}
+              outputHeight={400}
+            />
+          )}
         </Card>
 
         {/* Completeness */}

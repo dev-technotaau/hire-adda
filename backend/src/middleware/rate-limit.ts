@@ -77,6 +77,23 @@ export const mfaLimiter = rateLimit({
 });
 
 /**
+ * Export Route Limiter
+ * Usage: Apply to bulk export endpoints (CSV/XLSX, resume ZIP)
+ * Prevents abuse of resource-intensive export operations.
+ */
+export const exportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // 10 export requests per hour per user
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: createRedisStore('export'),
+  message: {
+    status: 'fail',
+    message: 'Too many export requests. Please try again later.',
+  },
+});
+
+/**
  * Search Route Limiter
  * Usage: Apply to /search routes (autocomplete, suggestions, etc.)
  * More permissive than auth but stricter than general API to prevent abuse.

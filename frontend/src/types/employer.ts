@@ -17,6 +17,7 @@ export interface LeadershipEntry {
   designation: string;
   linkedinUrl?: string;
   imageUrl?: string;
+  photo?: string;
   bio?: string;
 }
 
@@ -26,6 +27,10 @@ export interface EmployeeTestimonialEntry {
   department?: string;
   quote: string;
   imageUrl?: string;
+  photo?: string;
+  authorName?: string;
+  authorDesignation?: string;
+  authorDepartment?: string;
 }
 
 export interface OfficePhotoEntry {
@@ -69,16 +74,18 @@ export interface CompanyProfile {
   techStack: string[];
   companyCulture: string | null;
   missionStatement: string | null;
+  mission?: string | null;
   visionStatement: string | null;
+  vision?: string | null;
   coreValues: string[];
   diversityStatement: string | null;
   employeeResourceGroups: string[];
   csrInitiatives: string | null;
   benefits: string[];
-  structuredPerks: Record<string, string[]> | null;
+  structuredPerks: Array<{ category: string; perks: string[] }> | null;
   workplacePolicies: Record<string, string> | null;
   interviewProcess: string | null;
-  awardsRecognitions: Array<{ title: string; year?: number; issuer?: string }> | null;
+  awardsRecognitions: Array<{ title: string; year?: number; issuer?: string; issuingOrg?: string; description?: string }> | null;
   leadershipTeam: LeadershipEntry[] | null;
   employeeTestimonials: EmployeeTestimonialEntry[] | null;
   officePhotos: OfficePhotoEntry[] | null;
@@ -102,8 +109,14 @@ export interface CompanyProfile {
   country: string | null;
   headquarters: string | null;
   locations: string[];
+  additionalLocations?: string[] | null;
   latitude: number | null;
   longitude: number | null;
+  verificationStatus?: string | null;
+  linkedinUrl?: string | null;
+  twitterUrl?: string | null;
+  facebookUrl?: string | null;
+  awards?: Array<{ title: string; year?: number; issuingOrg?: string; description?: string }> | null;
   createdAt: string;
   updatedAt: string;
   user?: {
@@ -151,7 +164,7 @@ export interface UpdateCompanyRequest {
   employeeResourceGroups?: string[];
   csrInitiatives?: string;
   benefits?: string[];
-  structuredPerks?: Record<string, string[]>;
+  structuredPerks?: Array<{ category: string; perks: string[] }>;
   workplacePolicies?: Record<string, string>;
   interviewProcess?: string;
   awardsRecognitions?: Array<{ title: string; year?: number; issuer?: string }>;

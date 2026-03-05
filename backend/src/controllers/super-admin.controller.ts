@@ -177,6 +177,20 @@ export const revokeUserSessions = async (req: Request, res: Response, next: Next
   }
 };
 
+export const revokeUserSession = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.revokeUserSession(
+      req.params.id as string,
+      req.params.sessionId as string,
+      req.user.id
+    );
+    res.status(200).json({ status: 'success', message: 'Session revoked' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const deactivateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) throw new AppError('Not authorized', 401);
@@ -292,6 +306,150 @@ export const regenerateAdminBackupCodes = async (
     }).catch(() => {});
 
     res.status(200).json({ status: 'success', data: { backupCodes } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ── Admin Email / Mobile / WhatsApp Managed Verification ──
+
+export const initiateAdminEmailChange = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.initiateAdminEmailChange(req.params.id as string, req.body, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Verification code sent to new email' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const confirmAdminEmailChange = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.confirmAdminEmailChange(req.params.id as string, req.body.otp, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Admin email updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resendAdminEmailOtp = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.resendAdminEmailOtp(req.params.id as string, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Verification code resent' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const initiateAdminMobileChange = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.initiateAdminMobileChange(req.params.id as string, req.body, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Verification code sent via SMS' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const confirmAdminMobileChange = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.confirmAdminMobileChange(req.params.id as string, req.body.otp, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Admin mobile number updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resendAdminMobileOtp = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.resendAdminMobileOtp(req.params.id as string, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Verification code resent' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeAdminMobile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.removeAdminMobile(req.params.id as string, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Admin mobile number removed' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const initiateAdminWhatsappVerify = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.initiateAdminWhatsappVerify(req.params.id as string, req.body, req.user.id);
+    res.status(200).json({ status: 'success', message: 'WhatsApp verification OTP sent' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const initiateAdminWhatsappChange = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.initiateAdminWhatsappChange(req.params.id as string, req.body, req.user.id);
+    res.status(200).json({ status: 'success', message: 'WhatsApp change OTP sent' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const confirmAdminWhatsappOtp = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.confirmAdminWhatsappOtp(req.params.id as string, req.body.otp, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Admin WhatsApp verified successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeAdminWhatsappNumber = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.removeAdminWhatsappNumber(req.params.id as string, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Admin WhatsApp number removed' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ── Admin Password Managed Change ──
+
+export const initiateAdminPasswordChange = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.initiateAdminPasswordChange(req.params.id as string, req.body, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Verification code sent to admin email' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const confirmAdminPasswordChange = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.confirmAdminPasswordChange(req.params.id as string, req.body.otp, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Admin password changed — all sessions revoked' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resendAdminPasswordOtp = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    await superAdminService.resendAdminPasswordOtp(req.params.id as string, req.user.id);
+    res.status(200).json({ status: 'success', message: 'Verification code resent' });
   } catch (error) {
     next(error);
   }

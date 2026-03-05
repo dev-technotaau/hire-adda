@@ -83,3 +83,44 @@ export const candidateExportReady = (
     text: `Hi ${name}, your export of ${candidateCount} candidate(s) is ready. Download the ${formatLabel} file: ${downloadUrl}\n\nThis link expires in 7 days. File: ${filename}`,
   };
 };
+
+/**
+ * Resume ZIP export (employer-requested) ready for download.
+ */
+export const resumeExportReady = (
+  firstName: string | null,
+  resumeCount: number,
+  skippedCount: number,
+  downloadUrl: string,
+  filename: string
+): EmailTemplate => {
+  const name = firstName || 'there';
+  const skippedNote =
+    skippedCount > 0
+      ? `<br/>${skippedCount} candidate${skippedCount === 1 ? '' : 's'} had no resume on file and ${skippedCount === 1 ? 'was' : 'were'} skipped.`
+      : '';
+
+  return {
+    subject: 'Your Resume Export is Ready',
+    html: emailLayout(
+      `
+          ${iconCircle('&#128196;', '#ecfdf5')}
+          ${heading('Your Resume Export is Ready')}
+          ${greeting(name)}
+          ${paragraph(`Your ZIP archive containing <strong>${resumeCount} resume${resumeCount === 1 ? '' : 's'}</strong> is ready for download.${skippedNote}`)}
+          ${infoBox([
+            { label: 'Resumes', value: resumeCount.toString() },
+            ...(skippedCount > 0 ? [{ label: 'Skipped (no resume)', value: skippedCount.toString() }] : []),
+            { label: 'Format', value: 'ZIP' },
+            { label: 'File', value: filename },
+          ])}
+          ${button('Download ZIP File', downloadUrl)}
+          ${divider()}
+          ${smallText('This link will expire in 7 days.')}
+          ${signature()}
+      `,
+      `Your resume export of ${resumeCount} resumes is ready.`
+    ),
+    text: `Hi ${name}, your ZIP archive of ${resumeCount} resume(s) is ready. Download: ${downloadUrl}\n\n${skippedCount > 0 ? `${skippedCount} candidate(s) had no resume and were skipped.\n\n` : ''}This link expires in 7 days. File: ${filename}`,
+  };
+};

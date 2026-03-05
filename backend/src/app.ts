@@ -48,6 +48,7 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-eval'", 'https://challenges.cloudflare.com'], // Allow Cloudflare Turnstile
         frameSrc: ["'self'", 'https://challenges.cloudflare.com'], // Allow Turnstile iframe
+        frameAncestors: ["'none'"], // Modern CSP3 replacement for X-Frame-Options: DENY
         imgSrc: [
           "'self'",
           'data:',
@@ -57,6 +58,7 @@ app.use(
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
         reportUri: ['/api/csp-report'],
+        reportTo: ['csp-endpoint'],
       },
     },
     hsts: {
@@ -66,6 +68,12 @@ app.use(
     },
   })
 );
+
+// Reporting API v1 endpoint header (modern browsers use this instead of report-uri)
+app.use((_req: Request, res: Response, next) => {
+  res.setHeader('Reporting-Endpoints', 'csp-endpoint="/api/csp-report"');
+  next();
+});
 
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 
@@ -172,7 +180,7 @@ if (env.NODE_ENV === 'production') {
 // CSP violation reporting endpoint (before CSRF so browser reports aren't blocked)
 app.post(
   '/api/csp-report',
-  express.json({ type: ['application/csp-report', 'application/json'] }),
+  express.json({ type: ['application/csp-report', 'application/json', 'application/reports+json'] }),
   handleCspReport
 );
 

@@ -3,9 +3,10 @@ import { auth } from '../config/firebase';
 import prisma from '../config/prisma';
 import { AppError } from '../middleware/error';
 import { generateTokens } from '../services/auth.service';
-import { sessionService } from '../services/session.service';
+
 import { publishEvent, KafkaTopics } from '../kafka/producer';
 import { trackEvent, getClientId } from '../services/analytics.service';
+import { setTokenCookies } from '../utils/cookie-helpers';
 import logger from '../config/logger';
 import { Role } from '@prisma/client';
 
@@ -101,13 +102,11 @@ export const firebaseLogin = async (
       );
     }
 
-    // Generate JWT tokens
+    // Generate JWT tokens (session created inside generateTokens)
     const tokens = await generateTokens(user, userAgent, ipAddress);
 
-    // Create session
-    sessionService
-      .createSession(user.id, userAgent, ipAddress)
-      .catch((err) => logger.error('Failed to create session for Firebase login', err));
+    // Set httpOnly cookies
+    setTokenCookies(res, tokens.accessToken, tokens.refreshToken, true, tokens.sessionId);
 
     res.status(200).json({
       status: 'success',
@@ -122,6 +121,7 @@ export const firebaseLogin = async (
         },
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
+        sessionId: tokens.sessionId,
         isNewUser,
       },
     });

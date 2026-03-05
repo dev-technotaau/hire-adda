@@ -331,12 +331,12 @@ export default function CandidateDashboard() {
   const funnelData = useMemo(() => {
     if (!analytics?.funnel) return [];
     const stages = [
-      { key: 'APPLIED', label: 'Applied', color: '#3B82F6' },
-      { key: 'VIEWED', label: 'Reviewed', color: '#8B5CF6' },
-      { key: 'SHORTLISTED', label: 'Shortlisted', color: '#F59E0B' },
-      { key: 'INTERVIEW_SCHEDULED', label: 'Interview', color: '#6366F1' },
-      { key: 'OFFERED', label: 'Offered', color: '#10B981' },
-      { key: 'HIRED', label: 'Hired', color: '#059669' },
+      { key: 'applied', label: 'Applied', color: '#3B82F6' },
+      { key: 'viewed', label: 'Reviewed', color: '#8B5CF6' },
+      { key: 'shortlisted', label: 'Shortlisted', color: '#F59E0B' },
+      { key: 'interviewScheduled', label: 'Interview', color: '#6366F1' },
+      { key: 'offered', label: 'Offered', color: '#10B981' },
+      { key: 'hired', label: 'Hired', color: '#059669' },
     ];
     return stages
       .map((s) => ({ name: s.label, count: analytics.funnel[s.key] ?? 0, color: s.color }))
@@ -618,20 +618,16 @@ export default function CandidateDashboard() {
                         </span>
                         <div className="h-7 flex-1 overflow-hidden rounded-full bg-[var(--bg-secondary)]">
                           <div
-                            className="flex h-full items-center justify-end rounded-full pr-2 transition-all"
+                            className="h-full rounded-full transition-all"
                             style={{
                               width: `${widthPct}%`,
                               backgroundColor: stage.color,
-                              minWidth: stage.count > 0 ? '2rem' : '0',
                             }}
-                          >
-                            {stage.count > 0 && (
-                              <span className="text-[10px] font-semibold text-white">
-                                {stage.count}
-                              </span>
-                            )}
-                          </div>
+                          />
                         </div>
+                        <span className="w-10 shrink-0 text-right text-xs font-semibold text-[var(--text)]">
+                          {stage.count}
+                        </span>
                       </div>
                     );
                   })}

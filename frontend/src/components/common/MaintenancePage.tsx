@@ -67,13 +67,12 @@ export default function MaintenancePage() {
 
   // Auto-refresh: poll feature flags with raw fetch (bypasses Axios 503 interceptor)
   useEffect(() => {
-    const apiUrl = APP_CONFIG.apiUrl;
-
     async function checkMaintenance() {
       try {
-        const res = await fetch(`${apiUrl}/feature-flags/client`, {
+        // Try BFF proxy first (first-party cookies), fall back to direct backend
+        const res = await fetch('/api/proxy/feature-flags/client', {
           credentials: 'include',
-        });
+        }).catch(() => fetch(`${APP_CONFIG.apiUrl}/feature-flags/client`));
         if (res.ok) {
           const json = await res.json();
           if (json?.data?.maintenanceMode === false) {

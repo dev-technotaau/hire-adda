@@ -9,10 +9,32 @@ import { isFeatureEnabled, getFlag } from '../config/feature-flags';
  * Optional Remote Config keys:
  *   - `maintenanceMessage`    (string) — custom message shown to users
  *   - `maintenanceReturnTime` (string) — ISO-8601 timestamp for the countdown timer
+ *
+ * Whitelisted endpoints that bypass maintenance mode:
+ *   - /api/v1/feature-flags/* — Frontend needs to check maintenance status
+ *   - /api/v1/public/*        — Public endpoints should remain available
+ *   - /api/v1/config/*        — Public config endpoints
  */
 export const maintenanceCheck = () => {
-  return async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // Endpoints that should bypass maintenance mode
+  // Note: Middleware is mounted at /api, so paths start with /v1/...
+  const WHITELIST_PATTERNS = [
+    /^\/v1\/feature-flags/,
+    /^\/v1\/public/,
+    /^\/v1\/config/,
+  ];
+
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      // Check if current path matches any whitelist pattern
+      const isWhitelisted = WHITELIST_PATTERNS.some((pattern) => pattern.test(req.path));
+
+      if (isWhitelisted) {
+        // Allow whitelisted endpoints to pass through
+        next();
+        return;
+      }
+
       const inMaintenance = await isFeatureEnabled('maintenanceMode');
       if (inMaintenance) {
         const message = await getFlag<string>(

@@ -1206,6 +1206,7 @@ function AdminExpandedDetails({
 }) {
   const queryClient = useQueryClient();
   const [revokingAll, setRevokingAll] = useState(false);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
 
   const { data: statusRes } = useQuery({
     queryKey: ['admin-mfa-status', admin.id],
@@ -1231,6 +1232,20 @@ function AdminExpandedDetails({
       showToast.error(error.message || 'Failed to revoke sessions');
     } finally {
       setRevokingAll(false);
+    }
+  };
+
+  const handleRevokeSession = async (sessionId: string) => {
+    setRevokingSessionId(sessionId);
+    try {
+      await adminService.revokeUserSession(admin.id, sessionId);
+      showToast.success('Session revoked');
+      queryClient.invalidateQueries({ queryKey: ['admin-sessions', admin.id] });
+    } catch (err) {
+      const error = err as ApiError;
+      showToast.error(error.message || 'Failed to revoke session');
+    } finally {
+      setRevokingSessionId(null);
     }
   };
 
@@ -1318,9 +1333,15 @@ function AdminExpandedDetails({
                   </div>
                 </div>
                 {session.isActive && (
-                  <span className="rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-xs text-[var(--success)]">
-                    Active
-                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    isLoading={revokingSessionId === session.id}
+                    onClick={() => handleRevokeSession(session.id)}
+                    className="text-[var(--error)] hover:text-[var(--error)]"
+                  >
+                    Revoke
+                  </Button>
                 )}
               </div>
             ))}

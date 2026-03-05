@@ -10,7 +10,7 @@ import { handleSlaCheck } from './sla-check.worker';
 import { handleProfileReminder } from './profile-reminder.worker';
 import { handleScheduledPublish } from './scheduled-publish.worker';
 import { handleWeeklyDigest } from './weekly-digest.worker';
-import { handleDataExport } from './data-export.worker';
+import { handleDataExport, handleExportCleanup } from './data-export.worker';
 import { handleDbBackup, handleBackupCleanup } from './backup.worker';
 
 /**
@@ -42,6 +42,8 @@ export const schedulerWorker = new Worker(
         return handleDbBackup(job);
       case 'backup-cleanup':
         return handleBackupCleanup(job);
+      case 'export-cleanup':
+        return handleExportCleanup(job);
       default:
         logger.warn(`Unknown scheduler job name: ${job.name}`);
         return null;

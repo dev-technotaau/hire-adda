@@ -1,18 +1,26 @@
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import prisma from '../config/prisma';
-import { env } from '../config/env';
+import { env, getOtpLength, getOtpExpiryMinutes } from '../config/env';
 import {
   generateBackupCodes,
   hashToken,
   compareTokens,
   generateSecureToken,
+  generateOtp,
 } from '../utils/crypto';
 import { encryptField, decryptField } from '../utils/encryption';
 import { AuditService } from './audit.service';
 import { AppError } from '../middleware/error';
 import logger from '../config/logger';
 import bcrypt from 'bcryptjs';
+import type { TokenPayload } from '../utils/jwt';
+import { signAccessToken } from '../utils/jwt';
+import { createRefreshToken } from './token.service';
+import { sessionService } from './session.service';
+import { emailQueue } from '../jobs/email.queue';
+import { mfaRecoveryOtp as mfaRecoveryOtpTemplate } from '../templates/email/security';
+import { twoFactorDisabled } from '../templates/email/security';
 
 const TRUSTED_DEVICE_DAYS = 30;
 
@@ -472,4 +480,212 @@ export const verifyTrustedDevice = async (userId: string, token: string): Promis
  */
 export const revokeTrustedDevices = async (userId: string): Promise<void> => {
   await prisma.mfaTrustedDevice.deleteMany({ where: { userId } });
+};
+
+// ===============================
+// MFA Recovery — Email OTP flow
+// ===============================
+
+/**
+ * Request MFA recovery via email OTP.
+ * Silent return if user not found or MFA not enabled (prevent enumeration).
+ */
+export const requestMfaRecovery = async (email: string): Promise<void> => {
+  const normalizedEmail = email.toLowerCase();
+
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: { id: true, email: true, role: true, mfaEnabled: true, lockUntil: true },
+  });
+
+  // Silent return — prevent enumeration
+  if (!user || !user.mfaEnabled) return;
+
+  // Admin MFA is managed by Super Admin only — no self-service recovery
+  if (user.role === 'ADMIN') {
+    throw new AppError(
+      'Admin MFA recovery is not available. Contact a Super Admin.',
+      403,
+      'ADMIN_MFA_MANAGED'
+    );
+  }
+
+  // Check account lock
+  if (user.lockUntil && user.lockUntil > new Date()) {
+    throw new AppError('Account is temporarily locked. Please try again later.', 423, 'ACCOUNT_LOCKED');
+  }
+
+  const otp = generateOtp(getOtpLength());
+  const hashedOtp = hashToken(otp);
+  const expiresAt = new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      mfaRecoveryToken: hashedOtp,
+      mfaRecoveryExpires: expiresAt,
+    },
+  });
+
+  // Send recovery email
+  try {
+    const emailContent = mfaRecoveryOtpTemplate(otp);
+    await emailQueue.add('send-email', {
+      to: user.email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
+    });
+  } catch (error) {
+    logger.error(`Failed to queue MFA recovery email for ${normalizedEmail}`, error);
+  }
+
+  if (env.NODE_ENV !== 'production') {
+    logger.info(`DEV: MFA Recovery OTP for ${normalizedEmail}: ${otp}`);
+  }
+
+  AuditService.log({
+    action: 'MFA_RECOVERY_REQUESTED',
+    entity: 'User',
+    entityId: user.id,
+    performedBy: user.id,
+  }).catch(() => {});
+};
+
+/**
+ * Verify MFA recovery OTP → disable MFA → issue tokens → log user in.
+ */
+export const verifyMfaRecovery = async (
+  email: string,
+  otp: string,
+  userAgent?: string,
+  ipAddress?: string
+): Promise<{
+  user: {
+    id: string;
+    email: string;
+    role: string;
+    firstName: string | null;
+    lastName: string | null;
+    isEmailVerified: boolean;
+    mfaEnabled: boolean;
+    createdAt: Date;
+    lastLoginAt: Date | null;
+  };
+  accessToken: string;
+  refreshToken: string;
+  sessionId: string;
+}> => {
+  const normalizedEmail = email.toLowerCase();
+  const hashedOtp = hashToken(otp);
+
+  const user = await prisma.user.findFirst({
+    where: {
+      email: normalizedEmail,
+      mfaRecoveryToken: hashedOtp,
+      mfaRecoveryExpires: { gt: new Date() },
+    },
+  });
+
+  // Admin MFA is managed by Super Admin only — no self-service recovery
+  if (user?.role === 'ADMIN') {
+    throw new AppError(
+      'Admin MFA recovery is not available. Contact a Super Admin.',
+      403,
+      'ADMIN_MFA_MANAGED'
+    );
+  }
+
+  if (!user) {
+    // Increment login attempts on the user (if found by email) to prevent brute-force
+    const target = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true, loginAttempts: true },
+    });
+    if (target) {
+      const newAttempts = target.loginAttempts + 1;
+      const lockData: Record<string, unknown> = { loginAttempts: newAttempts };
+      if (newAttempts >= parseInt(env.MAX_LOGIN_ATTEMPTS, 10)) {
+        lockData.lockUntil = new Date(
+          Date.now() + parseInt(env.ACCOUNT_LOCK_DURATION_MINUTES, 10) * 60 * 1000
+        );
+      }
+      await prisma.user.update({ where: { id: target.id }, data: lockData });
+    }
+    throw new AppError('Invalid or expired recovery code', 401, 'INVALID_RECOVERY_CODE');
+  }
+
+  // Transaction: disable MFA + clear recovery token + reset security fields
+  const updatedUser = await prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
+      where: { id: user.id },
+      data: {
+        mfaEnabled: false,
+        mfaSecret: null,
+        mfaBackupCodes: [],
+        mfaRecoveryToken: null,
+        mfaRecoveryExpires: null,
+        loginAttempts: 0,
+        lockUntil: null,
+        lastLoginAt: new Date(),
+        lastLoginIp: ipAddress,
+      },
+    });
+
+    // Remove all trusted devices
+    await tx.mfaTrustedDevice.deleteMany({ where: { userId: user.id } });
+
+    return updated;
+  });
+
+  // Create session and generate tokens with sessionId
+  const session = await sessionService.createSession(updatedUser.id, userAgent, ipAddress);
+  const tokenPayload: TokenPayload = {
+    userId: updatedUser.id,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    sessionId: session.id,
+  };
+  const accessToken = signAccessToken(tokenPayload);
+  const refreshToken = await createRefreshToken(updatedUser.id, userAgent, ipAddress, session.id);
+
+  // Send security notification email (fire-and-forget)
+  try {
+    const emailContent = twoFactorDisabled('Authenticator App');
+    emailQueue
+      .add('send-email', {
+        to: updatedUser.email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      })
+      .catch(() => {});
+  } catch {
+    // ignore
+  }
+
+  AuditService.log({
+    action: 'MFA_RECOVERY_COMPLETED',
+    entity: 'User',
+    entityId: updatedUser.id,
+    performedBy: updatedUser.id,
+    details: { method: 'email_otp' },
+  }).catch(() => {});
+
+  return {
+    user: {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      isEmailVerified: updatedUser.isEmailVerified,
+      mfaEnabled: false,
+      createdAt: updatedUser.createdAt,
+      lastLoginAt: updatedUser.lastLoginAt,
+    },
+    accessToken,
+    refreshToken,
+    sessionId: session.id,
+  };
 };

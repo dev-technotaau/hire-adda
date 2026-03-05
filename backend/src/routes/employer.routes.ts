@@ -11,6 +11,7 @@ import { updateCompanyProfileSchema } from '../schemas/employer.schema';
 import { createJobTemplateSchema, updateJobTemplateSchema } from '../schemas/job-template.schema';
 import { audit } from '../middleware/audit';
 import { cache } from '../middleware/cache';
+import { exportLimiter } from '../middleware/rate-limit';
 
 const router = Router();
 
@@ -30,6 +31,9 @@ const upload = multer({
     }
   },
 });
+
+// --- Public routes (no auth required) ---
+router.get('/:id/public', cache({ ttl: 300 }), employerController.getPublicCompany);
 
 // All routes require authentication and EMPLOYER role
 router.use(protect);
@@ -51,12 +55,25 @@ router.put(
 
 router.post('/me/logo', upload.single('logo'), employerController.uploadLogo);
 router.delete('/me/logo', employerController.removeLogo);
+router.post('/me/cover-image', upload.single('coverImage'), employerController.uploadCoverImage);
+router.delete('/me/cover-image', employerController.removeCoverImage);
 
 router.get('/me/profile-views', employerController.getProfileViews);
 
 router.get('/candidates/search', cache({ ttl: 60, perUser: true }), employerController.searchCandidates);
 
-router.post('/candidates/bulk-export', employerController.bulkExportCandidates);
+router.post(
+  '/candidates/bulk-export',
+  exportLimiter,
+  audit('BULK_EXPORT_CANDIDATES', 'CandidateProfile'),
+  employerController.bulkExportCandidates
+);
+router.post(
+  '/candidates/bulk-export-resumes',
+  exportLimiter,
+  audit('BULK_EXPORT_RESUMES', 'CandidateProfile'),
+  employerController.bulkExportResumes
+);
 
 // Candidate management
 router.get('/applications', jobController.getAllEmployerApplications);

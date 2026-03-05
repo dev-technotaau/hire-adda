@@ -8,12 +8,16 @@ export const sessionService = {
     const res = await api.get(API.SESSIONS.LIST);
     const data = res.data as ApiResponse<Session[]>;
     // Map backend field names to UI-friendly aliases
+    const currentSessionId =
+      typeof document !== 'undefined'
+        ? (document.cookie.match(/tb_session_id=([^;]+)/)?.[1] || null)
+        : null;
     if (data.data) {
-      data.data = data.data.map((session, index) => ({
+      data.data = data.data.map((session) => ({
         ...session,
         deviceInfo: session.userAgent || session.deviceInfo || null,
         lastActive: session.lastSeenAt || session.lastActive || session.createdAt,
-        isCurrent: index === 0, // First session (most recent) is assumed current
+        isCurrent: session.id === currentSessionId,
       }));
     }
     return data;

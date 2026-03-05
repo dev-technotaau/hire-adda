@@ -258,6 +258,8 @@ export default function AdminDashboard() {
       value: stats?.activeJobs ?? 0,
       icon: Briefcase,
       color: 'text-[var(--success)] bg-[var(--success-light)]',
+      sparkData: appStats?.dailyTrend?.map((d) => ({ v: d.count })),
+      sparkColor: '#10B981',
     },
     {
       label: 'Total Applications',
@@ -272,6 +274,8 @@ export default function AdminDashboard() {
       value: stats?.newUsersToday ?? 0,
       icon: UserPlus,
       color: 'text-primary bg-primary-light',
+      sparkData: stats?.registrationTrends?.map((d) => ({ v: d.count })),
+      sparkColor: '#2563EB',
       delta: stats?.newUsersThisWeek
         ? Math.round(((stats.newUsersToday ?? 0) / (stats.newUsersThisWeek / 7)) * 100 - 100)
         : null,
@@ -281,12 +285,16 @@ export default function AdminDashboard() {
       value: stats?.newUsersThisWeek ?? 0,
       icon: TrendingUp,
       color: 'text-[var(--success)] bg-[var(--success-light)]',
+      sparkData: stats?.registrationTrends?.slice(-7).map((d) => ({ v: d.count })),
+      sparkColor: '#10B981',
     },
     {
       label: 'New This Month',
       value: stats?.newUsersThisMonth ?? 0,
       icon: TrendingUp,
       color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      sparkData: stats?.registrationTrends?.map((d) => ({ v: d.count })),
+      sparkColor: '#F59E0B',
     },
     {
       label: 'Pending Verifications',
@@ -310,6 +318,8 @@ export default function AdminDashboard() {
       icon: Activity,
       desc: 'Users active in last 7 days',
       color: 'text-primary',
+      sparkData: dauItems.slice(-7).map((d) => ({ v: d.total })),
+      sparkColor: '#2563EB',
     },
     {
       label: 'Expired Jobs',
@@ -514,6 +524,18 @@ export default function AdminDashboard() {
                   <p className="text-xs text-[var(--text-muted)]">{kpi.desc}</p>
                 </div>
               </div>
+              {'sparkData' in kpi &&
+                kpi.sparkData &&
+                (kpi.sparkData as { v: number }[]).length > 1 && (
+                  <div className="mt-2">
+                    <StatsChart
+                      data={kpi.sparkData as { v: number }[]}
+                      dataKey="v"
+                      color={kpi.sparkColor}
+                      height={36}
+                    />
+                  </div>
+                )}
             </Card>
           ))}
         </div>

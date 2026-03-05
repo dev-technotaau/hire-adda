@@ -248,6 +248,9 @@ export default function ProfilePreviewPage() {
                         {profile.disabilityType &&
                           profile.disabilityType !== 'NONE' &&
                           ` — ${DISABILITY_TYPE_LABELS[profile.disabilityType]}`}
+                        {profile.disabilityPercentage
+                          ? ` (${profile.disabilityPercentage}%)`
+                          : ''}
                       </Badge>
                     )}
                     {profile.hasCareerBreak && (
@@ -759,6 +762,21 @@ export default function ProfilePreviewPage() {
                   </Card>
                 )}
 
+                {/* Languages (simple array) */}
+                {profile.languages && profile.languages.length > 0 && (
+                  <Card>
+                    <div className="mb-3 flex items-center gap-2">
+                      <Languages className="h-5 w-5 text-[var(--info)]" />
+                      <h2 className="text-base font-semibold text-[var(--text)]">Languages</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {profile.languages.map((lang, i) => (
+                        <Tag key={i} label={lang} variant="default" />
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
                 {/* IT Skills */}
                 {profile.itSkills && profile.itSkills.length > 0 && (
                   <Card>
@@ -943,12 +961,31 @@ export default function ProfilePreviewPage() {
                   </Card>
                 )}
 
-                {/* Languages */}
-                {profile.languageProficiency && profile.languageProficiency.length > 0 && (
+                {/* Languages (simple array) */}
+                {profile.languages && profile.languages.length > 0 && (
                   <Card>
                     <div className="mb-3 flex items-center gap-2">
                       <Languages className="h-5 w-5 text-[var(--info)]" />
                       <h2 className="text-base font-semibold text-[var(--text)]">Languages</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.languages.map((lang, i) => (
+                        <Badge key={i} variant="neutral" size="sm">
+                          {lang}
+                        </Badge>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
+                {/* Language Proficiency (detailed) */}
+                {profile.languageProficiency && profile.languageProficiency.length > 0 && (
+                  <Card>
+                    <div className="mb-3 flex items-center gap-2">
+                      <Languages className="h-5 w-5 text-[var(--info)]" />
+                      <h2 className="text-base font-semibold text-[var(--text)]">
+                        Language Proficiency
+                      </h2>
                     </div>
                     <div className="space-y-2">
                       {profile.languageProficiency.map((lang, i) => (

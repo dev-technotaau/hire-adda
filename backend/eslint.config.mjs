@@ -11,7 +11,17 @@ export default tseslint.config(
     pluginN.configs['flat/recommended'],
     prettierConfig,
     {
-        ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'logs/**'],
+        ignores: [
+            'dist/**',
+            'dist-check/**',
+            'node_modules/**',
+            'coverage/**',
+            'logs/**',
+            '*.js',
+            '*.mjs',
+            'prisma/seeds/**',
+            'test/**',
+        ],
     },
     {
         languageOptions: {
@@ -43,6 +53,7 @@ export default tseslint.config(
             // Node
             'n/no-process-exit': 'off',
             'n/no-missing-import': 'off',
+            'n/no-missing-require': 'off',
             'n/no-unsupported-features/es-syntax': 'off',
             'n/no-unpublished-import': 'off',
         },

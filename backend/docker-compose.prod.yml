@@ -34,6 +34,8 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=https://api.talentbridge.com/api/v1
+      - BACKEND_INTERNAL_URL=http://app:5000/api/v1
+      - BFF_SECRET=${BFF_SECRET}
     networks:
       - talent_bridge_network
 
@@ -51,6 +53,7 @@ services:
       - PORT=${PORT}
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
+      - BFF_SECRET=${BFF_SECRET}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASSWORD=${REDIS_PASSWORD}

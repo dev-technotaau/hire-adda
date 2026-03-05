@@ -44,6 +44,26 @@ import { trackEvent, getClientId } from './analytics.service';
 
 const SALT_ROUNDS = 12;
 
+/**
+ * Re-index a user's candidate profile in Elasticsearch after user-level
+ * fields change (e.g. verification status). No-op if the user has no
+ * candidate profile. Fire-and-forget — failures are logged, not thrown.
+ */
+async function reindexCandidateIfExists(userId: string): Promise<void> {
+  try {
+    const profile = await prisma.candidateProfile.findUnique({
+      where: { userId },
+      include: { user: true },
+    });
+    if (profile) {
+      const { searchService } = await import('./search.service');
+      await searchService.indexCandidate(profile);
+    }
+  } catch (err) {
+    logger.error(`Failed to re-index candidate after user update (${userId})`, err);
+  }
+}
+
 function enforceResendLimits(lastSentAt: Date | null, resendCount: number): void {
   const cooldown = getOtpResendCooldown();
   const maxAttempts = getOtpMaxResendAttempts();
@@ -180,18 +200,27 @@ export const register = async (
 export const generateTokens = async (
   user: { id: string; email: string; role: string | Role },
   userAgent: string | undefined,
-  ipAddress: string | undefined
+  ipAddress: string | undefined,
+  sessionId?: string
 ) => {
-  const tokenPayload = {
+  // Create session if not provided
+  let sid = sessionId;
+  if (!sid) {
+    const session = await sessionService.createSession(user.id, userAgent, ipAddress);
+    sid = session.id;
+  }
+
+  const tokenPayload: TokenPayload = {
     userId: user.id,
     email: user.email,
     role: user.role,
+    sessionId: sid,
   };
 
   const accessToken = signAccessToken(tokenPayload);
-  const refreshToken = await createRefreshToken(user.id, userAgent, ipAddress);
+  const refreshToken = await createRefreshToken(user.id, userAgent, ipAddress, sid);
 
-  return { accessToken, refreshToken };
+  return { accessToken, refreshToken, sessionId: sid };
 };
 
 // ===============================
@@ -215,6 +244,7 @@ export const login = async (
   };
   accessToken: string;
   refreshToken: string;
+  sessionId?: string;
   requireMfa?: boolean;
 }> => {
   const { password, mfaCode } = data;
@@ -335,20 +365,17 @@ export const login = async (
 
   logger.info(`User logged in: ${email}`);
 
-  // Generate tokens
+  // Create session and generate tokens with sessionId
+  const session = await sessionService.createSession(user.id, userAgent, ipAddress);
   const tokenPayload: TokenPayload = {
     userId: user.id,
     email: user.email,
     role: user.role,
+    sessionId: session.id,
   };
 
   const accessToken = signAccessToken(tokenPayload);
-  const refreshToken = await createRefreshToken(user.id, userAgent, ipAddress);
-
-  // Create session
-  sessionService
-    .createSession(user.id, userAgent, ipAddress)
-    .catch((err) => logger.error('Failed to create session', err));
+  const refreshToken = await createRefreshToken(user.id, userAgent, ipAddress, session.id);
 
   // Publish Kafka event
   publishEvent(KafkaTopics.USER_LOGIN, user.id, { userId: user.id, email: user.email });
@@ -385,14 +412,21 @@ export const login = async (
     },
     accessToken,
     refreshToken,
+    sessionId: session.id,
   };
 };
 
 // ===============================
 // Logout
 // ===============================
-export const logout = async (refreshToken: string, userId?: string): Promise<void> => {
+export const logout = async (refreshToken: string, userId?: string, sessionId?: string): Promise<void> => {
   await revokeToken(refreshToken);
+
+  // Revoke the session if sessionId is provided
+  if (sessionId && userId) {
+    sessionService.revokeSession(userId, sessionId).catch(() => {});
+  }
+
   // Set offline presence (fire-and-forget)
   if (userId) {
     void import('../services/presence.service')
@@ -440,7 +474,7 @@ export const refreshTokens = async (
   oldRefreshToken: string,
   userAgent?: string,
   ipAddress?: string
-): Promise<{ accessToken: string; refreshToken: string }> => {
+): Promise<{ accessToken: string; refreshToken: string; sessionId?: string }> => {
   // Validate old token
   const isValid = await isTokenValid(oldRefreshToken);
   if (!isValid) {
@@ -453,6 +487,9 @@ export const refreshTokens = async (
     throw new AppError('User not found', 401);
   }
 
+  // Preserve sessionId from old token
+  const sessionId = tokenRecord.sessionId || undefined;
+
   // Revoke old token
   await revokeToken(oldRefreshToken);
 
@@ -464,17 +501,23 @@ export const refreshTokens = async (
     })
     .catch(() => {});
 
-  // Generate new tokens
+  // Update session lastSeenAt
+  if (sessionId) {
+    sessionService.updateLastSeen(sessionId);
+  }
+
+  // Generate new tokens with same sessionId
   const tokenPayload: TokenPayload = {
     userId: tokenRecord.user.id,
     email: tokenRecord.user.email,
     role: tokenRecord.user.role,
+    sessionId: sessionId || '',
   };
 
   const accessToken = signAccessToken(tokenPayload);
-  const refreshToken = await createRefreshToken(tokenRecord.user.id, userAgent, ipAddress);
+  const refreshToken = await createRefreshToken(tokenRecord.user.id, userAgent, ipAddress, sessionId);
 
-  return { accessToken, refreshToken };
+  return { accessToken, refreshToken, sessionId };
 };
 
 // ===============================
@@ -506,6 +549,7 @@ export const verifyEmail = async (
   };
   accessToken: string;
   refreshToken: string;
+  sessionId: string;
 }> => {
   const hashedToken = hashToken(token);
 
@@ -536,14 +580,10 @@ export const verifyEmail = async (
   });
 
   logger.info(`Email verified: ${user.email}`);
+  reindexCandidateIfExists(user.id).catch(() => {});
 
-  // Generate tokens so user is auto-logged-in after verification
-  const { accessToken, refreshToken } = await generateTokens(user, userAgent, ipAddress);
-
-  // Create session (same as login flow)
-  sessionService
-    .createSession(user.id, userAgent, ipAddress)
-    .catch((err) => logger.error('Failed to create session after email verification', err));
+  // Generate tokens so user is auto-logged-in after verification (session created inside)
+  const { accessToken, refreshToken, sessionId } = await generateTokens(user, userAgent, ipAddress);
 
   return {
     user: {
@@ -567,6 +607,7 @@ export const verifyEmail = async (
     },
     accessToken,
     refreshToken,
+    sessionId,
   };
 };
 
@@ -898,6 +939,7 @@ export const verifyMobile = async (mobileNumber: string, otp: string): Promise<v
   });
 
   logger.info(`Mobile verified: ${mobileNumber}`);
+  reindexCandidateIfExists(user.id).catch(() => {});
 };
 
 // ===============================
@@ -1070,6 +1112,7 @@ export const confirmWhatsappOtp = async (
   });
   const verifiedNumber = whatsappNumber || user.mobileNumber;
   logger.info(`WhatsApp verified for ${verifiedNumber}`);
+  reindexCandidateIfExists(userId).catch(() => {});
 };
 
 // ===============================
@@ -1174,6 +1217,7 @@ export const removeWhatsappNumber = async (userId: string): Promise<void> => {
   });
 
   logger.info(`Separate WhatsApp number removed for user ${userId}, reverted to mobile number`);
+  reindexCandidateIfExists(userId).catch(() => {});
 };
 
 // ===============================
@@ -1284,6 +1328,7 @@ export const confirmChangeEmail = async (userId: string, otp: string): Promise<v
   }
 
   logger.info(`Email changed for user ${userId} from ${oldEmail} to ${user.pendingEmail}`);
+  reindexCandidateIfExists(userId).catch(() => {});
 };
 
 export const resendChangeEmailOtp = async (userId: string): Promise<void> => {
@@ -1429,6 +1474,7 @@ export const confirmChangeMobile = async (userId: string, otp: string): Promise<
   });
 
   logger.info(`Mobile changed for user ${userId} to ${user.pendingMobileNumber}`);
+  reindexCandidateIfExists(userId).catch(() => {});
 };
 
 export const resendChangeMobileOtp = async (userId: string): Promise<void> => {

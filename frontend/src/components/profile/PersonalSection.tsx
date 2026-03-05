@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { User, MapPin, Phone, Mail, Camera, X, Loader2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import PhoneInput from '@/components/ui/PhoneInput';
 import Textarea from '@/components/ui/Textarea';
@@ -13,6 +14,7 @@ import DatePicker from '@/components/ui/DatePicker';
 import ImageCropper from '@/components/ui/ImageCropper';
 import { showToast } from '@/components/ui/Toast';
 import { candidateService } from '@/services/candidate.service';
+import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store/auth.store';
 import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
 import {
@@ -32,6 +34,100 @@ function toSelectOptions(labels: Record<string, string>): SelectOption[] {
 
 interface PersonalSectionProps extends ProfileSectionProps {
   profile?: CandidateProfile;
+}
+
+function NameSection({ profile }: { profile: CandidateProfile | undefined }) {
+  const queryClient = useQueryClient();
+  const { user, setUser } = useAuthStore();
+  const [firstName, setFirstName] = useState(user?.firstName || '');
+  const [lastName, setLastName] = useState(user?.lastName || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string }>({});
+
+  const validate = () => {
+    const newErrors: { firstName?: string; lastName?: string } = {};
+
+    if (!firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    } else if (firstName.length > 50) {
+      newErrors.firstName = 'First name must be at most 50 characters';
+    } else if (!/^[a-zA-Z\s'-]+$/.test(firstName)) {
+      newErrors.firstName = 'First name can only contain letters, spaces, hyphens, and apostrophes';
+    }
+
+    if (!lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    } else if (lastName.length > 50) {
+      newErrors.lastName = 'Last name must be at most 50 characters';
+    } else if (!/^[a-zA-Z\s'-]+$/.test(lastName)) {
+      newErrors.lastName = 'Last name can only contain letters, spaces, hyphens, and apostrophes';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+
+    try {
+      setIsSaving(true);
+      const res = await authService.updateProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
+      if (res.data?.user) {
+        setUser(res.data.user);
+      }
+      showToast.success('Name updated successfully');
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.AUTH.ME });
+    } catch (err) {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to update name');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const hasChanges = firstName !== (user?.firstName || '') || lastName !== (user?.lastName || '');
+
+  return (
+    <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">Name</h2>}>
+      <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="First Name"
+            placeholder="Enter your first name"
+            value={firstName}
+            onChange={(e) => {
+              setFirstName(e.target.value);
+              if (errors.firstName) setErrors({ ...errors, firstName: undefined });
+            }}
+            error={errors.firstName}
+            required
+          />
+          <Input
+            label="Last Name"
+            placeholder="Enter your last name"
+            value={lastName}
+            onChange={(e) => {
+              setLastName(e.target.value);
+              if (errors.lastName) setErrors({ ...errors, lastName: undefined });
+            }}
+            error={errors.lastName}
+            required
+          />
+        </div>
+        {hasChanges && (
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={isSaving} isLoading={isSaving}>
+              Save Name
+            </Button>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
 }
 
 function ProfileImageSection({ profile }: { profile: CandidateProfile | undefined }) {
@@ -104,46 +200,46 @@ function ProfileImageSection({ profile }: { profile: CandidateProfile | undefine
             </div>
           )}
         </div>
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp"
-                onChange={handleFileSelect}
-                className="sr-only"
-              />
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]">
-                <Camera className="h-4 w-4" /> {avatarUrl ? 'Change Photo' : 'Upload Photo'}
-              </span>
-            </label>
-            {avatarUrl && (
-              <button
-                onClick={async () => {
-                  try {
-                    setIsUploading(true);
-                    await candidateService.removeAvatar();
-                    const { user, setUser } = useAuthStore.getState();
-                    if (user) setUser({ ...user, avatar: '' });
-                    showToast.success('Profile photo removed');
-                    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
-                  } catch (err) {
-                    const error = err as unknown as ApiError;
-                    showToast.error(error?.message || 'Failed to remove photo');
-                  } finally {
-                    setIsUploading(false);
-                  }
-                }}
-                disabled={isUploading}
-                className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--error)] disabled:opacity-50"
-                title="Remove photo"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+        <div className="flex flex-col gap-2">
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp"
+              onChange={handleFileSelect}
+              className="sr-only"
+              disabled={isUploading}
+            />
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]">
+              <Camera className="h-4 w-4" />
+              {avatarUrl ? 'Change Photo' : 'Upload Photo'}
+            </span>
+          </label>
+          {avatarUrl && (
+            <button
+              onClick={async () => {
+                try {
+                  setIsUploading(true);
+                  await candidateService.removeAvatar();
+                  const { user, setUser } = useAuthStore.getState();
+                  if (user) setUser({ ...user, avatar: '' });
+                  showToast.success('Profile photo removed');
+                  queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
+                } catch (err) {
+                  const error = err as unknown as ApiError;
+                  showToast.error(error?.message || 'Failed to remove photo');
+                } finally {
+                  setIsUploading(false);
+                }
+              }}
+              disabled={isUploading}
+              className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+              title="Remove photo"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
           <p className="text-xs text-[var(--text-muted)]">
-            JPG, PNG, or WebP. Max 5MB. Will be cropped to a square.
+            JPG, PNG, or WebP. Max 5MB. Will be cropped to 1:1 aspect ratio (400x400px).
           </p>
         </div>
       </div>
@@ -168,6 +264,7 @@ function ProfileImageSection({ profile }: { profile: CandidateProfile | undefine
 export default function PersonalSection({ form, updateField, profile }: PersonalSectionProps) {
   return (
     <>
+      <NameSection profile={profile} />
       <ProfileImageSection profile={profile} />
       <Card
         header={<h2 className="text-lg font-semibold text-[var(--text)]">Personal Information</h2>}

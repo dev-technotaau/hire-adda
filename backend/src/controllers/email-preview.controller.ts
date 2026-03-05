@@ -321,6 +321,12 @@ const TEMPLATE_REGISTRY: Record<
     sampleArgs: () => ['Mike', 25, 'xlsx', 'https://example.com/download/candidates.xlsx', 'candidates-1708100000.xlsx'],
     description: 'Candidate export ready for download',
   },
+  'export.resumes': {
+    module: '../templates/email/data-export',
+    export: 'resumeExportReady',
+    sampleArgs: () => ['Mike', 42, 5, 'https://example.com/download/resumes.zip', 'resumes-1708100000.zip'],
+    description: 'Resume export (ZIP) ready for download',
+  },
 
   // Weekly digest
   'digest.weekly': {

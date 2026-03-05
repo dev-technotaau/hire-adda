@@ -10,6 +10,7 @@ import { updateCandidateProfileSchema } from '../schemas/candidate.schema';
 import { createJobAlertSchema, updateJobAlertSchema } from '../schemas/job-alert.schema';
 import { audit } from '../middleware/audit';
 import { cache } from '../middleware/cache';
+import { apiLimiter } from '../middleware/rate-limit';
 
 const router = Router();
 
@@ -146,6 +147,11 @@ router.get(
   cache({ ttl: 300, perUser: true }),
   candidateController.getCandidateProfile
 );
-router.get('/:id/resume', candidateController.getResumeDownloadUrl);
+router.get(
+  '/:id/resume',
+  apiLimiter,
+  audit('RESUME_DOWNLOAD', 'CandidateProfile'),
+  candidateController.getResumeDownloadUrl
+);
 
 export default router;

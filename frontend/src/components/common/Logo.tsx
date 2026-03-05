@@ -23,6 +23,7 @@ export default function Logo({ href = '/', className, size = 'md' }: LogoProps) 
       height={48}
       className={cn(sizeStyles[size], 'w-auto', className)}
       priority
+      fetchPriority="high"
     />
   );
 

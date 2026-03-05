@@ -10,6 +10,7 @@ declare global {
       lastName?: string | null;
       isEmailVerified?: boolean;
       mfaEnabled?: boolean;
+      sessionId?: string;
     }
 
     interface Request {

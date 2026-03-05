@@ -74,6 +74,10 @@ function validateToken(token: string): boolean {
 export function doubleCsrfProtection(req: Request, _res: Response, next: NextFunction): void {
   if (!MUTATION_METHODS.has(req.method.toUpperCase())) return next();
 
+  // BFF bypass: server-to-server calls from Next.js API routes
+  const bffSecret = req.headers['x-bff-secret'] as string | undefined;
+  if (bffSecret && env.BFF_SECRET && bffSecret === env.BFF_SECRET) return next();
+
   const token = req.headers['x-csrf-token'] as string | undefined;
 
   if (!token || !validateToken(token)) {

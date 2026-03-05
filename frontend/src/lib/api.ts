@@ -1,10 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import Cookies from 'js-cookie';
-import { APP_CONFIG, API_BASE_URL } from '@/constants/config';
-import { API } from '@/constants/api';
-import { storage, sessionStore, STORAGE_KEYS } from '@/utils/storage';
 import type { ApiError } from '@/types/api';
 import { useMaintenanceStore } from '@/store/maintenance.store';
+import { broadcastLogout } from '@/lib/auth-channel';
 
 /** Raw error body shape returned by the backend — supports both legacy and new formats */
 interface RawErrorBody {
@@ -20,10 +17,15 @@ interface RawErrorBody {
   errors?: Record<string, string[]> | unknown;
 }
 
+/**
+ * Axios instance for all API calls.
+ * Routes through the BFF proxy (/api/proxy) which attaches httpOnly cookie tokens.
+ * Cookies are sent automatically via withCredentials.
+ */
 const api = axios.create({
-  baseURL: APP_CONFIG.apiUrl,
+  baseURL: '/api/proxy',
   timeout: 30000,
-  withCredentials: true, // Required for CSRF httpOnly cookie
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -36,8 +38,8 @@ const MUTATION_METHODS = ['post', 'put', 'patch', 'delete'];
 
 async function fetchCsrfToken(): Promise<string | null> {
   try {
-    // CSRF endpoint is /api/csrf-token (not under /api/v1/)
-    const { data } = await axios.get(`${API_BASE_URL}/csrf-token`, {
+    // Fetch CSRF token via BFF route (proxies to backend's /api/csrf-token)
+    const { data } = await axios.get('/api/csrf-token', {
       withCredentials: true,
     });
     csrfToken = data.csrfToken;
@@ -49,7 +51,6 @@ async function fetchCsrfToken(): Promise<string | null> {
 
 async function ensureCsrfToken(): Promise<string | null> {
   if (csrfToken) return csrfToken;
-  // Deduplicate concurrent fetches
   if (!csrfFetchPromise) {
     csrfFetchPromise = fetchCsrfToken().finally(() => {
       csrfFetchPromise = null;
@@ -58,34 +59,9 @@ async function ensureCsrfToken(): Promise<string | null> {
   return csrfFetchPromise;
 }
 
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (token: string) => void;
-  reject: (error: unknown) => void;
-}> = [];
-
-function processQueue(error: unknown, token: string | null = null) {
-  failedQueue.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error);
-    } else if (token) {
-      resolve(token);
-    }
-  });
-  failedQueue = [];
-}
-
-// Request interceptor: attach auth token + CSRF token
+// Request interceptor: attach CSRF token on mutations (no more Bearer token — BFF handles it)
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    const token =
-      storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN) ??
-      sessionStore.get<string>(STORAGE_KEYS.ACCESS_TOKEN);
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    // Attach CSRF token on state-changing requests
     if (config.method && MUTATION_METHODS.includes(config.method.toLowerCase())) {
       const csrf = await ensureCsrfToken();
       if (csrf && config.headers) {
@@ -98,12 +74,13 @@ api.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// Response interceptor: handle 401 with token refresh, 429 with retry-after
+// Response interceptor: handle error codes
+// NOTE: 401 refresh is now handled server-side by the BFF proxy.
+// If we still get a 401, the refresh also failed → session is dead.
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
       _rateLimitRetry?: boolean;
       _csrfRetry?: boolean;
     };
@@ -116,7 +93,7 @@ api.interceptors.response.use(
         errorData?.message?.toLowerCase().includes('csrf');
       if (isCsrfError) {
         originalRequest._csrfRetry = true;
-        csrfToken = null; // Invalidate cached token
+        csrfToken = null;
         const newToken = await fetchCsrfToken();
         if (newToken && originalRequest.headers) {
           originalRequest.headers['x-csrf-token'] = newToken;
@@ -148,74 +125,10 @@ api.interceptors.response.use(
       return Promise.reject(transformError(error));
     }
 
-    // If 401 and not a refresh request itself
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      const refreshToken =
-        storage.get<string>(STORAGE_KEYS.REFRESH_TOKEN) ??
-        sessionStore.get<string>(STORAGE_KEYS.REFRESH_TOKEN);
-
-      // No refresh token — clear auth and redirect
-      if (!refreshToken) {
-        clearAuth();
-        return Promise.reject(transformError(error));
-      }
-
-      if (isRefreshing) {
-        // Queue this request while refresh is in progress
-        return new Promise<string>((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-          }
-          return api(originalRequest);
-        });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        // Include CSRF token so the refresh call isn't blocked by CSRF middleware
-        const csrf = await ensureCsrfToken();
-        const { data } = await axios.post(
-          `${APP_CONFIG.apiUrl}${API.AUTH.REFRESH_TOKEN}`,
-          { refreshToken },
-          {
-            withCredentials: true,
-            headers: csrf ? { 'x-csrf-token': csrf } : {},
-          },
-        );
-
-        const newAccessToken = data.data.accessToken;
-        const newRefreshToken = data.data.refreshToken;
-
-        // Respect the rememberMe flag when storing refreshed tokens
-        const remembered = storage.get<boolean>(STORAGE_KEYS.REMEMBER_ME) ?? true;
-        const activeStore = remembered ? storage : sessionStore;
-        activeStore.set(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
-        Cookies.set(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken, {
-          expires: remembered ? 7 : undefined,
-          secure: true,
-          sameSite: 'strict',
-        });
-        if (newRefreshToken) {
-          activeStore.set(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
-        }
-
-        processQueue(null, newAccessToken);
-
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        }
-        return api(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        clearAuth();
-        return Promise.reject(transformError(error));
-      } finally {
-        isRefreshing = false;
-      }
+    // 401 after BFF already tried refresh → session is dead
+    if (error.response?.status === 401) {
+      broadcastLogout();
+      redirectToLogin();
     }
 
     return Promise.reject(transformError(error));
@@ -225,7 +138,6 @@ api.interceptors.response.use(
 function transformError(error: AxiosError<ApiError>): ApiError {
   if (error.response?.data) {
     const data = error.response.data as RawErrorBody;
-    // Support both legacy { message } and new { error: { message, code } } shapes
     const message = data.error?.message || data.message || 'An unexpected error occurred';
     const code = data.error?.code;
     const requestId = data.error?.requestId;
@@ -262,40 +174,20 @@ function transformError(error: AxiosError<ApiError>): ApiError {
 const protectedPrefixes = ['/candidate', '/employer', '/admin', '/super-admin', '/notifications'];
 const adminPrefixes = ['/admin', '/super-admin'];
 
-let clearAuthPending = false;
+let redirectPending = false;
 
-function clearAuth() {
-  // Clear both localStorage and sessionStorage
-  storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
-  storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
-  storage.remove(STORAGE_KEYS.USER);
-  sessionStore.remove(STORAGE_KEYS.ACCESS_TOKEN);
-  sessionStore.remove(STORAGE_KEYS.REFRESH_TOKEN);
-  sessionStore.remove(STORAGE_KEYS.USER);
-  Cookies.remove(STORAGE_KEYS.ACCESS_TOKEN);
+function redirectToLogin() {
+  if (typeof window === 'undefined' || redirectPending) return;
 
-  if (typeof window !== 'undefined' && !clearAuthPending) {
-    const path = window.location.pathname;
-    const isProtected = protectedPrefixes.some((p) => path.startsWith(p));
-    const isAdminRoute = adminPrefixes.some((p) => path.startsWith(p));
+  const path = window.location.pathname;
+  const isProtected = protectedPrefixes.some((p) => path.startsWith(p));
+  const isAdminRoute = adminPrefixes.some((p) => path.startsWith(p));
 
-    // Don't redirect if already on a login page
-    if (isProtected && !path.startsWith('/auth/') && !path.startsWith('/portal/')) {
-      clearAuthPending = true;
-      // Admin routes redirect to portal login, others to auth login
-      const loginUrl = isAdminRoute ? '/portal/login' : '/auth/login';
-      window.location.href = `${loginUrl}?redirect=${encodeURIComponent(path)}`;
-    }
+  if (isProtected && !path.startsWith('/auth/') && !path.startsWith('/portal/')) {
+    redirectPending = true;
+    const loginUrl = isAdminRoute ? '/portal/login' : '/auth/login';
+    window.location.href = `${loginUrl}?redirect=${encodeURIComponent(path)}`;
   }
-}
-
-// Cross-tab auth synchronization
-if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (event) => {
-    if (event.key === STORAGE_KEYS.ACCESS_TOKEN && !event.newValue) {
-      clearAuth();
-    }
-  });
 }
 
 export default api;

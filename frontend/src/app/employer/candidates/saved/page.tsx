@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -24,6 +24,11 @@ import {
   UserCheck,
   ChevronDown,
   X,
+  Download,
+  FileDown,
+  CheckSquare,
+  Square,
+  GitCompareArrows,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -35,6 +40,8 @@ import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import PresenceIndicator from '@/components/ui/PresenceIndicator';
 import { showToast } from '@/components/ui/Toast';
+import CompareBar from '@/components/candidates/CompareBar';
+import CompareModal from '@/components/candidates/CompareModal';
 import { employerService } from '@/services/employer.service';
 import { jobService } from '@/services/job.service';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
@@ -48,6 +55,9 @@ import type { ApiError } from '@/types/api';
 export default function SavedCandidatesPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [showCompare, setShowCompare] = useState(false);
   const [jobPickerOpen, setJobPickerOpen] = useState(false);
   const [jobPickerAction, setJobPickerAction] = useState<'shortlist' | 'select'>('shortlist');
   const [jobPickerCandidateId, setJobPickerCandidateId] = useState('');
@@ -101,6 +111,31 @@ export default function SavedCandidatesPage() {
     },
   });
 
+  const bulkExportMutation = useMutation({
+    mutationFn: (candidateIds: string[]) =>
+      employerService.bulkExportCandidates({ candidateIds, format: 'xlsx' }),
+    onSuccess: () => {
+      showToast.success("Export queued! You'll receive an email when ready.");
+      clearSelection();
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to queue export');
+    },
+  });
+
+  const bulkExportResumesMutation = useMutation({
+    mutationFn: (candidateIds: string[]) => employerService.bulkExportResumes(candidateIds),
+    onSuccess: () => {
+      showToast.success("Resume export queued! You'll receive an email with a ZIP download link.");
+      clearSelection();
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to queue resume export');
+    },
+  });
+
   const openJobPicker = (candidateId: string, action: 'shortlist' | 'select') => {
     setJobPickerCandidateId(candidateId);
     setJobPickerAction(action);
@@ -108,8 +143,49 @@ export default function SavedCandidatesPage() {
     setJobPickerOpen(true);
   };
 
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
   const candidates = data?.data?.items || [];
   const pagination = data?.data;
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(candidates.map((c) => c.id)));
+  }, [candidates]);
+
+  const handleToggleCompare = useCallback((candidateId: string) => {
+    setCompareIds((prev) => {
+      if (prev.includes(candidateId)) {
+        return prev.filter((id) => id !== candidateId);
+      }
+      if (prev.length >= 3) {
+        showToast.error('You can compare up to 3 candidates');
+        return prev;
+      }
+      return [...prev, candidateId];
+    });
+  }, []);
+
+  const compareCandidates = useMemo(
+    () =>
+      compareIds
+        .map((id) => candidates.find((c) => c.id === id))
+        .filter((c): c is CandidateProfile => c !== undefined),
+    [compareIds, candidates],
+  );
 
   return (
     <DashboardLayout requiredRole={['EMPLOYER']}>
@@ -128,6 +204,62 @@ export default function SavedCandidatesPage() {
           </Link>
         </div>
 
+        {/* Bulk Actions Toolbar */}
+        {selectedIds.size > 0 && (
+          <Card className="border-primary bg-primary/5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (selectedIds.size === candidates.length) {
+                      clearSelection();
+                    } else {
+                      selectAll();
+                    }
+                  }}
+                  className="text-primary hover:text-primary-dark flex items-center gap-1.5 text-sm font-medium"
+                >
+                  {selectedIds.size === candidates.length ? (
+                    <CheckSquare className="h-4 w-4" />
+                  ) : (
+                    <Square className="h-4 w-4" />
+                  )}
+                  {selectedIds.size === candidates.length ? 'Deselect' : 'Select'} all on page
+                </button>
+                <span className="text-sm font-medium text-[var(--text)]">
+                  {selectedIds.size} candidate{selectedIds.size !== 1 ? 's' : ''} selected
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => bulkExportMutation.mutate(Array.from(selectedIds))}
+                  disabled={bulkExportMutation.isPending}
+                  isLoading={bulkExportMutation.isPending}
+                >
+                  <Download className="mr-1.5 h-4 w-4" />
+                  Export
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => bulkExportResumesMutation.mutate(Array.from(selectedIds))}
+                  disabled={bulkExportResumesMutation.isPending}
+                  isLoading={bulkExportResumesMutation.isPending}
+                >
+                  <FileDown className="mr-1.5 h-4 w-4" />
+                  Export Resumes
+                </Button>
+                <Button variant="ghost" size="sm" onClick={clearSelection}>
+                  <X className="mr-1.5 h-4 w-4" />
+                  Clear
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
         <div className="space-y-3">
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
@@ -140,12 +272,16 @@ export default function SavedCandidatesPage() {
               <SavedCandidateCard
                 key={candidate.id}
                 candidate={candidate}
+                isSelected={selectedIds.has(candidate.id)}
+                onToggleSelect={() => toggleSelect(candidate.id)}
                 onRemove={() => toggleSaveMutation.mutate(candidate.id)}
                 isRemoving={
                   toggleSaveMutation.isPending && toggleSaveMutation.variables === candidate.id
                 }
                 onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
                 onSelect={() => openJobPicker(candidate.id, 'select')}
+                isComparing={compareIds.includes(candidate.id)}
+                onToggleCompare={() => handleToggleCompare(candidate.id)}
               />
             ))
           ) : (
@@ -244,6 +380,26 @@ export default function SavedCandidatesPage() {
             </div>
           </div>
         )}
+
+        {/* Comparison Features */}
+        <CompareBar
+          candidates={compareCandidates}
+          onRemove={(id) => setCompareIds((prev) => prev.filter((cid) => cid !== id))}
+          onClear={() => setCompareIds([])}
+          onCompare={() => setShowCompare(true)}
+        />
+
+        <CompareModal
+          isOpen={showCompare}
+          onClose={() => setShowCompare(false)}
+          candidates={compareCandidates}
+          onRemove={(id) => {
+            setCompareIds((prev) => prev.filter((cid) => cid !== id));
+            if (compareCandidates.length <= 1) {
+              setShowCompare(false);
+            }
+          }}
+        />
       </div>
     </DashboardLayout>
   );
@@ -251,16 +407,24 @@ export default function SavedCandidatesPage() {
 
 function SavedCandidateCard({
   candidate,
+  isSelected,
+  onToggleSelect,
   onRemove,
   isRemoving,
   onShortlist,
   onSelect,
+  isComparing,
+  onToggleCompare,
 }: {
   candidate: CandidateProfile;
+  isSelected: boolean;
+  onToggleSelect: () => void;
   onRemove: () => void;
   isRemoving: boolean;
   onShortlist: () => void;
   onSelect: () => void;
+  isComparing: boolean;
+  onToggleCompare: () => void;
 }) {
   const [contactOpen, setContactOpen] = useState(false);
   const name = candidate.user
@@ -276,9 +440,21 @@ function SavedCandidateCard({
   })();
 
   return (
-    <Card className="hover:border-primary/20 transition-all hover:shadow-sm">
+    <Card className={`transition-all hover:shadow-sm ${isSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/20'}`}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-1 gap-4">
+          <button
+            type="button"
+            onClick={onToggleSelect}
+            className="mt-1 shrink-0 text-[var(--text-muted)] hover:text-primary"
+            title={isSelected ? 'Deselect' : 'Select'}
+          >
+            {isSelected ? (
+              <CheckSquare className="text-primary h-5 w-5" />
+            ) : (
+              <Square className="h-5 w-5" />
+            )}
+          </button>
           <div className="bg-primary-light flex h-12 w-12 shrink-0 items-center justify-center rounded-full">
             {candidate.user?.avatar ? (
               <img
@@ -355,6 +531,30 @@ function SavedCandidateCard({
               </Badge>
             </div>
 
+            {/* Special Badges */}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {candidate.noticePeriod === 'IMMEDIATE' && (
+                <Badge variant="success" size="sm">
+                  ⚡ Immediate Joiner
+                </Badge>
+              )}
+              {candidate.workStatus === 'ACTIVELY_LOOKING' && (
+                <Badge variant="info" size="sm">
+                  🔍 Actively Looking
+                </Badge>
+              )}
+              {candidate.openToWork === 'OPEN_TO_OFFERS' && (
+                <Badge variant="info" size="sm">
+                  💼 Open to Offers
+                </Badge>
+              )}
+              {candidate.willingToRelocate && (
+                <Badge variant="neutral" size="sm">
+                  📍 Open to Relocation
+                </Badge>
+              )}
+            </div>
+
             {/* Activity timestamps */}
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-[var(--text-muted)]">
               {candidate.updatedAt && (
@@ -396,6 +596,19 @@ function SavedCandidateCard({
             >
               <UserCheck className="h-3.5 w-3.5" /> Select
             </button>
+            <button
+              type="button"
+              onClick={onToggleCompare}
+              title={isComparing ? 'Remove from comparison' : 'Add to comparison'}
+              aria-label={isComparing ? 'Remove from comparison' : 'Add to comparison'}
+              className={`rounded-lg border p-2 transition-colors ${
+                isComparing
+                  ? 'border-primary bg-primary-light text-primary'
+                  : 'hover:border-primary hover:text-primary hover:bg-primary-light border-[var(--border)] text-[var(--text-secondary)]'
+              }`}
+            >
+              <GitCompareArrows className="h-4 w-4" />
+            </button>
             <div className="relative">
               <button
                 type="button"
@@ -418,18 +631,18 @@ function SavedCandidateCard({
                         <Mail className="h-3.5 w-3.5" /> Email
                       </a>
                     )}
-                    {candidate.phone && (
+                    {(candidate.user?.mobileNumber || candidate.phone) && (
                       <a
-                        href={`tel:${candidate.phone}`}
+                        href={`tel:${candidate.user?.mobileNumber || candidate.phone}`}
                         onClick={() => setContactOpen(false)}
                         className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
                       >
                         <Phone className="h-3.5 w-3.5" /> Call
                       </a>
                     )}
-                    {(candidate.phone || candidate.alternatePhone) && (
+                    {(candidate.user?.whatsappNumber || candidate.user?.mobileNumber || candidate.phone) && (
                       <a
-                        href={`https://wa.me/${(candidate.phone || candidate.alternatePhone || '').replace(/\D/g, '')}`}
+                        href={`https://wa.me/${(candidate.user?.whatsappNumber || candidate.user?.mobileNumber || candidate.phone || '').replace(/\D/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setContactOpen(false)}
@@ -437,6 +650,9 @@ function SavedCandidateCard({
                       >
                         <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                       </a>
+                    )}
+                    {!candidate.user?.email && !candidate.user?.mobileNumber && !candidate.user?.whatsappNumber && !candidate.phone && (
+                      <p className="px-3 py-2 text-xs text-[var(--text-muted)]">No contact info available</p>
                     )}
                   </div>
                 </>

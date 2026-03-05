@@ -3,6 +3,12 @@ import type { NextRequest } from 'next/server';
 
 /**
  * Create a NextResponse.next() with CSP nonce headers attached.
+ *
+ * CSP notes:
+ * - style-src requires 'unsafe-inline' — Next.js/Tailwind inject non-nonce'd inline styles
+ *   at build & runtime. This is a known framework limitation, not removable without breakage.
+ * - frame-ancestors 'none' is the modern CSP3 replacement for X-Frame-Options: DENY
+ * - report-to (Reporting API v1) sent alongside deprecated report-uri for forward compat
  */
 function nextWithCsp(): NextResponse {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
@@ -11,23 +17,35 @@ function nextWithCsp(): NextResponse {
   const apiUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000';
   const reportUri = `${apiUrl}/api/csp-report`;
 
+  // Derive WebSocket URL from API URL (http→ws, https→wss)
+  const wsUrl = apiUrl.replace(/^http/, 'ws');
+
+  // Specific Firebase RTDB domain instead of *.firebaseio.com wildcard
+  const firebaseDbUrl = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || '';
+  const firebaseDbOrigin = firebaseDbUrl ? new URL(firebaseDbUrl).origin : '';
+
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://challenges.cloudflare.com`,
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://challenges.cloudflare.com${firebaseDbOrigin ? ` ${firebaseDbOrigin}` : ''}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "img-src 'self' data: blob: https://res.cloudinary.com https://assets.talentbridge.com https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com",
+    "img-src 'self' data: blob: https://res.cloudinary.com https://assets.talentbridge.com https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com",
     "font-src 'self' https://fonts.gstatic.com",
-    `connect-src 'self' ${apiUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://*.firebaseio.com wss: ws:`,
+    `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com${firebaseDbOrigin ? ` ${firebaseDbOrigin}` : ''}`,
     "frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
+    "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
+    "frame-ancestors 'none'",
     `report-uri ${reportUri}`,
+    'report-to csp-endpoint',
   ].join('; ');
 
   response.headers.set('Content-Security-Policy', csp);
   response.headers.set('x-nonce', nonce);
+  // Reporting API v1 endpoint header (modern browsers use this instead of report-uri)
+  response.headers.set('Reporting-Endpoints', `csp-endpoint="${reportUri}"`);
 
   return response;
 }
@@ -63,6 +81,21 @@ const roleDashboards: Record<string, string> = {
   SUPER_ADMIN: '/super-admin',
 };
 
+/** Decode JWT payload without verification (Edge-compatible, no crypto needed — just for routing). */
+function getRoleFromToken(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    // base64url → base64 → decode
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = atob(payload);
+    const data = JSON.parse(json) as { role?: string };
+    return data.role || null;
+  } catch {
+    return null;
+  }
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -90,7 +123,10 @@ export function proxy(request: NextRequest) {
   // Auth paths: allow all through, but redirect authenticated users away from guest-only pages
   if (authPaths.some((p) => pathname.startsWith(p))) {
     if (token && guestOnlyPaths.some((p) => pathname.startsWith(p))) {
-      return NextResponse.redirect(new URL('/', request.url));
+      // Decode JWT to get role and redirect to the correct dashboard
+      const role = getRoleFromToken(token);
+      const dashboard = (role && roleDashboards[role]) || '/';
+      return NextResponse.redirect(new URL(dashboard, request.url));
     }
     return nextWithCsp();
   }

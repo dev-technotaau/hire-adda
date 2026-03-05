@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Briefcase,
@@ -273,6 +274,15 @@ export default function JobModerationPage() {
                       {JOB_STATUS_LABELS[job.status] || job.status}
                     </Badge>
                     <div className="flex items-center gap-2">
+                      <Link href={`/admin/jobs/${job.id}`}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          leftIcon={<Eye className="h-3.5 w-3.5" />}
+                        >
+                          View
+                        </Button>
+                      </Link>
                       <Button
                         variant="outline"
                         size="sm"

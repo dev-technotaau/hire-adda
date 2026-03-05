@@ -62,6 +62,11 @@ export const employerService = {
     return res.data;
   },
 
+  async getCompanyById(id: string): Promise<ApiResponse<CompanyProfile>> {
+    const res = await api.get(API.EMPLOYERS.PUBLIC_PROFILE(id));
+    return res.data;
+  },
+
   async updateCompany(data: UpdateCompanyRequest): Promise<ApiResponse<CompanyProfile>> {
     const res = await api.put(API.EMPLOYERS.ME, data);
     return res.data;
@@ -80,6 +85,21 @@ export const employerService = {
 
   async removeLogo(): Promise<ApiResponse<null>> {
     const res = await api.delete(API.EMPLOYERS.LOGO);
+    return res.data;
+  },
+
+  async uploadCoverImage(file: File): Promise<ApiResponse<{ url: string }>> {
+    const formData = new FormData();
+    formData.append('coverImage', file);
+    const res = await api.post(API.EMPLOYERS.COVER_IMAGE, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const body = res.data;
+    return { ...body, data: { url: body.data?.coverImage ?? body.data?.url ?? '' } };
+  },
+
+  async removeCoverImage(): Promise<ApiResponse<null>> {
+    const res = await api.delete(API.EMPLOYERS.COVER_IMAGE);
     return res.data;
   },
 
@@ -161,6 +181,11 @@ export const employerService = {
     format: 'csv' | 'xlsx';
   }): Promise<ApiResponse<{ jobId: string }>> {
     const res = await api.post(API.EMPLOYERS.BULK_EXPORT_CANDIDATES, data);
+    return res.data;
+  },
+
+  async bulkExportResumes(candidateIds: string[]): Promise<ApiResponse<{ jobId: string }>> {
+    const res = await api.post(API.EMPLOYERS.BULK_EXPORT_RESUMES, { candidateIds });
     return res.data;
   },
 

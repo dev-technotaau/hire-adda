@@ -58,9 +58,12 @@ export const sessionStore = {
 };
 
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'tb_access_token',
-  REFRESH_TOKEN: 'tb_refresh_token',
   USER: 'tb_user',
-  REMEMBER_ME: 'tb_remember_me',
   SIDEBAR_COLLAPSED: 'tb_sidebar_collapsed',
+  /** @deprecated — only used for one-time migration from localStorage to httpOnly cookies */
+  ACCESS_TOKEN: 'tb_access_token',
+  /** @deprecated — only used for one-time migration from localStorage to httpOnly cookies */
+  REFRESH_TOKEN: 'tb_refresh_token',
+  /** @deprecated — only used for one-time migration from localStorage to httpOnly cookies */
+  REMEMBER_ME: 'tb_remember_me',
 } as const;

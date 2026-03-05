@@ -33,6 +33,9 @@ import {
   firebaseLoginSchema,
   giveConsentSchema,
   mfaRegenerateBackupSchema,
+  mfaRecoveryRequestSchema,
+  mfaRecoveryVerifySchema,
+  updateProfileSchema,
 } from '../schemas/auth.schema';
 
 const router = Router();
@@ -165,6 +168,22 @@ router.get('/me', protect, authController.getMe);
 
 /**
  * @openapi
+ * /api/v1/auth/me/profile:
+ *   patch:
+ *     tags: [Auth]
+ *     summary: Update user profile (firstName, lastName)
+ *     security: [{ bearerAuth: [] }]
+ */
+router.patch(
+  '/me/profile',
+  protect,
+  validate(updateProfileSchema),
+  audit('PROFILE_UPDATE', 'User'),
+  authController.updateProfile
+);
+
+/**
+ * @openapi
  * /api/v1/auth/change-password:
  *   post:
  *     tags: [Auth]
@@ -225,6 +244,20 @@ router.post(
   authController.mfaRegenerateBackup
 );
 router.get('/mfa/backup-codes/count', protect, authController.mfaBackupCodeCount);
+
+// MFA Recovery (no auth required — user is locked out of MFA)
+router.post(
+  '/mfa/recovery/request',
+  authLimiter,
+  validate(mfaRecoveryRequestSchema),
+  authController.mfaRecoveryRequest
+);
+router.post(
+  '/mfa/recovery/verify',
+  authLimiter,
+  validate(mfaRecoveryVerifySchema),
+  authController.mfaRecoveryVerify
+);
 
 router.post('/verify-mobile', validate(verifyMobileSchema), authController.verifyMobile);
 

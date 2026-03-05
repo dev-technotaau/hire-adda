@@ -666,6 +666,248 @@ export const initializeServices = async (): Promise<void> => {
     registerService('File Uploads', 'not_configured');
   }
 
+  // Email Service
+  try {
+    const { sendEmail } = await import('../services/email.service');
+    if (typeof sendEmail === 'function') {
+      registerService('Email Service', 'ready', 'Transactional emails');
+    } else {
+      registerService('Email Service', 'not_configured');
+    }
+  } catch {
+    registerService('Email Service', 'error', 'Service missing');
+  }
+
+  // Contact Service
+  try {
+    const { contactService } = await import('../services/contact.service');
+    if (contactService) {
+      registerService('Contact Service', 'ready', 'Contact form inquiries');
+    } else {
+      registerService('Contact Service', 'not_configured');
+    }
+  } catch {
+    registerService('Contact Service', 'error', 'Service missing');
+  }
+
+  // Draft Service
+  try {
+    const { draftService } = await import('../services/draft.service');
+    if (draftService) {
+      registerService('Draft Service', 'ready', 'Form auto-save');
+    } else {
+      registerService('Draft Service', 'not_configured');
+    }
+  } catch {
+    registerService('Draft Service', 'error', 'Service missing');
+  }
+
+  // Saved Search
+  try {
+    const { savedSearchService } = await import('../services/saved-search.service');
+    if (savedSearchService) {
+      registerService('Saved Search', 'ready');
+    } else {
+      registerService('Saved Search', 'not_configured');
+    }
+  } catch {
+    registerService('Saved Search', 'error', 'Service missing');
+  }
+
+  // Saved Candidates
+  try {
+    const { savedCandidateService } = await import('../services/saved-candidate.service');
+    if (savedCandidateService) {
+      registerService('Saved Candidates', 'ready', 'Employer shortlists');
+    } else {
+      registerService('Saved Candidates', 'not_configured');
+    }
+  } catch {
+    registerService('Saved Candidates', 'error', 'Service missing');
+  }
+
+  // Profile Views
+  try {
+    const { profileViewService } = await import('../services/profile-view.service');
+    if (profileViewService) {
+      registerService('Profile Views', 'ready', 'View tracking');
+    } else {
+      registerService('Profile Views', 'not_configured');
+    }
+  } catch {
+    registerService('Profile Views', 'error', 'Service missing');
+  }
+
+  // Job Templates
+  try {
+    const { jobTemplateService } = await import('../services/job-template.service');
+    if (jobTemplateService) {
+      registerService('Job Templates', 'ready', 'Reusable job posts');
+    } else {
+      registerService('Job Templates', 'not_configured');
+    }
+  } catch {
+    registerService('Job Templates', 'error', 'Service missing');
+  }
+
+  // Device Security
+  try {
+    const { deviceSecurityService } = await import('../services/device-security.service');
+    if (deviceSecurityService) {
+      registerService('Device Security', 'ready', 'IP/device risk detection');
+    } else {
+      registerService('Device Security', 'not_configured');
+    }
+  } catch {
+    registerService('Device Security', 'error', 'Service missing');
+  }
+
+  // Report Generation
+  try {
+    const { reportService } = await import('../services/report.service');
+    if (reportService) {
+      registerService('Report Generation', 'ready', 'Excel/CSV exports');
+    } else {
+      registerService('Report Generation', 'not_configured');
+    }
+  } catch {
+    registerService('Report Generation', 'error', 'Service missing');
+  }
+
+  // Admin Service
+  try {
+    const { adminService } = await import('../services/admin.service');
+    if (adminService) {
+      registerService('Admin Service', 'ready', 'Dashboard + moderation');
+    } else {
+      registerService('Admin Service', 'not_configured');
+    }
+  } catch {
+    registerService('Admin Service', 'error', 'Service missing');
+  }
+
+  // Super Admin Service
+  try {
+    const { superAdminService } = await import('../services/super-admin.service');
+    if (superAdminService) {
+      registerService('Super Admin Service', 'ready');
+    } else {
+      registerService('Super Admin Service', 'not_configured');
+    }
+  } catch {
+    registerService('Super Admin Service', 'error', 'Service missing');
+  }
+
+  // Candidate Analytics
+  try {
+    const { candidateAnalyticsService } = await import('../services/candidate-analytics.service');
+    if (candidateAnalyticsService) {
+      registerService('Candidate Analytics', 'ready', 'Funnel + trends');
+    } else {
+      registerService('Candidate Analytics', 'not_configured');
+    }
+  } catch {
+    registerService('Candidate Analytics', 'error', 'Service missing');
+  }
+
+  // Employer Analytics
+  try {
+    const { employerAnalyticsService } = await import('../services/employer-analytics.service');
+    if (employerAnalyticsService) {
+      registerService('Employer Analytics', 'ready', 'Hiring pipeline');
+    } else {
+      registerService('Employer Analytics', 'not_configured');
+    }
+  } catch {
+    registerService('Employer Analytics', 'error', 'Service missing');
+  }
+
+  // Talent Matching (Cloud Talent)
+  if (env.GOOGLE_CLOUD_PROJECT_ID && env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      const { talentMatchingService } = await import('../services/talent-matching.service');
+      if (talentMatchingService) {
+        registerService('Talent Matching', 'ready', 'Cloud Talent recommendations');
+      } else {
+        registerService('Talent Matching', 'not_configured');
+      }
+    } catch {
+      registerService('Talent Matching', 'error', 'Service missing');
+    }
+  } else {
+    registerService('Talent Matching', 'not_configured');
+  }
+
+  // Kafka Events
+  if (env.KAFKA_BROKERS) {
+    try {
+      const { kafkaEventsService } = await import('../services/kafka-events.service');
+      if (kafkaEventsService) {
+        registerService('Kafka Events', 'ready', 'Event ring buffer');
+      } else {
+        registerService('Kafka Events', 'not_configured');
+      }
+    } catch {
+      registerService('Kafka Events', 'error', 'Service missing');
+    }
+  } else {
+    registerService('Kafka Events', 'not_configured');
+  }
+
+  // Field Encryption
+  if (env.FIELD_ENCRYPTION_KEY) {
+    registerService('Field Encryption', 'ready', 'AES-256-GCM');
+  } else {
+    registerService('Field Encryption', 'not_configured');
+  }
+
+  // Data Anonymization (GDPR)
+  try {
+    const { anonymizeEmail } = await import('../utils/anonymization');
+    if (typeof anonymizeEmail === 'function') {
+      registerService('Data Anonymization', 'ready', 'GDPR compliance');
+    } else {
+      registerService('Data Anonymization', 'not_configured');
+    }
+  } catch {
+    registerService('Data Anonymization', 'error', 'Module missing');
+  }
+
+  // Maintenance Mode
+  registerService('Maintenance Mode', 'ready', 'Feature flag driven');
+
+  // ═══════════════════════════════════════════════════════════════
+  // SCHEDULER QUEUES
+  // ═══════════════════════════════════════════════════════════════
+
+  if (env.REDIS_ENABLED === 'true') {
+    registerService('Scheduler Queue', 'ready', 'Core cron scheduler');
+    registerService('Backup Queue', 'ready', 'DB backup');
+    registerService('Data Export Queue', 'ready', 'GDPR export');
+    registerService('Geocoding Queue', 'ready', env.GEOCODING_PROVIDER || 'Nominatim');
+    registerService('Job Expiration Queue', 'ready', 'Auto-expire jobs');
+    registerService('Matching Queue', 'ready', 'AI job matching');
+    registerService('Profile Reminder Queue', 'ready', 'Completion nudges');
+    registerService('Resume Parse Queue', 'ready', 'Document AI async');
+    registerService('Scheduled Publish Queue', 'ready', 'Timed job publish');
+    registerService('SLA Check Queue', 'ready', 'Ticket SLA monitor');
+    registerService('Token Cleanup Queue', 'ready', 'Expired token sweep');
+    registerService('Weekly Digest Queue', 'ready', 'Digest emails');
+  } else {
+    registerService('Scheduler Queue', 'disabled', 'Requires Redis');
+    registerService('Backup Queue', 'disabled', 'Requires Redis');
+    registerService('Data Export Queue', 'disabled', 'Requires Redis');
+    registerService('Geocoding Queue', 'disabled', 'Requires Redis');
+    registerService('Job Expiration Queue', 'disabled', 'Requires Redis');
+    registerService('Matching Queue', 'disabled', 'Requires Redis');
+    registerService('Profile Reminder Queue', 'disabled', 'Requires Redis');
+    registerService('Resume Parse Queue', 'disabled', 'Requires Redis');
+    registerService('Scheduled Publish Queue', 'disabled', 'Requires Redis');
+    registerService('SLA Check Queue', 'disabled', 'Requires Redis');
+    registerService('Token Cleanup Queue', 'disabled', 'Requires Redis');
+    registerService('Weekly Digest Queue', 'disabled', 'Requires Redis');
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // INFRASTRUCTURE
   // ═══════════════════════════════════════════════════════════════

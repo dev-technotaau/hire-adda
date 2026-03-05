@@ -150,6 +150,18 @@ class NotificationService {
       }
 
       await Promise.allSettled(dispatches);
+
+      // Publish Kafka event for analytics pipeline
+      import('../kafka/producer')
+        .then(({ publishEvent, KafkaTopics }) =>
+          publishEvent(KafkaTopics.NOTIFICATION_SENT, userId, {
+            userId,
+            type,
+            channels: allowedChannels,
+          })
+        )
+        .catch(() => {});
+
       span.setStatus({ code: SpanStatusCode.OK });
       span.end();
     });

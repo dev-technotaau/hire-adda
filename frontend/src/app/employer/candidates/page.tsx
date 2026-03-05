@@ -36,6 +36,7 @@ import {
   GitCompareArrows,
   Map,
   Bell,
+  FileDown,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -115,6 +116,30 @@ const toSelectOptions = (map: Record<string, string>) =>
 /** Build filter sections from static config + live facets. */
 function buildCandidateFilterSections(facets: SearchFacets): FilterSection[] {
   return [
+    // Row 0: Search operators
+    {
+      key: 'keywordScope',
+      label: 'Search Scope',
+      type: 'select',
+      options: {
+        '': 'All Fields',
+        all: 'All Fields',
+        title: 'Job Title',
+        skills: 'Skills',
+        designation: 'Designation',
+        company: 'Company',
+      },
+    },
+    {
+      key: 'keywordOperator',
+      label: 'Keyword Match',
+      type: 'select',
+      options: {
+        '': 'Any (OR)',
+        or: 'Any (OR)',
+        and: 'All (AND)',
+      },
+    },
     // Row 1: Employment status
     {
       key: 'workStatus',
@@ -272,6 +297,33 @@ function buildCandidateFilterSections(facets: SearchFacets): FilterSection[] {
       type: 'select',
       options: DRIVING_LICENSE_TYPE_LABELS,
       facets: facets.drivingLicenseType,
+    },
+    {
+      key: 'workPermit',
+      label: 'Work Permit',
+      type: 'select',
+      options: {
+        '': 'All',
+        INDIAN_CITIZEN: 'Indian Citizen',
+        PERMANENT_RESIDENT: 'Permanent Resident',
+        WORK_VISA: 'Work Visa',
+        DEPENDENT_VISA: 'Dependent Visa',
+        STUDENT_VISA: 'Student Visa',
+        NO_PERMIT: 'No Permit',
+      },
+    },
+
+    // Row 8: Education Level filter
+    {
+      key: 'educationLevel',
+      label: 'Education Level',
+      type: 'select',
+      options: {
+        '': 'All',
+        UG: 'Undergraduate',
+        PG: 'Postgraduate',
+        DOCTORATE: 'Doctorate',
+      },
     },
 
     // Dynamic facets from ES aggregations
@@ -529,6 +581,18 @@ export default function CandidateSearchPage() {
     onError: (err) => {
       const error = err as unknown as ApiError;
       showToast.error(error.message || 'Failed to queue export');
+    },
+  });
+
+  const bulkExportResumesMutation = useMutation({
+    mutationFn: (candidateIds: string[]) => employerService.bulkExportResumes(candidateIds),
+    onSuccess: () => {
+      showToast.success("Resume export queued! You'll receive an email with a ZIP download link.");
+      clearSelection();
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to queue resume export');
     },
   });
 
@@ -1251,6 +1315,122 @@ export default function CandidateSearchPage() {
           </div>
         </Card>
 
+        {/* Certifications */}
+        <Card>
+          <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Certifications</h3>
+          <ServerAutoSuggest
+            category="certification"
+            value={filters.certifications ? filters.certifications.split(',') : []}
+            onChange={(vals) =>
+              handleFilterChange('certifications', Array.isArray(vals) ? vals.join(',') : vals)
+            }
+            placeholder="Search certifications..."
+            multiple
+            maxSelections={10}
+          />
+        </Card>
+
+        {/* Professional Search */}
+        <Card>
+          <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Professional Search</h3>
+          <p className="mb-4 text-sm text-[var(--text-muted)]">
+            Search for specific education, skills, or designations
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input
+              label="Education"
+              placeholder="e.g. B.Tech, MBA"
+              value={filters.education || ''}
+              onChange={(e) => handleFilterChange('education', e.target.value || undefined)}
+              inputSize="sm"
+            />
+            <Input
+              label="IT Skill"
+              placeholder="e.g. Python, AWS"
+              value={filters.itSkill || ''}
+              onChange={(e) => handleFilterChange('itSkill', e.target.value || undefined)}
+              inputSize="sm"
+            />
+            <Input
+              label="Designation"
+              placeholder="e.g. Senior Engineer"
+              value={filters.designation || ''}
+              onChange={(e) => handleFilterChange('designation', e.target.value || undefined)}
+              inputSize="sm"
+            />
+          </div>
+        </Card>
+
+        {/* Activity Dates */}
+        <Card>
+          <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Activity Dates</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                Registered After
+              </label>
+              <DatePicker
+                value={filters.registeredAfter || ''}
+                onChange={(val) => handleFilterChange('registeredAfter', val || undefined)}
+                maxDate={new Date()}
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                Modified After
+              </label>
+              <DatePicker
+                value={filters.modifiedAfter || ''}
+                onChange={(val) => handleFilterChange('modifiedAfter', val || undefined)}
+                maxDate={new Date()}
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* Radius Search */}
+        <Card>
+          <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Radius Search</h3>
+          <p className="mb-4 text-sm text-[var(--text-muted)]">
+            Search candidates within a specific radius of a location
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input
+              label="Latitude"
+              type="number"
+              step="0.000001"
+              placeholder="e.g. 28.6139"
+              value={filters.latitude || ''}
+              onChange={(e) => handleFilterChange('latitude', e.target.value || undefined)}
+              inputSize="sm"
+            />
+            <Input
+              label="Longitude"
+              type="number"
+              step="0.000001"
+              placeholder="e.g. 77.2090"
+              value={filters.longitude || ''}
+              onChange={(e) => handleFilterChange('longitude', e.target.value || undefined)}
+              inputSize="sm"
+            />
+            <Input
+              label="Radius (km)"
+              type="number"
+              min="1"
+              max="1000"
+              placeholder="e.g. 50"
+              value={filters.radiusKm || ''}
+              onChange={(e) => handleFilterChange('radiusKm', e.target.value || undefined)}
+              inputSize="sm"
+            />
+          </div>
+          {filters.latitude && filters.longitude && filters.radiusKm && (
+            <p className="mt-2 text-xs text-[var(--success)]">
+              Searching within {filters.radiusKm}km of ({filters.latitude}, {filters.longitude})
+            </p>
+          )}
+        </Card>
+
         {/* Region Presets */}
         <Card>
           <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
@@ -1851,6 +2031,16 @@ export default function CandidateSearchPage() {
                 >
                   <Download className="mr-1.5 h-4 w-4" />
                   Export
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => bulkExportResumesMutation.mutate(Array.from(selectedIds))}
+                  disabled={bulkExportResumesMutation.isPending}
+                  isLoading={bulkExportResumesMutation.isPending}
+                >
+                  <FileDown className="mr-1.5 h-4 w-4" />
+                  Export Resumes
                 </Button>
                 <Button variant="ghost" size="sm" onClick={clearSelection}>
                   <X className="mr-1.5 h-4 w-4" />

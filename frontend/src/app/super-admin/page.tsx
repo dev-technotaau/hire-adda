@@ -301,12 +301,18 @@ export default function SuperAdminDashboard() {
       value: stats?.totalJobs ?? 0,
       icon: Server,
       color: 'text-[var(--text-muted)] bg-[var(--bg-tertiary)]',
+      sparkData: appStats?.dailyTrend?.map((d) => ({ v: d.count })),
+      sparkKey: 'v',
+      sparkColor: '#6B7280',
     },
     {
       label: 'Active Jobs',
       value: stats?.activeJobs ?? 0,
       icon: Briefcase,
       color: 'text-[var(--success)] bg-[var(--success-light)]',
+      sparkData: appStats?.dailyTrend?.map((d) => ({ v: d.count })),
+      sparkKey: 'v',
+      sparkColor: '#10B981',
     },
     {
       label: 'Total Applications',
@@ -323,18 +329,27 @@ export default function SuperAdminDashboard() {
       value: stats?.newUsersToday ?? 0,
       icon: UserPlus,
       color: 'text-primary bg-primary-light',
+      sparkData: stats?.registrationTrends?.map((d) => ({ v: d.count })),
+      sparkKey: 'v',
+      sparkColor: '#2563EB',
     },
     {
       label: 'New This Week',
       value: stats?.newUsersThisWeek ?? 0,
       icon: TrendingUp,
       color: 'text-[var(--success)] bg-[var(--success-light)]',
+      sparkData: stats?.registrationTrends?.slice(-7).map((d) => ({ v: d.count })),
+      sparkKey: 'v',
+      sparkColor: '#10B981',
     },
     {
       label: 'New This Month',
       value: stats?.newUsersThisMonth ?? 0,
       icon: TrendingUp,
       color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      sparkData: stats?.registrationTrends?.map((d) => ({ v: d.count })),
+      sparkKey: 'v',
+      sparkColor: '#F59E0B',
     },
     {
       label: 'Pending Verifications',
@@ -352,6 +367,8 @@ export default function SuperAdminDashboard() {
       icon: Activity,
       desc: 'Users active in last 7 days',
       color: 'text-primary',
+      sparkData: dauItems.slice(-7).map((d) => ({ v: d.total })),
+      sparkColor: '#2563EB',
     },
     {
       label: 'Expired Jobs',
@@ -570,6 +587,18 @@ export default function SuperAdminDashboard() {
                   <p className="text-xs text-[var(--text-muted)]">{kpi.desc}</p>
                 </div>
               </div>
+              {'sparkData' in kpi &&
+                kpi.sparkData &&
+                (kpi.sparkData as { v: number }[]).length > 1 && (
+                  <div className="mt-2">
+                    <StatsChart
+                      data={kpi.sparkData as { v: number }[]}
+                      dataKey="v"
+                      color={kpi.sparkColor}
+                      height={36}
+                    />
+                  </div>
+                )}
             </Card>
           ))}
         </div>
@@ -910,23 +939,23 @@ export default function SuperAdminDashboard() {
               </Card>
             )}
 
-            {verificationTotal > 0 && (
-              <Card
-                header={
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-[var(--warning)]" />
-                    <h2 className="text-lg font-semibold text-[var(--text)]">
-                      Verification Pipeline
-                    </h2>
-                    {(stats.pendingVerifications ?? 0) > 0 && (
-                      <span className="ml-2 flex items-center gap-1 text-xs text-[var(--warning)]">
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        {stats.pendingVerifications} pending
-                      </span>
-                    )}
-                  </div>
-                }
-              >
+            <Card
+              header={
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-[var(--warning)]" />
+                  <h2 className="text-lg font-semibold text-[var(--text)]">
+                    Verification Pipeline
+                  </h2>
+                  {(stats.pendingVerifications ?? 0) > 0 && (
+                    <span className="ml-2 flex items-center gap-1 text-xs text-[var(--warning)]">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      {stats.pendingVerifications} pending
+                    </span>
+                  )}
+                </div>
+              }
+            >
+              {verificationTotal > 0 ? (
                 <div className="space-y-4 py-2">
                   {[
                     {
@@ -969,8 +998,12 @@ export default function SuperAdminDashboard() {
                     );
                   })}
                 </div>
-              </Card>
-            )}
+              ) : (
+                <div className="flex h-[280px] items-center justify-center text-sm text-[var(--text-muted)]">
+                  No verifications submitted yet
+                </div>
+              )}
+            </Card>
           </div>
         )}
 

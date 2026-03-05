@@ -9,7 +9,8 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { useAuthStore } from '@/store/auth.store';
 import { useMaintenanceStore } from '@/store/maintenance.store';
 import { useSocket } from '@/hooks/use-socket';
-import { pageView } from '@/lib/analytics';
+import { onAuthMessage } from '@/lib/auth-channel';
+import { pageView, fbPageView } from '@/lib/analytics';
 import { pushService } from '@/services/push.service';
 import { useFeatureFlags, useFeatureFlag } from '@/hooks/use-feature-flags';
 import { onFCMMessage } from '@/lib/firebase';
@@ -70,6 +71,23 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function AuthSyncListener({ children }: { children: ReactNode }) {
+  const storeLogin = useAuthStore((s) => s.login);
+  const storeLogout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+    return onAuthMessage((msg) => {
+      if (msg.type === 'logout' || msg.type === 'session_expired') {
+        storeLogout();
+      } else if (msg.type === 'login') {
+        storeLogin(msg.user);
+      }
+    });
+  }, [storeLogin, storeLogout]);
+
+  return <>{children}</>;
+}
+
 function SocketInitializer({ children }: { children: ReactNode }) {
   useSocket();
   return <>{children}</>;
@@ -80,6 +98,7 @@ function AnalyticsTracker({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     pageView(pathname);
+    fbPageView();
   }, [pathname]);
 
   return <>{children}</>;
@@ -135,23 +154,35 @@ function PushNotificationRegistrar({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function ServiceWorkerRegistrar({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }, []);
+  return <>{children}</>;
+}
+
 export default function Providers({ children }: { children: ReactNode }) {
   const queryClient = getQueryClient();
 
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <FeatureFlagPrefetcher>
-          <AuthHydrator>
-            <MaintenanceGate>
-              <AnalyticsTracker>
-                <SocketInitializer>
-                  <PushNotificationRegistrar>{children}</PushNotificationRegistrar>
-                </SocketInitializer>
-              </AnalyticsTracker>
-            </MaintenanceGate>
-          </AuthHydrator>
-        </FeatureFlagPrefetcher>
+        <ServiceWorkerRegistrar>
+          <FeatureFlagPrefetcher>
+            <AuthHydrator>
+              <AuthSyncListener>
+              <MaintenanceGate>
+                <AnalyticsTracker>
+                  <SocketInitializer>
+                    <PushNotificationRegistrar>{children}</PushNotificationRegistrar>
+                  </SocketInitializer>
+                </AnalyticsTracker>
+              </MaintenanceGate>
+              </AuthSyncListener>
+            </AuthHydrator>
+          </FeatureFlagPrefetcher>
+        </ServiceWorkerRegistrar>
         <Toaster />
       </QueryClientProvider>
     </ErrorBoundary>

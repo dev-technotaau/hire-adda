@@ -25,7 +25,14 @@ export function trackConversion(conversionId: string) {
   }
 }
 
-// Facebook Pixel
+// Facebook Pixel - PageView (called on every route change for SPA tracking)
+export function fbPageView() {
+  if (typeof window !== 'undefined' && window.fbq) {
+    window.fbq('track', 'PageView');
+  }
+}
+
+// Facebook Pixel - Custom events
 export function fbEvent(event: string, params?: Record<string, unknown>) {
   if (typeof window !== 'undefined' && window.fbq) {
     window.fbq('track', event, params);

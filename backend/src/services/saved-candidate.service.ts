@@ -69,6 +69,8 @@ class SavedCandidateService {
               isEmailVerified: true,
               isMobileVerified: true,
               isWhatsappVerified: true,
+              mobileNumber: true,
+              whatsappNumber: true,
               lastActiveAt: true,
               candidateProfile: true,
             },

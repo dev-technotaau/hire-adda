@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Select from '@/components/ui/Select';
 import type { ProfileSectionProps } from './types';
@@ -28,18 +29,38 @@ export default function LanguagesSection({ form, updateField }: ProfileSectionPr
   };
 
   return (
-    <Card
-      header={
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Languages</h2>
-          <Button size="sm" variant="outline" onClick={addLanguage}>
-            <Plus className="mr-1 h-4 w-4" /> Add
-          </Button>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        {(form.languageProficiency || []).length === 0 ? (
+    <>
+      <Card>
+        <h3 className="mb-4 text-lg font-semibold text-[var(--text)]">Languages (Quick List)</h3>
+        <p className="mb-4 text-sm text-[var(--text-muted)]">
+          List languages you can speak (for detailed proficiency levels, use the section below)
+        </p>
+        <ServerAutoSuggest
+          category="language"
+          placeholder="Search languages..."
+          value={form.languages || []}
+          onChange={(val) => updateField('languages', val as string[])}
+          multiple
+          allowCreate
+          createLabel={(q) => `Add "${q}"`}
+          maxSelections={20}
+        />
+      </Card>
+
+      <Card
+        header={
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-[var(--text)]">
+              Language Proficiency (Detailed)
+            </h2>
+            <Button size="sm" variant="outline" onClick={addLanguage}>
+              <Plus className="mr-1 h-4 w-4" /> Add
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {(form.languageProficiency || []).length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--text-muted)]">
             No languages added. Click &quot;Add&quot; to add your language proficiencies.
           </p>
@@ -77,7 +98,8 @@ export default function LanguagesSection({ form, updateField }: ProfileSectionPr
             </div>
           ))
         )}
-      </div>
-    </Card>
+        </div>
+      </Card>
+    </>
   );
 }

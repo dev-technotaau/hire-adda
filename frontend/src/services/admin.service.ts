@@ -22,12 +22,29 @@ import type {
   DailyActiveUsersData,
   AdminApplication,
   ApplicationStats,
+  ExportJob,
+  JobApplication,
+  JobPost,
+  VerificationRequest,
 } from '@/types/admin';
 import type { Job } from '@/types/job';
 import type { FeatureFlags } from '@/types/feature-flag';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function transformStats(body: any): ApiResponse<AdminStats> {
+interface RawStatsData {
+  users?: { total?: number; candidates?: number; employers?: number; admins?: number; newThisWeek?: number; newThisMonth?: number; activeThisWeek?: number };
+  jobs?: { total?: number; active?: number; expired?: number; newThisWeek?: number; newThisMonth?: number };
+  applications?: { total?: number; thisWeek?: number; conversionRate?: number };
+  verifications?: { pending?: number; approved?: number; rejected?: number };
+  totalUsers?: number; totalCandidates?: number; totalEmployers?: number;
+  totalJobs?: number; activeJobs?: number; totalApplications?: number;
+  newUsersToday?: number; newUsersThisWeek?: number; newUsersThisMonth?: number;
+  pendingVerifications?: number;
+  topSkills?: Array<{ skill: string; count: number }>;
+  topLocations?: Array<{ location: string; count: number }>;
+  registrationTrends?: Array<{ date: string; count: number }>;
+}
+
+function transformStats(body: ApiResponse<RawStatsData>): ApiResponse<AdminStats> {
   const d = body.data;
   return {
     ...body,
@@ -76,9 +93,9 @@ export const adminService = {
   },
 
   async getUsers(
-    filters?: Record<string, string | number | undefined>,
+    filters?: Record<string, string | number | string[] | undefined>,
   ): Promise<PaginatedResponse<UserListItem>> {
-    const qs = buildQueryString((filters || {}) as Record<string, string | undefined>);
+    const qs = buildQueryString(filters || {});
     const res = await api.get(`${API.ADMIN.USERS}${qs}`);
     return res.data;
   },
@@ -460,6 +477,198 @@ export const adminService = {
 
   async revokeAdminSessions(adminId: string): Promise<ApiResponse<null>> {
     const res = await api.delete(API.SUPER_ADMIN.REVOKE_USER_SESSIONS(adminId));
+    return res.data;
+  },
+
+  async revokeUserSession(userId: string, sessionId: string): Promise<ApiResponse<null>> {
+    const res = await api.delete(API.SUPER_ADMIN.REVOKE_USER_SESSION(userId, sessionId));
+    return res.data;
+  },
+
+  // ── Admin Email / Mobile / WhatsApp Managed Verification ──
+
+  async initiateAdminEmailChange(
+    id: string,
+    data: { newEmail: string; password: string },
+  ): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_EMAIL_INITIATE(id), data);
+    return res.data;
+  },
+
+  async confirmAdminEmailChange(id: string, data: { otp: string }): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_EMAIL_CONFIRM(id), data);
+    return res.data;
+  },
+
+  async resendAdminEmailOtp(id: string): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_EMAIL_RESEND(id));
+    return res.data;
+  },
+
+  async initiateAdminMobileChange(
+    id: string,
+    data: { mobileNumber: string; password?: string },
+  ): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_MOBILE_INITIATE(id), data);
+    return res.data;
+  },
+
+  async confirmAdminMobileChange(id: string, data: { otp: string }): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_MOBILE_CONFIRM(id), data);
+    return res.data;
+  },
+
+  async resendAdminMobileOtp(id: string): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_MOBILE_RESEND(id));
+    return res.data;
+  },
+
+  async removeAdminMobile(id: string): Promise<ApiResponse<null>> {
+    const res = await api.delete(API.SUPER_ADMIN.REMOVE_ADMIN_MOBILE(id));
+    return res.data;
+  },
+
+  async initiateAdminWhatsappVerify(
+    id: string,
+    data: { mobileNumber: string; whatsappNumber?: string },
+  ): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_WHATSAPP_VERIFY(id), data);
+    return res.data;
+  },
+
+  async initiateAdminWhatsappChange(
+    id: string,
+    data: { newWhatsappNumber: string; password: string },
+  ): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_WHATSAPP_CHANGE(id), data);
+    return res.data;
+  },
+
+  async confirmAdminWhatsappOtp(id: string, data: { otp: string }): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_WHATSAPP_CONFIRM(id), data);
+    return res.data;
+  },
+
+  async removeAdminWhatsappNumber(id: string): Promise<ApiResponse<null>> {
+    const res = await api.delete(API.SUPER_ADMIN.REMOVE_ADMIN_WHATSAPP(id));
+    return res.data;
+  },
+
+  // ── Admin Password Managed Change ──
+
+  async initiateAdminPasswordChange(
+    id: string,
+    data: { password: string; newPassword: string },
+  ): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_PASSWORD_INITIATE(id), data);
+    return res.data;
+  },
+
+  async confirmAdminPasswordChange(id: string, data: { otp: string }): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_PASSWORD_CONFIRM(id), data);
+    return res.data;
+  },
+
+  async resendAdminPasswordOtp(id: string): Promise<ApiResponse<null>> {
+    const res = await api.post(API.SUPER_ADMIN.ADMIN_PASSWORD_RESEND(id));
+    return res.data;
+  },
+
+  // ── Export Job Monitoring ──
+
+  async getExportJobs(
+    filters?: Record<string, string | number | undefined>,
+  ): Promise<ApiResponse<{ items: ExportJob[]; counts: Record<string, number>; page: number; limit: number }>> {
+    const qs = buildQueryString((filters || {}) as Record<string, string | undefined>);
+    const res = await api.get(`${API.ADMIN.EXPORT_JOBS}${qs}`);
+    return res.data;
+  },
+
+  async cancelExportJob(jobId: string): Promise<ApiResponse<null>> {
+    const res = await api.delete(API.ADMIN.CANCEL_EXPORT_JOB(jobId));
+    return res.data;
+  },
+
+  // ── User Applications & Jobs ──
+
+  async getUserApplications(
+    userId: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResponse<JobApplication>> {
+    const qs = buildQueryString({ page, limit });
+    const res = await api.get(`/super-admin/users/${userId}/applications${qs}`);
+    return res.data;
+  },
+
+  async getUserJobs(
+    userId: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResponse<JobPost>> {
+    const qs = buildQueryString({ page, limit });
+    const res = await api.get(`/super-admin/users/${userId}/jobs${qs}`);
+    return res.data;
+  },
+
+  async getUserVerifications(
+    userId: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResponse<VerificationRequest>> {
+    const qs = buildQueryString({ page, limit });
+    const res = await api.get(`/super-admin/users/${userId}/verifications${qs}`);
+    return res.data;
+  },
+
+  async updateVerificationStatus(
+    verificationId: string,
+    status: 'APPROVED' | 'REJECTED',
+    reason?: string,
+  ): Promise<ApiResponse<null>> {
+    const res = await api.patch(`/super-admin/verifications/${verificationId}/status`, {
+      status,
+      reason,
+    });
+    return res.data;
+  },
+
+  async updateCandidateProfile(
+    userId: string,
+    data: Record<string, unknown>,
+  ): Promise<ApiResponse<null>> {
+    const res = await api.patch(`/super-admin/users/${userId}/candidate-profile`, data);
+    return res.data;
+  },
+
+  async updateCompanyProfile(
+    userId: string,
+    data: Record<string, unknown>,
+  ): Promise<ApiResponse<null>> {
+    const res = await api.patch(`/super-admin/users/${userId}/company-profile`, data);
+    return res.data;
+  },
+
+  async bulkExportUsers(userIds: string[], format: 'csv' | 'xlsx' = 'csv'): Promise<ApiResponse<{ count: number }>> {
+    const res = await api.post('/super-admin/users/bulk/export', { userIds, format });
+    return res.data;
+  },
+
+  async bulkNotifyUsers(
+    userIds: string[],
+    notification: { title: string; message: string; type?: string },
+  ): Promise<ApiResponse<{ count: number }>> {
+    const res = await api.post('/super-admin/users/bulk/notify', { userIds, notification });
+    return res.data;
+  },
+
+  async bulkSuspendUsers(userIds: string[], reason?: string): Promise<ApiResponse<{ count: number }>> {
+    const res = await api.post('/super-admin/users/bulk/suspend', { userIds, reason });
+    return res.data;
+  },
+
+  async bulkActivateUsers(userIds: string[]): Promise<ApiResponse<{ count: number }>> {
+    const res = await api.post('/super-admin/users/bulk/activate', { userIds });
     return res.data;
   },
 };

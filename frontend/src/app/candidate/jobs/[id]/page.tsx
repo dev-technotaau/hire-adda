@@ -56,7 +56,108 @@ import {
 import { formatSalaryRange, formatDate, formatRelativeDate, getExperienceLabel } from '@/lib/utils';
 import { formatSalaryAsLPA } from '@/utils/format';
 import type { ApiError } from '@/types/api';
-import type { ScreeningAnswerInput } from '@/types/job';
+import type { Job, JobType, SalaryType, ScreeningAnswerInput } from '@/types/job';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://talentbridge.com';
+
+const JOB_TYPE_TO_SCHEMA: Record<JobType, string> = {
+  FULL_TIME: 'FULL_TIME',
+  PART_TIME: 'PART_TIME',
+  CONTRACT: 'CONTRACTOR',
+  INTERNSHIP: 'INTERN',
+  FREELANCE: 'TEMPORARY',
+};
+
+const SALARY_UNIT_MAP: Record<SalaryType, string> = {
+  ANNUAL: 'YEAR',
+  MONTHLY: 'MONTH',
+  HOURLY: 'HOUR',
+};
+
+function buildJobPostingJsonLd(job: Job) {
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'JobPosting',
+    title: job.title,
+    description: job.description,
+    datePosted: job.createdAt,
+    ...(job.applicationDeadline && { validThrough: job.applicationDeadline }),
+    ...(job.expiresAt && !job.applicationDeadline && { validThrough: job.expiresAt }),
+    employmentType: JOB_TYPE_TO_SCHEMA[job.type] || 'FULL_TIME',
+    jobLocation: {
+      '@type': 'Place',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: job.location,
+        addressCountry: 'IN',
+      },
+    },
+    ...(job.isRemote && {
+      jobLocationType: 'TELECOMMUTE',
+    }),
+    url: `${APP_URL}/candidate/jobs/${job.id}`,
+  };
+
+  // Salary
+  if (job.salaryDisclosed && job.salaryMin) {
+    jsonLd.baseSalary = {
+      '@type': 'MonetaryAmount',
+      currency: job.currency || 'INR',
+      value: {
+        '@type': 'QuantitativeValue',
+        ...(job.salaryMax && job.salaryMax !== job.salaryMin
+          ? { minValue: job.salaryMin, maxValue: job.salaryMax }
+          : { value: job.salaryMin }),
+        unitText: SALARY_UNIT_MAP[job.salaryType || 'ANNUAL'],
+      },
+    };
+  }
+
+  // Experience
+  if (job.experienceMin > 0 || job.experienceMax) {
+    jsonLd.experienceRequirements = {
+      '@type': 'OccupationalExperienceRequirements',
+      monthsOfExperience: (job.experienceMin || 0) * 12,
+    };
+  }
+
+  // Education
+  if (job.educationRequired) {
+    jsonLd.educationRequirements = {
+      '@type': 'EducationalOccupationalCredential',
+      credentialCategory: job.educationRequired,
+    };
+  }
+
+  // Skills
+  if (job.skillsRequired.length > 0) {
+    jsonLd.skills = job.skillsRequired.join(', ');
+  }
+
+  // Industry
+  if (job.industry) {
+    jsonLd.industry = job.industry;
+  }
+
+  // Number of openings
+  if (job.numberOfOpenings) {
+    jsonLd.totalJobOpenings = job.numberOfOpenings;
+  }
+
+  // Hiring organization
+  if (job.company && !job.isConfidential) {
+    jsonLd.hiringOrganization = {
+      '@type': 'Organization',
+      name: job.company.companyName,
+      ...(job.company.logo && { logo: job.company.logo }),
+      ...(job.company.website && { sameAs: job.company.website }),
+    };
+  } else {
+    jsonLd.hiringOrganization = { '@type': 'Organization', name: 'Confidential' };
+  }
+
+  return jsonLd;
+}
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -156,6 +257,11 @@ export default function JobDetailPage() {
 
   return (
     <DashboardLayout requiredRole={['CANDIDATE']}>
+      {/* JobPosting structured data for Google for Jobs */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildJobPostingJsonLd(job)) }}
+      />
       <div className="space-y-6">
         {/* Back */}
         <Link
@@ -491,6 +597,18 @@ export default function JobDetailPage() {
             </div>
           )}
 
+          {/* Job Perks */}
+          {(job.jobPerks?.length ?? 0) > 0 && (
+            <div className="mt-3">
+              <p className="mb-1.5 text-xs text-[var(--text-muted)]">Job Perks</p>
+              <div className="flex flex-wrap gap-1.5">
+                {job.jobPerks.map((perk) => (
+                  <Tag key={perk} label={perk} size="sm" variant="success" />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Bond Details */}
           {job.bondDetails && (
             <div className="mt-3">
@@ -640,6 +758,17 @@ export default function JobDetailPage() {
                   </div>
                 ) : job.company ? (
                   <div className="space-y-4">
+                    {/* Cover Image Banner */}
+                    {job.company.coverImage && (
+                      <div className="relative -mx-6 -mt-6 mb-6 h-48 w-[calc(100%+3rem)] overflow-hidden rounded-t-lg">
+                        <img
+                          src={job.company.coverImage}
+                          alt={`${job.company.companyName} cover`}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-4">
                       <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--bg-tertiary)]">
                         {job.company.logo ? (
@@ -737,6 +866,15 @@ export default function JobDetailPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* View Full Profile */}
+                    <Link
+                      href={ROUTES.PUBLIC.COMPANY(job.company.id)}
+                      className="text-primary mt-2 inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
+                    >
+                      <Building2 className="h-4 w-4" /> View Full Company Profile
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
                   </div>
                 ) : (
                   <p className="text-[var(--text-muted)]">Company information not available.</p>

@@ -10,6 +10,7 @@ export const ROUTES = {
     REFUND_POLICY: '/refund-policy',
     ACCESSIBILITY: '/accessibility',
     DISCLAIMER: '/disclaimer',
+    COMPANY: (id: string) => `/company/${id}`,
   },
   AUTH: {
     LOGIN: '/auth/login',
@@ -62,6 +63,7 @@ export const ROUTES = {
     USERS: '/admin/users',
     USER_DETAIL: (id: string) => `/admin/users/${id}`,
     JOBS: '/admin/jobs',
+    JOB_DETAIL: (id: string) => `/admin/jobs/${id}`,
     VERIFICATIONS: '/admin/verifications',
     ANALYTICS: '/admin/analytics',
     AUDIT_LOGS: '/admin/audit-logs',
@@ -76,8 +78,12 @@ export const ROUTES = {
   SUPER_ADMIN: {
     DASHBOARD: '/super-admin',
     ADMINS: '/super-admin/admins',
+    ADMIN_DETAIL: (id: string) => `/super-admin/admins/${id}`,
     USERS: '/super-admin/users',
     USER_DETAIL: (id: string) => `/super-admin/users/${id}`,
+    JOBS: '/super-admin/jobs',
+    JOB_DETAIL: (id: string) => `/super-admin/jobs/${id}`,
+    JOB_EDIT: (id: string) => `/super-admin/jobs/${id}/edit`,
     ANALYTICS: '/super-admin/analytics',
     FEATURE_FLAGS: '/super-admin/feature-flags',
     CONFIG: '/super-admin/config',

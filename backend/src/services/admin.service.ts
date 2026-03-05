@@ -130,9 +130,50 @@ export class AdminService {
   /**
    * Get All Users (Admin)
    */
-  async getUsers(role?: Role, page = 1, limit = 10) {
+  async getUsers(
+    role?: Role,
+    page = 1,
+    limit = 10,
+    filters?: {
+      profileCompleteness?: { min?: number; max?: number };
+      lastActive?: 'week' | 'month' | 'quarter' | 'inactive';
+      verified?: ('email' | 'mobile' | 'whatsapp')[];
+    }
+  ) {
     const skip = (page - 1) * limit;
-    const where = role ? { role } : {};
+    const where: any = {};
+
+    if (role) where.role = role;
+
+    // Email/Mobile/WhatsApp verification filters
+    if (filters?.verified?.includes('email')) where.isEmailVerified = true;
+    if (filters?.verified?.includes('mobile')) where.isMobileVerified = true;
+    if (filters?.verified?.includes('whatsapp')) where.isWhatsappVerified = true;
+
+    // Last active filter
+    if (filters?.lastActive) {
+      const now = new Date();
+      const cutoffDays =
+        filters.lastActive === 'week' ? 7 : filters.lastActive === 'month' ? 30 : filters.lastActive === 'quarter' ? 90 : 0;
+
+      if (cutoffDays > 0) {
+        where.lastActiveAt = { gte: new Date(now.getTime() - cutoffDays * 24 * 60 * 60 * 1000) };
+      } else if (filters.lastActive === 'inactive') {
+        where.OR = [
+          { lastActiveAt: null },
+          { lastActiveAt: { lt: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) } },
+        ];
+      }
+    }
+
+    // Profile completeness filter (only for candidates)
+    if (filters?.profileCompleteness && (role === Role.CANDIDATE || !role)) {
+      const { min, max } = filters.profileCompleteness;
+      const completenessWhere: any = {};
+      if (min !== undefined) completenessWhere.gte = min;
+      if (max !== undefined) completenessWhere.lte = max;
+      where.candidateProfile = { profileCompleteness: completenessWhere };
+    }
 
     const [users, total] = await prisma.$transaction([
       prisma.user.findMany({
@@ -142,8 +183,18 @@ export class AdminService {
           email: true,
           role: true,
           firstName: true,
+          lastName: true,
           isEmailVerified: true,
+          isMobileVerified: true,
+          isWhatsappVerified: true,
+          lastActiveAt: true,
           createdAt: true,
+          candidateProfile: {
+            select: { profileCompleteness: true },
+          },
+          companyProfile: {
+            select: { id: true },
+          },
         },
         skip,
         take: limit,
@@ -285,6 +336,7 @@ export class AdminService {
         updatedAt: true,
         lastLoginAt: true,
         lastLoginIp: true,
+        lastActiveAt: true,
         loginAttempts: true,
         lockUntil: true,
         candidateProfile: true,
@@ -783,6 +835,411 @@ export class AdminService {
       byStatus: Object.fromEntries(byStatus.map((s) => [s.status, s._count])),
       dailyTrend: Object.entries(dailyCounts).map(([date, count]) => ({ date, count })),
     };
+  }
+
+  /**
+   * Get candidate's job applications with pagination
+   */
+  async getUserApplications(userId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+
+    // Verify user exists and is a candidate
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, candidateProfile: { select: { id: true } } },
+    });
+    if (!user) throw new AppError('User not found', 404);
+    if (user.role !== Role.CANDIDATE || !user.candidateProfile) {
+      return { items: [], total: 0, page, limit, totalPages: 0, hasMore: false };
+    }
+
+    const [applications, total] = await prisma.$transaction([
+      prisma.jobApplication.findMany({
+        where: { candidate: { userId } },
+        include: {
+          job: {
+            select: {
+              id: true,
+              title: true,
+              location: true,
+              type: true,
+              status: true,
+              company: {
+                select: { id: true, companyName: true, logo: true, industry: true },
+              },
+            },
+          },
+          candidate: {
+            select: {
+              userId: true,
+              user: { select: { email: true, firstName: true, lastName: true } },
+            },
+          },
+        },
+        orderBy: { appliedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.jobApplication.count({ where: { candidate: { userId } } }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    return {
+      items: applications,
+      total,
+      page,
+      limit,
+      totalPages,
+      hasMore: page < totalPages,
+    };
+  }
+
+  /**
+   * Get employer's job posts with pagination
+   */
+  async getUserJobs(userId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+
+    // Verify user exists and is an employer
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, companyProfile: { select: { id: true } } },
+    });
+    if (!user) throw new AppError('User not found', 404);
+    if (user.role !== Role.EMPLOYER || !user.companyProfile) {
+      return { items: [], total: 0, page, limit, totalPages: 0, hasMore: false };
+    }
+
+    const [jobs, total] = await prisma.$transaction([
+      prisma.jobPost.findMany({
+        where: { company: { userId } },
+        include: {
+          company: {
+            select: {
+              id: true,
+              companyName: true,
+              logo: true,
+              industry: true,
+              companySize: true,
+            },
+          },
+          _count: {
+            select: {
+              applications: true,
+              savedBy: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.jobPost.count({ where: { company: { userId } } }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    return {
+      items: jobs.map((j) => ({
+        ...j,
+        _applicationCount: j._count.applications,
+        _savedCount: j._count.savedBy,
+        _count: undefined,
+      })),
+      total,
+      page,
+      limit,
+      totalPages,
+      hasMore: page < totalPages,
+    };
+  }
+
+  /**
+   * Get user's verification requests
+   */
+  async getUserVerifications(userId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+
+    const [verifications, total] = await prisma.$transaction([
+      prisma.verificationRequest.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.verificationRequest.count({ where: { userId } }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    return { items: verifications, total, page, limit, totalPages, hasMore: page < totalPages };
+  }
+
+  /**
+   * Approve/reject verification request
+   */
+  async updateVerificationStatus(
+    verificationId: string,
+    status: 'APPROVED' | 'REJECTED',
+    adminId: string,
+    reason?: string
+  ) {
+    const verification = await prisma.verificationRequest.findUnique({
+      where: { id: verificationId },
+    });
+    if (!verification) throw new AppError('Verification request not found', 404);
+
+    await prisma.$transaction([
+      prisma.verificationRequest.update({
+        where: { id: verificationId },
+        data: {
+          status,
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+          adminComments: reason || null,
+        },
+      }),
+      prisma.auditLog.create({
+        data: {
+          action: `VERIFICATION_${status}`,
+          entity: 'VerificationRequest',
+          entityId: verificationId,
+          performedBy: adminId,
+          details: { userId: verification.userId, type: verification.type, reason },
+        },
+      }),
+    ]);
+
+    // Fire-and-forget notification
+    void import('./notification.service')
+      .then(({ notificationService }) =>
+        notificationService.send({
+          userId: verification.userId,
+          title: `Verification ${status === 'APPROVED' ? 'Approved' : 'Rejected'}`,
+          message:
+            status === 'APPROVED'
+              ? 'Your verification request has been approved.'
+              : `Your verification request was rejected. ${reason || ''}`,
+          type: status === 'APPROVED' ? ('SUCCESS' as any) : ('WARNING' as any),
+          category: 'verification',
+          channels: ['in_app', 'email'],
+        })
+      )
+      .catch(() => {});
+  }
+
+  /**
+   * Update candidate profile (admin edit)
+   */
+  async updateCandidateProfile(userId: string, data: any, adminId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, candidateProfile: { select: { id: true } } },
+    });
+
+    if (!user) throw new AppError('User not found', 404);
+    if (user.role !== Role.CANDIDATE || !user.candidateProfile) {
+      throw new AppError('Candidate profile not found', 404);
+    }
+
+    await prisma.$transaction([
+      prisma.candidateProfile.update({
+        where: { userId },
+        data,
+      }),
+      prisma.auditLog.create({
+        data: {
+          action: 'UPDATE_CANDIDATE_PROFILE',
+          entity: 'CandidateProfile',
+          entityId: userId,
+          performedBy: adminId,
+          details: { fields: Object.keys(data), updates: data },
+        },
+      }),
+    ]);
+
+    return { success: true };
+  }
+
+  /**
+   * Update company profile (admin edit)
+   */
+  async updateCompanyProfile(userId: string, data: any, adminId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, companyProfile: { select: { id: true } } },
+    });
+
+    if (!user) throw new AppError('User not found', 404);
+    if (user.role !== Role.EMPLOYER || !user.companyProfile) {
+      throw new AppError('Company profile not found', 404);
+    }
+
+    await prisma.$transaction([
+      prisma.companyProfile.update({
+        where: { userId },
+        data,
+      }),
+      prisma.auditLog.create({
+        data: {
+          action: 'UPDATE_COMPANY_PROFILE',
+          entity: 'CompanyProfile',
+          entityId: userId,
+          performedBy: adminId,
+          details: { fields: Object.keys(data), updates: data },
+        },
+      }),
+    ]);
+
+    return { success: true };
+  }
+
+  /**
+   * Bulk export users (queues data export job)
+   */
+  async bulkExportUsers(userIds: string[], adminId: string, format: 'csv' | 'xlsx' = 'csv') {
+    // Validate user IDs
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, email: true, role: true },
+    });
+
+    if (users.length === 0) throw new AppError('No valid users found', 404);
+
+    // Queue data export job
+    await prisma.auditLog.create({
+      data: {
+        action: 'BULK_EXPORT_USERS',
+        entity: 'User',
+        performedBy: adminId,
+        details: { userIds, count: users.length, format },
+      },
+    });
+
+    // TODO: Implement actual export queue job that sends email with CSV/XLSX attachment
+    // For now, just create audit log - admin will be notified via audit system
+
+    return { success: true, count: users.length };
+  }
+
+  /**
+   * Bulk send notifications
+   */
+  async bulkNotifyUsers(
+    userIds: string[],
+    adminId: string,
+    notification: { title: string; message: string; type?: string }
+  ) {
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true },
+    });
+
+    if (users.length === 0) throw new AppError('No valid users found', 404);
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        action: 'BULK_NOTIFY_USERS',
+        entity: 'User',
+        performedBy: adminId,
+        details: { userIds, count: users.length, notification },
+      },
+    });
+
+    // Fire-and-forget: send notifications to all users
+    void import('./notification.service')
+      .then(({ notificationService }) => {
+        return Promise.all(
+          users.map((user) =>
+            notificationService
+              .send({
+                userId: user.id,
+                title: notification.title,
+                message: notification.message,
+                type: (notification.type || 'INFO') as any,
+                category: 'admin',
+                channels: ['in_app', 'email'],
+              })
+              .catch(() => {})
+          )
+        );
+      })
+      .catch(() => {});
+
+    return { success: true, count: users.length };
+  }
+
+  /**
+   * Bulk suspend users
+   */
+  async bulkSuspendUsers(userIds: string[], adminId: string, reason?: string) {
+    // Validate users (cannot suspend self or super admins)
+    const users = await prisma.user.findMany({
+      where: {
+        id: { in: userIds },
+        role: { not: Role.SUPER_ADMIN },
+        NOT: { id: adminId },
+      },
+      select: { id: true, email: true },
+    });
+
+    if (users.length === 0) throw new AppError('No valid users to suspend', 404);
+
+    // Bulk update
+    await prisma.$transaction([
+      prisma.user.updateMany({
+        where: { id: { in: users.map((u) => u.id) } },
+        data: { isSuspended: true, suspendedAt: new Date(), suspendedBy: adminId },
+      }),
+      prisma.auditLog.create({
+        data: {
+          action: 'BULK_SUSPEND_USERS',
+          entity: 'User',
+          performedBy: adminId,
+          details: { userIds: users.map((u) => u.id), count: users.length, reason },
+        },
+      }),
+    ]);
+
+    // Fire-and-forget: notify users
+    void import('./notification.service')
+      .then(({ notificationService }) => {
+        return Promise.all(
+          users.map((user) => notificationService.notifyUserSuspended(user.id).catch(() => {}))
+        );
+      })
+      .catch(() => {});
+
+    return { success: true, count: users.length };
+  }
+
+  /**
+   * Bulk activate users
+   */
+  async bulkActivateUsers(userIds: string[], adminId: string) {
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds }, isSuspended: true },
+      select: { id: true, email: true },
+    });
+
+    if (users.length === 0) throw new AppError('No suspended users found', 404);
+
+    // Bulk update
+    await prisma.$transaction([
+      prisma.user.updateMany({
+        where: { id: { in: users.map((u) => u.id) } },
+        data: { isSuspended: false, suspendedAt: null, suspendedBy: null },
+      }),
+      prisma.auditLog.create({
+        data: {
+          action: 'BULK_ACTIVATE_USERS',
+          entity: 'User',
+          performedBy: adminId,
+          details: { userIds: users.map((u) => u.id), count: users.length },
+        },
+      }),
+    ]);
+
+    return { success: true, count: users.length };
   }
 }
 

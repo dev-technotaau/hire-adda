@@ -14,6 +14,8 @@ interface ImageCropperProps {
   onCropComplete: (croppedBlob: Blob) => void;
   aspectRatio?: number;
   circularCrop?: boolean;
+  outputWidth?: number;
+  outputHeight?: number;
 }
 
 function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number): Crop {
@@ -31,6 +33,8 @@ export default function ImageCropper({
   onCropComplete,
   aspectRatio = 1,
   circularCrop = true,
+  outputWidth,
+  outputHeight,
 }: ImageCropperProps) {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
@@ -55,9 +59,11 @@ export default function ImageCropper({
     const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
     const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
 
-    const outputSize = 400;
-    canvas.width = outputSize;
-    canvas.height = outputSize;
+    // Use provided output dimensions or calculate based on aspect ratio
+    const finalWidth = outputWidth || 400;
+    const finalHeight = outputHeight || (outputWidth ? outputWidth / aspectRatio : 400);
+    canvas.width = finalWidth;
+    canvas.height = finalHeight;
 
     ctx.imageSmoothingQuality = 'high';
 
@@ -69,8 +75,8 @@ export default function ImageCropper({
       completedCrop.height * scaleY,
       0,
       0,
-      outputSize,
-      outputSize,
+      finalWidth,
+      finalHeight,
     );
 
     canvas.toBlob(
@@ -83,7 +89,7 @@ export default function ImageCropper({
       'image/jpeg',
       0.9,
     );
-  }, [completedCrop, onCropComplete, onClose]);
+  }, [completedCrop, onCropComplete, onClose, outputWidth, outputHeight, aspectRatio]);
 
   return (
     <Modal

@@ -72,7 +72,7 @@ export interface AddCandidatesInput {
 
 export const candidateListService = {
   async getLists(): Promise<ApiResponse<CandidateList[]>> {
-    const res = await api.get('/api/v1/candidate-lists');
+    const res = await api.get('/candidate-lists');
     return res.data;
   },
 
@@ -95,22 +95,22 @@ export const candidateListService = {
     >
   > {
     const qs = buildQueryString({ page, limit });
-    const res = await api.get(`/api/v1/candidate-lists/${listId}${qs}`);
+    const res = await api.get(`/candidate-lists/${listId}${qs}`);
     return res.data;
   },
 
   async createList(data: CreateListInput): Promise<ApiResponse<CandidateList>> {
-    const res = await api.post('/api/v1/candidate-lists', data);
+    const res = await api.post('/candidate-lists', data);
     return res.data;
   },
 
   async updateList(listId: string, data: UpdateListInput): Promise<ApiResponse<CandidateList>> {
-    const res = await api.put(`/api/v1/candidate-lists/${listId}`, data);
+    const res = await api.put(`/candidate-lists/${listId}`, data);
     return res.data;
   },
 
   async deleteList(listId: string): Promise<ApiResponse<{ message: string }>> {
-    const res = await api.delete(`/api/v1/candidate-lists/${listId}`);
+    const res = await api.delete(`/candidate-lists/${listId}`);
     return res.data;
   },
 
@@ -118,7 +118,7 @@ export const candidateListService = {
     listId: string,
     data: AddCandidatesInput,
   ): Promise<ApiResponse<{ message: string; totalMembers: number }>> {
-    const res = await api.post(`/api/v1/candidate-lists/${listId}/candidates`, data);
+    const res = await api.post(`/candidate-lists/${listId}/candidates`, data);
     return res.data;
   },
 
@@ -126,7 +126,7 @@ export const candidateListService = {
     listId: string,
     candidateId: string,
   ): Promise<ApiResponse<{ message: string }>> {
-    const res = await api.delete(`/api/v1/candidate-lists/${listId}/candidates/${candidateId}`);
+    const res = await api.delete(`/candidate-lists/${listId}/candidates/${candidateId}`);
     return res.data;
   },
 
@@ -136,7 +136,7 @@ export const candidateListService = {
     notes: string,
   ): Promise<ApiResponse<CandidateListMember>> {
     const res = await api.patch(
-      `/api/v1/candidate-lists/${listId}/candidates/${candidateId}/notes`,
+      `/candidate-lists/${listId}/candidates/${candidateId}/notes`,
       { notes },
     );
     return res.data;

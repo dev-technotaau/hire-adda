@@ -26,6 +26,7 @@ import {
   Phone,
   CheckCircle,
   MessageCircle,
+  Download,
 } from 'lucide-react';
 import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -2053,6 +2054,7 @@ function PrivacyTab() {
   const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>('registered');
   const [resumeSearchable, setResumeSearchable] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const p = profileData?.data as unknown as Record<string, unknown> | undefined;
@@ -2184,6 +2186,45 @@ function PrivacyTab() {
             <div className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5" />
           </div>
         </label>
+      </Card>
+
+      {/* Download My Data */}
+      <Card variant="bordered">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-lg">
+            <Download className="text-primary h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--text)]">Download My Data</h2>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Export a copy of all your personal data stored on TalentBridge
+            </p>
+          </div>
+        </div>
+        <p className="mb-4 text-sm text-[var(--text-muted)]">
+          You&apos;ll receive a JSON file via email containing your profile, applications,
+          saved jobs, notifications, and other account data. This may take a few minutes to
+          prepare.
+        </p>
+        <Button
+          variant="outline"
+          isLoading={isExporting}
+          onClick={async () => {
+            setIsExporting(true);
+            try {
+              await authService.exportMyData();
+              showToast.success('Data export requested! Check your email shortly.');
+            } catch (err) {
+              const error = err as ApiError;
+              showToast.error(error.message || 'Failed to request data export');
+            } finally {
+              setIsExporting(false);
+            }
+          }}
+        >
+          <Download className="mr-1.5 h-4 w-4" />
+          Request Data Export
+        </Button>
       </Card>
 
       {/* Save Button */}

@@ -7,6 +7,7 @@ import {
   greeting,
   signature,
   button,
+  otpBlock,
   infoBox,
   successBox,
   warningBox,
@@ -130,4 +131,23 @@ export const sessionRevokedAll = (name: string): EmailTemplate => ({
     'All sessions on your Talent Bridge account have been revoked.'
   ),
   text: `Hi ${name}, all active sessions on your Talent Bridge account have been signed out. If you didn't do this, change your password immediately.`,
+});
+
+export const mfaRecoveryOtp = (otp: string): EmailTemplate => ({
+  subject: 'MFA Recovery Code — Talent Bridge',
+  html: emailLayout(
+    `
+        ${iconCircle('&#128272;', BRAND.errorLight)}
+        ${heading('MFA Recovery Code')}
+        ${subtitle('Use this code to disable two-factor authentication and regain access to your account.')}
+        ${otpBlock(otp)}
+        ${dangerBox('This code expires in <strong>15 minutes</strong>. If you did not request this, your account credentials may be compromised — <strong>change your password immediately</strong>.')}
+        ${paragraph('After using this code, two-factor authentication will be <strong>removed</strong> from your account. We strongly recommend re-enabling 2FA once you regain access.')}
+        ${divider()}
+        ${smallText('Never share this code with anyone. Talent Bridge will never ask for your recovery code.')}
+        ${signature()}
+    `,
+    'Your MFA recovery code for Talent Bridge.'
+  ),
+  text: `Your MFA recovery code is: ${otp}. This code expires in 15 minutes. Use it to disable two-factor authentication and regain access. If you didn't request this, change your password immediately.`,
 });

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, UserPlus, Trash2, AlertTriangle, Mail, KeyRound } from 'lucide-react';
+import { Shield, UserPlus, Trash2, AlertTriangle, Mail, KeyRound, Eye } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -15,6 +16,7 @@ import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
 import { useOtpConfig } from '@/hooks/use-otp-config';
 import { formatRelativeDate } from '@/lib/utils';
+import { ROUTES } from '@/constants/routes';
 import type { ApiError } from '@/types/api';
 import type { UserListItem } from '@/types/admin';
 
@@ -188,6 +190,11 @@ export default function ManageAdminsPage() {
                     <span className="text-xs text-[var(--text-muted)]">
                       Joined {formatRelativeDate(admin.createdAt)}
                     </span>
+                    <Link href={ROUTES.SUPER_ADMIN.ADMIN_DETAIL(admin.id)}>
+                      <Button variant="outline" size="sm" leftIcon={<Eye className="h-3.5 w-3.5" />}>
+                        View
+                      </Button>
+                    </Link>
                     <Button
                       variant="ghost"
                       size="sm"

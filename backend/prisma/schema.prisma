@@ -73,6 +73,10 @@ model User {
   mfaEnabled     Boolean  @default(false)
   mfaBackupCodes String[] @default([])
 
+  // MFA Recovery
+  mfaRecoveryToken   String?
+  mfaRecoveryExpires DateTime?
+
   // Account Security
   loginAttempts Int       @default(0)
   lockUntil     DateTime?
@@ -155,11 +159,16 @@ model RefreshToken {
   userAgent String?
   ipAddress String?
 
+  // Link to session
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
   @@index([expiresAt])
+  @@index([sessionId])
 }
 
 model Session {
@@ -172,7 +181,8 @@ model Session {
   updatedAt  DateTime @default(now()) @updatedAt
   lastSeenAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
 
   @@index([userId])
   @@index([isActive])

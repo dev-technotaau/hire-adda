@@ -16,6 +16,10 @@ import {
   UserPlus,
   Key,
   Power,
+  Download,
+  Bell,
+  X,
+  Filter,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -72,6 +76,25 @@ export default function SuperAdminUsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+
+  // Bulk selection
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+
+  // Enhanced filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [profileCompletenessMin, setProfileCompletenessMin] = useState<number | undefined>();
+  const [profileCompletenessMax, setProfileCompletenessMax] = useState<number | undefined>();
+  const [lastActiveFilter, setLastActiveFilter] = useState<'week' | 'month' | 'quarter' | 'inactive' | ''>('');
+  const [verifiedFilters, setVerifiedFilters] = useState<('email' | 'mobile' | 'whatsapp')[]>([]);
+
+  // Bulk operation modals
+  const [showBulkNotifyModal, setShowBulkNotifyModal] = useState(false);
+  const [bulkNotificationTitle, setBulkNotificationTitle] = useState('');
+  const [bulkNotificationMessage, setBulkNotificationMessage] = useState('');
+  const [bulkNotificationType, setBulkNotificationType] = useState<'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR'>('INFO');
+  const [showBulkSuspendModal, setShowBulkSuspendModal] = useState(false);
+  const [bulkSuspendReason, setBulkSuspendReason] = useState('');
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSetSearch = useCallback(
@@ -159,12 +182,16 @@ export default function SuperAdminUsersPage() {
     setResendTimer(0);
   };
 
-  const filters: Record<string, string | number | undefined> = {
+  const filters: Record<string, string | number | string[] | undefined> = {
     page,
     limit: PAGINATION.USERS_PER_PAGE,
     ...(search && { search }),
     ...(roleFilter && { role: roleFilter }),
     ...(statusFilter && { status: statusFilter }),
+    ...(profileCompletenessMin !== undefined && { profileCompletenessMin }),
+    ...(profileCompletenessMax !== undefined && { profileCompletenessMax }),
+    ...(lastActiveFilter && { lastActive: lastActiveFilter }),
+    ...(verifiedFilters.length > 0 && { verified: verifiedFilters }),
   };
 
   const { data, isLoading } = useQuery({
@@ -269,6 +296,73 @@ export default function SuperAdminUsersPage() {
     onError: (err) => {
       const error = err as unknown as ApiError;
       showToast.error(error.message || 'Failed to deactivate user');
+    },
+  });
+
+  // Bulk operations mutations
+  const bulkExportMutation = useMutation({
+    mutationFn: ({ format }: { format: 'csv' | 'xlsx' }) =>
+      adminService.bulkExportUsers(Array.from(selectedUserIds), format),
+    onSuccess: () => {
+      showToast.success('Export queued. You will receive an email.');
+      setSelectedUserIds(new Set());
+      setShowBulkActions(false);
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to export users');
+    },
+  });
+
+  const bulkNotifyMutation = useMutation({
+    mutationFn: () =>
+      adminService.bulkNotifyUsers(Array.from(selectedUserIds), {
+        title: bulkNotificationTitle,
+        message: bulkNotificationMessage,
+        type: bulkNotificationType,
+      }),
+    onSuccess: (data) => {
+      showToast.success(`Notifications sent to ${data.data.count} users`);
+      setSelectedUserIds(new Set());
+      setShowBulkActions(false);
+      setShowBulkNotifyModal(false);
+      setBulkNotificationTitle('');
+      setBulkNotificationMessage('');
+      setBulkNotificationType('INFO');
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to send notifications');
+    },
+  });
+
+  const bulkSuspendMutation = useMutation({
+    mutationFn: () => adminService.bulkSuspendUsers(Array.from(selectedUserIds), bulkSuspendReason),
+    onSuccess: (data) => {
+      showToast.success(`${data.data.count} users suspended`);
+      invalidateUsers();
+      setSelectedUserIds(new Set());
+      setShowBulkActions(false);
+      setShowBulkSuspendModal(false);
+      setBulkSuspendReason('');
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to suspend users');
+    },
+  });
+
+  const bulkActivateMutation = useMutation({
+    mutationFn: () => adminService.bulkActivateUsers(Array.from(selectedUserIds)),
+    onSuccess: (data) => {
+      showToast.success(`${data.data.count} users activated`);
+      invalidateUsers();
+      setSelectedUserIds(new Set());
+      setShowBulkActions(false);
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to activate users');
     },
   });
 
@@ -378,8 +472,219 @@ export default function SuperAdminUsersPage() {
                 }}
               />
             </div>
+            <div className="flex items-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                leftIcon={<Filter className="h-4 w-4" />}
+              >
+                Filters
+                {(profileCompletenessMin !== undefined ||
+                  profileCompletenessMax !== undefined ||
+                  lastActiveFilter ||
+                  verifiedFilters.length > 0) && (
+                  <Badge variant="info" size="sm" className="ml-2">
+                    {[
+                      profileCompletenessMin !== undefined || profileCompletenessMax !== undefined,
+                      lastActiveFilter,
+                      verifiedFilters.length > 0,
+                    ].filter(Boolean).length}
+                  </Badge>
+                )}
+              </Button>
+            </div>
           </div>
         </Card>
+
+        {/* Advanced Filters Panel */}
+        {showFilters && (
+          <Card>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-semibold text-[var(--text)]">Advanced Filters</h3>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setProfileCompletenessMin(undefined);
+                  setProfileCompletenessMax(undefined);
+                  setLastActiveFilter('');
+                  setVerifiedFilters([]);
+                  setPage(1);
+                }}
+              >
+                Clear All
+              </Button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {/* Profile Completeness */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                  Profile Completeness (%)
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={profileCompletenessMin ?? ''}
+                    onChange={(e) => {
+                      setProfileCompletenessMin(e.target.value ? Number(e.target.value) : undefined);
+                      setPage(1);
+                    }}
+                    min={0}
+                    max={100}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={profileCompletenessMax ?? ''}
+                    onChange={(e) => {
+                      setProfileCompletenessMax(e.target.value ? Number(e.target.value) : undefined);
+                      setPage(1);
+                    }}
+                    min={0}
+                    max={100}
+                  />
+                </div>
+              </div>
+
+              {/* Last Active */}
+              <Select
+                label="Last Active"
+                value={lastActiveFilter}
+                onChange={(val) => {
+                  setLastActiveFilter(val as typeof lastActiveFilter);
+                  setPage(1);
+                }}
+                options={[
+                  { value: '', label: 'Any' },
+                  { value: 'week', label: 'Last 7 days' },
+                  { value: 'month', label: 'Last 30 days' },
+                  { value: 'quarter', label: 'Last 90 days' },
+                  { value: 'inactive', label: 'Inactive (>90 days)' },
+                ]}
+              />
+
+              {/* Verification Status */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[var(--text)]">Verified</label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={verifiedFilters.includes('email')}
+                      onChange={(e) => {
+                        const newFilters = e.target.checked
+                          ? [...verifiedFilters, 'email' as const]
+                          : verifiedFilters.filter((v) => v !== 'email');
+                        setVerifiedFilters(newFilters);
+                        setPage(1);
+                      }}
+                      className="h-4 w-4 rounded border-[var(--border)]"
+                    />
+                    Email
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={verifiedFilters.includes('mobile')}
+                      onChange={(e) => {
+                        const newFilters = e.target.checked
+                          ? [...verifiedFilters, 'mobile' as const]
+                          : verifiedFilters.filter((v) => v !== 'mobile');
+                        setVerifiedFilters(newFilters);
+                        setPage(1);
+                      }}
+                      className="h-4 w-4 rounded border-[var(--border)]"
+                    />
+                    Mobile
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={verifiedFilters.includes('whatsapp')}
+                      onChange={(e) => {
+                        const newFilters = e.target.checked
+                          ? [...verifiedFilters, 'whatsapp' as const]
+                          : verifiedFilters.filter((v) => v !== 'whatsapp');
+                        setVerifiedFilters(newFilters);
+                        setPage(1);
+                      }}
+                      className="h-4 w-4 rounded border-[var(--border)]"
+                    />
+                    WhatsApp
+                  </label>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Bulk Actions Bar */}
+        {selectedUserIds.size > 0 && (
+          <Card className="sticky top-16 z-10 border-primary bg-primary/5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-[var(--text)]">
+                  {selectedUserIds.size} user{selectedUserIds.size !== 1 ? 's' : ''} selected
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedUserIds(new Set())}
+                  leftIcon={<X className="h-4 w-4" />}
+                >
+                  Clear
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => bulkExportMutation.mutate({ format: 'csv' })}
+                  disabled={bulkExportMutation.isPending}
+                  leftIcon={<Download className="h-4 w-4" />}
+                >
+                  Export CSV
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => bulkExportMutation.mutate({ format: 'xlsx' })}
+                  disabled={bulkExportMutation.isPending}
+                  leftIcon={<Download className="h-4 w-4" />}
+                >
+                  Export XLSX
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setShowBulkNotifyModal(true)}
+                  leftIcon={<Bell className="h-4 w-4" />}
+                >
+                  Notify
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setShowBulkSuspendModal(true)}
+                  leftIcon={<Ban className="h-4 w-4" />}
+                >
+                  Suspend
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => bulkActivateMutation.mutate()}
+                  disabled={bulkActivateMutation.isPending}
+                  leftIcon={<CheckCircle className="h-4 w-4" />}
+                >
+                  Activate
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Users Table */}
         <Card padding="sm">
@@ -394,6 +699,20 @@ export default function SuperAdminUsersPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)]">
+                    <th className="w-12 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={users.length > 0 && selectedUserIds.size === users.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedUserIds(new Set(users.map((u) => u.id)));
+                          } else {
+                            setSelectedUserIds(new Set());
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-[var(--border)]"
+                      />
+                    </th>
                     <th className="px-4 py-3 text-left font-medium text-[var(--text-secondary)]">
                       Name
                     </th>
@@ -420,6 +739,22 @@ export default function SuperAdminUsersPage() {
                 <tbody className="divide-y divide-[var(--border)]">
                   {users.map((user) => (
                     <tr key={user.id} className="transition-colors hover:bg-[var(--bg-secondary)]">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.has(user.id)}
+                          onChange={(e) => {
+                            const newSelected = new Set(selectedUserIds);
+                            if (e.target.checked) {
+                              newSelected.add(user.id);
+                            } else {
+                              newSelected.delete(user.id);
+                            }
+                            setSelectedUserIds(newSelected);
+                          }}
+                          className="h-4 w-4 rounded border-[var(--border)]"
+                        />
+                      </td>
                       <td className="px-4 py-3 font-medium text-[var(--text)]">
                         <Link
                           href={ROUTES.SUPER_ADMIN.USER_DETAIL(user.id)}
@@ -821,6 +1156,125 @@ export default function SuperAdminUsersPage() {
               />
             </div>
           )}
+        </Modal>
+
+        {/* Bulk Notify Modal */}
+        <Modal
+          isOpen={showBulkNotifyModal}
+          onClose={() => {
+            setShowBulkNotifyModal(false);
+            setBulkNotificationTitle('');
+            setBulkNotificationMessage('');
+            setBulkNotificationType('INFO');
+          }}
+          title={`Send Notification to ${selectedUserIds.size} User${selectedUserIds.size !== 1 ? 's' : ''}`}
+        >
+          <div className="space-y-4">
+            <Input
+              label="Title"
+              value={bulkNotificationTitle}
+              onChange={(e) => setBulkNotificationTitle(e.target.value)}
+              placeholder="Notification title"
+              required
+            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Message <span className="text-error">*</span>
+              </label>
+              <textarea
+                value={bulkNotificationMessage}
+                onChange={(e) => setBulkNotificationMessage(e.target.value)}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                rows={4}
+                placeholder="Enter your message..."
+                required
+              />
+            </div>
+            <Select
+              label="Type"
+              value={bulkNotificationType}
+              onChange={(val) => setBulkNotificationType(val as typeof bulkNotificationType)}
+              options={[
+                { value: 'INFO', label: 'Info' },
+                { value: 'SUCCESS', label: 'Success' },
+                { value: 'WARNING', label: 'Warning' },
+                { value: 'ERROR', label: 'Error' },
+              ]}
+            />
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBulkNotifyModal(false);
+                  setBulkNotificationTitle('');
+                  setBulkNotificationMessage('');
+                  setBulkNotificationType('INFO');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => bulkNotifyMutation.mutate()}
+                disabled={!bulkNotificationTitle || !bulkNotificationMessage || bulkNotifyMutation.isPending}
+              >
+                {bulkNotifyMutation.isPending ? 'Sending...' : 'Send Notification'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Bulk Suspend Modal */}
+        <Modal
+          isOpen={showBulkSuspendModal}
+          onClose={() => {
+            setShowBulkSuspendModal(false);
+            setBulkSuspendReason('');
+          }}
+          title={`Suspend ${selectedUserIds.size} User${selectedUserIds.size !== 1 ? 's' : ''}`}
+        >
+          <div className="space-y-4">
+            <div className="rounded-lg bg-[var(--bg-secondary)] p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+                <div>
+                  <p className="font-medium text-[var(--text)]">Warning</p>
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    This will suspend all selected users. They will not be able to log in until reactivated.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Reason (optional)
+              </label>
+              <textarea
+                value={bulkSuspendReason}
+                onChange={(e) => setBulkSuspendReason(e.target.value)}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                rows={3}
+                placeholder="Optional suspension reason..."
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBulkSuspendModal(false);
+                  setBulkSuspendReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => bulkSuspendMutation.mutate()}
+                disabled={bulkSuspendMutation.isPending}
+              >
+                {bulkSuspendMutation.isPending ? 'Suspending...' : 'Suspend Users'}
+              </Button>
+            </div>
+          </div>
         </Modal>
       </div>
     </DashboardLayout>

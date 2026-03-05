@@ -226,6 +226,7 @@ export default function CandidateProfilePage() {
           skillsWithProficiency: profile.skillsWithProficiency || [],
           interests: profile.interests || [],
           hobbies: profile.hobbies || [],
+          languages: profile.languages || [],
           isPhysicallyChallenged: profile.isPhysicallyChallenged || false,
           disabilityType: profile.disabilityType || undefined,
           disabilityPercentage: profile.disabilityPercentage || undefined,

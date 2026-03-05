@@ -57,6 +57,8 @@ export const listSaved = async (req: Request, res: Response, next: NextFunction)
         isEmailVerified: sc.candidate?.isEmailVerified ?? false,
         isMobileVerified: sc.candidate?.isMobileVerified ?? false,
         isWhatsappVerified: sc.candidate?.isWhatsappVerified ?? false,
+        mobileNumber: sc.candidate?.mobileNumber ?? null,
+        whatsappNumber: sc.candidate?.whatsappNumber ?? null,
         lastActiveAt: sc.candidate?.lastActiveAt ?? null,
       },
       savedAt: sc.savedAt,

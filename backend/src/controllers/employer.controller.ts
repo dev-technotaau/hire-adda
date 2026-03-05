@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { employerService } from '../services/employer.service';
 import { candidateService } from '../services/candidate.service';
 import { AppError } from '../middleware/error';
+import { prisma } from '../config/prisma';
 
 // ... (existing imports)
 
@@ -153,6 +154,23 @@ export const getMyCompany = async (req: Request, res: Response, next: NextFuncti
 };
 
 /**
+ * Get public company profile by company ID (no auth required)
+ */
+export const getPublicCompany = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id as string;
+    const profile = await employerService.getPublicProfile(id);
+
+    res.status(200).json({
+      status: 'success',
+      data: profile,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Update company profile
  */
 export const updateMyCompany = async (req: Request, res: Response, next: NextFunction) => {
@@ -213,6 +231,51 @@ export const removeLogo = async (req: Request, res: Response, next: NextFunction
     res.status(200).json({
       status: 'success',
       message: 'Company logo removed successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Upload Cover Image
+ */
+export const uploadCoverImage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw new AppError('Not authorized', 401);
+    }
+
+    if (!req.file) {
+      throw new AppError('Cover image file required', 400);
+    }
+
+    const coverImage = await employerService.uploadCoverImage(req.user.id, req.file);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Cover image uploaded successfully',
+      data: { coverImage },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Remove Cover Image
+ */
+export const removeCoverImage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw new AppError('Not authorized', 401);
+    }
+
+    await employerService.removeCoverImage(req.user.id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Cover image removed successfully',
     });
   } catch (error) {
     next(error);
@@ -374,6 +437,79 @@ export const bulkExportCandidates = async (
     res.status(202).json({
       status: 'success',
       message: 'Export queued successfully. You will receive an email when ready.',
+      data: { jobId: job.id },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Bulk Export Resumes as ZIP
+ */
+export const bulkExportResumes = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+
+    const { candidateIds } = req.body;
+
+    if (!candidateIds || !Array.isArray(candidateIds) || candidateIds.length === 0) {
+      throw new AppError('candidateIds array is required', 400, 'INVALID_INPUT');
+    }
+
+    if (candidateIds.length > 100) {
+      throw new AppError('Maximum 100 candidates per resume export', 400, 'LIMIT_EXCEEDED');
+    }
+
+    // Verify employer has relationship with all candidates (application or saved)
+    const company = await prisma.companyProfile.findUnique({
+      where: { userId: req.user.id },
+      select: { id: true },
+    });
+    if (!company) throw new AppError('Employer profile not found', 404);
+
+    // Verify employer has relationship with all requested candidates
+    const relatedCandidateIds = new Set<string>();
+    const applications = await prisma.jobApplication.findMany({
+      where: {
+        candidate: { user: { id: { in: candidateIds } } },
+        job: { companyId: company.id },
+      },
+      select: { candidate: { select: { userId: true } } },
+      distinct: ['candidateId'],
+    });
+    for (const a of applications) relatedCandidateIds.add(a.candidate.userId);
+
+    const saved = await prisma.savedCandidate.findMany({
+      where: { employerId: company.id, candidateId: { in: candidateIds } },
+      select: { candidateId: true },
+    });
+    for (const s of saved) relatedCandidateIds.add(s.candidateId);
+
+    const unauthorizedIds = candidateIds.filter((id: string) => !relatedCandidateIds.has(id));
+    if (unauthorizedIds.length > 0) {
+      throw new AppError(
+        `Not authorized to access resumes for ${unauthorizedIds.length} candidate(s)`,
+        403,
+        'UNAUTHORIZED_CANDIDATES'
+      );
+    }
+
+    // Queue the resume export job
+    const { addDataExportJob } = await import('../jobs/data-export.queue');
+    const job = await addDataExportJob({
+      userId: req.user.id,
+      exportType: 'RESUME_EXPORT',
+      candidateIds,
+    });
+
+    res.status(202).json({
+      status: 'success',
+      message: 'Resume export queued. You will receive an email with a download link when ready.',
       data: { jobId: job.id },
     });
   } catch (error) {

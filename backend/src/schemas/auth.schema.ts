@@ -169,6 +169,29 @@ export const mfaRegenerateBackupSchema = z.object({
 export type MfaRegenerateBackupInput = z.infer<typeof mfaRegenerateBackupSchema>['body'];
 
 // ===============================
+// MFA Recovery Request
+// ===============================
+export const mfaRecoveryRequestSchema = z.object({
+  body: z.object({
+    email: z.string().email('Invalid email address'),
+  }),
+});
+
+export type MfaRecoveryRequestInput = z.infer<typeof mfaRecoveryRequestSchema>['body'];
+
+// ===============================
+// MFA Recovery Verify
+// ===============================
+export const mfaRecoveryVerifySchema = z.object({
+  body: z.object({
+    email: z.string().email('Invalid email address'),
+    otp: z.string().length(6, 'Recovery code must be 6 digits'),
+  }),
+});
+
+export type MfaRecoveryVerifyInput = z.infer<typeof mfaRecoveryVerifySchema>['body'];
+
+// ===============================
 // Mobile Verification
 // ===============================
 export const verifyMobileSchema = z.object({
@@ -295,3 +318,23 @@ export const giveConsentSchema = z.object({
     granted: z.boolean(),
   }),
 });
+
+// ===============================
+// Update Profile
+// ===============================
+export const updateProfileSchema = z.object({
+  body: z.object({
+    firstName: z
+      .string()
+      .min(1, 'First name is required')
+      .max(50, 'First name must be at most 50 characters')
+      .regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes'),
+    lastName: z
+      .string()
+      .min(1, 'Last name is required')
+      .max(50, 'Last name must be at most 50 characters')
+      .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
+  }),
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>['body'];

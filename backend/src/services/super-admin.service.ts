@@ -1,8 +1,16 @@
 import { prisma } from '../config/prisma';
+import redis from '../config/redis';
 import { Role } from '@prisma/client';
 import { AppError } from '../middleware/error';
 import bcrypt from 'bcryptjs';
 import logger from '../config/logger';
+import {
+  env,
+  getOtpExpiryMinutes,
+  getOtpLength,
+  getOtpMaxResendAttempts,
+  getOtpResendCooldown,
+} from '../config/env';
 import { uploadImage, uploadOptions, deleteImage, extractPublicId } from '../config/cloudinary';
 import { revokeAllUserTokens } from './token.service';
 import { sessionService } from './session.service';
@@ -229,6 +237,19 @@ class SuperAdminService {
       throw new AppError('Cannot modify another super admin', 403);
     }
 
+    // ADMIN accounts must use OTP-verified routes for contact info changes
+    if (user.role === Role.ADMIN) {
+      const blocked = ['email', 'mobileNumber', 'whatsappNumber', 'isMobileVerified', 'isWhatsappVerified'] as const;
+      for (const field of blocked) {
+        if (data[field] !== undefined) {
+          throw new AppError(
+            `Cannot directly modify ${field} for admin accounts. Use the verified management endpoints.`,
+            400,
+          );
+        }
+      }
+    }
+
     if (data.email && data.email !== user.email) {
       const existing = await prisma.user.findUnique({ where: { email: data.email } });
       if (existing) throw new AppError('Email already in use', 400);
@@ -321,6 +342,12 @@ class SuperAdminService {
   async sendAdminPasswordResetOtp(userId: string, superAdminId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AppError('User not found', 404);
+    if (user.role === Role.ADMIN) {
+      throw new AppError(
+        'Admin accounts require verified password change. Use the /password/initiate endpoint.',
+        400,
+      );
+    }
     if (user.role === Role.SUPER_ADMIN && userId !== superAdminId) {
       throw new AppError('Cannot reset another super admin password', 403);
     }
@@ -352,6 +379,12 @@ class SuperAdminService {
   async adminResetPassword(userId: string, newPassword: string, otp: string, superAdminId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AppError('User not found', 404);
+    if (user.role === Role.ADMIN) {
+      throw new AppError(
+        'Admin accounts require verified password change. Use the /password/confirm endpoint.',
+        400,
+      );
+    }
     if (user.role === Role.SUPER_ADMIN && userId !== superAdminId) {
       throw new AppError('Cannot change another super admin password', 403);
     }
@@ -493,6 +526,28 @@ class SuperAdminService {
     logger.info(`All sessions revoked for user ${userId} by super admin ${superAdminId}`);
   }
 
+  async revokeUserSession(userId: string, sessionId: string, superAdminId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+    if (user.role === Role.SUPER_ADMIN && userId !== superAdminId) {
+      throw new AppError('Cannot revoke another super admin session', 403);
+    }
+
+    await sessionService.revokeSession(userId, sessionId);
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'REVOKE_USER_SESSION',
+        entity: 'User',
+        entityId: userId,
+        performedBy: superAdminId,
+        details: { sessionId },
+      },
+    });
+
+    logger.info(`Session ${sessionId} revoked for user ${userId} by super admin ${superAdminId}`);
+  }
+
   async deactivateUser(userId: string, superAdminId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AppError('User not found', 404);
@@ -511,6 +566,743 @@ class SuperAdminService {
     });
 
     logger.info(`User ${userId} deactivated by super admin ${superAdminId}`);
+  }
+
+  // ── Admin Email / Mobile / WhatsApp Managed Verification ──
+
+  private enforceResendLimits(lastSentAt: Date | null, resendCount: number): void {
+    const cooldown = getOtpResendCooldown();
+    const maxAttempts = getOtpMaxResendAttempts();
+    if (resendCount >= maxAttempts) {
+      throw new AppError('Maximum resend attempts reached. Please try again later.', 429, 'OTP_MAX_RESEND');
+    }
+    if (lastSentAt) {
+      const elapsed = (Date.now() - lastSentAt.getTime()) / 1000;
+      if (elapsed < cooldown) {
+        const remaining = Math.ceil(cooldown - elapsed);
+        throw new AppError(`Please wait ${remaining} seconds before requesting another code`, 429, 'OTP_COOLDOWN');
+      }
+    }
+  }
+
+  private async verifySuperAdminPassword(superAdminId: string, password: string): Promise<void> {
+    const admin = await prisma.user.findUnique({ where: { id: superAdminId }, select: { password: true } });
+    if (!admin?.password) throw new AppError('Super admin password not found', 500);
+    const valid = await bcrypt.compare(password, admin.password);
+    if (!valid) throw new AppError('Invalid password', 401);
+  }
+
+  private async verifyTargetIsAdmin(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+    if (user.role !== Role.ADMIN) throw new AppError('This operation is only available for admin accounts', 400);
+    return user;
+  }
+
+  // ── Email ──
+
+  async initiateAdminEmailChange(
+    targetUserId: string,
+    data: { newEmail: string; password: string },
+    superAdminId: string,
+  ) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+    await this.verifySuperAdminPassword(superAdminId, data.password);
+
+    const newEmail = data.newEmail.toLowerCase();
+    if (newEmail === user.email) throw new AppError('New email must be different from current email', 400);
+
+    const existing = await prisma.user.findUnique({ where: { email: newEmail } });
+    if (existing) throw new AppError('Email already in use', 400);
+
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        pendingEmail: newEmail,
+        emailVerificationToken: hashedOtp,
+        emailVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+        emailOtpResendCount: 0,
+        emailOtpLastSentAt: new Date(),
+      },
+    });
+
+    try {
+      const emailContent = verifyEmailTemplate(otp);
+      await emailQueue.add('send-email', {
+        to: newEmail,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      });
+    } catch (error) {
+      logger.error(`Failed to send admin email change OTP to ${newEmail}`, error);
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'ADMIN_EMAIL_CHANGE_INITIATED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+        details: { newEmail },
+      },
+    });
+
+    logger.info(`Admin email change initiated for ${targetUserId} to ${newEmail} by super admin ${superAdminId}`);
+  }
+
+  async confirmAdminEmailChange(targetUserId: string, otp: string, superAdminId: string) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+    if (!user.pendingEmail) throw new AppError('No pending email change', 400);
+
+    const hashedOtp = hashToken(otp);
+    if (user.emailVerificationToken !== hashedOtp) throw new AppError('Invalid verification code', 400);
+    if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+      throw new AppError('Verification code has expired', 400);
+    }
+
+    const oldEmail = user.email;
+
+    await prisma.$transaction(async (tx) => {
+      const existingUser = await tx.user.findUnique({ where: { email: user.pendingEmail! } });
+      if (existingUser) throw new AppError('Email already in use', 400);
+
+      await tx.user.update({
+        where: { id: targetUserId },
+        data: {
+          email: user.pendingEmail!,
+          isEmailVerified: true,
+          pendingEmail: null,
+          emailVerificationToken: null,
+          emailVerificationExpires: null,
+          emailOtpResendCount: 0,
+          emailOtpLastSentAt: null,
+        },
+      });
+    });
+
+    // Notify old email
+    try {
+      const { emailChanged } = await import('../templates/email/security');
+      const tmpl = emailChanged(user.firstName || 'there', user.pendingEmail!);
+      await emailQueue.add('send-email', { to: oldEmail, subject: tmpl.subject, html: tmpl.html, text: tmpl.text });
+    } catch (error) {
+      logger.error('Failed to send admin email change notification', error);
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'ADMIN_EMAIL_CHANGED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+        details: { oldEmail, newEmail: user.pendingEmail },
+      },
+    });
+
+    logger.info(`Admin email changed for ${targetUserId} from ${oldEmail} to ${user.pendingEmail} by ${superAdminId}`);
+  }
+
+  async resendAdminEmailOtp(targetUserId: string, superAdminId: string) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+    if (!user.pendingEmail) throw new AppError('No pending email change', 400);
+
+    this.enforceResendLimits(user.emailOtpLastSentAt, user.emailOtpResendCount);
+
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        emailVerificationToken: hashedOtp,
+        emailVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+        emailOtpResendCount: user.emailOtpResendCount + 1,
+        emailOtpLastSentAt: new Date(),
+      },
+    });
+
+    try {
+      const emailContent = verifyEmailTemplate(otp);
+      await emailQueue.add('send-email', {
+        to: user.pendingEmail,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      });
+    } catch (error) {
+      logger.error('Failed to resend admin email OTP', error);
+    }
+
+    logger.info(`Resent admin email OTP for ${targetUserId} by ${superAdminId}`);
+  }
+
+  // ── Mobile ──
+
+  async initiateAdminMobileChange(
+    targetUserId: string,
+    data: { mobileNumber: string; password?: string },
+    superAdminId: string,
+  ) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+
+    // If admin already has a mobile, require super admin password (this is a "change")
+    if (user.mobileNumber) {
+      if (!data.password) throw new AppError('Password is required when changing an existing mobile number', 400);
+      await this.verifySuperAdminPassword(superAdminId, data.password);
+    }
+
+    if (data.mobileNumber === user.mobileNumber) {
+      throw new AppError('New mobile number must be different from current number', 400);
+    }
+
+    const existing = await prisma.user.findFirst({
+      where: { mobileNumber: data.mobileNumber, NOT: { id: targetUserId } },
+    });
+    if (existing) throw new AppError('Mobile number already in use', 409);
+
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        pendingMobileNumber: data.mobileNumber,
+        mobileVerificationToken: hashedOtp,
+        mobileVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+        mobileOtpResendCount: 0,
+        mobileOtpLastSentAt: new Date(),
+      },
+    });
+
+    if (env.NODE_ENV !== 'production') {
+      logger.info(`DEV: Admin mobile OTP for ${data.mobileNumber}: ${otp}`);
+    }
+
+    try {
+      const { smsQueue } = await import('../jobs/sms.queue');
+      await smsQueue.add('send-sms', {
+        to: data.mobileNumber,
+        body: `Your verification OTP is: ${otp}. Valid for ${getOtpExpiryMinutes()} minutes.`,
+      });
+    } catch (error) {
+      logger.error('Failed to send admin mobile OTP', error);
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        action: user.mobileNumber ? 'ADMIN_MOBILE_CHANGE_INITIATED' : 'ADMIN_MOBILE_ADD_INITIATED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+        details: { mobileNumber: data.mobileNumber },
+      },
+    });
+
+    logger.info(`Admin mobile change initiated for ${targetUserId} by ${superAdminId}`);
+  }
+
+  async confirmAdminMobileChange(targetUserId: string, otp: string, superAdminId: string) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+    if (!user.pendingMobileNumber) throw new AppError('No pending mobile number change', 400);
+
+    const hashedOtp = hashToken(otp);
+    if (user.mobileVerificationToken !== hashedOtp) throw new AppError('Invalid verification code', 400);
+    if (!user.mobileVerificationExpires || user.mobileVerificationExpires < new Date()) {
+      throw new AppError('Verification code has expired', 400);
+    }
+
+    const hasSeparateWhatsapp = !!user.whatsappNumber;
+
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.user.findFirst({ where: { mobileNumber: user.pendingMobileNumber! } });
+      if (existing) throw new AppError('Mobile number already in use', 409);
+
+      await tx.user.update({
+        where: { id: targetUserId },
+        data: {
+          mobileNumber: user.pendingMobileNumber,
+          isMobileVerified: true,
+          // Reset WhatsApp if using mobile for WhatsApp (no separate whatsapp number)
+          ...(hasSeparateWhatsapp
+            ? {}
+            : {
+                isWhatsappVerified: false,
+                whatsappVerificationToken: null,
+                whatsappVerificationExpires: null,
+                whatsappOtpResendCount: 0,
+                whatsappOtpLastSentAt: null,
+              }),
+          pendingMobileNumber: null,
+          mobileVerificationToken: null,
+          mobileVerificationExpires: null,
+          mobileOtpResendCount: 0,
+          mobileOtpLastSentAt: null,
+        },
+      });
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'ADMIN_MOBILE_CHANGED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+        details: { mobileNumber: user.pendingMobileNumber, whatsappReset: !hasSeparateWhatsapp },
+      },
+    });
+
+    logger.info(`Admin mobile changed for ${targetUserId} to ${user.pendingMobileNumber} by ${superAdminId}`);
+  }
+
+  async resendAdminMobileOtp(targetUserId: string, superAdminId: string) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+    if (!user.pendingMobileNumber) throw new AppError('No pending mobile number change', 400);
+
+    this.enforceResendLimits(user.mobileOtpLastSentAt, user.mobileOtpResendCount);
+
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        mobileVerificationToken: hashedOtp,
+        mobileVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+        mobileOtpResendCount: user.mobileOtpResendCount + 1,
+        mobileOtpLastSentAt: new Date(),
+      },
+    });
+
+    if (env.NODE_ENV !== 'production') {
+      logger.info(`DEV: Resent admin mobile OTP for ${user.pendingMobileNumber}: ${otp}`);
+    }
+
+    try {
+      const { smsQueue } = await import('../jobs/sms.queue');
+      await smsQueue.add('send-sms', {
+        to: user.pendingMobileNumber,
+        body: `Your verification OTP is: ${otp}. Valid for ${getOtpExpiryMinutes()} minutes.`,
+      });
+    } catch (error) {
+      logger.error('Failed to resend admin mobile OTP', error);
+    }
+
+    logger.info(`Resent admin mobile OTP for ${targetUserId} by ${superAdminId}`);
+  }
+
+  async removeAdminMobile(targetUserId: string, superAdminId: string) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+    if (!user.mobileNumber) throw new AppError('Admin has no mobile number to remove', 400);
+
+    const hasSeparateWhatsapp = !!user.whatsappNumber;
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        mobileNumber: null,
+        isMobileVerified: false,
+        pendingMobileNumber: null,
+        mobileVerificationToken: null,
+        mobileVerificationExpires: null,
+        mobileOtpResendCount: 0,
+        mobileOtpLastSentAt: null,
+        // Reset WhatsApp if using mobile for WhatsApp
+        ...(hasSeparateWhatsapp
+          ? {}
+          : {
+              isWhatsappVerified: false,
+              whatsappVerificationToken: null,
+              whatsappVerificationExpires: null,
+              whatsappOtpResendCount: 0,
+              whatsappOtpLastSentAt: null,
+            }),
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'ADMIN_MOBILE_REMOVED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+      },
+    });
+
+    logger.info(`Admin mobile removed for ${targetUserId} by ${superAdminId}`);
+  }
+
+  // ── WhatsApp ──
+
+  async initiateAdminWhatsappVerify(
+    targetUserId: string,
+    data: { mobileNumber: string; whatsappNumber?: string },
+    superAdminId: string,
+  ) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+    if (!user.mobileNumber && !data.mobileNumber) throw new AppError('No mobile number provided', 400);
+
+    const effectiveMobile = data.mobileNumber || user.mobileNumber!;
+    const targetNumber = data.whatsappNumber || effectiveMobile;
+
+    // Block if already verified with same number
+    if (user.isWhatsappVerified) {
+      const currentWhatsapp = user.whatsappNumber || user.mobileNumber;
+      if (targetNumber === currentWhatsapp) throw new AppError('WhatsApp already verified with this number', 400);
+    }
+
+    const separateWhatsapp =
+      data.whatsappNumber && data.whatsappNumber !== effectiveMobile ? data.whatsappNumber : null;
+
+    if (separateWhatsapp) {
+      const existing = await prisma.user.findFirst({
+        where: { whatsappNumber: separateWhatsapp, id: { not: targetUserId } },
+      });
+      if (existing) throw new AppError('This WhatsApp number is already in use by another account', 400);
+    }
+
+    this.enforceResendLimits(user.whatsappOtpLastSentAt, user.whatsappOtpResendCount);
+
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+    const expiryMinutes = getOtpExpiryMinutes();
+
+    await redis.set(
+      `whatsapp:pending:${targetUserId}`,
+      JSON.stringify({ number: separateWhatsapp, targetNumber }),
+      'EX',
+      expiryMinutes * 60,
+    );
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        whatsappVerificationToken: hashedOtp,
+        whatsappVerificationExpires: new Date(Date.now() + expiryMinutes * 60 * 1000),
+        whatsappOtpResendCount: user.whatsappOtpResendCount + 1,
+        whatsappOtpLastSentAt: new Date(),
+      },
+    });
+
+    try {
+      const { otpWhatsapp } = await import('../templates/whatsapp');
+      const { whatsappQueue } = await import('../jobs/whatsapp.queue');
+      const tmpl = otpWhatsapp(otp);
+      await whatsappQueue.add('send-whatsapp', {
+        to: targetNumber,
+        templateName: tmpl.templateName,
+        components: tmpl.components,
+      });
+    } catch (error) {
+      logger.error('Failed to send admin WhatsApp OTP', error);
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'ADMIN_WHATSAPP_VERIFY_INITIATED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+        details: { targetNumber },
+      },
+    });
+
+    logger.info(`Admin WhatsApp OTP sent to ${targetNumber} for ${targetUserId} by ${superAdminId}`);
+  }
+
+  async initiateAdminWhatsappChange(
+    targetUserId: string,
+    data: { newWhatsappNumber: string; password: string },
+    superAdminId: string,
+  ) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+    await this.verifySuperAdminPassword(superAdminId, data.password);
+
+    const currentWhatsapp = user.whatsappNumber || user.mobileNumber;
+    if (data.newWhatsappNumber === currentWhatsapp) {
+      throw new AppError('New WhatsApp number must be different from current', 400);
+    }
+
+    const storeNumber = data.newWhatsappNumber === user.mobileNumber ? null : data.newWhatsappNumber;
+    const targetNumber = data.newWhatsappNumber;
+
+    if (storeNumber) {
+      const existing = await prisma.user.findFirst({
+        where: { whatsappNumber: storeNumber, id: { not: targetUserId } },
+      });
+      if (existing) throw new AppError('This WhatsApp number is already in use by another account', 400);
+    }
+
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+    const expiryMinutes = getOtpExpiryMinutes();
+
+    await redis.set(
+      `whatsapp:pending:${targetUserId}`,
+      JSON.stringify({ number: storeNumber, targetNumber }),
+      'EX',
+      expiryMinutes * 60,
+    );
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        whatsappVerificationToken: hashedOtp,
+        whatsappVerificationExpires: new Date(Date.now() + expiryMinutes * 60 * 1000),
+        whatsappOtpResendCount: user.whatsappOtpResendCount + 1,
+        whatsappOtpLastSentAt: new Date(),
+      },
+    });
+
+    if (env.NODE_ENV !== 'production') {
+      logger.info(`DEV: Admin WhatsApp change OTP for ${targetNumber}: ${otp}`);
+    }
+
+    try {
+      const { otpWhatsapp } = await import('../templates/whatsapp');
+      const { whatsappQueue } = await import('../jobs/whatsapp.queue');
+      const tmpl = otpWhatsapp(otp);
+      await whatsappQueue.add('send-whatsapp', {
+        to: targetNumber,
+        templateName: tmpl.templateName,
+        components: tmpl.components,
+      });
+    } catch (error) {
+      logger.error('Failed to send admin WhatsApp change OTP', error);
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'ADMIN_WHATSAPP_CHANGE_INITIATED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+        details: { targetNumber },
+      },
+    });
+
+    logger.info(`Admin WhatsApp change initiated for ${targetUserId} to ${targetNumber} by ${superAdminId}`);
+  }
+
+  async confirmAdminWhatsappOtp(targetUserId: string, otp: string, superAdminId: string) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+
+    const hashedOtp = hashToken(otp);
+    if (user.whatsappVerificationToken !== hashedOtp) throw new AppError('Invalid or expired OTP', 400);
+    if (!user.whatsappVerificationExpires || user.whatsappVerificationExpires < new Date()) {
+      throw new AppError('Verification code has expired', 400);
+    }
+
+    const pendingKey = `whatsapp:pending:${targetUserId}`;
+    const pendingData = await redis.get(pendingKey);
+    let whatsappNumber: string | null = null;
+    if (pendingData) {
+      const parsed = JSON.parse(pendingData) as { number: string | null; targetNumber: string };
+      whatsappNumber = parsed.number ?? (user.mobileNumber ? null : parsed.targetNumber);
+      await redis.del(pendingKey);
+    }
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        whatsappNumber,
+        isWhatsappVerified: true,
+        whatsappVerificationToken: null,
+        whatsappVerificationExpires: null,
+        whatsappOtpResendCount: 0,
+        whatsappOtpLastSentAt: null,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'ADMIN_WHATSAPP_VERIFIED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+        details: { whatsappNumber: whatsappNumber || user.mobileNumber },
+      },
+    });
+
+    logger.info(`Admin WhatsApp verified for ${targetUserId} by ${superAdminId}`);
+  }
+
+  async removeAdminWhatsappNumber(targetUserId: string, superAdminId: string) {
+    await this.verifyTargetIsAdmin(targetUserId);
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        whatsappNumber: null,
+        isWhatsappVerified: false,
+        whatsappVerificationToken: null,
+        whatsappVerificationExpires: null,
+        whatsappOtpResendCount: 0,
+        whatsappOtpLastSentAt: null,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'ADMIN_WHATSAPP_REMOVED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+      },
+    });
+
+    logger.info(`Admin WhatsApp removed for ${targetUserId} by ${superAdminId}`);
+  }
+
+  // ── Admin Password (verified change) ──
+
+  async initiateAdminPasswordChange(
+    targetUserId: string,
+    data: { password: string; newPassword: string },
+    superAdminId: string,
+  ) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+    await this.verifySuperAdminPassword(superAdminId, data.password);
+
+    const strengthCheck = validatePasswordStrength(data.newPassword);
+    if (!strengthCheck.isValid) throw new AppError(strengthCheck.errors.join('. '), 400);
+
+    // Hash new password and store temporarily in Redis
+    const hashedPassword = await bcrypt.hash(data.newPassword, SALT_ROUNDS);
+    const expiryMinutes = getOtpExpiryMinutes();
+    await redis.set(
+      `admin:pw:pending:${targetUserId}`,
+      hashedPassword,
+      'EX',
+      expiryMinutes * 60,
+    );
+
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        emailVerificationToken: hashedOtp,
+        emailVerificationExpires: new Date(Date.now() + expiryMinutes * 60 * 1000),
+        emailOtpResendCount: 0,
+        emailOtpLastSentAt: new Date(),
+      },
+    });
+
+    try {
+      const emailContent = passwordResetOtpTemplate(otp);
+      await emailQueue.add('send-email', {
+        to: user.email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      });
+    } catch (error) {
+      logger.error(`Failed to send admin password change OTP to ${user.email}`, error);
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'ADMIN_PASSWORD_CHANGE_INITIATED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+      },
+    });
+
+    logger.info(`Admin password change initiated for ${targetUserId} by super admin ${superAdminId}`);
+  }
+
+  async confirmAdminPasswordChange(targetUserId: string, otp: string, superAdminId: string) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+
+    if (!user.emailVerificationToken || !user.emailVerificationExpires) {
+      throw new AppError('No verification code found. Please request a new one.', 400);
+    }
+    if (user.emailVerificationExpires < new Date()) {
+      throw new AppError('Verification code has expired. Please request a new one.', 400);
+    }
+    const hashedOtp = hashToken(otp);
+    if (hashedOtp !== user.emailVerificationToken) {
+      throw new AppError('Invalid verification code', 400);
+    }
+
+    // Retrieve pending password from Redis
+    const pendingKey = `admin:pw:pending:${targetUserId}`;
+    const hashedPassword = await redis.get(pendingKey);
+    if (!hashedPassword) {
+      throw new AppError('No pending password change found. Please start again.', 400);
+    }
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        password: hashedPassword,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+        emailOtpResendCount: 0,
+        emailOtpLastSentAt: null,
+      },
+    });
+
+    await redis.del(pendingKey);
+    await revokeAllUserTokens(targetUserId);
+    await sessionService.revokeAllSessions(targetUserId);
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'ADMIN_PASSWORD_CHANGED',
+        entity: 'User',
+        entityId: targetUserId,
+        performedBy: superAdminId,
+      },
+    });
+
+    logger.info(`Admin password changed for ${targetUserId} by super admin ${superAdminId}`);
+  }
+
+  async resendAdminPasswordOtp(targetUserId: string, superAdminId: string) {
+    const user = await this.verifyTargetIsAdmin(targetUserId);
+
+    // Ensure a pending password change exists
+    const pendingKey = `admin:pw:pending:${targetUserId}`;
+    const pending = await redis.get(pendingKey);
+    if (!pending) {
+      throw new AppError('No pending password change. Please initiate a new one.', 400);
+    }
+
+    this.enforceResendLimits(user.emailOtpLastSentAt, user.emailOtpResendCount);
+
+    const otp = generateOtp(getOtpLength());
+    const hashedOtp = hashToken(otp);
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        emailVerificationToken: hashedOtp,
+        emailVerificationExpires: new Date(Date.now() + getOtpExpiryMinutes() * 60 * 1000),
+        emailOtpResendCount: user.emailOtpResendCount + 1,
+        emailOtpLastSentAt: new Date(),
+      },
+    });
+
+    try {
+      const emailContent = passwordResetOtpTemplate(otp);
+      await emailQueue.add('send-email', {
+        to: user.email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      });
+    } catch (error) {
+      logger.error('Failed to resend admin password change OTP', error);
+    }
+
+    logger.info(`Resent admin password OTP for ${targetUserId} by ${superAdminId}`);
   }
 }
 

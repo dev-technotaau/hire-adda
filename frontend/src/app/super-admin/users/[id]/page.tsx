@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -26,6 +26,34 @@ import {
   Globe,
   LogOut,
   MessageCircle,
+  User,
+  FileText,
+  Briefcase,
+  Building2,
+  Activity,
+  MapPin,
+  DollarSign,
+  Code,
+  Award,
+  BookOpen,
+  Linkedin,
+  Github,
+  ExternalLink,
+  Download,
+  Image as ImageIcon,
+  Users,
+  Target,
+  TrendingUp,
+  Sparkles,
+  GraduationCap,
+  Languages,
+  Star,
+  FolderOpen,
+  FileCode,
+  Heart,
+  Lightbulb,
+  Edit,
+  Save,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -37,6 +65,7 @@ import Select from '@/components/ui/Select';
 import Switch from '@/components/ui/Switch';
 import Skeleton from '@/components/ui/Skeleton';
 import Modal from '@/components/ui/Modal';
+import Tabs from '@/components/ui/Tabs';
 import OtpInput from '@/components/auth/OtpInput';
 import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
@@ -46,12 +75,159 @@ import { usePasswordRules } from '@/hooks/use-security-config';
 import { ROUTES } from '@/constants/routes';
 import { ROLE_LABELS } from '@/constants/enums';
 import { formatDate } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
 import type { Role } from '@/types/auth';
 import type { ApiError } from '@/types/api';
+import type { CandidateProfile } from '@/types/candidate';
+import type { CompanyProfile } from '@/types/employer';
+import type { AuditLog, JobApplication, JobPost, VerificationRequest } from '@/types/admin';
 
 type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 
 const roleChangeOptions = Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }));
+
+// Editable field component
+interface EditableFieldProps {
+  value: string | number | boolean | null | undefined;
+  onSave: (newValue: string | number | boolean) => Promise<void>;
+  type?: 'text' | 'number' | 'textarea' | 'boolean';
+  maxLength?: number;
+  placeholder?: string;
+  className?: string;
+}
+
+function EditableField({ value, onSave, type = 'text', maxLength, placeholder, className = '' }: EditableFieldProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState<string | number>(value != null ? String(value) : '');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (editValue === value) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onSave(type === 'number' ? Number(editValue) : type === 'boolean' ? editValue === 'true' : editValue);
+      setIsEditing(false);
+      showToast.success('Field updated successfully');
+    } catch (error) {
+      showToast.error('Failed to update field');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditValue(value != null ? String(value) : '');
+    setIsEditing(false);
+  };
+
+  if (type === 'boolean') {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <span>{value ? 'Yes' : 'No'}</span>
+        {!isEditing ? (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="text-primary hover:text-primary/80 p-1"
+            title="Edit"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <select
+              value={String(editValue)}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--bg)] text-[var(--text)]"
+            >
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="text-success hover:text-success/80 p-1"
+              title="Save"
+            >
+              <Save className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="text-error hover:text-error/80 p-1"
+              title="Cancel"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (!isEditing) {
+    return (
+      <div className={`flex items-center gap-2 group ${className}`}>
+        <span>{value || placeholder || '—'}</span>
+        <button
+          onClick={() => {
+            setEditValue(value != null ? String(value) : '');
+            setIsEditing(true);
+          }}
+          className="text-primary hover:text-primary/80 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Edit"
+        >
+          <Edit className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      {type === 'textarea' ? (
+        <textarea
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--bg)] text-[var(--text)] resize-none"
+          rows={3}
+          autoFocus
+        />
+      ) : (
+        <Input
+          type={type}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          className="flex-1"
+          autoFocus
+        />
+      )}
+      <button
+        onClick={handleSave}
+        disabled={isSaving}
+        className="text-success hover:text-success/80 p-1"
+        title="Save"
+      >
+        <Save className="w-4 h-4" />
+      </button>
+      <button
+        onClick={handleCancel}
+        disabled={isSaving}
+        className="text-error hover:text-error/80 p-1"
+        title="Cancel"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
 
 export default function SuperAdminUserDetailPage() {
   const params = useParams();
@@ -61,6 +237,9 @@ export default function SuperAdminUserDetailPage() {
   const passwordRules = usePasswordRules();
   const userId = params.id as string;
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'applications' | 'jobs' | 'activity' | 'verification'>('account');
 
   // Modals
   const [showSuspendModal, setShowSuspendModal] = useState(false);
@@ -76,6 +255,9 @@ export default function SuperAdminUserDetailPage() {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [isResending, setIsResending] = useState(false);
+  const [resetSuperAdminPassword, setResetSuperAdminPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetErrors, setResetErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (resendTimer <= 0) return;
@@ -83,42 +265,15 @@ export default function SuperAdminUserDetailPage() {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  const handleSendResetOtp = async () => {
-    setIsSendingOtp(true);
-    try {
-      await adminService.sendPasswordResetOtp(userId);
-      showToast.success('Verification code sent to user email');
-      setResetStep('verify');
-      setResendTimer(otpConfig.RESEND_COOLDOWN);
-    } catch (err) {
-      const error = err as unknown as ApiError;
-      showToast.error(error.message || 'Failed to send verification code');
-    } finally {
-      setIsSendingOtp(false);
-    }
-  };
-
-  const handleResendResetOtp = async () => {
-    setIsResending(true);
-    try {
-      await adminService.sendPasswordResetOtp(userId);
-      showToast.success('New verification code sent!');
-      setResendTimer(otpConfig.RESEND_COOLDOWN);
-      setResetOtp('');
-    } catch (err) {
-      const error = err as unknown as ApiError;
-      showToast.error(error.message || 'Failed to resend code');
-    } finally {
-      setIsResending(false);
-    }
-  };
-
   const closeResetPwModal = () => {
     setShowResetPwModal(false);
     setNewPassword('');
     setResetStep('send');
     setResetOtp('');
     setResendTimer(0);
+    setResetSuperAdminPassword('');
+    setResetConfirmPassword('');
+    setResetErrors({});
   };
 
   // Edit profile
@@ -138,6 +293,64 @@ export default function SuperAdminUserDetailPage() {
   });
 
   const user = data?.data;
+  const isAdminPasswordFlow = user?.role === 'ADMIN';
+
+  const validateAdminPasswordForm = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!resetSuperAdminPassword) errs.password = 'Your password is required';
+    if (!newPassword) errs.newPassword = 'New password is required';
+    else if (newPassword.length < passwordRules.MIN_LENGTH)
+      errs.newPassword = `Password must be at least ${passwordRules.MIN_LENGTH} characters`;
+    if (!resetConfirmPassword) errs.confirmPassword = 'Please confirm the new password';
+    else if (newPassword !== resetConfirmPassword) errs.confirmPassword = 'Passwords do not match';
+    setResetErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSendResetOtp = async () => {
+    if (isAdminPasswordFlow) {
+      if (!validateAdminPasswordForm()) return;
+    }
+    setIsSendingOtp(true);
+    try {
+      if (isAdminPasswordFlow) {
+        await adminService.initiateAdminPasswordChange(userId, {
+          password: resetSuperAdminPassword,
+          newPassword,
+        });
+      } else {
+        await adminService.sendPasswordResetOtp(userId);
+      }
+      showToast.success('Verification code sent to user email');
+      setResetStep('verify');
+      setResendTimer(otpConfig.RESEND_COOLDOWN);
+      setResetErrors({});
+    } catch (err) {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to send verification code');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleResendResetOtp = async () => {
+    setIsResending(true);
+    try {
+      if (isAdminPasswordFlow) {
+        await adminService.resendAdminPasswordOtp(userId);
+      } else {
+        await adminService.sendPasswordResetOtp(userId);
+      }
+      showToast.success('New verification code sent!');
+      setResendTimer(otpConfig.RESEND_COOLDOWN);
+      setResetOtp('');
+    } catch (err) {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to resend code');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const { data: sessionsData, isLoading: sessionsLoading } = useQuery({
     queryKey: QUERY_KEYS.SUPER_ADMIN.USER_SESSIONS(userId),
@@ -146,6 +359,40 @@ export default function SuperAdminUserDetailPage() {
   });
 
   const sessions = sessionsData?.data || [];
+
+  // Pagination state for new tabs
+  const [applicationsPage, setApplicationsPage] = useState(1);
+  const [jobsPage, setJobsPage] = useState(1);
+  const [activityPage, setActivityPage] = useState(1);
+  const [verificationsPage, setVerificationsPage] = useState(1);
+
+  // Applications query
+  const { data: applicationsData, isLoading: applicationsLoading } = useQuery({
+    queryKey: ['admin', 'user-applications', userId, applicationsPage],
+    queryFn: () => adminService.getUserApplications(userId, applicationsPage, 20),
+    enabled: !!userId && activeTab === 'applications',
+  });
+
+  // Jobs query
+  const { data: jobsData, isLoading: jobsLoading } = useQuery({
+    queryKey: ['admin', 'user-jobs', userId, jobsPage],
+    queryFn: () => adminService.getUserJobs(userId, jobsPage, 20),
+    enabled: !!userId && activeTab === 'jobs',
+  });
+
+  // Activity query
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ['admin', 'audit-logs', { performedBy: userId, page: activityPage }],
+    queryFn: () => adminService.getAuditLogs({ performedBy: userId, page: activityPage, limit: 20 }),
+    enabled: !!userId && activeTab === 'activity',
+  });
+
+  // Verifications query
+  const { data: verificationsData, isLoading: verificationsLoading } = useQuery({
+    queryKey: ['admin', 'user-verifications', userId, verificationsPage],
+    queryFn: () => adminService.getUserVerifications(userId, verificationsPage, 20),
+    enabled: !!userId && activeTab === 'verification',
+  });
 
   const invalidateUser = () =>
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.USER_DETAIL(userId) });
@@ -205,8 +452,12 @@ export default function SuperAdminUserDetailPage() {
   });
 
   const resetPasswordMutation = useMutation({
-    mutationFn: ({ pw, otp }: { pw: string; otp: string }) =>
-      adminService.resetUserPassword(userId, { newPassword: pw, otp }),
+    mutationFn: ({ pw, otp }: { pw: string; otp: string }) => {
+      if (isAdminPasswordFlow) {
+        return adminService.confirmAdminPasswordChange(userId, { otp });
+      }
+      return adminService.resetUserPassword(userId, { newPassword: pw, otp });
+    },
     onSuccess: () => {
       showToast.success('Password reset successfully — all sessions revoked');
       closeResetPwModal();
@@ -268,6 +519,28 @@ export default function SuperAdminUserDetailPage() {
     },
   });
 
+  const updateCandidateProfileMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => adminService.updateCandidateProfile(userId, data),
+    onSuccess: () => {
+      invalidateUser();
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to update candidate profile');
+    },
+  });
+
+  const updateCompanyProfileMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => adminService.updateCompanyProfile(userId, data),
+    onSuccess: () => {
+      invalidateUser();
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to update company profile');
+    },
+  });
+
   const revokeSessionsMutation = useMutation({
     mutationFn: () => adminService.revokeUserSessions(userId),
     onSuccess: () => {
@@ -280,6 +553,35 @@ export default function SuperAdminUserDetailPage() {
     },
   });
 
+  const updateVerificationMutation = useMutation({
+    mutationFn: ({ verificationId, status, reason }: { verificationId: string; status: 'APPROVED' | 'REJECTED'; reason?: string }) =>
+      adminService.updateVerificationStatus(verificationId, status, reason),
+    onSuccess: () => {
+      showToast.success('Verification status updated');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'user-verifications', userId] });
+    },
+    onError: (err) => {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to update verification');
+    },
+  });
+
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
+
+  const handleRevokeSession = async (sessionId: string) => {
+    setRevokingSessionId(sessionId);
+    try {
+      await adminService.revokeUserSession(userId, sessionId);
+      showToast.success('Session revoked');
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.SUPER_ADMIN.USER_SESSIONS(userId) });
+    } catch (err) {
+      const error = err as unknown as ApiError;
+      showToast.error(error.message || 'Failed to revoke session');
+    } finally {
+      setRevokingSessionId(null);
+    }
+  };
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -290,15 +592,41 @@ export default function SuperAdminUserDetailPage() {
     uploadAvatarMutation.mutate(file);
   };
 
+  const isAdminTarget = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+
+  // Check if there are any unsaved changes in edit mode
+  const hasUnsavedChanges = useMemo(() => {
+    if (!isEditing || !user) return false;
+
+    // Check name changes
+    if (editFirstName !== (user.firstName || '')) return true;
+    if (editLastName !== (user.lastName || '')) return true;
+
+    // Check other fields only for non-admin targets
+    if (!isAdminTarget) {
+      if (editEmail !== user.email) return true;
+      const effectiveMobile = editMobileNumber.trim() || null;
+      if (effectiveMobile !== (user.mobileNumber || null)) return true;
+      if (editIsMobileVerified !== user.isMobileVerified) return true;
+      const effectiveWhatsapp = editWhatsappNumber.trim() || null;
+      if (effectiveWhatsapp !== (user.whatsappNumber || null)) return true;
+      if (editIsWhatsappVerified !== user.isWhatsappVerified) return true;
+    }
+
+    return false;
+  }, [isEditing, user, editFirstName, editLastName, editEmail, editMobileNumber, editWhatsappNumber, editIsMobileVerified, editIsWhatsappVerified, isAdminTarget]);
+
   const startEditing = () => {
     if (!user) return;
     setEditFirstName(user.firstName || '');
     setEditLastName(user.lastName || '');
-    setEditEmail(user.email);
-    setEditMobileNumber(user.mobileNumber || '');
-    setEditWhatsappNumber(user.whatsappNumber || '');
-    setEditIsMobileVerified(user.isMobileVerified);
-    setEditIsWhatsappVerified(user.isWhatsappVerified);
+    if (!isAdminTarget) {
+      setEditEmail(user.email);
+      setEditMobileNumber(user.mobileNumber || '');
+      setEditWhatsappNumber(user.whatsappNumber || '');
+      setEditIsMobileVerified(user.isMobileVerified);
+      setEditIsWhatsappVerified(user.isWhatsappVerified);
+    }
     setIsEditing(true);
   };
 
@@ -307,20 +635,22 @@ export default function SuperAdminUserDetailPage() {
     const updates: Record<string, unknown> = {};
     if (editFirstName && editFirstName !== user.firstName) updates.firstName = editFirstName;
     if (editLastName && editLastName !== user.lastName) updates.lastName = editLastName;
-    if (editEmail && editEmail !== user.email) updates.email = editEmail;
 
-    // Mobile number: empty string → null (remove), changed → update
-    const effectiveMobile = editMobileNumber.trim() || null;
-    if (effectiveMobile !== (user.mobileNumber || null)) updates.mobileNumber = effectiveMobile;
-    if (editIsMobileVerified !== user.isMobileVerified)
-      updates.isMobileVerified = editIsMobileVerified;
+    // Only include email/mobile/whatsapp for non-admin targets (admin uses OTP routes)
+    if (!isAdminTarget) {
+      if (editEmail && editEmail !== user.email) updates.email = editEmail;
 
-    // WhatsApp number
-    const effectiveWhatsapp = editWhatsappNumber.trim() || null;
-    if (effectiveWhatsapp !== (user.whatsappNumber || null))
-      updates.whatsappNumber = effectiveWhatsapp;
-    if (editIsWhatsappVerified !== user.isWhatsappVerified)
-      updates.isWhatsappVerified = editIsWhatsappVerified;
+      const effectiveMobile = editMobileNumber.trim() || null;
+      if (effectiveMobile !== (user.mobileNumber || null)) updates.mobileNumber = effectiveMobile;
+      if (editIsMobileVerified !== user.isMobileVerified)
+        updates.isMobileVerified = editIsMobileVerified;
+
+      const effectiveWhatsapp = editWhatsappNumber.trim() || null;
+      if (effectiveWhatsapp !== (user.whatsappNumber || null))
+        updates.whatsappNumber = effectiveWhatsapp;
+      if (editIsWhatsappVerified !== user.isWhatsappVerified)
+        updates.isWhatsappVerified = editIsWhatsappVerified;
+    }
 
     if (Object.keys(updates).length === 0) {
       setIsEditing(false);
@@ -351,6 +681,1519 @@ export default function SuperAdminUserDetailPage() {
     if (ua.includes('Safari')) return 'Safari';
     if (ua.includes('Edge')) return 'Edge';
     return ua.slice(0, 40);
+  };
+
+  // Helper component for info items
+  const InfoItem = ({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) => (
+    <div>
+      <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+        <Icon className="h-3.5 w-3.5" />
+        <span>{label}</span>
+      </div>
+      <p className="mt-1 text-sm font-medium text-[var(--text)]">{value}</p>
+    </div>
+  );
+
+  // Tab items definition
+  const tabItems = [
+    { key: 'account' as const, label: 'Account' },
+    { key: 'profile' as const, label: 'Profile' },
+    ...(user?.role === 'CANDIDATE' ? [{ key: 'applications' as const, label: 'Applications' }] : []),
+    ...(user?.role === 'EMPLOYER' ? [{ key: 'jobs' as const, label: 'Jobs' }] : []),
+    { key: 'activity' as const, label: 'Activity' },
+    { key: 'verification' as const, label: 'Verification' },
+  ];
+
+  // Candidate Profile Viewer Component
+  const CandidateProfileViewer = ({ profile }: { profile: CandidateProfile }) => {
+    const completeness = profile.profileCompleteness || 0;
+    return (
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Profile Completeness */}
+          <Card>
+            <h3 className="mb-4 text-lg font-semibold text-[var(--text)]">Profile Completeness</h3>
+            <div className="relative pt-1">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-2xl font-semibold text-[var(--text)]">{completeness}%</span>
+                <span
+                  className={`text-xs ${
+                    completeness < 50
+                      ? 'text-[var(--error)]'
+                      : completeness < 80
+                      ? 'text-[var(--warning)]'
+                      : 'text-[var(--success)]'
+                  }`}
+                >
+                  {completeness < 50 ? 'Low' : completeness < 80 ? 'Good' : 'Excellent'}
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded bg-[var(--bg-secondary)]">
+                <div
+                  style={{ width: `${completeness}%` }}
+                  className={`h-full ${
+                    completeness < 50
+                      ? 'bg-[var(--error)]'
+                      : completeness < 80
+                      ? 'bg-[var(--warning)]'
+                      : 'bg-[var(--success)]'
+                  }`}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* Quick Info */}
+          <Card>
+            <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Quick Info</h3>
+            <div className="space-y-2 text-sm">
+              <div>
+                <p className="text-xs text-[var(--text-muted)]">Headline</p>
+                <EditableField
+                  value={profile.headline}
+                  onSave={async (val) => {
+                    await updateCandidateProfileMutation.mutateAsync({ headline: val });
+                  }}
+                  type="text"
+                  maxLength={200}
+                  placeholder="No headline set"
+                  className="font-medium"
+                />
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-muted)]">Company</p>
+                <EditableField
+                  value={profile.currentCompany}
+                  onSave={async (val) => {
+                    await updateCandidateProfileMutation.mutateAsync({ currentCompany: val });
+                  }}
+                  type="text"
+                  maxLength={200}
+                  placeholder="No company set"
+                />
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-muted)]">Role</p>
+                <EditableField
+                  value={profile.currentRole}
+                  onSave={async (val) => {
+                    await updateCandidateProfileMutation.mutateAsync({ currentRole: val });
+                  }}
+                  type="text"
+                  maxLength={200}
+                  placeholder="No role set"
+                />
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-muted)]">Experience</p>
+                <EditableField
+                  value={profile.experienceYears}
+                  onSave={async (val) => {
+                    await updateCandidateProfileMutation.mutateAsync({ experienceYears: val });
+                  }}
+                  type="number"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-muted)]">Expected Salary</p>
+                <EditableField
+                  value={profile.expectedSalary}
+                  onSave={async (val) => {
+                    await updateCandidateProfileMutation.mutateAsync({ expectedSalary: val });
+                  }}
+                  type="number"
+                  placeholder="Not specified"
+                />
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-muted)]">Notice Period (days)</p>
+                <EditableField
+                  value={profile.noticePeriod}
+                  onSave={async (val) => {
+                    await updateCandidateProfileMutation.mutateAsync({ noticePeriod: val });
+                  }}
+                  type="number"
+                  placeholder="Not specified"
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* Contact */}
+          {(profile.phone || profile.alternatePhone || profile.alternateEmail || profile.currentLocation) && (
+            <Card>
+              <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Contact</h3>
+              <div className="space-y-2 text-sm">
+                {profile.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                    <span className="text-[var(--text)]">{profile.phone}</span>
+                  </div>
+                )}
+                {profile.alternatePhone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                    <span className="text-[var(--text)]">{profile.alternatePhone}</span>
+                  </div>
+                )}
+                {profile.alternateEmail && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                    <span className="text-[var(--text)]">{profile.alternateEmail}</span>
+                  </div>
+                )}
+                {profile.currentLocation && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                    <span className="text-[var(--text)]">{profile.currentLocation}</span>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* Work Preferences */}
+          {((profile.preferredJobTypes?.length ?? 0) > 0 || (profile.preferredWorkModes?.length ?? 0) > 0) && (
+            <Card>
+              <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Work Preferences</h3>
+              <div className="space-y-2">
+                {(profile.preferredJobTypes?.length ?? 0) > 0 && (
+                  <div>
+                    <p className="mb-1 text-xs text-[var(--text-muted)]">Job Types</p>
+                    <div className="flex flex-wrap gap-1">
+                      {profile.preferredJobTypes!.map((type, i) => (
+                        <Badge key={i} variant="neutral" size="sm">
+                          {type}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(profile.preferredWorkModes?.length ?? 0) > 0 && (
+                  <div>
+                    <p className="mb-1 text-xs text-[var(--text-muted)]">Work Modes</p>
+                    <div className="flex flex-wrap gap-1">
+                      {profile.preferredWorkModes!.map((mode, i) => (
+                        <Badge key={i} variant="neutral" size="sm">
+                          {mode}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* Additional Info */}
+          {(profile.visaStatus || profile.workPermitStatus || profile.passportNumber || profile.drivingLicenseType || profile.ownVehicle !== undefined || profile.isPwD || profile.disabilityType || profile.veteranStatus || profile.blockedCompanies?.length > 0) && (
+            <Card>
+              <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Additional Info</h3>
+              <div className="space-y-2 text-sm">
+                {profile.visaStatus && (
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">Visa Status</p>
+                    <Badge variant="neutral" size="sm">{profile.visaStatus}</Badge>
+                  </div>
+                )}
+                {profile.workPermitStatus && (
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">Work Permit</p>
+                    <Badge variant="neutral" size="sm">{profile.workPermitStatus}</Badge>
+                  </div>
+                )}
+                {profile.passportNumber && (
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">Passport</p>
+                    <p className="text-[var(--text)]">XXX-XXXX-{profile.passportNumber.slice(-4)}</p>
+                  </div>
+                )}
+                {profile.drivingLicenseType && (
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">Driving License</p>
+                    <p className="text-[var(--text)]">{profile.drivingLicenseType}</p>
+                  </div>
+                )}
+                {profile.ownVehicle !== undefined && (
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">Own Vehicle</p>
+                    <Badge variant={profile.ownVehicle ? 'success' : 'neutral'} size="sm">
+                      {profile.ownVehicle ? 'Yes' : 'No'}
+                    </Badge>
+                  </div>
+                )}
+                {profile.isPwD && (
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">PwD Status</p>
+                    <Badge variant="info" size="sm">Person with Disability</Badge>
+                    {profile.disabilityType && <p className="mt-1 text-xs text-[var(--text)]">{profile.disabilityType}</p>}
+                    {profile.disabilityPercentage && <p className="text-xs text-[var(--text-muted)]">{profile.disabilityPercentage}%</p>}
+                  </div>
+                )}
+                {profile.veteranStatus && (
+                  <div>
+                    <p className="text-xs text-[var(--text-muted)]">Veteran Status</p>
+                    <Badge variant="success" size="sm">{profile.veteranStatus}</Badge>
+                  </div>
+                )}
+                {profile.blockedCompanies?.length > 0 && (
+                  <div>
+                    <p className="mb-1 text-xs text-[var(--text-muted)]">Blocked Companies</p>
+                    <div className="flex flex-wrap gap-1">
+                      {profile.blockedCompanies.map((company: string, i: number) => (
+                        <Badge key={i} variant="error" size="sm">
+                          {company}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Main Content */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Resume */}
+          {profile.resume && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <FileText className="h-5 w-5" />
+                Resume
+              </h3>
+              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] p-3">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-8 w-8 text-primary" />
+                  <div>
+                    <p className="font-medium text-[var(--text)]">{profile.resume.split('/').pop()}</p>
+                    <p className="text-xs text-[var(--text-muted)]">Uploaded resume</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Download className="h-4 w-4" />}
+                  onClick={() => window.open(profile.resume!, '_blank')}
+                >
+                  Download
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* Skills */}
+          {profile.skills?.length > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Code className="h-5 w-5" />
+                Skills
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {profile.skills.map((skill: string, i: number) => (
+                  <Badge key={i} variant="info" size="sm">
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Languages */}
+          {profile.languages?.length > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Languages className="h-5 w-5" />
+                Languages
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {profile.languages.map((lang: string, i: number) => (
+                  <Badge key={i} variant="info" size="sm">
+                    {lang}
+                  </Badge>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Education */}
+          {(profile.education?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <GraduationCap className="h-5 w-5" />
+                Education
+              </h3>
+              <div className="space-y-4 border-l-2 border-[var(--border)] pl-4">
+                {profile.education!.map((edu, i) => (
+                  <div key={i} className="relative">
+                    <div className="absolute -left-[1.3rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white" />
+                    <p className="font-semibold text-[var(--text)]">{edu.institution}</p>
+                    <p className="text-sm text-[var(--text)]">
+                      {edu.degree} {edu.fieldOfStudy && `in ${edu.fieldOfStudy}`}
+                    </p>
+                    {(edu.startDate || edu.endDate) && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {edu.startDate} - {edu.endDate || 'Present'}
+                      </p>
+                    )}
+                    {edu.grade && <p className="text-sm text-[var(--text-muted)]">Grade: {edu.grade}</p>}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Experience */}
+          {(profile.experience?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Briefcase className="h-5 w-5" />
+                Experience
+              </h3>
+              <div className="space-y-4 border-l-2 border-[var(--border)] pl-4">
+                {profile.experience!.map((exp, i) => (
+                  <div key={i} className="relative">
+                    <div className="absolute -left-[1.3rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white" />
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-semibold text-[var(--text)]">{exp.company}</p>
+                        <p className="text-sm text-[var(--text)]">{exp.role}</p>
+                      </div>
+                      {exp.isCurrent && (
+                        <Badge variant="success" size="sm">
+                          Current
+                        </Badge>
+                      )}
+                    </div>
+                    {(exp.startDate || exp.endDate) && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {exp.startDate} - {exp.endDate || 'Present'}
+                      </p>
+                    )}
+                    {exp.description && <p className="mt-2 text-sm text-[var(--text-muted)]">{exp.description}</p>}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Certifications */}
+          {(profile.certifications?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Award className="h-5 w-5" />
+                Certifications
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {profile.certifications!.map((cert, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                    <p className="font-medium text-[var(--text)]">{cert.name}</p>
+                    {cert.issuer && <p className="text-sm text-[var(--text-muted)]">{cert.issuer}</p>}
+                    {cert.issueDate && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Issued: {cert.issueDate}
+                        {cert.expiryDate && ` | Expires: ${cert.expiryDate}`}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Projects */}
+          {(profile.projects?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <FolderOpen className="h-5 w-5" />
+                Projects
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {profile.projects!.map((project, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                    <p className="font-medium text-[var(--text)]">{project.name}</p>
+                    {project.description && (
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{project.description}</p>
+                    )}
+                    {project.url && (
+                      <a
+                        href={project.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        View Project <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* IT Skills */}
+          {(profile.itSkills?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <FileCode className="h-5 w-5" />
+                IT Skills
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Technology</th>
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Version</th>
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Proficiency</th>
+                      <th className="pb-2 text-right font-medium text-[var(--text-muted)]">Years</th>
+                      <th className="pb-2 text-right font-medium text-[var(--text-muted)]">Last Used</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profile.itSkills!.map((skill, i) => (
+                      <tr key={i} className="border-b border-[var(--border)] last:border-0">
+                        <td className="py-2 text-[var(--text)]">{skill.technology}</td>
+                        <td className="py-2 text-[var(--text-muted)]">{skill.version || '—'}</td>
+                        <td className="py-2">
+                          <Badge variant="info" size="sm">{skill.proficiency}</Badge>
+                        </td>
+                        <td className="py-2 text-right text-[var(--text)]">{skill.experienceYears || '—'}</td>
+                        <td className="py-2 text-right text-[var(--text-muted)]">{skill.lastUsed || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+
+          {/* Skills with Proficiency */}
+          {(profile.skillsWithProficiency?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Star className="h-5 w-5" />
+                Skills with Proficiency
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Skill</th>
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Proficiency</th>
+                      <th className="pb-2 text-right font-medium text-[var(--text-muted)]">Years</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profile.skillsWithProficiency!.map((skill, i) => (
+                      <tr key={i} className="border-b border-[var(--border)] last:border-0">
+                        <td className="py-2 text-[var(--text)]">{skill.skill}</td>
+                        <td className="py-2">
+                          <Badge
+                            variant={skill.proficiency === 'EXPERT' ? 'success' : skill.proficiency === 'ADVANCED' ? 'info' : 'neutral'}
+                            size="sm"
+                          >
+                            {skill.proficiency}
+                          </Badge>
+                        </td>
+                        <td className="py-2 text-right text-[var(--text)]">{skill.years || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+
+          {/* Languages */}
+          {profile.languages?.length > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Languages className="h-5 w-5" />
+                Languages
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {profile.languages.map((lang: string, i: number) => (
+                  <Badge key={i} variant="neutral" size="sm">
+                    {lang}
+                  </Badge>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Language Proficiency */}
+          {(profile.languageProficiency?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Languages className="h-5 w-5" />
+                Language Proficiency
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Language</th>
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Proficiency</th>
+                      <th className="pb-2 text-center font-medium text-[var(--text-muted)]">Read</th>
+                      <th className="pb-2 text-center font-medium text-[var(--text-muted)]">Write</th>
+                      <th className="pb-2 text-center font-medium text-[var(--text-muted)]">Speak</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profile.languageProficiency!.map((lang, i) => (
+                      <tr key={i} className="border-b border-[var(--border)] last:border-0">
+                        <td className="py-2 text-[var(--text)]">{lang.language}</td>
+                        <td className="py-2">
+                          <Badge variant="info" size="sm">{lang.proficiency}</Badge>
+                        </td>
+                        <td className="py-2 text-center">{lang.read ? '✓' : '—'}</td>
+                        <td className="py-2 text-center">{lang.write ? '✓' : '—'}</td>
+                        <td className="py-2 text-center">{lang.speak ? '✓' : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+
+          {/* Publications */}
+          {(profile.publications?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <BookOpen className="h-5 w-5" />
+                Publications
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {profile.publications!.map((pub, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                    <p className="font-medium text-[var(--text)]">{pub.title}</p>
+                    {pub.publisher && <p className="mt-1 text-sm text-[var(--text-muted)]">{pub.publisher}</p>}
+                    {pub.publicationDate && (
+                      <p className="text-xs text-[var(--text-muted)]">Published: {pub.publicationDate}</p>
+                    )}
+                    {pub.description && (
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">{pub.description}</p>
+                    )}
+                    {pub.authors && (
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">Authors: {pub.authors}</p>
+                    )}
+                    {pub.url && (
+                      <a
+                        href={pub.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        View Publication <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Patents */}
+          {(profile.patents?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Award className="h-5 w-5" />
+                Patents
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {profile.patents!.map((patent, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                    <div className="flex items-start justify-between">
+                      <p className="font-medium text-[var(--text)]">{patent.title}</p>
+                      {patent.status && (
+                        <Badge variant={patent.status === 'GRANTED' ? 'success' : 'warning'} size="sm">
+                          {patent.status}
+                        </Badge>
+                      )}
+                    </div>
+                    {patent.patentOffice && <p className="mt-1 text-sm text-[var(--text-muted)]">{patent.patentOffice}</p>}
+                    {patent.patentNumber && (
+                      <p className="text-xs text-[var(--text-muted)]">Patent #: {patent.patentNumber}</p>
+                    )}
+                    {(patent.filingDate || patent.issueDate) && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {patent.filingDate && `Filed: ${patent.filingDate}`}
+                        {patent.issueDate && ` | Issued: ${patent.issueDate}`}
+                      </p>
+                    )}
+                    {patent.description && (
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">{patent.description}</p>
+                    )}
+                    {patent.inventors && (
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">Inventors: {patent.inventors}</p>
+                    )}
+                    {patent.url && (
+                      <a
+                        href={patent.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        View Patent <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Awards */}
+          {(profile.awards?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Award className="h-5 w-5" />
+                Awards & Honors
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {profile.awards!.map((award, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                    <p className="font-medium text-[var(--text)]">{award.title}</p>
+                    {award.issuer && <p className="mt-1 text-sm text-[var(--text-muted)]">{award.issuer}</p>}
+                    {award.date && <p className="text-xs text-[var(--text-muted)]">Awarded: {award.date}</p>}
+                    {award.description && (
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">{award.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Courses */}
+          {(profile.courses?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <BookOpen className="h-5 w-5" />
+                Courses & Training
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {profile.courses!.map((course, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                    <p className="font-medium text-[var(--text)]">{course.name}</p>
+                    {course.provider && <p className="mt-1 text-sm text-[var(--text-muted)]">{course.provider}</p>}
+                    {course.completionDate && (
+                      <p className="text-xs text-[var(--text-muted)]">Completed: {course.completionDate}</p>
+                    )}
+                    {course.associatedWith && (
+                      <p className="text-xs text-[var(--text-muted)]">Associated: {course.associatedWith}</p>
+                    )}
+                    {course.url && (
+                      <a
+                        href={course.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        View Certificate <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Test Scores */}
+          {(profile.testScores?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Star className="h-5 w-5" />
+                Test Scores
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {profile.testScores!.map((test, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                    <div className="flex items-start justify-between">
+                      <p className="font-medium text-[var(--text)]">{test.testName}</p>
+                      {test.score && (
+                        <Badge variant="success" size="sm">
+                          {test.score}
+                        </Badge>
+                      )}
+                    </div>
+                    {test.dateOfExam && (
+                      <p className="text-xs text-[var(--text-muted)]">Taken: {test.dateOfExam}</p>
+                    )}
+                    {test.associatedWith && (
+                      <p className="text-xs text-[var(--text-muted)]">Associated: {test.associatedWith}</p>
+                    )}
+                    {test.description && (
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">{test.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Volunteer Experience */}
+          {(profile.volunteerExperience?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Heart className="h-5 w-5" />
+                Volunteer Experience
+              </h3>
+              <div className="space-y-4 border-l-2 border-[var(--border)] pl-4">
+                {profile.volunteerExperience!.map((vol, i) => (
+                  <div key={i} className="relative">
+                    <div className="absolute -left-[1.3rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white" />
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-semibold text-[var(--text)]">{vol.organization}</p>
+                        <p className="text-sm text-[var(--text)]">{vol.role}</p>
+                      </div>
+                      {vol.isCurrent && (
+                        <Badge variant="success" size="sm">
+                          Current
+                        </Badge>
+                      )}
+                    </div>
+                    {vol.cause && <p className="text-sm text-[var(--text-muted)]">Cause: {vol.cause}</p>}
+                    {(vol.startDate || vol.endDate) && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {vol.startDate} - {vol.endDate || 'Present'}
+                      </p>
+                    )}
+                    {vol.description && <p className="mt-2 text-sm text-[var(--text-muted)]">{vol.description}</p>}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Professional Memberships */}
+          {(profile.professionalMemberships?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Users className="h-5 w-5" />
+                Professional Memberships
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {profile.professionalMemberships!.map((membership, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                    <p className="font-medium text-[var(--text)]">{membership.organization}</p>
+                    {membership.role && <p className="mt-1 text-sm text-[var(--text-muted)]">{membership.role}</p>}
+                    {(membership.startDate || membership.endDate) && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {membership.startDate} - {membership.endDate || 'Present'}
+                      </p>
+                    )}
+                    {membership.membershipId && (
+                      <p className="text-xs text-[var(--text-muted)]">ID: {membership.membershipId}</p>
+                    )}
+                    {membership.description && (
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">{membership.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* References */}
+          {(profile.references?.length ?? 0) > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Users className="h-5 w-5" />
+                References
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {profile.references!.map((refEntry, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                    <p className="font-medium text-[var(--text)]">{refEntry.name}</p>
+                    {refEntry.designation && <p className="text-sm text-[var(--text-muted)]">{refEntry.designation}</p>}
+                    {refEntry.organization && <p className="text-sm text-[var(--text-muted)]">{refEntry.organization}</p>}
+                    {refEntry.email && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Email: {refEntry.email.substring(0, 3)}***{refEntry.email.substring(refEntry.email.indexOf('@'))}
+                      </p>
+                    )}
+                    {refEntry.phone && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Phone: {refEntry.phone.substring(0, 4)}****{refEntry.phone.substring(refEntry.phone.length - 3)}
+                      </p>
+                    )}
+                    {refEntry.relationship && (
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">Relationship: {refEntry.relationship}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Interests */}
+          {profile.interests?.length > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Heart className="h-5 w-5" />
+                Interests
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {profile.interests.map((interest: string, i: number) => (
+                  <Badge key={i} variant="neutral" size="sm">
+                    {interest}
+                  </Badge>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Hobbies */}
+          {profile.hobbies?.length > 0 && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Sparkles className="h-5 w-5" />
+                Hobbies
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {profile.hobbies.map((hobby: string, i: number) => (
+                  <Badge key={i} variant="neutral" size="sm">
+                    {hobby}
+                  </Badge>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Career Break */}
+          {profile.hasCareerBreak && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Clock className="h-5 w-5" />
+                Career Break
+              </h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="warning">Has Career Break</Badge>
+                  {profile.careerBreakType && (
+                    <Badge variant="neutral">{profile.careerBreakType}</Badge>
+                  )}
+                </div>
+                {profile.careerBreakReason && (
+                  <p className="text-sm text-[var(--text-muted)]">{profile.careerBreakReason}</p>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* Social Profiles */}
+          {(profile.githubUrl || profile.linkedinUrl || profile.portfolioUrl) && (
+            <Card>
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+                <Globe className="h-5 w-5" />
+                Social Profiles
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {profile.githubUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Github className="h-4 w-4" />}
+                    onClick={() => window.open(profile.githubUrl!, '_blank')}
+                  >
+                    GitHub
+                  </Button>
+                )}
+                {profile.linkedinUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Linkedin className="h-4 w-4" />}
+                    onClick={() => window.open(profile.linkedinUrl!, '_blank')}
+                  >
+                    LinkedIn
+                  </Button>
+                )}
+                {profile.portfolioUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Globe className="h-4 w-4" />}
+                    onClick={() => window.open(profile.portfolioUrl!, '_blank')}
+                  >
+                    Portfolio
+                  </Button>
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Employer Profile Viewer Component
+  const EmployerProfileViewer = ({ profile }: { profile: CompanyProfile }) => {
+    return (
+      <div className="space-y-6">
+        {/* Company Overview */}
+        <Card>
+          {/* Cover Image Banner */}
+          {profile.coverImage && (
+            <div className="mb-6 -mx-6 -mt-6 h-48 w-[calc(100%+3rem)] overflow-hidden rounded-t-lg">
+              <img
+                src={profile.coverImage}
+                alt={`${profile.companyName} cover`}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          )}
+          <div className="flex gap-6">
+            {profile.logo && (
+              <div className="h-32 w-32 shrink-0 overflow-hidden rounded-lg border border-[var(--border)]">
+                <img src={profile.logo} alt={profile.companyName} className="h-full w-full object-cover" />
+              </div>
+            )}
+            <div className="flex-1">
+              <div className="flex items-start justify-between">
+                <div className="w-full">
+                  <EditableField
+                    value={profile.companyName}
+                    onSave={async (val) => {
+                      await updateCompanyProfileMutation.mutateAsync({ companyName: val });
+                    }}
+                    type="text"
+                    maxLength={200}
+                    placeholder="Company name"
+                    className="text-2xl font-bold"
+                  />
+                  <div className="mt-1">
+                    <EditableField
+                      value={profile.tagline}
+                      onSave={async (val) => {
+                        await updateCompanyProfileMutation.mutateAsync({ tagline: val });
+                      }}
+                      type="text"
+                      maxLength={200}
+                      placeholder="No tagline"
+                      className="text-[var(--text-muted)]"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {profile.companyType && (
+                  <Badge variant="info" size="sm">
+                    {profile.companyType}
+                  </Badge>
+                )}
+                {profile.industry && (
+                  <Badge variant="neutral" size="sm">
+                    {profile.industry}
+                  </Badge>
+                )}
+                {profile.companySize && (
+                  <Badge variant="neutral" size="sm">
+                    {profile.companySize}
+                  </Badge>
+                )}
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {profile.website && (
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-[var(--text-muted)]" />
+                    <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                      Website
+                    </a>
+                  </div>
+                )}
+                {profile.foundedYear && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-[var(--text-muted)]" />
+                    <span className="text-sm text-[var(--text)]">Founded {profile.foundedYear}</span>
+                  </div>
+                )}
+                {profile.employeeCount && (
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-[var(--text-muted)]" />
+                    <span className="text-sm text-[var(--text)]">{profile.employeeCount} employees</span>
+                  </div>
+                )}
+                {profile.headquarters && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-[var(--text-muted)]" />
+                    <span className="text-sm text-[var(--text)]">{profile.headquarters}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Description */}
+        <Card>
+          <h3 className="mb-4 text-lg font-semibold text-[var(--text)]">About</h3>
+          <EditableField
+            value={profile.description}
+            onSave={async (val) => {
+              await updateCompanyProfileMutation.mutateAsync({ description: val });
+            }}
+            type="textarea"
+            maxLength={5000}
+            placeholder="No description"
+            className="text-[var(--text-muted)]"
+          />
+        </Card>
+
+        {/* Mission & Vision */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Target className="h-5 w-5" />
+              Mission
+            </h3>
+            <EditableField
+              value={profile.mission}
+              onSave={async (val) => {
+                await updateCompanyProfileMutation.mutateAsync({ mission: val });
+              }}
+              type="textarea"
+              maxLength={1000}
+              placeholder="No mission statement"
+              className="text-[var(--text-muted)]"
+            />
+          </Card>
+          <Card>
+            <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Lightbulb className="h-5 w-5" />
+              Vision
+            </h3>
+            <EditableField
+              value={profile.vision}
+              onSave={async (val) => {
+                await updateCompanyProfileMutation.mutateAsync({ vision: val });
+              }}
+              type="textarea"
+              maxLength={1000}
+              placeholder="No vision statement"
+              className="text-[var(--text-muted)]"
+            />
+          </Card>
+        </div>
+
+        {/* Culture & Values */}
+        {(profile.companyCulture || profile.coreValues?.length > 0) && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Sparkles className="h-5 w-5" />
+              Culture & Values
+            </h3>
+            {profile.companyCulture && (
+              <p className="mb-4 whitespace-pre-line text-[var(--text-muted)]">{profile.companyCulture}</p>
+            )}
+            {profile.coreValues?.length > 0 && (
+              <div>
+                <p className="mb-2 text-sm font-medium text-[var(--text)]">Core Values</p>
+                <div className="flex flex-wrap gap-2">
+                  {profile.coreValues.map((value: string, i: number) => (
+                    <Badge key={i} variant="success" size="sm">
+                      {value}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Benefits & Perks */}
+        {profile.benefits?.length > 0 && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Star className="h-5 w-5" />
+              Benefits & Perks
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {profile.benefits.map((benefit: string, i: number) => (
+                <Badge key={i} variant="info" size="sm">
+                  {benefit}
+                </Badge>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Tech Stack */}
+        {profile.techStack?.length > 0 && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <FileCode className="h-5 w-5" />
+              Tech Stack
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {profile.techStack.map((tech: string, i: number) => (
+                <Badge key={i} variant="neutral" size="sm">
+                  {tech}
+                </Badge>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Funding */}
+        {(profile.fundingStage || profile.totalFundingRaised) && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <TrendingUp className="h-5 w-5" />
+              Funding & Growth
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {profile.fundingStage && (
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">Funding Stage</p>
+                  <Badge variant="info">{profile.fundingStage}</Badge>
+                </div>
+              )}
+              {profile.totalFundingRaised && (
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">Total Funding</p>
+                  <p className="font-medium text-[var(--text)]">{profile.totalFundingRaised}</p>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* Products & Services */}
+        {profile.productsServices?.length > 0 && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Target className="h-5 w-5" />
+              Products & Services
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {profile.productsServices.map((product: string, i: number) => (
+                <Badge key={i} variant="info" size="sm">
+                  {product}
+                </Badge>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Interview Process */}
+        {profile.interviewProcess && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Users className="h-5 w-5" />
+              Interview Process
+            </h3>
+            <p className="whitespace-pre-line text-[var(--text-muted)]">{profile.interviewProcess}</p>
+          </Card>
+        )}
+
+        {/* Leadership Team */}
+        {(profile.leadershipTeam?.length ?? 0) > 0 && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Users className="h-5 w-5" />
+              Leadership Team
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {profile.leadershipTeam!.map((leader, i) => (
+                <div key={i} className="text-center">
+                  {leader.photo && (
+                    <div className="mx-auto mb-3 h-20 w-20 overflow-hidden rounded-full">
+                      <img src={leader.photo} alt={leader.name} className="h-full w-full object-cover" />
+                    </div>
+                  )}
+                  <p className="font-medium text-[var(--text)]">{leader.name}</p>
+                  {leader.designation && (
+                    <p className="text-sm text-[var(--text-muted)]">{leader.designation}</p>
+                  )}
+                  {leader.linkedinUrl && (
+                    <a
+                      href={leader.linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      LinkedIn <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                  {leader.bio && (
+                    <details className="mt-2 text-left">
+                      <summary className="cursor-pointer text-xs text-[var(--text-muted)]">View Bio</summary>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">{leader.bio}</p>
+                    </details>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Employee Testimonials */}
+        {(profile.employeeTestimonials?.length ?? 0) > 0 && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <MessageCircle className="h-5 w-5" />
+              Employee Testimonials
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {profile.employeeTestimonials!.map((testimonial, i) => (
+                <div key={i} className="rounded-lg border border-[var(--border)] p-4">
+                  {testimonial.photo && (
+                    <div className="mb-3 h-15 w-15 overflow-hidden rounded-full">
+                      <img src={testimonial.photo} alt={testimonial.authorName} className="h-full w-full object-cover" />
+                    </div>
+                  )}
+                  <p className="italic text-[var(--text-muted)]">&quot;{testimonial.quote}&quot;</p>
+                  <div className="mt-2">
+                    <p className="text-sm font-medium text-[var(--text)]">{testimonial.authorName}</p>
+                    {testimonial.authorDesignation && (
+                      <p className="text-xs text-[var(--text-muted)]">{testimonial.authorDesignation}</p>
+                    )}
+                    {testimonial.authorDepartment && (
+                      <p className="text-xs text-[var(--text-muted)]">{testimonial.authorDepartment}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Awards & Recognitions */}
+        {(profile.awards?.length ?? 0) > 0 && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Award className="h-5 w-5" />
+              Awards & Recognitions
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {profile.awards!.map((award, i) => (
+                <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                  <p className="font-medium text-[var(--text)]">{award.title}</p>
+                  {award.year && <p className="text-sm text-[var(--text-muted)]">Year: {award.year}</p>}
+                  {award.issuingOrg && (
+                    <p className="text-xs text-[var(--text-muted)]">Issuing Org: {award.issuingOrg}</p>
+                  )}
+                  {award.description && (
+                    <p className="mt-2 text-sm text-[var(--text-muted)]">{award.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Workplace Policies */}
+        {profile.workplacePolicies && Object.keys(profile.workplacePolicies).length > 0 && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Shield className="h-5 w-5" />
+              Workplace Policies
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {Object.entries(profile.workplacePolicies).map(([key, value], i) => (
+                <div key={i}>
+                  <p className="font-medium text-[var(--text)]">{key}</p>
+                  <p className="text-sm text-[var(--text-muted)]">{value}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Office Photos */}
+        {(profile.officePhotos?.length ?? 0) > 0 && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <ImageIcon className="h-5 w-5" />
+              Office Photos
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {profile.officePhotos!.map((photo, i) => (
+                <div key={i} className="aspect-video overflow-hidden rounded-lg">
+                  <img src={photo.url} alt={photo.caption || `Office ${i + 1}`} className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Locations */}
+        {(profile.headquarters || (profile.additionalLocations?.length ?? 0) > 0) && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <MapPin className="h-5 w-5" />
+              Locations
+            </h3>
+            {profile.headquarters && (
+              <div className="mb-4 rounded-lg border border-[var(--border)] p-3">
+                <p className="mb-1 text-xs font-medium text-[var(--text-muted)]">Headquarters</p>
+                <p className="text-sm text-[var(--text)]">{profile.headquarters}</p>
+                {(profile.latitude && profile.longitude) && (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Coordinates: {profile.latitude}, {profile.longitude}
+                  </p>
+                )}
+              </div>
+            )}
+            {(profile.additionalLocations?.length ?? 0) > 0 && (
+              <div>
+                <p className="mb-2 text-sm font-medium text-[var(--text)]">Additional Locations</p>
+                <div className="flex flex-wrap gap-2">
+                  {profile.additionalLocations!.map((location, i) => (
+                    <Badge key={i} variant="neutral" size="sm">
+                      {location}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Contact Information */}
+        {(profile.contactEmail || profile.contactPhone || profile.contactPersonName) && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Phone className="h-5 w-5" />
+              Contact Information
+            </h3>
+            <div className="space-y-2 text-sm">
+              {profile.contactEmail && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-[var(--text-muted)]" />
+                  <span className="text-[var(--text)]">{profile.contactEmail}</span>
+                </div>
+              )}
+              {profile.contactPhone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-[var(--text-muted)]" />
+                  <span className="text-[var(--text)]">{profile.contactPhone}</span>
+                </div>
+              )}
+              {profile.contactPersonName && (
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">Contact Person</p>
+                  <p className="text-[var(--text)]">{profile.contactPersonName}</p>
+                  {profile.contactPersonDesignation && (
+                    <p className="text-xs text-[var(--text-muted)]">{profile.contactPersonDesignation}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* Verification Documents */}
+        {(profile.gstNumber || profile.cinNumber || profile.panNumber) && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <ShieldCheck className="h-5 w-5" />
+              Verification Documents
+            </h3>
+            <div className="space-y-2 text-sm">
+              {profile.gstNumber && (
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">GST Number</p>
+                  <p className="text-[var(--text)]">GST-XXXX-XXXX-{profile.gstNumber.slice(-4)}</p>
+                </div>
+              )}
+              {profile.cinNumber && (
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">CIN Number</p>
+                  <p className="text-[var(--text)]">CIN-XXXX-XXXX-{profile.cinNumber.slice(-4)}</p>
+                </div>
+              )}
+              {profile.panNumber && (
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">PAN Number</p>
+                  <p className="text-[var(--text)]">PAN-XXXX-{profile.panNumber.slice(-4)}</p>
+                </div>
+              )}
+              {profile.verificationStatus && (
+                <div className="mt-3">
+                  <Badge
+                    variant={
+                      profile.verificationStatus === 'VERIFIED'
+                        ? 'success'
+                        : profile.verificationStatus === 'PENDING'
+                        ? 'warning'
+                        : 'error'
+                    }
+                  >
+                    {profile.verificationStatus}
+                  </Badge>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* Specialties */}
+        {profile.specialties?.length > 0 && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Sparkles className="h-5 w-5" />
+              Specialties
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {profile.specialties.map((specialty: string, i: number) => (
+                <Badge key={i} variant="info" size="sm">
+                  {specialty}
+                </Badge>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Social Links */}
+        {(profile.linkedinUrl || profile.twitterUrl || profile.facebookUrl) && (
+          <Card>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+              <Globe className="h-5 w-5" />
+              Social Links
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {profile.linkedinUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Linkedin className="h-4 w-4" />}
+                  onClick={() => window.open(profile.linkedinUrl!, '_blank')}
+                >
+                  LinkedIn
+                </Button>
+              )}
+              {profile.twitterUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Globe className="h-4 w-4" />}
+                  onClick={() => window.open(profile.twitterUrl!, '_blank')}
+                >
+                  Twitter
+                </Button>
+              )}
+              {profile.facebookUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Globe className="h-4 w-4" />}
+                  onClick={() => window.open(profile.facebookUrl!, '_blank')}
+                >
+                  Facebook
+                </Button>
+              )}
+            </div>
+          </Card>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -527,8 +2370,16 @@ export default function SuperAdminUserDetailPage() {
               </div>
             </Card>
 
-            {/* Edit Profile */}
-            <Card
+            {/* Tabs */}
+            <Tabs tabs={tabItems} activeTab={activeTab} onChange={(key) => setActiveTab(key as typeof activeTab)} variant="underline" />
+
+            {/* Tab Content */}
+            <div className="space-y-6">
+              {/* Account Tab */}
+              {activeTab === 'account' && (
+                <>
+                  {/* Edit Profile */}
+                  <Card
               header={
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-[var(--text)]">Edit Profile</h2>
@@ -554,44 +2405,54 @@ export default function SuperAdminUserDetailPage() {
                       onChange={(e) => setEditLastName(e.target.value)}
                     />
                   </div>
-                  <Input
-                    label="Email"
-                    type="email"
-                    value={editEmail}
-                    onChange={(e) => setEditEmail(e.target.value)}
-                  />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Input
-                      label="Mobile Number"
-                      placeholder="+919876543210"
-                      value={editMobileNumber}
-                      onChange={(e) => setEditMobileNumber(e.target.value)}
-                    />
-                    <Input
-                      label="WhatsApp Number"
-                      placeholder="+919876543210"
-                      value={editWhatsappNumber}
-                      onChange={(e) => setEditWhatsappNumber(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Switch
-                      label="Mobile Verified"
-                      description="Mark mobile number as verified (trusted bypass)"
-                      checked={editIsMobileVerified}
-                      onChange={(e) => setEditIsMobileVerified(e.target.checked)}
-                      disabled={!editMobileNumber.trim()}
-                    />
-                    <Switch
-                      label="WhatsApp Verified"
-                      description="Mark WhatsApp number as verified (trusted bypass)"
-                      checked={editIsWhatsappVerified}
-                      onChange={(e) => setEditIsWhatsappVerified(e.target.checked)}
-                      disabled={!editWhatsappNumber.trim()}
-                    />
-                  </div>
+                  {/* Email/Mobile/WhatsApp fields only for non-admin targets */}
+                  {!isAdminTarget && (
+                    <>
+                      <Input
+                        label="Email"
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                      />
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Input
+                          label="Mobile Number"
+                          placeholder="+919876543210"
+                          value={editMobileNumber}
+                          onChange={(e) => setEditMobileNumber(e.target.value)}
+                        />
+                        <Input
+                          label="WhatsApp Number"
+                          placeholder="+919876543210"
+                          value={editWhatsappNumber}
+                          onChange={(e) => setEditWhatsappNumber(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Switch
+                          label="Mobile Verified"
+                          description="Mark mobile number as verified (trusted bypass)"
+                          checked={editIsMobileVerified}
+                          onChange={(e) => setEditIsMobileVerified(e.target.checked)}
+                          disabled={!editMobileNumber.trim()}
+                        />
+                        <Switch
+                          label="WhatsApp Verified"
+                          description="Mark WhatsApp number as verified (trusted bypass)"
+                          checked={editIsWhatsappVerified}
+                          onChange={(e) => setEditIsWhatsappVerified(e.target.checked)}
+                          disabled={!editWhatsappNumber.trim()}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {isAdminTarget && (
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Email, mobile, and WhatsApp are managed separately below with OTP verification.
+                    </p>
+                  )}
                   <div className="flex gap-3">
-                    <Button onClick={handleSaveProfile} isLoading={updateProfileMutation.isPending}>
+                    <Button onClick={handleSaveProfile} isLoading={updateProfileMutation.isPending} disabled={!hasUnsavedChanges}>
                       Save Changes
                     </Button>
                     <Button variant="outline" onClick={() => setIsEditing(false)}>
@@ -611,39 +2472,64 @@ export default function SuperAdminUserDetailPage() {
                     <p className="text-xs text-[var(--text-muted)]">Last Name</p>
                     <p className="text-sm font-medium text-[var(--text)]">{user.lastName || '—'}</p>
                   </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-muted)]">Email</p>
-                    <p className="text-sm font-medium text-[var(--text)]">{user.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-muted)]">Mobile Number</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-[var(--text)]">
-                        {user.mobileNumber || '—'}
-                      </p>
-                      {user.mobileNumber && (
-                        <Badge variant={user.isMobileVerified ? 'success' : 'warning'} size="sm">
-                          {user.isMobileVerified ? 'Verified' : 'Unverified'}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-muted)]">WhatsApp Number</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-[var(--text)]">
-                        {user.whatsappNumber || '—'}
-                      </p>
-                      {user.whatsappNumber && (
-                        <Badge variant={user.isWhatsappVerified ? 'success' : 'warning'} size="sm">
-                          {user.isWhatsappVerified ? 'Verified' : 'Unverified'}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
+                  {!isAdminTarget && (
+                    <>
+                      <div>
+                        <p className="text-xs text-[var(--text-muted)]">Email</p>
+                        <p className="text-sm font-medium text-[var(--text)]">{user.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[var(--text-muted)]">Mobile Number</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-[var(--text)]">
+                            {user.mobileNumber || '—'}
+                          </p>
+                          {user.mobileNumber && (
+                            <Badge variant={user.isMobileVerified ? 'success' : 'warning'} size="sm">
+                              {user.isMobileVerified ? 'Verified' : 'Unverified'}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[var(--text-muted)]">WhatsApp Number</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-[var(--text)]">
+                            {user.whatsappNumber || '—'}
+                          </p>
+                          {user.whatsappNumber && (
+                            <Badge variant={user.isWhatsappVerified ? 'success' : 'warning'} size="sm">
+                              {user.isWhatsappVerified ? 'Verified' : 'Unverified'}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </Card>
+
+            {/* Admin Contact Management (OTP-verified) */}
+            {user.role === 'ADMIN' && (
+              <>
+                <AdminEmailSection userId={userId} user={user} invalidateUser={invalidateUser} />
+                <AdminMobileSection userId={userId} user={user} invalidateUser={invalidateUser} />
+                <AdminWhatsappSection userId={userId} user={user} invalidateUser={invalidateUser} />
+              </>
+            )}
+
+            {user.role === 'SUPER_ADMIN' && (
+              <Card>
+                <div className="flex items-center gap-3 py-4">
+                  <Shield className="h-5 w-5 text-[var(--text-muted)]" />
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Email, mobile, and WhatsApp for super admin accounts can only be managed directly
+                    in the database.
+                  </p>
+                </div>
+              </Card>
+            )}
 
             {/* Account Info */}
             <Card
@@ -663,6 +2549,11 @@ export default function SuperAdminUserDetailPage() {
                   icon={Clock}
                   label="Last Login"
                   value={user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never'}
+                />
+                <InfoItem
+                  icon={Activity}
+                  label="Last Active"
+                  value={user.lastActiveAt ? formatDate(user.lastActiveAt) : 'Never'}
                 />
                 <InfoItem
                   icon={ShieldAlert}
@@ -748,9 +2639,22 @@ export default function SuperAdminUserDetailPage() {
                           </div>
                         </div>
                       </div>
-                      <Badge variant={session.isActive ? 'success' : 'neutral'} size="sm">
-                        {session.isActive ? 'Active' : 'Expired'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={session.isActive ? 'success' : 'neutral'} size="sm">
+                          {session.isActive ? 'Active' : 'Expired'}
+                        </Badge>
+                        {session.isActive && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            isLoading={revokingSessionId === session.id}
+                            onClick={() => handleRevokeSession(session.id)}
+                            className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
+                          >
+                            Revoke
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -760,6 +2664,395 @@ export default function SuperAdminUserDetailPage() {
                 </p>
               )}
             </Card>
+                </>
+              )}
+
+              {/* Profile Tab */}
+              {activeTab === 'profile' && (
+                <>
+                  {user.role === 'CANDIDATE' && user.candidateProfile && (
+                    <CandidateProfileViewer profile={user.candidateProfile} />
+                  )}
+                  {user.role === 'EMPLOYER' && user.companyProfile && (
+                    <EmployerProfileViewer profile={user.companyProfile} />
+                  )}
+                  {(user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || (!user.candidateProfile && !user.companyProfile)) && (
+                    <Card>
+                      <div className="py-12 text-center">
+                        <User className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
+                        <p className="mt-4 text-[var(--text-muted)]">No profile data available for this role.</p>
+                      </div>
+                    </Card>
+                  )}
+                </>
+              )}
+
+              {/* Applications Tab */}
+              {activeTab === 'applications' && (
+                <>
+                  {applicationsLoading ? (
+                    <Card>
+                      <div className="space-y-3">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Skeleton key={i} variant="rect" height={48} />
+                        ))}
+                      </div>
+                    </Card>
+                  ) : applicationsData?.data?.items && applicationsData.data.items.length > 0 ? (
+                    <Card>
+                      <div className="mb-4 flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-[var(--text)]">
+                          Applications ({applicationsData.data.total})
+                        </h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-[var(--border)]">
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Applied</th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Job Title</th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Company</th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Status</th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Match</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {applicationsData.data.items.map((app) => (
+                              <tr key={app.id} className="border-b border-[var(--border)] last:border-0">
+                                <td className="py-3 text-sm text-[var(--text)]">{formatDate(app.appliedAt)}</td>
+                                <td className="py-3 text-sm font-medium text-[var(--text)]">{app.job.title}</td>
+                                <td className="py-3 text-sm text-[var(--text)]">{app.job.company.companyName}</td>
+                                <td className="py-3">
+                                  <Badge variant={app.status === 'SHORTLISTED' ? 'success' : app.status === 'REJECTED' ? 'error' : 'info'} size="sm">
+                                    {app.status}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 text-sm text-[var(--text)]">{app.matchScore ? `${app.matchScore}%` : '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {applicationsData.data.totalPages > 1 && (
+                        <div className="mt-4 flex items-center justify-between">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setApplicationsPage(p => Math.max(1, p - 1))}
+                            disabled={applicationsPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-sm text-[var(--text-muted)]">
+                            Page {applicationsPage} of {applicationsData.data.totalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setApplicationsPage(p => p + 1)}
+                            disabled={!applicationsData.data.hasMore}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      )}
+                    </Card>
+                  ) : (
+                    <Card>
+                      <div className="py-12 text-center">
+                        <Briefcase className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
+                        <p className="mt-4 text-[var(--text-muted)]">This candidate hasn&apos;t applied to any jobs yet.</p>
+                      </div>
+                    </Card>
+                  )}
+                </>
+              )}
+
+              {/* Jobs Tab */}
+              {activeTab === 'jobs' && (
+                <>
+                  {jobsLoading ? (
+                    <Card>
+                      <div className="space-y-3">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Skeleton key={i} variant="rect" height={48} />
+                        ))}
+                      </div>
+                    </Card>
+                  ) : jobsData?.data?.items && jobsData.data.items.length > 0 ? (
+                    <Card>
+                      <div className="mb-4 flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-[var(--text)]">
+                          Job Posts ({jobsData.data.total})
+                        </h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-[var(--border)]">
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Posted</th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Job Title</th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Status</th>
+                              <th className="pb-3 text-right text-sm font-medium text-[var(--text-muted)]">Applications</th>
+                              <th className="pb-3 text-right text-sm font-medium text-[var(--text-muted)]">Saved</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {jobsData.data.items.map((job) => (
+                              <tr key={job.id} className="border-b border-[var(--border)] last:border-0">
+                                <td className="py-3 text-sm text-[var(--text)]">{formatDate(job.createdAt)}</td>
+                                <td className="py-3 text-sm font-medium text-[var(--text)]">{job.title}</td>
+                                <td className="py-3">
+                                  <Badge variant={job.status === 'ACTIVE' ? 'success' : job.status === 'CLOSED' ? 'error' : 'neutral'} size="sm">
+                                    {job.status}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 text-right text-sm text-[var(--text)]">{job._applicationCount}</td>
+                                <td className="py-3 text-right text-sm text-[var(--text)]">{job._savedCount}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {jobsData.data.totalPages > 1 && (
+                        <div className="mt-4 flex items-center justify-between">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setJobsPage(p => Math.max(1, p - 1))}
+                            disabled={jobsPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-sm text-[var(--text-muted)]">
+                            Page {jobsPage} of {jobsData.data.totalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setJobsPage(p => p + 1)}
+                            disabled={!jobsData.data.hasMore}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      )}
+                    </Card>
+                  ) : (
+                    <Card>
+                      <div className="py-12 text-center">
+                        <Building2 className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
+                        <p className="mt-4 text-[var(--text-muted)]">This employer hasn&apos;t posted any jobs yet.</p>
+                      </div>
+                    </Card>
+                  )}
+                </>
+              )}
+
+              {/* Activity Tab */}
+              {activeTab === 'activity' && (
+                <>
+                  {activityLoading ? (
+                    <Card>
+                      <div className="space-y-3">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Skeleton key={i} variant="rect" height={48} />
+                        ))}
+                      </div>
+                    </Card>
+                  ) : !activityData?.data?.items || activityData.data.items.length === 0 ? (
+                    <Card>
+                      <div className="py-12 text-center">
+                        <Activity className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
+                        <p className="mt-4 text-[var(--text-muted)]">No activity found for this user.</p>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <div className="mb-4">
+                        <h3 className="text-lg font-semibold text-[var(--text)]">
+                          Activity Log ({activityData.data.total} actions)
+                        </h3>
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">Recent actions performed by this user</p>
+                      </div>
+                      <div className="space-y-3">
+                        {activityData.data.items.map((log) => (
+                          <div key={log.id} className="rounded-r-lg border border-[var(--border)] border-l-2 border-l-primary py-2 pl-4">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-[var(--text)]">{log.action}</span>
+                              <span className="text-xs text-[var(--text-muted)]">{formatDate(log.createdAt)}</span>
+                            </div>
+                            <p className="text-sm text-[var(--text-muted)]">
+                              {log.entity} {log.entityId && `(${log.entityId.substring(0, 8)}...)`}
+                            </p>
+                            {log.ipAddress && (
+                              <p className="text-xs text-[var(--text-muted)]">IP: {log.ipAddress}</p>
+                            )}
+                            {log.details && (
+                              <details className="mt-1">
+                                <summary className="cursor-pointer text-xs text-primary">View Details</summary>
+                                <pre className="mt-1 overflow-x-auto rounded bg-[var(--bg-secondary)] p-2 text-xs">
+                                  {JSON.stringify(log.details, null, 2)}
+                                </pre>
+                              </details>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {activityData.data.totalPages > 1 && (
+                        <div className="mt-4 flex items-center justify-between">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setActivityPage(p => Math.max(1, p - 1))}
+                            disabled={activityPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-sm text-[var(--text-muted)]">
+                            Page {activityPage} of {activityData.data.totalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setActivityPage(p => p + 1)}
+                            disabled={!activityData.data.hasMore}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      )}
+                    </Card>
+                  )}
+                </>
+              )}
+
+              {/* Verification Tab */}
+              {activeTab === 'verification' && (
+                <>
+                  {verificationsLoading ? (
+                    <Card>
+                      <div className="space-y-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <Skeleton key={i} variant="rect" height={80} />
+                        ))}
+                      </div>
+                    </Card>
+                  ) : verificationsData?.data?.items && verificationsData.data.items.length > 0 ? (
+                    <Card>
+                      <div className="mb-4">
+                        <h3 className="text-lg font-semibold text-[var(--text)]">
+                          Verification Requests ({verificationsData.data.total})
+                        </h3>
+                      </div>
+                      <div className="space-y-4">
+                        {verificationsData.data.items.map((verification) => (
+                          <div key={verification.id} className="rounded-lg border border-[var(--border)] p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" />
+                                  <p className="font-medium text-[var(--text)]">{verification.type}</p>
+                                  <Badge
+                                    variant={
+                                      verification.status === 'APPROVED'
+                                        ? 'success'
+                                        : verification.status === 'REJECTED'
+                                        ? 'error'
+                                        : 'warning'
+                                    }
+                                    size="sm"
+                                  >
+                                    {verification.status}
+                                  </Badge>
+                                </div>
+                                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                                  Submitted: {formatDate(verification.createdAt)}
+                                </p>
+                                {verification.reviewedAt && (
+                                  <p className="text-sm text-[var(--text-muted)]">
+                                    Reviewed: {formatDate(verification.reviewedAt)}
+                                  </p>
+                                )}
+                                {verification.adminComments && (
+                                  <p className="mt-2 text-sm text-[var(--error)]">
+                                    Admin Comments: {verification.adminComments}
+                                  </p>
+                                )}
+                              </div>
+                              {verification.status === 'PENDING' && (
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      updateVerificationMutation.mutate({
+                                        verificationId: verification.id,
+                                        status: 'APPROVED',
+                                      });
+                                    }}
+                                    isLoading={updateVerificationMutation.isPending}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => {
+                                      const reason = prompt('Reason for rejection:');
+                                      if (reason) {
+                                        updateVerificationMutation.mutate({
+                                          verificationId: verification.id,
+                                          status: 'REJECTED',
+                                          reason,
+                                        });
+                                      }
+                                    }}
+                                    isLoading={updateVerificationMutation.isPending}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {verificationsData.data.totalPages > 1 && (
+                        <div className="mt-4 flex items-center justify-between">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setVerificationsPage(p => Math.max(1, p - 1))}
+                            disabled={verificationsPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-sm text-[var(--text-muted)]">
+                            Page {verificationsPage} of {verificationsData.data.totalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setVerificationsPage(p => p + 1)}
+                            disabled={!verificationsData.data.hasMore}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      )}
+                    </Card>
+                  ) : (
+                    <Card>
+                      <div className="py-12 text-center">
+                        <ShieldCheck className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
+                        <p className="mt-4 text-[var(--text-muted)]">No verification requests found.</p>
+                      </div>
+                    </Card>
+                  )}
+                </>
+              )}
+            </div>
           </>
         ) : (
           <Card>
@@ -917,7 +3210,7 @@ export default function SuperAdminUserDetailPage() {
         <Modal
           isOpen={showResetPwModal}
           onClose={closeResetPwModal}
-          title="Reset Password"
+          title={isAdminPasswordFlow ? 'Change Admin Password' : 'Reset Password'}
           size="md"
           footer={
             <div className="flex justify-end gap-3">
@@ -925,7 +3218,11 @@ export default function SuperAdminUserDetailPage() {
                 Cancel
               </Button>
               {resetStep === 'send' ? (
-                <Button onClick={handleSendResetOtp} isLoading={isSendingOtp}>
+                <Button
+                  onClick={handleSendResetOtp}
+                  isLoading={isSendingOtp}
+                  disabled={isAdminPasswordFlow && (!resetSuperAdminPassword || !newPassword || !resetConfirmPassword)}
+                >
                   Send Verification Code
                 </Button>
               ) : (
@@ -934,29 +3231,71 @@ export default function SuperAdminUserDetailPage() {
                   onClick={() => resetPasswordMutation.mutate({ pw: newPassword, otp: resetOtp })}
                   isLoading={resetPasswordMutation.isPending}
                   disabled={
-                    newPassword.length < passwordRules.MIN_LENGTH ||
-                    resetOtp.length !== otpConfig.LENGTH
+                    isAdminPasswordFlow
+                      ? resetOtp.length !== otpConfig.LENGTH
+                      : newPassword.length < passwordRules.MIN_LENGTH ||
+                        resetOtp.length !== otpConfig.LENGTH
                   }
                 >
-                  Reset Password
+                  {isAdminPasswordFlow ? 'Confirm Password Change' : 'Reset Password'}
                 </Button>
               )}
             </div>
           }
         >
           {resetStep === 'send' ? (
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 shrink-0 text-[var(--warning)]" />
-              <p className="text-sm text-[var(--text-secondary)]">
-                A 6-digit verification code will be sent to this user&apos;s email to confirm the
-                password reset. This will revoke all their active sessions.
-              </p>
-            </div>
+            isAdminPasswordFlow ? (
+              <div className="space-y-4">
+                <div className="flex items-start gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-[var(--warning)]" />
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    A verification code will be sent to the admin&apos;s email. All their active sessions will be revoked.
+                  </p>
+                </div>
+                <Input
+                  label="Your Password (Super Admin)"
+                  type="password"
+                  value={resetSuperAdminPassword}
+                  onChange={(e) => setResetSuperAdminPassword(e.target.value)}
+                  placeholder="Enter your password to authorize"
+                  error={resetErrors.password}
+                  required
+                />
+                <Input
+                  label="New Password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder={`Min ${passwordRules.MIN_LENGTH} characters`}
+                  error={resetErrors.newPassword}
+                  required
+                />
+                <Input
+                  label="Confirm New Password"
+                  type="password"
+                  value={resetConfirmPassword}
+                  onChange={(e) => setResetConfirmPassword(e.target.value)}
+                  placeholder="Re-enter the new password"
+                  error={resetErrors.confirmPassword}
+                  required
+                />
+              </div>
+            ) : (
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 shrink-0 text-[var(--warning)]" />
+                <p className="text-sm text-[var(--text-secondary)]">
+                  A 6-digit verification code will be sent to this user&apos;s email to confirm the
+                  password reset. This will revoke all their active sessions.
+                </p>
+              </div>
+            )
           ) : (
             <div className="space-y-5">
               <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
                 <p className="text-sm text-[var(--text-secondary)]">
-                  Enter the 6-digit code sent to the user&apos;s email and the new password.
+                  {isAdminPasswordFlow
+                    ? 'Enter the 6-digit code sent to the admin\u2019s email to confirm the password change.'
+                    : 'Enter the 6-digit code sent to the user\u2019s email and the new password.'}
                 </p>
               </div>
 
@@ -985,14 +3324,16 @@ export default function SuperAdminUserDetailPage() {
                 </p>
               </div>
 
-              <Input
-                label="New Password"
-                type="password"
-                placeholder="Min 8 characters"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
+              {!isAdminPasswordFlow && (
+                <Input
+                  label="New Password"
+                  type="password"
+                  placeholder="Min 8 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                />
+              )}
             </div>
           )}
         </Modal>
@@ -1020,5 +3361,514 @@ function InfoItem({
         <p className="text-sm font-medium text-[var(--text)]">{value}</p>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Admin Email Section (OTP-verified)
+// ---------------------------------------------------------------------------
+
+type AdminSectionProps = {
+  userId: string;
+  user: { email: string; mobileNumber: string | null; isMobileVerified: boolean; whatsappNumber: string | null; isWhatsappVerified: boolean };
+  invalidateUser: () => void;
+};
+
+function AdminEmailSection({ userId, user, invalidateUser }: AdminSectionProps) {
+  const otpConfig = useOtpConfig();
+  const [step, setStep] = useState<'idle' | 'form' | 'otp'>('idle');
+  const [newEmail, setNewEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const t = setInterval(() => setResendTimer((p) => p - 1), 1000);
+    return () => clearInterval(t);
+  }, [resendTimer]);
+
+  const reset = () => { setStep('idle'); setNewEmail(''); setPassword(''); setOtp(''); };
+
+  const handleInitiate = async () => {
+    setLoading(true);
+    try {
+      await adminService.initiateAdminEmailChange(userId, { newEmail, password });
+      showToast.success('Verification code sent to new email');
+      setStep('otp');
+      setResendTimer(otpConfig.RESEND_COOLDOWN);
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Failed to initiate email change');
+    } finally { setLoading(false); }
+  };
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    try {
+      await adminService.confirmAdminEmailChange(userId, { otp });
+      showToast.success('Admin email updated successfully');
+      invalidateUser();
+      reset();
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Invalid verification code');
+    } finally { setLoading(false); }
+  };
+
+  const handleResend = async () => {
+    try {
+      await adminService.resendAdminEmailOtp(userId);
+      showToast.success('Code resent');
+      setOtp('');
+      setResendTimer(otpConfig.RESEND_COOLDOWN);
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Failed to resend');
+    }
+  };
+
+  return (
+    <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">Email Management</h2>}>
+      {step === 'idle' && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Mail className="h-5 w-5 text-[var(--text-muted)]" />
+            <div>
+              <p className="text-sm font-medium text-[var(--text)]">{user.email}</p>
+              <Badge variant="success" size="sm">Verified</Badge>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setStep('form')}>Change Email</Button>
+        </div>
+      )}
+
+      {step === 'form' && (
+        <div className="space-y-4">
+          <Input label="New Email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="new@example.com" />
+          <Input label="Your Password (Super Admin)" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password to confirm" />
+          <div className="flex gap-3">
+            <Button onClick={handleInitiate} isLoading={loading} disabled={!newEmail || !password}>Send Verification Code</Button>
+            <Button variant="outline" onClick={reset}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      {step === 'otp' && (
+        <div className="space-y-4">
+          <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
+            <p className="text-sm text-[var(--text-secondary)]">Enter the 6-digit code sent to <span className="font-medium">{newEmail}</span></p>
+          </div>
+          <OtpInput value={otp} onChange={setOtp} length={otpConfig.LENGTH} />
+          <div className="text-center">
+            <p className="text-sm text-[var(--text-muted)]">
+              {resendTimer > 0 ? (
+                <span>Resend in {resendTimer}s</span>
+              ) : (
+                <button type="button" onClick={handleResend} className="text-primary font-medium hover:underline">Resend Code</button>
+              )}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH}>Confirm Email Change</Button>
+            <Button variant="outline" onClick={reset}>Cancel</Button>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Admin Mobile Section (OTP-verified)
+// ---------------------------------------------------------------------------
+
+function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps) {
+  const otpConfig = useOtpConfig();
+  const [step, setStep] = useState<'idle' | 'form' | 'otp'>('idle');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const t = setInterval(() => setResendTimer((p) => p - 1), 1000);
+    return () => clearInterval(t);
+  }, [resendTimer]);
+
+  const reset = () => { setStep('idle'); setMobileNumber(''); setPassword(''); setOtp(''); };
+
+  const handleInitiate = async () => {
+    setLoading(true);
+    try {
+      const payload: { mobileNumber: string; password?: string } = { mobileNumber };
+      if (user.mobileNumber) payload.password = password; // Password required only for "change"
+      await adminService.initiateAdminMobileChange(userId, payload);
+      showToast.success('Verification code sent via SMS');
+      setStep('otp');
+      setResendTimer(otpConfig.RESEND_COOLDOWN);
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Failed to send SMS OTP');
+    } finally { setLoading(false); }
+  };
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    try {
+      await adminService.confirmAdminMobileChange(userId, { otp });
+      showToast.success('Admin mobile number updated');
+      invalidateUser();
+      reset();
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Invalid verification code');
+    } finally { setLoading(false); }
+  };
+
+  const handleResend = async () => {
+    try {
+      await adminService.resendAdminMobileOtp(userId);
+      showToast.success('Code resent');
+      setOtp('');
+      setResendTimer(otpConfig.RESEND_COOLDOWN);
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Failed to resend');
+    }
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      await adminService.removeAdminMobile(userId);
+      showToast.success('Mobile number removed');
+      invalidateUser();
+      setShowRemoveModal(false);
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Failed to remove');
+    } finally { setRemoving(false); }
+  };
+
+  return (
+    <>
+      <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">Mobile Number Management</h2>}>
+        {step === 'idle' && (
+          <>
+            {user.mobileNumber ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-[var(--text-muted)]" />
+                  <div>
+                    <p className="text-sm font-medium text-[var(--text)]">{user.mobileNumber}</p>
+                    <Badge variant={user.isMobileVerified ? 'success' : 'warning'} size="sm">
+                      {user.isMobileVerified ? 'Verified' : 'Unverified'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setStep('form')}>Change</Button>
+                  <Button variant="outline" size="sm" className="text-[var(--error)]" onClick={() => setShowRemoveModal(true)}>Remove</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-[var(--text-muted)]">No mobile number set</p>
+                <Button variant="outline" size="sm" onClick={() => setStep('form')}>Add Mobile</Button>
+              </div>
+            )}
+          </>
+        )}
+
+        {step === 'form' && (
+          <div className="space-y-4">
+            <Input
+              label="Mobile Number"
+              placeholder="+919876543210"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value)}
+            />
+            {user.mobileNumber && (
+              <Input
+                label="Your Password (Super Admin)"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Required for changing existing number"
+              />
+            )}
+            {!user.whatsappNumber && user.isWhatsappVerified && user.mobileNumber && (
+              <div className="flex items-start gap-2 rounded-lg bg-[var(--warning-light)] px-3 py-2">
+                <AlertCircle className="h-4 w-4 shrink-0 text-[var(--warning)]" />
+                <p className="text-xs text-[var(--text-secondary)]">
+                  Changing mobile will reset WhatsApp verification since no separate WhatsApp number is set.
+                </p>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Button onClick={handleInitiate} isLoading={loading} disabled={!mobileNumber || (!!user.mobileNumber && !password)}>
+                Send SMS Code
+              </Button>
+              <Button variant="outline" onClick={reset}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 'otp' && (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
+              <p className="text-sm text-[var(--text-secondary)]">Enter the code sent to <span className="font-medium">{mobileNumber}</span></p>
+            </div>
+            <OtpInput value={otp} onChange={setOtp} length={otpConfig.LENGTH} />
+            <div className="text-center">
+              <p className="text-sm text-[var(--text-muted)]">
+                {resendTimer > 0 ? (
+                  <span>Resend in {resendTimer}s</span>
+                ) : (
+                  <button type="button" onClick={handleResend} className="text-primary font-medium hover:underline">Resend Code</button>
+                )}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH}>Confirm</Button>
+              <Button variant="outline" onClick={reset}>Cancel</Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Modal
+        isOpen={showRemoveModal}
+        onClose={() => setShowRemoveModal(false)}
+        title="Remove Mobile Number"
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowRemoveModal(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRemove} isLoading={removing}>Remove</Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-[var(--text-secondary)]">
+          This will remove the admin&apos;s mobile number and reset mobile verification.
+          {!user.whatsappNumber && user.isWhatsappVerified && ' WhatsApp verification will also be reset.'}
+        </p>
+      </Modal>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Admin WhatsApp Section (OTP-verified)
+// ---------------------------------------------------------------------------
+
+function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProps) {
+  const otpConfig = useOtpConfig();
+  const [step, setStep] = useState<'idle' | 'verify' | 'add-separate' | 'change' | 'otp'>('idle');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [removing, setRemoving] = useState(false);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const t = setInterval(() => setResendTimer((p) => p - 1), 1000);
+    return () => clearInterval(t);
+  }, [resendTimer]);
+
+  const reset = () => { setStep('idle'); setWhatsappNumber(''); setPassword(''); setOtp(''); };
+
+  const hasMobile = !!user.mobileNumber;
+  const effectiveWhatsapp = user.whatsappNumber || user.mobileNumber;
+
+  const handleVerifyMobile = async () => {
+    if (!user.mobileNumber) return;
+    setLoading(true);
+    try {
+      await adminService.initiateAdminWhatsappVerify(userId, { mobileNumber: user.mobileNumber });
+      showToast.success('WhatsApp OTP sent');
+      setStep('otp');
+      setResendTimer(otpConfig.RESEND_COOLDOWN);
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Failed to send WhatsApp OTP');
+    } finally { setLoading(false); }
+  };
+
+  const handleAddSeparate = async () => {
+    setLoading(true);
+    try {
+      await adminService.initiateAdminWhatsappVerify(userId, {
+        mobileNumber: user.mobileNumber || whatsappNumber,
+        whatsappNumber,
+      });
+      showToast.success('WhatsApp OTP sent');
+      setStep('otp');
+      setResendTimer(otpConfig.RESEND_COOLDOWN);
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Failed to send WhatsApp OTP');
+    } finally { setLoading(false); }
+  };
+
+  const handleChange = async () => {
+    setLoading(true);
+    try {
+      await adminService.initiateAdminWhatsappChange(userId, { newWhatsappNumber: whatsappNumber, password });
+      showToast.success('WhatsApp OTP sent to new number');
+      setStep('otp');
+      setResendTimer(otpConfig.RESEND_COOLDOWN);
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Failed to change WhatsApp number');
+    } finally { setLoading(false); }
+  };
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    try {
+      await adminService.confirmAdminWhatsappOtp(userId, { otp });
+      showToast.success('WhatsApp verified');
+      invalidateUser();
+      reset();
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Invalid code');
+    } finally { setLoading(false); }
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      await adminService.removeAdminWhatsappNumber(userId);
+      showToast.success('WhatsApp number removed');
+      invalidateUser();
+      setShowRemoveModal(false);
+    } catch (err) {
+      showToast.error((err as unknown as ApiError).message || 'Failed to remove');
+    } finally { setRemoving(false); }
+  };
+
+  return (
+    <>
+      <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">WhatsApp Management</h2>}>
+        {step === 'idle' && (
+          <>
+            {!hasMobile && !user.isMobileVerified ? (
+              <div className="flex items-center gap-3 text-sm text-[var(--text-muted)]">
+                <MessageCircle className="h-5 w-5" />
+                <p>Add and verify a mobile number first to enable WhatsApp.</p>
+              </div>
+            ) : user.isWhatsappVerified ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="h-5 w-5 text-[var(--text-muted)]" />
+                  <div>
+                    <p className="text-sm font-medium text-[var(--text)]">{effectiveWhatsapp}</p>
+                    <Badge variant="success" size="sm">Verified</Badge>
+                    {user.whatsappNumber && (
+                      <span className="ml-2 text-xs text-[var(--text-muted)]">(separate number)</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setStep('change')}>Change</Button>
+                  {user.whatsappNumber && (
+                    <Button variant="outline" size="sm" className="text-[var(--error)]" onClick={() => setShowRemoveModal(true)}>Remove</Button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="h-5 w-5 text-[var(--text-muted)]" />
+                  <p className="text-sm text-[var(--text-muted)]">WhatsApp not verified</p>
+                </div>
+                <div className="flex gap-2">
+                  {hasMobile && (
+                    <Button variant="outline" size="sm" onClick={handleVerifyMobile} isLoading={loading}>
+                      Verify Mobile for WhatsApp
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => setStep('add-separate')}>
+                    Add Separate Number
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {step === 'add-separate' && (
+          <div className="space-y-4">
+            <Input
+              label="WhatsApp Number"
+              placeholder="+919876543210"
+              value={whatsappNumber}
+              onChange={(e) => setWhatsappNumber(e.target.value)}
+            />
+            <div className="flex gap-3">
+              <Button onClick={handleAddSeparate} isLoading={loading} disabled={!whatsappNumber}>Send WhatsApp OTP</Button>
+              <Button variant="outline" onClick={reset}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 'change' && (
+          <div className="space-y-4">
+            <Input
+              label="New WhatsApp Number"
+              placeholder="+919876543210"
+              value={whatsappNumber}
+              onChange={(e) => setWhatsappNumber(e.target.value)}
+            />
+            <Input
+              label="Your Password (Super Admin)"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password to confirm"
+            />
+            <div className="flex gap-3">
+              <Button onClick={handleChange} isLoading={loading} disabled={!whatsappNumber || !password}>Send WhatsApp OTP</Button>
+              <Button variant="outline" onClick={reset}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 'otp' && (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
+              <p className="text-sm text-[var(--text-secondary)]">Enter the OTP received on WhatsApp</p>
+            </div>
+            <OtpInput value={otp} onChange={setOtp} length={otpConfig.LENGTH} />
+            <div className="text-center">
+              <p className="text-sm text-[var(--text-muted)]">
+                {resendTimer > 0 ? <span>Resend in {resendTimer}s</span> : <span className="text-[var(--text-muted)]">Use the buttons above to request a new code</span>}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH}>Confirm</Button>
+              <Button variant="outline" onClick={reset}>Cancel</Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Modal
+        isOpen={showRemoveModal}
+        onClose={() => setShowRemoveModal(false)}
+        title="Remove WhatsApp Number"
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowRemoveModal(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRemove} isLoading={removing}>Remove</Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-[var(--text-secondary)]">
+          This will remove the separate WhatsApp number. WhatsApp verification will be reset.
+        </p>
+      </Modal>
+    </>
   );
 }

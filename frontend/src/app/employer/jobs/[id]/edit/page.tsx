@@ -137,8 +137,12 @@ export default function EditJobPage() {
         tags: job.tags || [],
         jobPerks: job.jobPerks || [],
         urgencyLevel: job.urgencyLevel || undefined,
-        applicationDeadline: job.applicationDeadline ? job.applicationDeadline.split('T')[0] : '',
+        applicationDeadline: job.applicationDeadline
+          ? job.applicationDeadline.slice(0, 16)
+          : '',
         isFeatured: job.isFeatured ?? false,
+        isPremium: job.isPremium ?? false,
+        expiresAt: job.expiresAt || '',
         // Enterprise fields
         functionalArea: job.functionalArea || undefined,
         referenceCode: job.referenceCode || '',
@@ -151,8 +155,8 @@ export default function EditJobPage() {
         isConfidential: job.isConfidential ?? false,
         additionalLocations: job.additionalLocations || [],
         accommodationProvided: job.accommodationProvided ?? false,
-        walkInStartDate: job.walkInStartDate ? job.walkInStartDate.split('T')[0] : '',
-        walkInEndDate: job.walkInEndDate ? job.walkInEndDate.split('T')[0] : '',
+        walkInStartDate: job.walkInStartDate ? job.walkInStartDate.slice(0, 16) : '',
+        walkInEndDate: job.walkInEndDate ? job.walkInEndDate.slice(0, 16) : '',
         walkInTime: job.walkInTime || '',
         walkInVenue: job.walkInVenue || '',
         walkInContactPerson: job.walkInContactPerson || '',
@@ -249,11 +253,19 @@ export default function EditJobPage() {
       showToast.error('At least one required skill is needed');
       return;
     }
+    // Validate expiresAt is after applicationDeadline
+    if (form.expiresAt && form.applicationDeadline) {
+      if (new Date(form.expiresAt) < new Date(form.applicationDeadline)) {
+        showToast.error('Job expiration date must be after application deadline');
+        return;
+      }
+    }
     const payload = {
       ...form,
       applicationDeadline: form.applicationDeadline
         ? new Date(form.applicationDeadline).toISOString()
         : undefined,
+      expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : undefined,
       walkInStartDate: form.walkInStartDate
         ? new Date(form.walkInStartDate).toISOString()
         : undefined,
@@ -595,14 +607,16 @@ export default function EditJobPage() {
                 <p className="text-sm font-medium text-[var(--text)]">Walk-in Details</p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <DatePicker
-                    label="Start Date"
+                    label="Start Date & Time"
                     value={form.walkInStartDate || ''}
                     onChange={(v) => handleChange('walkInStartDate', v)}
+                    mode="datetime"
                   />
                   <DatePicker
-                    label="End Date"
+                    label="End Date & Time"
                     value={form.walkInEndDate || ''}
                     onChange={(v) => handleChange('walkInEndDate', v)}
+                    mode="datetime"
                   />
                 </div>
                 <Input
@@ -845,9 +859,18 @@ export default function EditJobPage() {
                 placeholder="Select urgency"
               />
               <DatePicker
-                label="Application Deadline"
+                label="Application Deadline (Date & Time)"
                 value={form.applicationDeadline || ''}
                 onChange={(val) => handleChange('applicationDeadline', val)}
+                mode="datetime"
+              />
+              <DatePicker
+                label="Job Expiration Date & Time"
+                helperText="Date and time when this job will automatically expire and close"
+                value={form.expiresAt || ''}
+                onChange={(val) => handleChange('expiresAt', val)}
+                mode="datetime"
+                minDate={new Date()}
               />
             </div>
 
@@ -855,6 +878,12 @@ export default function EditJobPage() {
               label="Feature this job (premium)"
               checked={form.isFeatured || false}
               onChange={() => handleChange('isFeatured', !form.isFeatured)}
+            />
+            <Switch
+              label="Premium Job Posting"
+              description="Highlight this job with premium badge and priority placement"
+              checked={form.isPremium || false}
+              onChange={() => handleChange('isPremium', !form.isPremium)}
             />
             {/* Notice Period Preference */}
             <div>

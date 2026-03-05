@@ -320,6 +320,12 @@ export default function PostJobPage() {
       case 5:
         return true;
       case 6:
+        // Validate expiresAt is after applicationDeadline
+        if (form.expiresAt && form.applicationDeadline) {
+          if (new Date(form.expiresAt) < new Date(form.applicationDeadline)) {
+            return false;
+          }
+        }
         return true;
       default:
         return true;
@@ -340,6 +346,7 @@ export default function PostJobPage() {
       applicationDeadline: form.applicationDeadline
         ? new Date(form.applicationDeadline).toISOString()
         : undefined,
+      expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : undefined,
     };
     createMutation.mutate(payload);
   };
@@ -784,14 +791,16 @@ export default function PostJobPage() {
                   <h3 className="text-sm font-medium text-[var(--text)]">Walk-in Details</h3>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <DatePicker
-                      label="Start Date"
+                      label="Start Date & Time"
                       value={form.walkInStartDate || ''}
                       onChange={(v) => updateField('walkInStartDate', v)}
+                      mode="datetime"
                     />
                     <DatePicker
-                      label="End Date"
+                      label="End Date & Time"
                       value={form.walkInEndDate || ''}
                       onChange={(v) => updateField('walkInEndDate', v)}
+                      mode="datetime"
                     />
                   </div>
                   <Input
@@ -943,9 +952,10 @@ export default function PostJobPage() {
                   placeholder="Select urgency"
                 />
                 <DatePicker
-                  label="Application Deadline"
+                  label="Application Deadline (Date & Time)"
                   value={form.applicationDeadline || ''}
                   onChange={(val) => updateField('applicationDeadline', val)}
+                  mode="datetime"
                 />
               </div>
 
@@ -953,6 +963,13 @@ export default function PostJobPage() {
                 label="Feature this job (premium)"
                 checked={form.isFeatured || false}
                 onChange={() => updateField('isFeatured', !form.isFeatured)}
+              />
+
+              <Switch
+                label="Premium Job Posting"
+                description="Highlight this job with premium badge and priority placement"
+                checked={form.isPremium || false}
+                onChange={() => updateField('isPremium', !form.isPremium)}
               />
 
               {/* Notice Period Preference */}
@@ -1145,9 +1162,19 @@ export default function PostJobPage() {
               )}
 
               <DatePicker
-                label="Schedule Publish Date (leave empty to publish immediately)"
+                label="Schedule Publish Date & Time (leave empty to publish immediately)"
                 value={form.scheduledPublishAt || ''}
                 onChange={(v) => updateField('scheduledPublishAt', v)}
+                mode="datetime"
+              />
+
+              <DatePicker
+                label="Job Expiration Date & Time"
+                helperText="Date and time when this job will automatically expire and close"
+                value={form.expiresAt || ''}
+                onChange={(v) => updateField('expiresAt', v)}
+                mode="datetime"
+                minDate={new Date()}
               />
             </div>
           )}
@@ -1160,6 +1187,7 @@ export default function PostJobPage() {
               <div className="flex flex-wrap gap-1.5">
                 {form.isConfidential && <Badge variant="warning">Confidential</Badge>}
                 {form.isFeatured && <Badge variant="success">Featured</Badge>}
+                {form.isPremium && <Badge variant="info">Premium</Badge>}
                 {form.postingVisibility && form.postingVisibility !== 'PUBLIC' && (
                   <Badge variant="info">{POSTING_VISIBILITY_LABELS[form.postingVisibility]}</Badge>
                 )}
@@ -1169,6 +1197,7 @@ export default function PostJobPage() {
                 {form.scheduledPublishAt && (
                   <Badge variant="info">Scheduled: {form.scheduledPublishAt}</Badge>
                 )}
+                {form.expiresAt && <Badge variant="warning">Expires: {form.expiresAt}</Badge>}
               </div>
 
               {/* Basic Info */}

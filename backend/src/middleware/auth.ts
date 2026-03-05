@@ -6,6 +6,20 @@ import prisma from '../config/prisma';
 import logger from '../config/logger';
 import { env } from '../config/env';
 import redis from '../config/redis';
+import { COOKIE_NAMES } from '../utils/cookie-helpers';
+import { sessionService } from '../services/session.service';
+
+/**
+ * Extract access token from Authorization header or httpOnly cookie.
+ * Header takes precedence for backward compatibility.
+ */
+function extractAccessToken(req: Request): string | undefined {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
+  }
+  return req.cookies?.[COOKIE_NAMES.ACCESS_TOKEN];
+}
 
 // Express type extension moved to src/types/express/index.d.ts
 
@@ -14,14 +28,8 @@ import redis from '../config/redis';
  */
 export const protect = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Get token from header
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError('Not authorized. Please log in.', 401);
-    }
-
-    const token = authHeader.split(' ')[1];
+    // Get token from header or httpOnly cookie
+    const token = extractAccessToken(req);
 
     if (!token) {
       throw new AppError('Not authorized. Please log in.', 401);
@@ -33,6 +41,14 @@ export const protect = async (req: Request, _res: Response, next: NextFunction):
       decoded = verifyAccessToken(token);
     } catch {
       throw new AppError('Invalid or expired token. Please log in again.', 401);
+    }
+
+    // Validate session is still active (skip for old tokens without sessionId)
+    if (decoded.sessionId) {
+      const sessionActive = await sessionService.isSessionActive(decoded.sessionId);
+      if (!sessionActive) {
+        throw new AppError('Session has been revoked. Please log in again.', 401);
+      }
     }
 
     // Check if user still exists
@@ -79,6 +95,7 @@ export const protect = async (req: Request, _res: Response, next: NextFunction):
       role: user.role,
       isEmailVerified: user.isEmailVerified,
       mfaEnabled: user.mfaEnabled,
+      sessionId: decoded.sessionId,
     };
 
     // Debounced lastActiveAt update (every 5 min via Redis)
@@ -117,13 +134,7 @@ export const optionalAuth = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return next();
-    }
-
-    const token = authHeader.split(' ')[1];
+    const token = extractAccessToken(req);
 
     if (!token) {
       return next();

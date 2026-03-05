@@ -18,6 +18,13 @@ const envSchema = z
     // CSRF
     CSRF_SECRET: z.string().min(32),
 
+    // BFF (Backend-For-Frontend) — shared secret for Next.js API route proxying
+    BFF_SECRET: z.string().min(32).optional(),
+
+    // Cookie maxAge (days) — controls how long auth cookies persist in the browser
+    COOKIE_ACCESS_MAX_AGE_DAYS: z.string().default('7'),
+    COOKIE_REFRESH_MAX_AGE_DAYS: z.string().default('30'),
+
     // JWT
     JWT_SECRET: z.string().min(32),
     JWT_EXPIRES_IN: z.string().default('15m'),

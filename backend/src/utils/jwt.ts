@@ -6,12 +6,14 @@ export interface TokenPayload {
   userId: string;
   email: string;
   role: string;
+  sessionId: string;
 }
 
 export interface DecodedToken extends JwtPayload {
   userId: string;
   email: string;
   role: string;
+  sessionId?: string;
 }
 
 const isRS256 = env.JWT_ALGORITHM === 'RS256';

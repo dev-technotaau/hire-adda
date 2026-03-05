@@ -20,7 +20,7 @@ export default function PieChart({
 }: PieChartProps) {
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <RechartsPie>
+      <RechartsPie margin={{ top: 20, right: 20, bottom: 5, left: 20 }}>
         <Pie
           data={data}
           cx="50%"

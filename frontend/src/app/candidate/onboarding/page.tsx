@@ -36,6 +36,7 @@ import {
   Plane,
 } from 'lucide-react';
 import OnboardingShell, { type OnboardingStep } from '@/components/onboarding/OnboardingShell';
+import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import { useOnboarding, markOnboardingComplete } from '@/hooks/use-onboarding';
 import Button from '@/components/ui/Button';
@@ -186,6 +187,7 @@ interface CandidateOnboardingData {
   courses: CourseCompletionEntry[];
   testScores: TestScoreEntry[];
   // Step: Languages
+  languages: string[];
   languageProficiency: LanguageEntry[];
   // Step: Publications & Memberships
   publications: PublicationEntry[];
@@ -309,6 +311,7 @@ const INITIAL_DATA: CandidateOnboardingData = {
   awards: [],
   courses: [],
   testScores: [],
+  languages: [],
   languageProficiency: [],
   publications: [],
   patents: [],
@@ -749,6 +752,7 @@ export default function CandidateOnboardingPage() {
           awards: data.awards.length > 0 ? data.awards : undefined,
           courses: data.courses.length > 0 ? data.courses : undefined,
           testScores: data.testScores.length > 0 ? data.testScores : undefined,
+          languages: data.languages.length > 0 ? data.languages : undefined,
           languageProficiency:
             data.languageProficiency.length > 0 ? data.languageProficiency : undefined,
           publications: data.publications.length > 0 ? data.publications : undefined,
@@ -1047,6 +1051,7 @@ export default function CandidateOnboardingPage() {
     setHobbyInput('');
   }
 
+
   function addInterest(value: string) {
     const trimmed = value.trim();
     if (trimmed && !data.interests.includes(trimmed)) {
@@ -1118,8 +1123,8 @@ export default function CandidateOnboardingPage() {
     // Step 1 - Profile Photo
     // ===================================================================
     if (currentKey === 'avatar') {
-      const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+      const handleAvatarDrop = (files: File[]) => {
+        const file = files[0];
         if (!file) return;
         if (!(FILE_LIMITS.IMAGE_TYPES as readonly string[]).includes(file.type)) {
           showToast.error('Please select a JPG, PNG, or WebP image');
@@ -1135,7 +1140,6 @@ export default function CandidateOnboardingPage() {
           setCropperOpen(true);
         };
         reader.readAsDataURL(file);
-        e.target.value = '';
       };
 
       const handleCropComplete = (blob: Blob) => {
@@ -1159,37 +1163,42 @@ export default function CandidateOnboardingPage() {
             </div>
           </div>
 
-          <div className="flex flex-col items-center py-6">
-            <div className="relative mb-6">
-              <div className="h-32 w-32 overflow-hidden rounded-full border-2 border-dashed border-[var(--border)] bg-[var(--bg-secondary)]">
-                {avatarPreview ? (
+          {!avatarPreview ? (
+            <FileUpload
+              label="Profile Photo (JPG, PNG, WebP)"
+              accept={{
+                'image/jpeg': ['.jpg', '.jpeg'],
+                'image/png': ['.png'],
+                'image/webp': ['.webp'],
+              }}
+              maxSize={FILE_LIMITS.AVATAR_MAX_SIZE}
+              onDrop={handleAvatarDrop}
+              files={[]}
+              multiple={false}
+            />
+          ) : (
+            <div className="flex flex-col items-center py-6">
+              <div className="relative mb-6">
+                <div className="h-32 w-32 overflow-hidden rounded-full border-2 border-[var(--border)] bg-[var(--bg-secondary)]">
                   <img
                     src={avatarPreview}
                     alt="Avatar preview"
                     className="h-full w-full object-cover"
                   />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <User className="h-12 w-12 text-[var(--text-muted)]" />
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.webp"
-                  onChange={handleAvatarSelect}
-                  className="sr-only"
-                />
-                <span className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]">
-                  <Upload className="h-4 w-4" />
-                  {avatarPreview ? 'Change Photo' : 'Upload Photo'}
-                </span>
-              </label>
-              {avatarPreview && (
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAvatarFile(null);
+                    setAvatarPreview(null);
+                  }}
+                >
+                  <Upload className="mr-1.5 h-4 w-4" />
+                  Change Photo
+                </Button>
                 <Button
                   variant="ghost"
                   onClick={() => {
@@ -1201,13 +1210,13 @@ export default function CandidateOnboardingPage() {
                   <Trash2 className="mr-1.5 h-4 w-4" />
                   Remove
                 </Button>
-              )}
-            </div>
+              </div>
 
-            <p className="mt-4 text-center text-xs text-[var(--text-muted)]">
-              JPG, PNG, or WebP. Max 5MB. Will be cropped to a circle.
-            </p>
-          </div>
+              <p className="mt-4 text-center text-xs text-[var(--text-muted)]">
+                JPG, PNG, or WebP. Max 5MB. Will be cropped to 1:1 aspect ratio (400x400px).
+              </p>
+            </div>
+          )}
 
           {selectedImage && (
             <ImageCropper
@@ -1220,6 +1229,8 @@ export default function CandidateOnboardingPage() {
               onCropComplete={handleCropComplete}
               aspectRatio={1}
               circularCrop={true}
+              outputWidth={400}
+              outputHeight={400}
             />
           )}
         </div>
@@ -2714,9 +2725,30 @@ export default function CandidateOnboardingPage() {
             </Button>
           </div>
 
-          {/* Languages */}
+          {/* Languages (Quick List) */}
           <div className="border-t border-[var(--border)] pt-4">
-            <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Language Proficiency</h3>
+            <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
+              Languages <span className="text-[var(--text-muted)]">(Optional)</span>
+            </h3>
+            <p className="mb-3 text-xs text-[var(--text-muted)]">List languages you can speak</p>
+            <ServerAutoSuggest
+              category="language"
+              placeholder="Search languages..."
+              value={data.languages}
+              onChange={(val) => updateData({ languages: val as string[] })}
+              multiple
+              allowCreate
+              createLabel={(q) => `Add "${q}"`}
+              maxSelections={20}
+            />
+          </div>
+
+          {/* Language Proficiency (Detailed) */}
+          <div className="border-t border-[var(--border)] pt-4">
+            <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
+              Language Proficiency (Detailed){' '}
+              <span className="text-[var(--text-muted)]">(Optional)</span>
+            </h3>
 
             {data.languageProficiency.length === 0 && (
               <p className="py-4 text-center text-sm text-[var(--text-muted)]">
@@ -4293,7 +4325,11 @@ export default function CandidateOnboardingPage() {
                 <p className={fieldValue}>{data.testScores.length} added</p>
               </div>
               <div>
-                <p className={fieldLabel}>Languages</p>
+                <p className={fieldLabel}>Languages (Quick List)</p>
+                <p className={fieldValue}>{data.languages.length} added</p>
+              </div>
+              <div>
+                <p className={fieldLabel}>Language Proficiency (Detailed)</p>
                 <p className={fieldValue}>{data.languageProficiency.length} added</p>
               </div>
             </div>

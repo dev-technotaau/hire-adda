@@ -2,11 +2,11 @@ import type { Request, Response, NextFunction } from 'express';
 import { webauthnService } from '../services/webauthn.service';
 import { generateTokens } from '../services/auth.service';
 import { verifyMfaToken } from '../services/mfa.service';
-import { sessionService } from '../services/session.service';
+
 import { AppError } from '../middleware/error';
 import { publishEvent, KafkaTopics } from '../kafka/producer';
 import { trackEvent, getClientId } from '../services/analytics.service';
-import logger from '../config/logger';
+import { setTokenCookies } from '../utils/cookie-helpers';
 import prisma from '../config/prisma';
 
 function getSessionId(req: Request): string {
@@ -171,9 +171,8 @@ export const verifyAuthentication = async (
 
     const tokens = await generateTokens(user, userAgent, ipAddress);
 
-    sessionService
-      .createSession(user.id, userAgent, ipAddress)
-      .catch((err) => logger.error('Failed to create session for WebAuthn login', err));
+    // Set httpOnly cookies (session already created inside generateTokens)
+    setTokenCookies(res, tokens.accessToken, tokens.refreshToken, true, tokens.sessionId);
 
     publishEvent(KafkaTopics.USER_LOGIN, user.id, {
       userId: user.id,
@@ -197,6 +196,7 @@ export const verifyAuthentication = async (
         },
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
+        sessionId: tokens.sessionId,
       },
     });
   } catch (error) {

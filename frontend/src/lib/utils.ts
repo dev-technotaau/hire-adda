@@ -89,12 +89,17 @@ export function getExperienceLabel(years: number): string {
 }
 
 export function buildQueryString(
-  params: Record<string, string | number | boolean | undefined | null>,
+  params: Record<string, string | number | boolean | string[] | undefined | null>,
 ): string {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
-      searchParams.set(key, String(value));
+      if (Array.isArray(value)) {
+        // For arrays, append multiple values with the same key
+        value.forEach((v) => searchParams.append(key, String(v)));
+      } else {
+        searchParams.set(key, String(value));
+      }
     }
   });
   const qs = searchParams.toString();

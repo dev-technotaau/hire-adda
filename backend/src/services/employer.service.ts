@@ -4,6 +4,7 @@ import { AppError } from '../middleware/error';
 import type { CompanyProfile } from '@prisma/client';
 import { uploadImage, uploadOptions, deleteImage, extractPublicId } from '../config/cloudinary';
 import { searchService } from './search.service';
+import { publishEvent, KafkaTopics } from '../kafka/producer';
 
 export class EmployerService {
   /**
@@ -28,6 +29,76 @@ export class EmployerService {
 
     // Unlike candidate, if company profile doesn't exist, we might just return null
     // But for consistency let's throw 404 or handle in controller
+    if (!profile) {
+      throw new AppError('Company profile not found', 404);
+    }
+
+    return profile;
+  }
+
+  /**
+   * Get public company profile by CompanyProfile ID.
+   * Excludes sensitive fields (GST, CIN, PAN, contact details, granular address).
+   */
+  async getPublicProfile(companyId: string) {
+    const profile = await prisma.companyProfile.findUnique({
+      where: { id: companyId },
+      select: {
+        id: true,
+        userId: true,
+        companyName: true,
+        companyType: true,
+        tagline: true,
+        logo: true,
+        coverImage: true,
+        companyVideoUrl: true,
+        industry: true,
+        subIndustry: true,
+        specialties: true,
+        companySize: true,
+        employeeCount: true,
+        numberOfOffices: true,
+        description: true,
+        whyWorkForUs: true,
+        website: true,
+        careersPageUrl: true,
+        blogUrl: true,
+        foundedYear: true,
+        parentCompany: true,
+        stockTicker: true,
+        isVerified: true,
+        annualRevenueRange: true,
+        fundingStage: true,
+        totalFundingRaised: true,
+        investors: true,
+        productsServices: true,
+        techStack: true,
+        companyCulture: true,
+        missionStatement: true,
+        visionStatement: true,
+        coreValues: true,
+        diversityStatement: true,
+        employeeResourceGroups: true,
+        csrInitiatives: true,
+        benefits: true,
+        structuredPerks: true,
+        workplacePolicies: true,
+        interviewProcess: true,
+        awardsRecognitions: true,
+        leadershipTeam: true,
+        employeeTestimonials: true,
+        officePhotos: true,
+        socialLinks: true,
+        headquarters: true,
+        locations: true,
+        city: true,
+        state: true,
+        country: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
     if (!profile) {
       throw new AppError('Company profile not found', 404);
     }
@@ -89,6 +160,9 @@ export class EmployerService {
     searchService
       .indexEmployer(profile)
       .catch((err) => logger.error('Failed to index employer', err));
+
+    // Publish Kafka event for analytics/webhooks
+    publishEvent(KafkaTopics.PROFILE_UPDATED, userId, { userId, profileId: profile.id }).catch(() => {});
 
     // Trigger geocoding if address fields changed
     const geoAddress = [data.city, data.state, data.country, data.headquarters]
@@ -321,6 +395,58 @@ export class EmployerService {
       const publicId = extractPublicId(existing.logo);
       if (publicId) deleteImage(publicId).catch(() => {});
     }
+  }
+
+  /**
+   * Upload Cover Image
+   */
+  async uploadCoverImage(userId: string, file: Express.Multer.File) {
+    const company = await prisma.companyProfile.findUnique({
+      where: { userId },
+      select: { id: true, coverImage: true },
+    });
+    if (!company) throw new AppError('Company profile not found', 404);
+
+    // Delete old cover image from Cloudinary if exists
+    if (company.coverImage) {
+      const oldPublicId = extractPublicId(company.coverImage);
+      if (oldPublicId) deleteImage(oldPublicId).catch(() => {});
+    }
+
+    // Upload new cover image
+    const uploadResult = await uploadImage(
+      profileImageBufferOrPath(file),
+      uploadOptions.companyCover
+    );
+
+    // Update database
+    await prisma.companyProfile.update({
+      where: { userId },
+      data: { coverImage: uploadResult.secure_url },
+    });
+
+    return uploadResult.secure_url;
+  }
+
+  /**
+   * Remove Cover Image
+   */
+  async removeCoverImage(userId: string) {
+    const company = await prisma.companyProfile.findUnique({
+      where: { userId },
+      select: { id: true, coverImage: true },
+    });
+    if (!company) throw new AppError('Company profile not found', 404);
+
+    if (company.coverImage) {
+      const publicId = extractPublicId(company.coverImage);
+      if (publicId) deleteImage(publicId).catch(() => {});
+    }
+
+    await prisma.companyProfile.update({
+      where: { userId },
+      data: { coverImage: null },
+    });
   }
 
   /**

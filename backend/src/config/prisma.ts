@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 
 // Ensure Decimal fields serialize as numbers in JSON responses (not strings)
@@ -27,21 +27,21 @@ const createPool = () => {
   // Strip stray quotes (common copy-paste mistake in env dashboards)
   connectionString = connectionString.replace(/^["']+|["']+$/g, '');
 
-  // Strip ?pgbouncer=true — that's a Prisma-only param, pg Pool doesn't understand it
+  // Strip ?pgbouncer=true — Prisma-only param that pg Pool doesn't understand
   connectionString = connectionString
     .replace(/[?&]pgbouncer=true/gi, '')
     .replace(/\?$/, '');
 
-  // Detect if connecting to Supabase (needs SSL)
-  const isSupabase = connectionString.includes('supabase');
+  // Detect if connecting to a remote/managed DB (Neon, Supabase, Railway, etc.)
   const isLocalhost =
     connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+  const isRemote = !isLocalhost;
 
   const pool = new Pool({
     connectionString,
     // Keep pool small for managed DB services
     max: parseInt(process.env.DATABASE_POOL_SIZE || '5', 10),
-    // Don't hold idle connections — Supabase/Supavisor kills them
+    // Don't hold idle connections — managed DB poolers may reclaim them
     idleTimeoutMillis: 30_000,
     // Allow 30s for initial connection (managed DBs can be slow to wake)
     connectionTimeoutMillis: parseInt(process.env.DATABASE_POOL_TIMEOUT || '30', 10) * 1000,
@@ -49,8 +49,8 @@ const createPool = () => {
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
     allowExitOnIdle: false,
-    // Supabase requires SSL from external hosts
-    ...(isSupabase || !isLocalhost ? { ssl: { rejectUnauthorized: false } } : {}),
+    // Remote/managed PostgreSQL providers require SSL
+    ...(isRemote ? { ssl: { rejectUnauthorized: false } } : {}),
   });
 
   // Set statement timeout on every new connection to prevent hung queries

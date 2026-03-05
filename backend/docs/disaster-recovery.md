@@ -2,13 +2,13 @@
 
 ## Overview
 
-Talent Bridge runs on **Render** (backend) + **Supabase Free** (PostgreSQL) + **Managed OpenSearch** + **Cloudflare R2** (file storage). This document covers backup procedures, restore steps, and disaster recovery runbooks.
+Talent Bridge runs on **Render** (backend) + **Managed PostgreSQL** (Neon/Supabase/etc.) + **Managed OpenSearch** + **Cloudflare R2** (file storage). This document covers backup procedures, restore steps, and disaster recovery runbooks.
 
 ### Infrastructure
 
 | Component | Provider | Backup Strategy |
 |-----------|----------|-----------------|
-| PostgreSQL | Supabase (Free) | **Automated**: BullMQ → `pg_dump` → Cloudflare R2 (daily 2AM UTC) |
+| PostgreSQL | Managed (Neon/Supabase) | **Automated**: BullMQ → `pg_dump` → Cloudflare R2 (daily 2AM UTC) |
 | OpenSearch | Managed service | Provider handles snapshots (check provider dashboard) |
 | Redis | Upstash/Cloud | Ephemeral cache — no backup needed |
 | Resumes & Files | Cloudflare R2 | Provider-managed durability (11 nines) |
@@ -22,7 +22,7 @@ Talent Bridge runs on **Render** (backend) + **Supabase Free** (PostgreSQL) + **
 ### How It Works
 
 1. **BullMQ scheduler** triggers `db-backup` job daily at 2:00 AM UTC
-2. The backup worker runs `pg_dump` against `DATABASE_URL` (Supabase)
+2. The backup worker runs `pg_dump` against `DATABASE_URL`
 3. Output is **gzipped** in memory (no local filesystem needed — works on Render)
 4. Compressed backup is **uploaded to Cloudflare R2** at `backups/db/talent_bridge_YYYYMMDD_HHMMSS.sql.gz`
 5. Weekly cleanup job deletes R2 backups older than `BACKUP_RETENTION_DAYS` (default 30)
@@ -106,7 +106,7 @@ Redis is ephemeral — just restart the service:
 
 ## Disaster Scenarios
 
-### Scenario 1: Supabase Database Loss
+### Scenario 1: PostgreSQL Database Loss
 
 1. **Identify** the most recent R2 backup in `backups/db/` folder (via Cloudflare dashboard)
 2. **Download** the backup file from R2
@@ -125,14 +125,14 @@ Redis is ephemeral — just restart the service:
 1. Render auto-redeploys from Git. If persistent:
 2. Check Render dashboard for service health
 3. Redeploy manually from the Render dashboard
-4. Data is safe (PostgreSQL on Supabase, files on R2 — not on Render)
+4. Data is safe (PostgreSQL on managed provider, files on R2 — not on Render)
 
 ### Scenario 4: Complete Rebuild
 
 1. **Code**: `git clone` from GitHub
 2. **Environment**: Restore env vars from secure storage (1Password, etc.)
 3. **Deploy**: Push to Render (auto-deploys from main branch)
-4. **Database**: Restore from R2 backup if Supabase data is lost
+4. **Database**: Restore from R2 backup if database data is lost
 5. **Search**: `npx ts-node scripts/reindex-all.ts`
 6. **Verify**: `curl https://your-api.onrender.com/health/ready`
 

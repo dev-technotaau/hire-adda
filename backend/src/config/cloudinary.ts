@@ -25,7 +25,16 @@ export const uploadOptions = {
     folder: 'talent_bridge/companies',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'svg'],
     transformation: [
-      { width: 200, height: 200, crop: 'fit' },
+      { width: 400, height: 400, crop: 'fit' },
+      { quality: 'auto', fetch_format: 'auto' },
+    ],
+  } as UploadApiOptions,
+
+  companyCover: {
+    folder: 'talent_bridge/companies/covers',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [
+      { width: 1200, height: 400, crop: 'fill' },
       { quality: 'auto', fetch_format: 'auto' },
     ],
   } as UploadApiOptions,

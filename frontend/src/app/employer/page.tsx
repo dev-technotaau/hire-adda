@@ -1048,19 +1048,15 @@ export default function EmployerDashboard() {
                           </span>
                           <div className="h-6 flex-1 overflow-hidden rounded-full bg-[var(--bg-secondary)]">
                             <div
-                              className={`h-full rounded-full ${stage.color} flex items-center justify-end pr-2 transition-all`}
+                              className={`h-full rounded-full ${stage.color} transition-all`}
                               style={{
                                 width: `${widthPct}%`,
-                                minWidth: stage.value > 0 ? '2rem' : '0',
                               }}
-                            >
-                              {stage.value > 0 && (
-                                <span className="text-[10px] font-semibold text-white">
-                                  {stage.value}
-                                </span>
-                              )}
-                            </div>
+                            />
                           </div>
+                          <span className="w-10 shrink-0 text-right text-xs font-semibold text-[var(--text)]">
+                            {stage.value}
+                          </span>
                           {stage.rate !== undefined && (
                             <span className="w-12 text-right text-[10px] text-[var(--text-muted)]">
                               {stage.rate}%

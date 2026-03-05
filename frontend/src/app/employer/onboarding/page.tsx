@@ -33,7 +33,9 @@ import {
   TrendingUp,
   UserCircle,
   Camera,
+  ImageIcon,
   Briefcase as BriefcaseBusiness,
+  Layers,
 } from 'lucide-react';
 import OnboardingShell, { type OnboardingStep } from '@/components/onboarding/OnboardingShell';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
@@ -45,6 +47,7 @@ import Textarea from '@/components/ui/Textarea';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import Tag from '@/components/ui/Tag';
 import FileUpload from '@/components/ui/FileUpload';
+import ImageCropper from '@/components/ui/ImageCropper';
 import { showToast } from '@/components/ui/Toast';
 import { employerService } from '@/services/employer.service';
 import { ROUTES } from '@/constants/routes';
@@ -111,6 +114,7 @@ interface EmployerOnboardingData {
   employeeResourceGroups: string[];
   // Step: Benefits & Perks
   benefits: string[];
+  structuredPerks: Array<{ category: string; perks: string[] }>;
   // Step: Tech Stack & Policies
   techStack: string[];
   productsServices: string[];
@@ -208,6 +212,7 @@ const INITIAL_DATA: EmployerOnboardingData = {
   coreValues: [],
   employeeResourceGroups: [],
   benefits: [],
+  structuredPerks: [],
   techStack: [],
   productsServices: [],
   workplacePolicies: {},
@@ -311,11 +316,19 @@ export default function EmployerOnboardingPage() {
   const [investorInput, setInvestorInput] = useState('');
   const [productInput, setProductInput] = useState('');
   const [ergInput, setErgInput] = useState('');
-  const [logoFiles, setLogoFiles] = useState<File[]>([]);
-  const logoPreviewUrl = useMemo(
-    () => (logoFiles.length > 0 ? URL.createObjectURL(logoFiles[0]) : null),
-    [logoFiles],
-  );
+  const [perkInputs, setPerkInputs] = useState<Record<number, string>>({});
+
+  // Logo cropper state
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoCropperOpen, setLogoCropperOpen] = useState(false);
+  const [selectedLogoImage, setSelectedLogoImage] = useState<string | null>(null);
+
+  // Cover image cropper state
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [coverCropperOpen, setCoverCropperOpen] = useState(false);
+  const [selectedCoverImage, setSelectedCoverImage] = useState<string | null>(null);
 
   // --- Mutations ----------------------------------------------------------
   const saveMutation = useMutation({
@@ -336,6 +349,76 @@ export default function EmployerOnboardingPage() {
       showToast.error(apiErr?.message || 'Failed to upload logo');
     },
   });
+
+  const coverImageMutation = useMutation({
+    mutationFn: (file: File) => employerService.uploadCoverImage(file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPANY });
+      showToast.success('Cover image uploaded successfully');
+    },
+    onError: (err) => {
+      const apiErr = err as unknown as ApiError;
+      showToast.error(apiErr?.message || 'Failed to upload cover image');
+    },
+  });
+
+  // --- Logo handlers ------------------------------------------------------
+  const handleLogoDrop = (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+
+    if (!(FILE_LIMITS.IMAGE_TYPES as readonly string[]).includes(file.type)) {
+      showToast.error('Please select a JPG, PNG, or WebP image');
+      return;
+    }
+    if (file.size > FILE_LIMITS.LOGO_MAX_SIZE) {
+      showToast.error('Logo must be under 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedLogoImage(reader.result as string);
+      setLogoCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogoCropComplete = (blob: Blob) => {
+    const file = new File([blob], 'logo.jpg', { type: 'image/jpeg' });
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(blob));
+    setSelectedLogoImage(null);
+  };
+
+  // --- Cover image handlers -----------------------------------------------
+  const handleCoverDrop = (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+
+    if (!(FILE_LIMITS.IMAGE_TYPES as readonly string[]).includes(file.type)) {
+      showToast.error('Please select a JPG, PNG, or WebP image');
+      return;
+    }
+    if (file.size > FILE_LIMITS.COVER_MAX_SIZE) {
+      showToast.error('Cover image must be under 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedCoverImage(reader.result as string);
+      setCoverCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCoverCropComplete = (blob: Blob) => {
+    const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
+    setCoverImageFile(file);
+    setCoverImagePreview(URL.createObjectURL(blob));
+    setSelectedCoverImage(null);
+  };
 
   // --- Validation ---------------------------------------------------------
   const validateStep = useCallback((): boolean => {
@@ -395,12 +478,26 @@ export default function EmployerOnboardingPage() {
         employeeResourceGroups:
           data.employeeResourceGroups.length > 0 ? data.employeeResourceGroups : undefined,
         benefits: data.benefits.length > 0 ? data.benefits : undefined,
+        structuredPerks: data.structuredPerks.length > 0
+          ? data.structuredPerks.filter((p) => p.category.trim()) as UpdateCompanyRequest['structuredPerks']
+          : undefined,
         techStack: data.techStack.length > 0 ? data.techStack : undefined,
         productsServices: data.productsServices.length > 0 ? data.productsServices : undefined,
-        workplacePolicies:
-          Object.keys(data.workplacePolicies).length > 0 ? data.workplacePolicies : undefined,
-        awardsRecognitions:
-          data.awardsRecognitions.length > 0 ? data.awardsRecognitions : undefined,
+        // Backend expects Array<{ title, description }> not Record<string, string>
+        workplacePolicies: Object.keys(data.workplacePolicies).length > 0
+          ? Object.entries(data.workplacePolicies)
+              .filter(([, desc]) => desc.trim())
+              .map(([title, description]) => ({ title, description })) as unknown as UpdateCompanyRequest['workplacePolicies']
+          : undefined,
+        // Backend uses 'issuingOrg', frontend uses 'issuer'
+        awardsRecognitions: data.awardsRecognitions.length > 0
+          ? data.awardsRecognitions
+              .filter((a) => a.title.trim())
+              .map(({ issuer, ...award }) => ({
+                ...award,
+                issuingOrg: issuer || undefined,
+              })) as unknown as UpdateCompanyRequest['awardsRecognitions']
+          : undefined,
         gstNumber: data.gstNumber || undefined,
         cinNumber: data.cinNumber || undefined,
         panNumber: data.panNumber || undefined,
@@ -442,8 +539,13 @@ export default function EmployerOnboardingPage() {
         await saveMutation.mutateAsync(payload);
 
         // Upload logo if provided
-        if (logoFiles.length > 0) {
-          await logoMutation.mutateAsync(logoFiles[0]);
+        if (logoFile) {
+          await logoMutation.mutateAsync(logoFile);
+        }
+
+        // Upload cover image if provided
+        if (coverImageFile) {
+          await coverImageMutation.mutateAsync(coverImageFile);
         }
 
         markOnboardingComplete('tb_employer_onboarding');
@@ -457,7 +559,18 @@ export default function EmployerOnboardingPage() {
     }
 
     nextStep();
-  }, [validateStep, isLastStep, data, logoFiles, saveMutation, logoMutation, nextStep, router]);
+  }, [
+    validateStep,
+    isLastStep,
+    data,
+    logoFile,
+    coverImageFile,
+    saveMutation,
+    logoMutation,
+    coverImageMutation,
+    nextStep,
+    router,
+  ]);
 
   // --- Skip handler -------------------------------------------------------
   const handleSkip = useCallback(() => {
@@ -963,14 +1076,110 @@ export default function EmployerOnboardingPage() {
       {/* Company Logo */}
       <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
         <label className="mb-3 block text-sm font-semibold text-[var(--text)]">Company Logo</label>
-        <FileUpload
-          label="Upload your company logo"
-          accept={{ 'image/*': FILE_LIMITS.IMAGE_EXTENSIONS.map((ext) => ext) }}
-          maxSize={FILE_LIMITS.LOGO_MAX_SIZE}
-          onDrop={(files) => setLogoFiles(files)}
-          files={logoFiles}
-          onRemove={() => setLogoFiles([])}
-        />
+        {!logoPreview ? (
+          <FileUpload
+            label="Company Logo (JPG, PNG, WebP)"
+            accept={{
+              'image/jpeg': ['.jpg', '.jpeg'],
+              'image/png': ['.png'],
+              'image/webp': ['.webp'],
+            }}
+            maxSize={FILE_LIMITS.LOGO_MAX_SIZE}
+            onDrop={handleLogoDrop}
+            files={[]}
+            multiple={false}
+          />
+        ) : (
+          <div className="flex items-center gap-4">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--bg-tertiary)]">
+              <img src={logoPreview} alt="Logo preview" className="h-full w-full object-contain" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setLogoFile(null);
+                  setLogoPreview(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]"
+              >
+                <Camera className="h-4 w-4" />
+                Change Logo
+              </button>
+              <button
+                onClick={() => {
+                  setLogoFile(null);
+                  setLogoPreview(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)]"
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
+          JPG, PNG, or WebP. Max 5MB. Will be cropped to 1:1 aspect ratio (400x400px).
+        </p>
+      </div>
+
+      {/* Cover Image */}
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+        <label className="mb-1 block text-sm font-semibold text-[var(--text)]">
+          Cover Image <span className="text-[var(--text-muted)]">(Optional)</span>
+        </label>
+        <p className="mb-3 text-xs text-[var(--text-muted)]">
+          Banner image for your profile (1200x400px recommended)
+        </p>
+        {!coverImagePreview ? (
+          <FileUpload
+            label="Cover Image (JPG, PNG, WebP)"
+            accept={{
+              'image/jpeg': ['.jpg', '.jpeg'],
+              'image/png': ['.png'],
+              'image/webp': ['.webp'],
+            }}
+            maxSize={FILE_LIMITS.COVER_MAX_SIZE}
+            onDrop={handleCoverDrop}
+            files={[]}
+            multiple={false}
+          />
+        ) : (
+          <div className="flex items-center gap-4">
+            <div className="flex h-32 w-48 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--bg-tertiary)]">
+              <img
+                src={coverImagePreview}
+                alt="Cover preview"
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setCoverImageFile(null);
+                  setCoverImagePreview(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]"
+              >
+                <Camera className="h-4 w-4" />
+                Change Cover
+              </button>
+              <button
+                onClick={() => {
+                  setCoverImageFile(null);
+                  setCoverImagePreview(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)]"
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
+          JPG, PNG, or WebP. Max 5MB. Will be cropped to 3:1 aspect ratio (1200x400px).
+        </p>
       </div>
     </div>
   );
@@ -1186,6 +1395,158 @@ export default function EmployerOnboardingPage() {
           </div>
         </div>
       )}
+
+      {/* ---- Structured Perks by Category ---- */}
+      <div className="border-t border-[var(--border)] pt-6">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-xl">
+            <Layers className="text-primary h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--text)]">Structured Perks</h3>
+            <p className="text-xs text-[var(--text-muted)]">
+              Organize perks by category for a clearer presentation
+            </p>
+          </div>
+        </div>
+
+        {data.structuredPerks.length === 0 && (
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">
+              Quick-add categories
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {['Health & Wellness', 'Financial', 'Work-Life Balance', 'Learning & Development'].map(
+                (cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() =>
+                      updateData({
+                        structuredPerks: [...data.structuredPerks, { category: cat, perks: [] }],
+                      })
+                    }
+                    className="hover:border-primary hover:text-primary rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
+                  >
+                    + {cat}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+        )}
+
+        {data.structuredPerks.length === 0 && (
+          <div className="rounded-lg border-2 border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-6 py-8 text-center">
+            <Layers className="mx-auto mb-2 h-7 w-7 text-[var(--text-muted)]" />
+            <p className="text-sm text-[var(--text-muted)]">No perk categories added yet</p>
+          </div>
+        )}
+
+        {data.structuredPerks.map((cat, catIndex) => (
+          <div
+            key={catIndex}
+            className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4"
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <Input
+                  label="Category"
+                  placeholder="e.g. Health & Wellness"
+                  value={cat.category}
+                  onChange={(e) => {
+                    const updated = [...data.structuredPerks];
+                    updated[catIndex] = { ...updated[catIndex], category: e.target.value };
+                    updateData({ structuredPerks: updated });
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  updateData({
+                    structuredPerks: data.structuredPerks.filter((_, i) => i !== catIndex),
+                  })
+                }
+                className="mt-5 rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white hover:text-[var(--error)]"
+                aria-label="Remove category"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a perk"
+                value={perkInputs[catIndex] || ''}
+                onChange={(e) =>
+                  setPerkInputs((prev) => ({ ...prev, [catIndex]: e.target.value }))
+                }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const value = (perkInputs[catIndex] || '').trim();
+                    if (value && !cat.perks.includes(value)) {
+                      const updated = [...data.structuredPerks];
+                      updated[catIndex] = { ...cat, perks: [...cat.perks, value] };
+                      updateData({ structuredPerks: updated });
+                      setPerkInputs((prev) => ({ ...prev, [catIndex]: '' }));
+                    }
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button
+                variant="secondary"
+                className="shrink-0"
+                onClick={() => {
+                  const value = (perkInputs[catIndex] || '').trim();
+                  if (value && !cat.perks.includes(value)) {
+                    const updated = [...data.structuredPerks];
+                    updated[catIndex] = { ...cat, perks: [...cat.perks, value] };
+                    updateData({ structuredPerks: updated });
+                    setPerkInputs((prev) => ({ ...prev, [catIndex]: '' }));
+                  }
+                }}
+                disabled={!(perkInputs[catIndex] || '').trim()}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {cat.perks.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {cat.perks.map((perk) => (
+                  <Tag
+                    key={perk}
+                    label={perk}
+                    variant="primary"
+                    onRemove={() => {
+                      const updated = [...data.structuredPerks];
+                      updated[catIndex] = {
+                        ...updated[catIndex],
+                        perks: updated[catIndex].perks.filter((p) => p !== perk),
+                      };
+                      updateData({ structuredPerks: updated });
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        <Button
+          variant="outline"
+          onClick={() =>
+            updateData({
+              structuredPerks: [...data.structuredPerks, { category: '', perks: [] }],
+            })
+          }
+        >
+          <Plus className="mr-1 h-4 w-4" /> Add Category
+        </Button>
+      </div>
     </div>
   );
 
@@ -2026,6 +2387,13 @@ export default function EmployerOnboardingPage() {
             label: 'Benefits',
             value: data.benefits.length > 0 ? `${data.benefits.length} added` : undefined,
           },
+          {
+            label: 'Structured Perks',
+            value:
+              data.structuredPerks.length > 0
+                ? `${data.structuredPerks.length} categories`
+                : undefined,
+          },
         ],
       },
       {
@@ -2225,7 +2593,7 @@ export default function EmployerOnboardingPage() {
         })}
 
         {/* Logo preview in review */}
-        {logoPreviewUrl && (
+        {logoPreview && (
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
@@ -2238,7 +2606,7 @@ export default function EmployerOnboardingPage() {
             </button>
             <div className="flex items-center gap-3">
               <img
-                src={logoPreviewUrl}
+                src={logoPreview}
                 alt="Company logo"
                 className="h-16 w-16 rounded-lg border border-[var(--border)] bg-white object-contain"
               />
@@ -2262,6 +2630,35 @@ export default function EmployerOnboardingPage() {
             <div className="flex flex-wrap gap-2">
               {data.benefits.map((b) => (
                 <Tag key={b} label={b} variant="primary" size="sm" />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Structured perks in review */}
+        {data.structuredPerks.length > 0 && (
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+            <button
+              type="button"
+              onClick={() => goToStep(5)}
+              className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
+            >
+              <Layers className="h-4 w-4" />
+              Structured Perks
+              <ExternalLink className="h-3 w-3" />
+            </button>
+            <div className="space-y-3">
+              {data.structuredPerks.map((cat) => (
+                <div key={cat.category}>
+                  <span className="text-xs font-medium text-[var(--text-muted)]">
+                    {cat.category}
+                  </span>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {cat.perks.map((p) => (
+                      <Tag key={p} label={p} variant="primary" size="sm" />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -2461,7 +2858,42 @@ export default function EmployerOnboardingPage() {
   // =======================================================================
 
   return (
-    <OnboardingShell
+    <>
+      {/* Logo Cropper Modal */}
+      {selectedLogoImage && (
+        <ImageCropper
+          isOpen={logoCropperOpen}
+          onClose={() => {
+            setLogoCropperOpen(false);
+            setSelectedLogoImage(null);
+          }}
+          imageSrc={selectedLogoImage}
+          onCropComplete={handleLogoCropComplete}
+          aspectRatio={1}
+          circularCrop={true}
+          outputWidth={400}
+          outputHeight={400}
+        />
+      )}
+
+      {/* Cover Image Cropper Modal */}
+      {selectedCoverImage && (
+        <ImageCropper
+          isOpen={coverCropperOpen}
+          onClose={() => {
+            setCoverCropperOpen(false);
+            setSelectedCoverImage(null);
+          }}
+          imageSrc={selectedCoverImage}
+          onCropComplete={handleCoverCropComplete}
+          aspectRatio={3}
+          circularCrop={false}
+          outputWidth={1200}
+          outputHeight={400}
+        />
+      )}
+
+      <OnboardingShell
       steps={STEPS}
       currentStep={step}
       onNext={handleNext}
@@ -2479,5 +2911,6 @@ export default function EmployerOnboardingPage() {
     >
       {renderStepContent()}
     </OnboardingShell>
+    </>
   );
 }

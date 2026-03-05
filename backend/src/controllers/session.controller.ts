@@ -10,7 +10,7 @@ export const listSessions = async (
   try {
     if (!req.user) throw new AppError('Not authorized', 401);
     const sessions = await sessionService.listActiveSessions(req.user.id);
-    res.status(200).json({ status: 'success', data: { sessions } });
+    res.status(200).json({ status: 'success', data: sessions });
   } catch (error) {
     next(error);
   }
@@ -37,8 +37,9 @@ export const revokeAllSessions = async (
 ): Promise<void> => {
   try {
     if (!req.user) throw new AppError('Not authorized', 401);
-    await sessionService.revokeAllSessions(req.user.id);
-    res.status(200).json({ status: 'success', message: 'All sessions revoked' });
+    // Exclude current session so the user stays logged in
+    await sessionService.revokeAllSessions(req.user.id, req.user.sessionId);
+    res.status(200).json({ status: 'success', message: 'All other sessions revoked' });
   } catch (error) {
     next(error);
   }

@@ -7,7 +7,7 @@ async function testConnection(name, connectionString) {
 
     const client = new Client({
         connectionString: connectionString,
-        ssl: { rejectUnauthorized: false }, // Supabase requires SSL, but usually self-signed CA implies rejectUnauthorized: false or providing CA
+        ssl: { rejectUnauthorized: false }, // Remote/managed PostgreSQL providers require SSL
         connectionTimeoutMillis: 5000,
     });
 
@@ -29,7 +29,7 @@ async function testConnection(name, connectionString) {
 }
 
 async function run() {
-    console.log('Testing Supabase Connectivity...');
+    console.log('Testing PostgreSQL Connectivity...');
 
     // 1. Test Session Mode (Port 5432) - Required for Migrations
     // Note: We use DIRECT_URL or allow constructing it

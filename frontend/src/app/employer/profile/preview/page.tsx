@@ -85,6 +85,17 @@ export default function CompanyProfilePreviewPage() {
           </div>
         ) : company ? (
           <>
+            {/* Cover Image Banner */}
+            {company.coverImage && (
+              <div className="relative h-64 w-full overflow-hidden rounded-xl">
+                <img
+                  src={company.coverImage}
+                  alt={`${company.companyName} cover`}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            )}
+
             {/* Company Header */}
             <Card>
               <div className="flex flex-col gap-6 sm:flex-row">
@@ -345,19 +356,80 @@ export default function CompanyProfilePreviewPage() {
                   </div>
                 }
               >
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {company.benefits.map((benefit) => (
-                    <div
-                      key={benefit}
-                      className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-secondary)]"
-                    >
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--success)]" />
-                      {benefit}
+                <div className="space-y-6">
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {company.benefits.map((benefit) => (
+                      <div
+                        key={benefit}
+                        className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-secondary)]"
+                      >
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--success)]" />
+                        {benefit}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Structured Perks by Category */}
+                  {company.structuredPerks && company.structuredPerks.length > 0 && (
+                    <div className="space-y-4">
+                      {company.structuredPerks.map((cat) => (
+                        <div key={cat.category}>
+                          <h3 className="mb-2 text-sm font-semibold text-[var(--text)]">
+                            {cat.category}
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {cat.perks.map((perk) => (
+                              <span
+                                key={perk}
+                                className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)]"
+                              >
+                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--success)]" />
+                                {perk}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               </Card>
             )}
+
+            {/* Structured Perks standalone (when no flat benefits) */}
+            {(!company.benefits || company.benefits.length === 0) &&
+              company.structuredPerks &&
+              company.structuredPerks.length > 0 && (
+                <Card
+                  header={
+                    <div className="flex items-center gap-2">
+                      <Handshake className="h-5 w-5 text-[var(--success)]" />
+                      <h2 className="text-lg font-semibold text-[var(--text)]">Perks</h2>
+                    </div>
+                  }
+                >
+                  <div className="space-y-4">
+                    {company.structuredPerks.map((cat) => (
+                      <div key={cat.category}>
+                        <h3 className="mb-2 text-sm font-semibold text-[var(--text)]">
+                          {cat.category}
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {cat.perks.map((perk) => (
+                            <span
+                              key={perk}
+                              className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)]"
+                            >
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--success)]" />
+                              {perk}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
 
             {/* Products & Services */}
             {company.productsServices && company.productsServices.length > 0 && (
@@ -543,6 +615,7 @@ export default function CompanyProfilePreviewPage() {
             {/* Funding & Investors */}
             {(company.fundingStage ||
               company.totalFundingRaised ||
+              company.annualRevenueRange ||
               (company.investors && company.investors.length > 0)) && (
               <Card
                 header={
@@ -566,6 +639,12 @@ export default function CompanyProfilePreviewPage() {
                       <span className="flex items-center gap-1.5">
                         <span className="font-medium text-[var(--text)]">Total Raised:</span>{' '}
                         {company.totalFundingRaised}
+                      </span>
+                    )}
+                    {company.annualRevenueRange && (
+                      <span className="flex items-center gap-1.5">
+                        <span className="font-medium text-[var(--text)]">Annual Revenue:</span>{' '}
+                        {company.annualRevenueRange}
                       </span>
                     )}
                   </div>
@@ -652,7 +731,7 @@ export default function CompanyProfilePreviewPage() {
             )}
 
             {/* Locations */}
-            {company.locations && company.locations.length > 0 && (
+            {((company.locations && company.locations.length > 0) || company.addressLine1) && (
               <Card
                 header={
                   <div className="flex items-center gap-2">
@@ -661,15 +740,38 @@ export default function CompanyProfilePreviewPage() {
                   </div>
                 }
               >
-                <div className="flex flex-wrap gap-2">
-                  {company.locations.map((loc) => (
-                    <span
-                      key={loc}
-                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)]"
-                    >
-                      <MapPin className="h-3.5 w-3.5" /> {loc}
-                    </span>
-                  ))}
+                <div className="space-y-4">
+                  {company.addressLine1 && (
+                    <div className="text-sm text-[var(--text-secondary)]">
+                      <h3 className="mb-1 text-sm font-semibold text-[var(--text)]">
+                        Primary Address
+                      </h3>
+                      <p>
+                        {[
+                          company.addressLine1,
+                          company.addressLine2,
+                          company.city,
+                          company.state,
+                          company.pincode,
+                          company.country,
+                        ]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </p>
+                    </div>
+                  )}
+                  {company.locations && company.locations.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {company.locations.map((loc) => (
+                        <span
+                          key={loc}
+                          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)]"
+                        >
+                          <MapPin className="h-3.5 w-3.5" /> {loc}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </Card>
             )}

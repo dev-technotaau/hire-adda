@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { authService } from '@/services/auth.service';
 import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
-import type { LoginRequest, RegisterRequest, Role, User } from '@/types/auth';
+import { broadcastLogout, broadcastLogin } from '@/lib/auth-channel';
+import type { LoginRequest, Role, User } from '@/types/auth';
 
 const ADMIN_ROLES: Role[] = ['ADMIN', 'SUPER_ADMIN'];
 
@@ -13,7 +14,6 @@ export function useAuth() {
   const router = useRouter();
   const {
     user,
-    refreshToken: storedRefreshToken,
     isAuthenticated,
     isLoading,
     isHydrated,
@@ -31,7 +31,7 @@ export function useAuth() {
     }
   }, [isHydrated, hydrate]);
 
-  // Verify token on mount by fetching current user.
+  // Verify token on mount by fetching current user from BFF.
   // Skip if login just happened (within 60s) — token is guaranteed fresh.
   useEffect(() => {
     if (isHydrated && isAuthenticated) {
@@ -43,17 +43,15 @@ export function useAuth() {
       authService
         .getMe()
         .then((res) => {
-          // Backend may wrap user in {user: ...} or return directly
           const payload = res.data as unknown as Record<string, unknown>;
           const userData = (payload?.user ?? res.data) as User;
           setUser(userData);
         })
         .catch((err) => {
           // Only logout on 401 (invalid/expired token), not on network errors
-          if (err?.statusCode === 401) {
+          if (err?.statusCode === 401 || err?.response?.status === 401) {
             storeLogout();
           } else {
-            // For other errors (network, 500, etc), keep user logged in but stop loading
             setLoading(false);
           }
         })
@@ -65,19 +63,19 @@ export function useAuth() {
   const login = useCallback(
     async (data: LoginRequest, turnstileToken?: string) => {
       const res = await authService.login(data, turnstileToken);
-      // Handle MFA requirement — backend returns empty tokens with requireMfa flag
+      // Handle MFA requirement — backend returns requireMfa flag with no tokens
       if (res.data.requireMfa) {
         return res;
       }
-      const { user: authUser, accessToken, refreshToken } = res.data;
-      storeLogin(authUser, accessToken, refreshToken, data.rememberMe ?? true);
+      // Tokens are set as httpOnly cookies by the BFF — just store user
+      storeLogin(res.data.user);
+      broadcastLogin(res.data.user);
       return res;
     },
     [storeLogin],
   );
 
-  const register = useCallback(async (data: RegisterRequest, turnstileToken?: string) => {
-    // Registration no longer returns tokens — user must verify email first
+  const register = useCallback(async (data: Parameters<typeof authService.register>[0], turnstileToken?: string) => {
     const res = await authService.register(data, turnstileToken);
     return res;
   }, []);
@@ -85,13 +83,14 @@ export function useAuth() {
   const logout = useCallback(async () => {
     const isAdmin = user?.role && ADMIN_ROLES.includes(user.role as Role);
     try {
-      await authService.logout(storedRefreshToken || undefined);
+      await authService.logout();
     } catch {
       // Continue with local logout even if API fails
     }
     storeLogout();
+    broadcastLogout();
     router.push(isAdmin ? ROUTES.PORTAL.LOGIN : '/auth/login');
-  }, [storeLogout, router, storedRefreshToken, user]);
+  }, [storeLogout, router, user]);
 
   const redirectToDashboard = useCallback(() => {
     if (user?.role) {

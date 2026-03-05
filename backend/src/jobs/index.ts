@@ -27,6 +27,7 @@ import './profile-reminder.queue';
 import './scheduled-publish.queue';
 import './weekly-digest.queue';
 import './backup.queue';
+import './data-export.queue';
 
 // Scheduler queue for stale job cleanup
 import { schedulerQueue } from './scheduler.queue';

@@ -48,6 +48,7 @@ export interface CandidateProfile {
   pronouns: string | null;
   gender: Gender | null;
   dob: string | null;
+  dateOfBirth?: string | null;
   maritalStatus: MaritalStatus | null;
   nationality: string | null;
   hometown: string | null;
@@ -85,6 +86,7 @@ export interface CandidateProfile {
   currentDepartment: string | null;
   functionalArea: string | null;
   currSalary: number | null;
+  expectedSalary?: number | null;
   expectedSalaryMin: number | null;
   expectedSalaryMax: number | null;
   salaryCurrency: string;
@@ -96,7 +98,9 @@ export interface CandidateProfile {
   careerBreakReason: string | null;
   openToWork: OpenToWorkStatus | null;
   preferredJobType: JobType[];
+  preferredJobTypes?: JobType[];
   preferredWorkMode: WorkMode[];
+  preferredWorkModes?: WorkMode[];
   preferredShift: ShiftType | null;
   preferredIndustries: string[];
   preferredRoleCategories: string[];
@@ -133,12 +137,16 @@ export interface CandidateProfile {
   skillsWithProficiency: SkillWithProficiency[] | null;
   interests: string[];
   hobbies: string[];
+  isPwD?: boolean;
+  veteranStatus?: string | null;
   isPhysicallyChallenged: boolean;
   disabilityType: DisabilityType | null;
   disabilityPercentage: number | null;
   profileCompleteness: number;
   githubProfile: string | null;
+  githubUrl?: string | null;
   linkedinProfile: string | null;
+  linkedinUrl?: string | null;
   portfolioUrl: string | null;
   stackOverflowProfile: string | null;
   twitterProfile: string | null;
@@ -168,6 +176,7 @@ export interface EducationEntry {
   institution: string;
   degree: string;
   field: string;
+  fieldOfStudy?: string;
   startDate: string;
   endDate?: string;
   grade?: string;
@@ -229,12 +238,16 @@ export interface LanguageEntry {
   language: string;
   proficiency: 'BASIC' | 'INTERMEDIATE' | 'FLUENT' | 'NATIVE';
   readWrite?: LanguageReadWrite;
+  read?: boolean;
+  write?: boolean;
+  speak?: boolean;
 }
 
 export interface SkillWithProficiency {
   skill: string;
   proficiency: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
   yearsOfExperience?: number;
+  years?: number;
 }
 
 export interface ITSkillEntry {

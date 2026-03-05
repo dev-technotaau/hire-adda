@@ -272,6 +272,7 @@ export default function DashboardHeader() {
                 <img
                   src={companyLogo}
                   alt="Company"
+                  loading="lazy"
                   className="h-8 w-8 rounded-md border border-[var(--border)] object-contain"
                 />
               )}

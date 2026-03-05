@@ -77,7 +77,10 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
   ) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
     const detectedCode = value ? detectCode(value) : null;
-    const [selectedCode, setSelectedCode] = useState(detectedCode || defaultCode);
+    // Internal code tracks user's manual selection from dropdown
+    const [internalCode, setInternalCode] = useState(detectedCode || defaultCode);
+    // Derive effective code: external value detection wins, fallback to internal state
+    const selectedCode = detectedCode || internalCode;
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [highlightIndex, setHighlightIndex] = useState(-1);
@@ -86,19 +89,9 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
     const listRef = useRef<HTMLDivElement>(null);
     const phoneInputRef = useRef<HTMLInputElement | null>(null);
 
-    // Sync selectedCode when value changes externally
-    useEffect(() => {
-      if (value) {
-        const code = detectCode(value);
-        if (code && code !== selectedCode) setSelectedCode(code);
-      }
-    }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
-
     // Focus search input when dropdown opens
     useEffect(() => {
       if (dropdownOpen) {
-        setSearch('');
-        setHighlightIndex(-1);
         // Small delay so the dropdown renders first
         requestAnimationFrame(() => searchInputRef.current?.focus());
       }
@@ -159,17 +152,15 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
       onValueChange?.(fullNumber);
     };
 
-    const handleCodeSelect = useCallback(
-      (c: CountryCode) => {
-        setSelectedCode(c.code);
-        setDropdownOpen(false);
-        setSearch('');
-        // Re-focus the phone number input after selection
-        requestAnimationFrame(() => phoneInputRef.current?.focus());
-        emitChange(localValue, c.code);
-      },
-      [emitChange, localValue],
-    );
+    const handleCodeSelect = (c: CountryCode) => {
+      setInternalCode(c.code);
+      setDropdownOpen(false);
+      setSearch('');
+      setHighlightIndex(-1);
+      // Re-focus the phone number input after selection
+      requestAnimationFrame(() => phoneInputRef.current?.focus());
+      emitChange(localValue, c.code);
+    };
 
     const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
       switch (e.key) {
@@ -229,7 +220,14 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
           <div className="relative" ref={dropdownRef}>
             <button
               type="button"
-              onClick={() => !props.disabled && setDropdownOpen(!dropdownOpen)}
+              onClick={() => {
+                if (props.disabled) return;
+                if (!dropdownOpen) {
+                  setSearch('');
+                  setHighlightIndex(-1);
+                }
+                setDropdownOpen(!dropdownOpen);
+              }}
               className={cn(
                 'flex shrink-0 items-center gap-1 border-r border-[var(--border)] bg-[var(--bg-secondary)] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)]',
                 inputSize === 'sm'

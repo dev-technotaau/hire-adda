@@ -440,22 +440,20 @@ export default function EmployerAnalyticsPage() {
                       {step.label}
                     </div>
                     <div className="flex-1">
-                      <div className="relative h-8 overflow-hidden rounded-lg bg-[var(--bg-secondary)]">
+                      <div className="h-8 overflow-hidden rounded-lg bg-[var(--bg-secondary)]">
                         <div
-                          className="absolute inset-y-0 left-0 rounded-lg transition-all duration-500"
+                          className="h-full rounded-lg transition-all duration-500"
                           style={{ width: `${pct}%`, backgroundColor: step.color }}
                         />
-                        <span className="absolute inset-y-0 left-3 flex items-center text-xs font-semibold text-white mix-blend-difference">
-                          {count}
-                        </span>
                       </div>
                     </div>
-                    <div className="w-20 shrink-0 text-right">
-                      <span className="text-sm font-medium text-[var(--text)]">{pct}%</span>
+                    <div className="w-24 shrink-0 text-right">
+                      <span className="text-sm font-semibold text-[var(--text)]">{count}</span>
+                      <span className="ml-1 text-xs text-[var(--text-muted)]">({pct}%)</span>
                       {i > 0 && (
-                        <span className="ml-1 text-xs text-[var(--text-muted)]">
-                          ({conversionRate}%)
-                        </span>
+                        <div className="text-[10px] text-[var(--text-muted)]">
+                          conv. {conversionRate}%
+                        </div>
                       )}
                     </div>
                   </div>

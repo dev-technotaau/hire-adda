@@ -60,21 +60,39 @@ export const metadata: Metadata = {
   },
 };
 
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'WebSite',
-  name: 'TalentBridge',
-  url: process.env.NEXT_PUBLIC_APP_URL || 'https://talentbridge.com',
-  description: "India's leading job portal and recruitment platform.",
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: {
-      '@type': 'EntryPoint',
-      urlTemplate: `${process.env.NEXT_PUBLIC_APP_URL || 'https://talentbridge.com'}/candidate/jobs?keyword={search_term_string}`,
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://talentbridge.com';
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'TalentBridge',
+    url: APP_URL,
+    description: "India's leading job portal and recruitment platform.",
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${APP_URL}/candidate/jobs?keyword={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
     },
-    'query-input': 'required name=search_term_string',
   },
-};
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'TalentBridge',
+    url: APP_URL,
+    logo: `${APP_URL}/icons/logo.svg`,
+    description: "India's leading job portal and recruitment platform. Find top jobs, hire the best talent, and build your career.",
+    sameAs: [],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer service',
+      url: `${APP_URL}/contact`,
+    },
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Server-side data fetching
@@ -422,6 +440,7 @@ export default async function Home() {
                 height={500}
                 className="w-full"
                 priority
+                fetchPriority="high"
               />
             </div>
           </div>

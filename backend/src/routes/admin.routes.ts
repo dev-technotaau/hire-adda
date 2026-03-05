@@ -90,6 +90,14 @@ router.delete('/moderation/keywords/:keyword', adminController.removeModerationK
 router.get('/applications', adminController.getApplications);
 router.get('/applications/stats', adminController.getApplicationStats);
 
+// Export Job Monitoring
+router.get('/export-jobs', adminController.getExportJobs);
+router.delete(
+  '/export-jobs/:jobId',
+  audit('CANCEL_EXPORT_JOB', 'ExportJob'),
+  adminController.cancelExportJob
+);
+
 // Note: Verification routes are under /verifications/pending and /verifications/:id/review
 // which are also admin restricted.
 
