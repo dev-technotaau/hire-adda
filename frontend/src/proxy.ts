@@ -81,7 +81,8 @@ const roleDashboards: Record<string, string> = {
   SUPER_ADMIN: '/super-admin',
 };
 
-/** Decode JWT payload without verification (Edge-compatible, no crypto needed — just for routing). */
+/** Decode JWT payload without verification (Edge-compatible, no crypto needed — just for routing).
+ *  Returns null if the token is malformed or expired so the middleware treats it as unauthenticated. */
 function getRoleFromToken(token: string): string | null {
   try {
     const parts = token.split('.');
@@ -89,7 +90,9 @@ function getRoleFromToken(token: string): string | null {
     // base64url → base64 → decode
     const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const json = atob(payload);
-    const data = JSON.parse(json) as { role?: string };
+    const data = JSON.parse(json) as { role?: string; exp?: number };
+    // Treat expired tokens as unauthenticated to prevent redirect loops
+    if (data.exp && data.exp * 1000 < Date.now()) return null;
     return data.role || null;
   } catch {
     return null;
