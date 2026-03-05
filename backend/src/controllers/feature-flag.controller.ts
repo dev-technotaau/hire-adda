@@ -54,6 +54,8 @@ export const getClientFlags = async (req: Request, res: Response, next: NextFunc
       }
     }
 
+    // Prevent any caching layer (CDN, edge, browser) from serving stale flags
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.status(200).json({
       status: 'success',
       data: clientFlags,

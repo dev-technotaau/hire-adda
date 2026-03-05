@@ -105,6 +105,8 @@ async function proxyRequest(
   if (requestId) responseHeaders['x-request-id'] = requestId;
   const retryAfter = res.headers.get('retry-after');
   if (retryAfter) responseHeaders['retry-after'] = retryAfter;
+  const cacheControl = res.headers.get('cache-control');
+  if (cacheControl) responseHeaders['cache-control'] = cacheControl;
 
   return new NextResponse(responseBody, {
     status: res.status,

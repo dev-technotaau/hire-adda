@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-const CACHE_NAME = 'tb-cache-v1';
+const CACHE_NAME = 'tb-cache-v2';
 const OFFLINE_URL = '/offline';
 
 // Static assets to pre-cache on install
