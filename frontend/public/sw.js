@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-const CACHE_NAME = 'tb-cache-v2';
+const CACHE_NAME = 'tb-cache-v3';
 const OFFLINE_URL = '/offline';
 
 // Static assets to pre-cache on install
@@ -33,14 +33,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Skip non-GET, non-http(s), and cross-origin API calls
+  // Skip non-GET and non-http(s) requests
   if (request.method !== 'GET') return;
   if (!request.url.startsWith('http')) return;
-  if (request.url.includes('/api/')) return;
-  if (request.url.includes('firebaseio.com')) return;
-  if (request.url.includes('googleapis.com')) return;
-  if (request.url.includes('facebook.com')) return;
-  if (request.url.includes('facebook.net')) return;
+
+  // Skip all third-party / cross-origin requests — let the browser handle them directly.
+  // The SW fetch() is subject to its own CSP which blocks external connect-src origins.
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
 
   // Navigation requests: network-first, fallback to offline page
   if (request.mode === 'navigate') {
