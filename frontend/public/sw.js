@@ -33,11 +33,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Skip non-GET and cross-origin API calls
+  // Skip non-GET, non-http(s), and cross-origin API calls
   if (request.method !== 'GET') return;
+  if (!request.url.startsWith('http')) return;
   if (request.url.includes('/api/')) return;
   if (request.url.includes('firebaseio.com')) return;
   if (request.url.includes('googleapis.com')) return;
+  if (request.url.includes('facebook.com')) return;
+  if (request.url.includes('facebook.net')) return;
 
   // Navigation requests: network-first, fallback to offline page
   if (request.mode === 'navigate') {

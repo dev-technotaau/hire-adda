@@ -30,7 +30,7 @@ function nextWithCsp(): NextResponse {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https://res.cloudinary.com https://assets.talentbridge.com https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com",
     "font-src 'self' https://fonts.gstatic.com",
-    `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com${firebaseDbOrigin ? ` ${firebaseDbOrigin}` : ''}`,
+    `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com${firebaseDbOrigin ? ` ${firebaseDbOrigin}` : ''}`,
     "frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
