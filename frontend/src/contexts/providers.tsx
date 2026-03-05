@@ -42,19 +42,7 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
   const { data: flags, isPending } = useFeatureFlags();
   const maintenanceFlag = flags?.maintenanceMode === true;
   const apiTriggered = useMaintenanceStore((s) => s.isMaintenanceMode);
-  const setMaintenanceMode = useMaintenanceStore((s) => s.setMaintenanceMode);
   const user = useAuthStore((s) => s.user);
-
-  // Sync feature-flag message/timer into the maintenance store so MaintenancePage can read them
-  useEffect(() => {
-    if (maintenanceFlag) {
-      setMaintenanceMode(
-        true,
-        (flags?.maintenanceMessage as string) || undefined,
-        (flags?.maintenanceReturnTime as string) || undefined,
-      );
-    }
-  }, [maintenanceFlag, flags?.maintenanceMessage, flags?.maintenanceReturnTime, setMaintenanceMode]);
 
   // Admin bypass: ADMIN/SUPER_ADMIN users skip maintenance
   const isAdminRole = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
@@ -76,7 +64,7 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
 
   const isBypassed = isAdminRole || hasBypassKey;
 
-  // If API already triggered maintenance, show immediately (no need to wait for flags)
+  // If API already triggered maintenance (503 interceptor), show immediately
   if (apiTriggered && !isBypassed) {
     return <MaintenancePage />;
   }
@@ -90,8 +78,14 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
     );
   }
 
+  // Feature-flag path: pass message/timer directly as props (no store sync needed)
   if (maintenanceFlag && !isBypassed) {
-    return <MaintenancePage />;
+    return (
+      <MaintenancePage
+        message={flags?.maintenanceMessage as string}
+        estimatedReturnTime={flags?.maintenanceReturnTime as string}
+      />
+    );
   }
 
   return <>{children}</>;

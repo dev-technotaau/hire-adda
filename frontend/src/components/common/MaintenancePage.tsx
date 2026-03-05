@@ -19,10 +19,19 @@ const STATUS_MESSAGES = [
 
 const AUTO_REFRESH_INTERVAL = 30_000; // 30 seconds
 
+interface MaintenancePageProps {
+  message?: string | null;
+  estimatedReturnTime?: string | null;
+}
+
 /** Full-screen enterprise maintenance page with animations and auto-refresh. */
-export default function MaintenancePage() {
-  const message = useMaintenanceStore((s) => s.message);
-  const estimatedReturnTime = useMaintenanceStore((s) => s.estimatedReturnTime);
+export default function MaintenancePage(props: MaintenancePageProps = {}) {
+  const storeMessage = useMaintenanceStore((s) => s.message);
+  const storeReturnTime = useMaintenanceStore((s) => s.estimatedReturnTime);
+
+  // Props (from feature flags) take precedence, fall back to store (from 503 interceptor)
+  const message = props.message || storeMessage;
+  const estimatedReturnTime = props.estimatedReturnTime || storeReturnTime;
 
   const [statusIndex, setStatusIndex] = useState(0);
   const [countdown, setCountdown] = useState<{
