@@ -89,13 +89,13 @@ export default function MaintenancePage(props: MaintenancePageProps = {}) {
     async function checkMaintenance() {
       if (reloadTriggered.current) return;
       try {
-        // Bust any HTTP cache so we get fresh data from backend
-        const url = `/api/proxy/feature-flags/client?_t=${Date.now()}`;
+        // Bust all caches: fresh=true bypasses backend cache, _t busts HTTP cache
+        const url = `/api/proxy/feature-flags/client?fresh=true&_t=${Date.now()}`;
         const res = await fetch(url, {
           credentials: 'include',
           cache: 'no-store',
         }).catch(() =>
-          fetch(`${APP_CONFIG.apiUrl}/feature-flags/client?_t=${Date.now()}`, {
+          fetch(`${APP_CONFIG.apiUrl}/feature-flags/client?fresh=true&_t=${Date.now()}`, {
             cache: 'no-store',
           }),
         );

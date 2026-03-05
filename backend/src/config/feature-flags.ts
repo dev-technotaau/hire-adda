@@ -42,13 +42,21 @@ let lastFetchTime = 0;
 const CACHE_TTL_MS = 60 * 1000; // 1 minute — short TTL so maintenance toggle takes effect quickly
 
 /**
- * Fetch feature flags from Firebase Remote Config
+ * Invalidate the feature flags cache so the next fetch hits Firebase directly.
  */
-export const fetchFeatureFlags = async (): Promise<FeatureFlagsConfig> => {
+export const invalidateCache = (): void => {
+  lastFetchTime = 0;
+};
+
+/**
+ * Fetch feature flags from Firebase Remote Config
+ * @param force - bypass cache and fetch fresh from Firebase
+ */
+export const fetchFeatureFlags = async (force = false): Promise<FeatureFlagsConfig> => {
   const now = Date.now();
 
-  // Return cached flags if still valid
-  if (now - lastFetchTime < CACHE_TTL_MS) {
+  // Return cached flags if still valid (unless force refresh)
+  if (!force && now - lastFetchTime < CACHE_TTL_MS) {
     return cachedFlags;
   }
 
@@ -107,9 +115,10 @@ export const isFeatureEnabled = async (key: string): Promise<boolean> => {
 
 /**
  * Get all feature flags (for admin panel)
+ * @param force - bypass cache and fetch fresh from Firebase
  */
-export const getAllFlags = async (): Promise<FeatureFlagsConfig> => {
-  return fetchFeatureFlags();
+export const getAllFlags = async (force = false): Promise<FeatureFlagsConfig> => {
+  return fetchFeatureFlags(force);
 };
 
-export default { fetchFeatureFlags, getFlag, isFeatureEnabled, getAllFlags };
+export default { fetchFeatureFlags, getFlag, isFeatureEnabled, getAllFlags, invalidateCache };

@@ -40,10 +40,12 @@ export const getFlags = async (_req: Request, res: Response, next: NextFunction)
 
 /**
  * GET /api/v1/feature-flags/client — Public subset for frontend
+ * Supports ?fresh=true to bypass backend cache and fetch directly from Firebase
  */
-export const getClientFlags = async (_req: Request, res: Response, next: NextFunction) => {
+export const getClientFlags = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const allFlags = await getAllFlags();
+    const force = req.query.fresh === 'true';
+    const allFlags = await getAllFlags(force);
     const clientFlags: Record<string, boolean | string | number> = {};
 
     for (const key of CLIENT_VISIBLE_FLAGS) {
