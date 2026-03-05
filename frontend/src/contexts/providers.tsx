@@ -42,11 +42,20 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
   const { data: flags, isPending } = useFeatureFlags();
   const maintenanceFlag = flags?.maintenanceMode === true;
   const apiTriggered = useMaintenanceStore((s) => s.isMaintenanceMode);
+  const clearMaintenance = useMaintenanceStore((s) => s.clearMaintenanceMode);
   const user = useAuthStore((s) => s.user);
 
   // One-shot ref: once feature flags resolve, never show the spinner again
   const resolved = useRef(false);
   if (!isPending) resolved.current = true;
+
+  // If feature flags resolved and say maintenance is OFF, clear any stale apiTriggered state
+  // Feature flags are the source of truth — the 503 store is just an early-detection shortcut
+  useEffect(() => {
+    if (!isPending && !maintenanceFlag && apiTriggered) {
+      clearMaintenance();
+    }
+  }, [isPending, maintenanceFlag, apiTriggered, clearMaintenance]);
 
   // Admin bypass: ADMIN/SUPER_ADMIN users skip maintenance
   const isAdminRole = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
@@ -68,8 +77,9 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
 
   const isBypassed = isAdminRole || hasBypassKey;
 
-  // If API already triggered maintenance (503 interceptor), show immediately
-  if (apiTriggered && !isBypassed) {
+  // If API triggered maintenance AND flags haven't resolved yet, show immediately
+  // Once flags resolve, they become the source of truth (useEffect above clears stale state)
+  if (apiTriggered && !resolved.current && !isBypassed) {
     return (
       <MaintenancePage
         message={flags?.maintenanceMessage as string}
@@ -87,8 +97,8 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
     );
   }
 
-  // Feature-flag path: pass message/timer directly as props
-  if (maintenanceFlag && !isBypassed) {
+  // Feature-flag path OR api-triggered (when flags also confirm maintenance)
+  if ((maintenanceFlag || apiTriggered) && !isBypassed) {
     return (
       <MaintenancePage
         message={flags?.maintenanceMessage as string}

@@ -3,13 +3,13 @@ import { featureFlagService } from '@/services/feature-flag.service';
 import { QUERY_KEYS } from '@/constants/config';
 import type { FeatureFlags } from '@/types/feature-flag';
 
-/** Hook to get client-visible feature flags (public, cached 5min) */
+/** Hook to get client-visible feature flags (public, cached 1min) */
 export function useFeatureFlags() {
   return useQuery<FeatureFlags>({
     queryKey: QUERY_KEYS.FEATURE_FLAGS.CLIENT,
     queryFn: featureFlagService.getClientFlags,
-    staleTime: 5 * 60 * 1000, // 5 minutes — matches backend cache TTL
-    gcTime: 10 * 60 * 1000,
+    staleTime: 60 * 1000, // 1 minute — matches backend cache TTL
+    gcTime: 5 * 60 * 1000,
     retry: 1,
   });
 }

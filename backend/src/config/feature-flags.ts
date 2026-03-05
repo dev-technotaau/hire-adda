@@ -39,7 +39,7 @@ const defaultFlags: FeatureFlagsConfig = {
 
 let cachedFlags: FeatureFlagsConfig = { ...defaultFlags };
 let lastFetchTime = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 60 * 1000; // 1 minute — short TTL so maintenance toggle takes effect quickly
 
 /**
  * Fetch feature flags from Firebase Remote Config
