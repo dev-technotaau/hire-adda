@@ -61,7 +61,7 @@ export async function authenticatedBackendFetch(
   const { request, ...fetchInit } = init;
   const headers = new Headers(fetchInit.headers);
 
-  if (accessToken) {
+  if (accessToken && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${accessToken}`);
   }
 

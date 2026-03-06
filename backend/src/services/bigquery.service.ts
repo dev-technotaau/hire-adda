@@ -149,7 +149,7 @@ export const bigqueryService = {
             query,
             params: { startDate, endDate },
           });
-          return rows;
+          if (rows.length > 0) return rows;
         } catch (error) {
           logger.warn(`BigQuery user growth query failed (falling back to Prisma): ${(error as Error).message}`);
         }
@@ -187,7 +187,7 @@ export const bigqueryService = {
             query,
             params: { startDate, endDate },
           });
-          return rows;
+          if (rows.length > 0) return rows;
         } catch (error) {
           logger.warn(`BigQuery application funnel query failed (falling back to Prisma): ${(error as Error).message}`);
         }
@@ -227,7 +227,7 @@ export const bigqueryService = {
             query,
             params: { limit },
           });
-          return rows;
+          if (rows.length > 0) return rows;
         } catch (error) {
           logger.warn(`BigQuery popular skills query failed (falling back to Prisma): ${(error as Error).message}`);
         }
@@ -276,7 +276,7 @@ export const bigqueryService = {
             `;
 
           const [rows] = await bigqueryClient.query({ query, params });
-          return rows;
+          if (rows.length > 0) return rows;
         } catch (error) {
           logger.warn(`BigQuery salary trends query failed (falling back to Prisma): ${(error as Error).message}`);
         }
@@ -315,7 +315,7 @@ export const bigqueryService = {
             query,
             params: { startDate, endDate },
           });
-          return rows;
+          if (rows.length > 0) return rows;
         } catch (error) {
           logger.warn(`BigQuery job trends query failed (falling back to Prisma): ${(error as Error).message}`);
         }

@@ -83,7 +83,7 @@ export default function EmailTemplatesPage() {
                 ))}
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="max-h-[calc(100vh-16rem)] space-y-1 overflow-y-auto">
                 {templates.map((tpl) => (
                   <button
                     key={tpl.key}

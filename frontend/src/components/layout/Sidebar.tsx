@@ -94,6 +94,7 @@ const superAdminNav: NavItem[] = [
   { label: 'Audit Logs', href: ROUTES.ADMIN.AUDIT_LOGS, icon: ClipboardList },
   { label: 'Reports', href: ROUTES.ADMIN.REPORTS, icon: FileBarChart },
   { label: 'Email Templates', href: ROUTES.ADMIN.EMAIL_TEMPLATES, icon: Mail },
+  { label: 'Support Tickets', href: ROUTES.ADMIN.TICKETS, icon: MessageSquare },
   { label: 'Ticket Analytics', href: ROUTES.SUPER_ADMIN.TICKETS, icon: BarChart3 },
   { label: 'Feature Flags', href: ROUTES.SUPER_ADMIN.FEATURE_FLAGS, icon: ToggleLeft },
   { label: 'System Config', href: ROUTES.SUPER_ADMIN.CONFIG, icon: Settings },

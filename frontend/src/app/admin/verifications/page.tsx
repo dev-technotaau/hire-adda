@@ -112,7 +112,12 @@ export default function AdminVerificationsPage() {
     ...(typeFilter && { type: typeFilter as VerificationFilters['type'] }),
   };
 
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    error: queryError,
+  } = useQuery({
     queryKey: QUERY_KEYS.VERIFICATIONS.ALL(filters as Record<string, unknown>),
     queryFn: () => verificationService.getAllVerifications(filters),
   });
@@ -124,7 +129,23 @@ export default function AdminVerificationsPage() {
 
   const verifications = data?.data?.items || [];
   const pagination = data?.data;
-  const stats = statsData?.data;
+  const rawStats = statsData?.data as
+    | { pending: number; approved: number; rejected: number; total: number }
+    | { byStatus?: Record<string, number>; byType?: Record<string, number> }
+    | undefined;
+
+  // Normalize stats — backend may return { byStatus: {...} } or flat { pending, approved, ... }
+  type NormalizedStats = { pending: number; approved: number; rejected: number; total: number };
+  const stats: NormalizedStats | undefined = rawStats
+    ? 'byStatus' in rawStats
+      ? {
+          pending: rawStats.byStatus?.PENDING ?? 0,
+          approved: rawStats.byStatus?.APPROVED ?? 0,
+          rejected: rawStats.byStatus?.REJECTED ?? 0,
+          total: Object.values(rawStats.byStatus ?? {}).reduce((a, b) => a + b, 0),
+        }
+      : (rawStats as NormalizedStats)
+    : undefined;
 
   const reviewMutation = useMutation({
     mutationFn: () =>
@@ -300,7 +321,19 @@ export default function AdminVerificationsPage() {
 
         {/* Verifications Table */}
         <Card padding="sm">
-          {isLoading ? (
+          {isError ? (
+            <div className="flex flex-col items-center justify-center gap-2 p-8 text-center">
+              <AlertCircle className="h-8 w-8 text-[var(--error)]" />
+              <p className="text-sm font-medium text-[var(--error)]">
+                Failed to load verifications
+              </p>
+              <p className="text-xs text-[var(--text-muted)]">
+                {(queryError as unknown as ApiError)?.message ||
+                  (queryError as unknown as Error)?.message ||
+                  'An unexpected error occurred'}
+              </p>
+            </div>
+          ) : isLoading ? (
             <div className="space-y-3 p-4">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} variant="rect" height={60} />

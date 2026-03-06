@@ -5,19 +5,44 @@ import { BACKEND_URL, BFF_SECRET, COOKIE_NAMES } from './config';
 let refreshPromise: Promise<{ accessToken: string; refreshToken: string } | null> | null = null;
 
 /**
+ * TTL cache for the last successful refresh result.
+ * After a token rotation the old refresh token is revoked. Requests that arrive
+ * slightly later still carry the old (revoked) cookie, so without a cache they
+ * would fail even though valid tokens were just issued seconds ago.
+ */
+let cachedTokens: { accessToken: string; refreshToken: string } | null = null;
+let cachedAt = 0;
+const CACHE_TTL_MS = 10_000; // 10 seconds
+
+/**
  * Attempt a silent token refresh server-side.
  * Returns new tokens on success or null on failure.
- * Uses a mutex so concurrent 401 retries don't trigger multiple refreshes.
+ * Uses a mutex so concurrent 401 retries don't trigger multiple refreshes,
+ * and a short TTL cache so sequential requests after rotation reuse the
+ * fresh tokens instead of sending the revoked cookie to the backend.
  */
 export async function attemptServerRefresh(): Promise<{
   accessToken: string;
   refreshToken: string;
 } | null> {
+  // Return cached tokens if still fresh (prevents using revoked cookie)
+  if (cachedTokens && Date.now() - cachedAt < CACHE_TTL_MS) {
+    return cachedTokens;
+  }
+
   if (refreshPromise) return refreshPromise;
 
-  refreshPromise = doRefresh().finally(() => {
-    refreshPromise = null;
-  });
+  refreshPromise = doRefresh()
+    .then((tokens) => {
+      if (tokens) {
+        cachedTokens = tokens;
+        cachedAt = Date.now();
+      }
+      return tokens;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
 
   return refreshPromise;
 }
