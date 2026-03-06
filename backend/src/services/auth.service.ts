@@ -237,10 +237,12 @@ export const login = async (
     role: Role;
     firstName: string | null;
     lastName: string | null;
+    avatar: string | null;
     isEmailVerified: boolean;
     mfaEnabled: boolean;
     createdAt: Date;
     lastLoginAt: Date | null;
+    companyProfile?: { logo: string | null; coverImage: string | null; companyName: string } | null;
   };
   accessToken: string;
   refreshToken: string;
@@ -250,8 +252,13 @@ export const login = async (
   const { password, mfaCode } = data;
   const email = data.email?.toLowerCase();
 
-  // Find user
-  const user = await prisma.user.findUnique({ where: { email } });
+  // Find user (include company profile basics for immediate header display)
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: {
+      companyProfile: { select: { logo: true, coverImage: true, companyName: true } },
+    },
+  });
   if (!user) {
     throw new AppError('Invalid email or password', 401);
   }
@@ -326,10 +333,12 @@ export const login = async (
           role: user.role,
           firstName: user.firstName,
           lastName: user.lastName,
+          avatar: user.avatar,
           isEmailVerified: user.isEmailVerified,
           mfaEnabled: user.mfaEnabled,
           createdAt: user.createdAt,
           lastLoginAt: user.lastLoginAt,
+          companyProfile: user.companyProfile,
         },
         accessToken: '',
         refreshToken: '',
@@ -405,10 +414,12 @@ export const login = async (
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
+      avatar: user.avatar,
       isEmailVerified: user.isEmailVerified,
       mfaEnabled: user.mfaEnabled,
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt,
+      companyProfile: user.companyProfile,
     },
     accessToken,
     refreshToken,
@@ -856,6 +867,14 @@ export const getCurrentUser = async (userId: string) => {
       lastLoginAt: true,
       createdAt: true,
       updatedAt: true,
+      // Include company profile basics so the header can display logo immediately
+      companyProfile: {
+        select: {
+          logo: true,
+          coverImage: true,
+          companyName: true,
+        },
+      },
     },
   });
 

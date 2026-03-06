@@ -19,6 +19,8 @@ export interface User {
   lastActiveAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Included in login + getMe responses for immediate header display */
+  companyProfile?: { logo: string | null; coverImage: string | null; companyName: string } | null;
 }
 
 export interface LoginRequest {

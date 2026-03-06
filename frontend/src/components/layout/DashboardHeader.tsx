@@ -51,7 +51,8 @@ export default function DashboardHeader() {
     enabled: user?.role === 'EMPLOYER',
     staleTime: 10 * 60 * 1000,
   });
-  const companyLogo = companyData?.data?.logo;
+  // Use query data when available, fall back to auth store (available immediately after login)
+  const companyLogo = companyData?.data?.logo ?? user?.companyProfile?.logo;
 
   const dashboardPath = user?.role ? ROLE_DASHBOARDS[user.role as Role] : '/';
   const hasSearchPage = user?.role === 'CANDIDATE' || user?.role === 'EMPLOYER';

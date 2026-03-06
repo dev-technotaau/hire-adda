@@ -47,6 +47,7 @@ export const firebaseLogin = async (
     // Find existing user or create a new one
     let user = await prisma.user.findUnique({
       where: { email: decodedToken.email },
+      include: { companyProfile: { select: { logo: true, coverImage: true, companyName: true } } },
     });
 
     let isNewUser = false;
@@ -65,6 +66,7 @@ export const firebaseLogin = async (
           isEmailVerified: decodedToken.email_verified || false,
           googleId: decodedToken.uid,
         },
+        include: { companyProfile: { select: { logo: true, coverImage: true, companyName: true } } },
       });
 
       isNewUser = true;
@@ -118,6 +120,8 @@ export const firebaseLogin = async (
           role: user.role,
           firstName: user.firstName,
           lastName: user.lastName,
+          avatar: user.avatar,
+          companyProfile: user.companyProfile,
         },
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
