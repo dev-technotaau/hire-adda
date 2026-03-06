@@ -44,6 +44,7 @@ import Input from '@/components/ui/Input';
 import PhoneInput from '@/components/ui/PhoneInput';
 import Tabs from '@/components/ui/Tabs';
 import Modal from '@/components/ui/Modal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Badge from '@/components/ui/Badge';
 import { showToast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -1643,6 +1644,7 @@ function PasskeysSection() {
   const queryClient = useQueryClient();
   const [registering, setRegistering] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [friendlyName, setFriendlyName] = useState('');
   const [showNameModal, setShowNameModal] = useState(false);
   const [pendingCredential, setPendingCredential] = useState<unknown>(null);
@@ -1691,6 +1693,7 @@ function PasskeysSection() {
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
+    setConfirmDeleteId(null);
     try {
       await webauthnService.deleteCredential(id);
       showToast.success('Passkey removed');
@@ -1751,7 +1754,7 @@ function PasskeysSection() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDelete(cred.id)}
+                  onClick={() => setConfirmDeleteId(cred.id)}
                   isLoading={deletingId === cred.id}
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
@@ -1765,6 +1768,15 @@ function PasskeysSection() {
           </p>
         )}
       </Card>
+
+      <ConfirmDialog
+        isOpen={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+        title="Remove Passkey"
+        message="Are you sure you want to remove this passkey? You will no longer be able to use it to sign in."
+        confirmLabel="Remove"
+      />
 
       <Modal
         isOpen={showNameModal}
@@ -1806,6 +1818,8 @@ function ActiveSessionsSection() {
   const queryClient = useQueryClient();
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
+  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
+  const [showConfirmRevokeAll, setShowConfirmRevokeAll] = useState(false);
 
   const { data: sessionsResponse, isLoading } = useQuery({
     queryKey: ['sessions', 'list'],
@@ -1816,6 +1830,7 @@ function ActiveSessionsSection() {
 
   const handleRevoke = async (sessionId: string) => {
     setRevokingId(sessionId);
+    setConfirmRevokeId(null);
     try {
       await sessionService.revokeSession(sessionId);
       showToast.success('Session revoked successfully');
@@ -1830,6 +1845,7 @@ function ActiveSessionsSection() {
 
   const handleRevokeAll = async () => {
     setRevokingAll(true);
+    setShowConfirmRevokeAll(false);
     try {
       await sessionService.revokeAllSessions();
       showToast.success('All other sessions have been revoked');
@@ -1852,6 +1868,7 @@ function ActiveSessionsSection() {
   };
 
   return (
+    <>
     <Card variant="bordered">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -1871,7 +1888,7 @@ function ActiveSessionsSection() {
             size="sm"
             isLoading={revokingAll}
             leftIcon={<LogOut className="h-4 w-4" />}
-            onClick={handleRevokeAll}
+            onClick={() => setShowConfirmRevokeAll(true)}
           >
             Revoke All Other Sessions
           </Button>
@@ -1921,7 +1938,7 @@ function ActiveSessionsSection() {
                   variant="ghost"
                   size="sm"
                   isLoading={revokingId === session.id}
-                  onClick={() => handleRevoke(session.id)}
+                  onClick={() => setConfirmRevokeId(session.id)}
                   className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
                 >
                   Revoke
@@ -1932,6 +1949,24 @@ function ActiveSessionsSection() {
         </div>
       )}
     </Card>
+
+    <ConfirmDialog
+      isOpen={!!confirmRevokeId}
+      onClose={() => setConfirmRevokeId(null)}
+      onConfirm={() => confirmRevokeId && handleRevoke(confirmRevokeId)}
+      title="Revoke Session"
+      message="Are you sure you want to revoke this session? The device will be signed out immediately."
+      confirmLabel="Revoke"
+    />
+    <ConfirmDialog
+      isOpen={showConfirmRevokeAll}
+      onClose={() => setShowConfirmRevokeAll(false)}
+      onConfirm={handleRevokeAll}
+      title="Revoke All Other Sessions"
+      message="Are you sure you want to revoke all other sessions? All other devices will be signed out immediately."
+      confirmLabel="Revoke All"
+    />
+    </>
   );
 }
 
@@ -1950,6 +1985,7 @@ function WebhooksTab() {
   const [expandedWebhook, setExpandedWebhook] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteWebhookId, setConfirmDeleteWebhookId] = useState<string | null>(null);
 
   const { data: webhooksResponse, isLoading } = useQuery({
     queryKey: ['webhooks', 'list'],
@@ -2009,6 +2045,7 @@ function WebhooksTab() {
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
+    setConfirmDeleteWebhookId(null);
     try {
       await webhookService.delete(id);
       showToast.success('Webhook deleted');
@@ -2110,7 +2147,7 @@ function WebhooksTab() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(wh.id)}
+                      onClick={() => setConfirmDeleteWebhookId(wh.id)}
                       isLoading={deletingId === wh.id}
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
@@ -2208,6 +2245,15 @@ function WebhooksTab() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!confirmDeleteWebhookId}
+        onClose={() => setConfirmDeleteWebhookId(null)}
+        onConfirm={() => confirmDeleteWebhookId && handleDelete(confirmDeleteWebhookId)}
+        title="Delete Webhook"
+        message="Are you sure you want to delete this webhook? It will stop receiving all event notifications."
+        confirmLabel="Delete"
+      />
     </div>
   );
 }

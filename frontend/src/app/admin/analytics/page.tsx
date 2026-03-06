@@ -1494,7 +1494,7 @@ export default function AdminAnalyticsPage() {
                 <EmptyState
                   icon={TrendingUp}
                   title="No funnel data"
-                  description="Hiring funnel data will appear when BigQuery is configured."
+                  description="Hiring funnel data No data available yet."
                 />
               )}
             </Card>
@@ -1519,7 +1519,7 @@ export default function AdminAnalyticsPage() {
                   <EmptyState
                     icon={BarChart3}
                     title="No data"
-                    description="Funnel chart will appear when BigQuery is configured."
+                    description="Funnel chart No data available yet."
                   />
                 )}
               </Card>
@@ -1622,7 +1622,7 @@ export default function AdminAnalyticsPage() {
                   <EmptyState
                     icon={Code}
                     title="No skill data"
-                    description="Skill demand data will appear when BigQuery is configured."
+                    description="Skill demand data No data available yet."
                   />
                 )}
               </Card>
@@ -1650,7 +1650,7 @@ export default function AdminAnalyticsPage() {
                   <EmptyState
                     icon={FileText}
                     title="No funnel data"
-                    description="Application funnel chart will appear when BigQuery is configured."
+                    description="Application funnel chart No data available yet."
                   />
                 )}
               </Card>
@@ -1680,7 +1680,7 @@ export default function AdminAnalyticsPage() {
                   <EmptyState
                     icon={UserPlus}
                     title="No growth data"
-                    description="User growth data will appear when BigQuery is configured."
+                    description="User growth data No data available yet."
                   />
                 )}
               </Card>
@@ -1707,7 +1707,7 @@ export default function AdminAnalyticsPage() {
                   <EmptyState
                     icon={Briefcase}
                     title="No job trends data"
-                    description="Job posting trends will appear when BigQuery is configured."
+                    description="Job posting trends No data available yet."
                   />
                 )}
               </Card>
@@ -1738,7 +1738,7 @@ export default function AdminAnalyticsPage() {
                 <EmptyState
                   icon={DollarSign}
                   title="No salary data"
-                  description="Salary trend data will appear when BigQuery is configured."
+                  description="Salary trend data No data available yet."
                 />
               )}
             </Card>

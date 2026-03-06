@@ -157,7 +157,7 @@ export default function CandidateMapView({
 
       {geoCandidates.map((candidate) => {
         const isSelected = candidate.id === selectedCandidateId;
-        const isSaved = savedCandidateIds.has(candidate.id);
+        const isSaved = savedCandidateIds.has(candidate.userId);
         const name = candidate.user
           ? `${candidate.user.firstName || ''} ${candidate.user.lastName || ''}`.trim()
           : 'Anonymous';
@@ -217,7 +217,7 @@ export default function CandidateMapView({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSaveCandidate(candidate.id);
+                      onSaveCandidate(candidate.userId);
                     }}
                     className={
                       isSaved

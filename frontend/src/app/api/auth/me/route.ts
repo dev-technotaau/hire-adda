@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticatedBackendFetch, setAuthCookies, getTokensFromCookies } from '../_lib/proxy-helpers';
+import { authenticatedBackendFetch, setAuthCookies, clearAuthCookies, getTokensFromCookies } from '../_lib/proxy-helpers';
 import { attemptServerRefresh } from '../_lib/refresh';
 
 export async function GET(request: NextRequest) {
@@ -24,10 +24,15 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return NextResponse.json(
+      // Session is truly dead — clear stale cookies so middleware doesn't keep
+      // allowing access to protected routes with a dead session.
+      // This is safe here (unlike the catch-all proxy) because getMe() is the
+      // authoritative session check called once on mount, not concurrent bulk requests.
+      const response = NextResponse.json(
         { status: 'error', message: 'Not authenticated' },
         { status: 401 },
       );
+      return clearAuthCookies(response);
     }
 
     const data = await res.json();

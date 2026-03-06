@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Mail, Lock, Shield, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import Logo from '@/components/common/Logo';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -33,6 +34,7 @@ export default function AdminLoginPage() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
   const { login } = useAuth();
+  const queryClient = useQueryClient();
   const storeLogin = useAuthStore((s) => s.login);
   const storeLogout = useAuthStore((s) => s.logout);
 
@@ -130,6 +132,7 @@ export default function AdminLoginPage() {
         return;
       }
 
+      queryClient.clear();
       storeLogin(authData.user);
       showToast.success('Welcome back!');
       router.push(redirect || ROLE_DASHBOARDS[role]);
@@ -177,6 +180,7 @@ export default function AdminLoginPage() {
           showToast.error('Access denied. This portal is for administrators only.');
           return;
         }
+        queryClient.clear();
         storeLogin(user);
         showToast.success('MFA has been disabled. You are now logged in.');
         router.push(redirect || ROLE_DASHBOARDS[role]);

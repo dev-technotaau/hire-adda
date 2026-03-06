@@ -14,6 +14,7 @@ import ProgressBar from '@/components/ui/ProgressBar';
 import Skeleton from '@/components/ui/Skeleton';
 import { showToast } from '@/components/ui/Toast';
 import ImageCropper from '@/components/ui/ImageCropper';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { employerService } from '@/services/employer.service';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store/auth.store';
@@ -80,120 +81,29 @@ const SECTION_HEADERS: Record<Section, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Name Section Component
-// ---------------------------------------------------------------------------
-
-function NameSection() {
-  const queryClient = useQueryClient();
-  const { user, setUser } = useAuthStore();
-  const [firstName, setFirstName] = useState(user?.firstName || '');
-  const [lastName, setLastName] = useState(user?.lastName || '');
-  const [isSaving, setIsSaving] = useState(false);
-  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string }>({});
-
-  const validate = () => {
-    const newErrors: { firstName?: string; lastName?: string } = {};
-
-    if (!firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    } else if (firstName.length > 50) {
-      newErrors.firstName = 'First name must be at most 50 characters';
-    } else if (!/^[a-zA-Z\s'-]+$/.test(firstName)) {
-      newErrors.firstName = 'First name can only contain letters, spaces, hyphens, and apostrophes';
-    }
-
-    if (!lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-    } else if (lastName.length > 50) {
-      newErrors.lastName = 'Last name must be at most 50 characters';
-    } else if (!/^[a-zA-Z\s'-]+$/.test(lastName)) {
-      newErrors.lastName = 'Last name can only contain letters, spaces, hyphens, and apostrophes';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validate()) return;
-
-    try {
-      setIsSaving(true);
-      const res = await authService.updateProfile({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-      });
-      if (res.data?.user) {
-        setUser(res.data.user);
-      }
-      showToast.success('Name updated successfully');
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.AUTH.ME });
-    } catch (err) {
-      const error = err as unknown as ApiError;
-      showToast.error(error.message || 'Failed to update name');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const hasChanges = firstName !== (user?.firstName || '') || lastName !== (user?.lastName || '');
-
-  return (
-    <Card padding="sm">
-      <div>
-        <p className="mb-2 font-medium text-[var(--text)]">Your Name</p>
-        <p className="mb-3 text-xs text-[var(--text-muted)]">
-          Update your personal name for account identification
-        </p>
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="First Name"
-              placeholder="Enter your first name"
-              value={firstName}
-              onChange={(e) => {
-                setFirstName(e.target.value);
-                if (errors.firstName) setErrors({ ...errors, firstName: undefined });
-              }}
-              error={errors.firstName}
-              required
-            />
-            <Input
-              label="Last Name"
-              placeholder="Enter your last name"
-              value={lastName}
-              onChange={(e) => {
-                setLastName(e.target.value);
-                if (errors.lastName) setErrors({ ...errors, lastName: undefined });
-              }}
-              error={errors.lastName}
-              required
-            />
-          </div>
-          {hasChanges && (
-            <div className="flex justify-end">
-              <Button onClick={handleSave} disabled={isSaving} isLoading={isSaving} size="sm">
-                Save Name
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Page Component
 // ---------------------------------------------------------------------------
 
 export default function CompanyProfilePage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const { user } = useAuthStore();
   const [activeSection, setActiveSection] = useState<Section>('company');
   const [form, setForm] = useState<UpdateCompanyRequest>({});
   const [formDirty, setFormDirty] = useState(false);
   const initialFormRef = useRef<string>('');
+
+  // Personal name state (lives on User model, not CompanyProfile)
+  const [firstName, setFirstName] = useState(user?.firstName || '');
+  const [lastName, setLastName] = useState(user?.lastName || '');
+
+  // Sync name state when user data loads/changes
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+    }
+  }, [user]);
 
   // Logo cropper state
   const [logoCropperOpen, setLogoCropperOpen] = useState(false);
@@ -204,6 +114,10 @@ export default function CompanyProfilePage() {
   const [coverCropperOpen, setCoverCropperOpen] = useState(false);
   const [selectedCoverImage, setSelectedCoverImage] = useState<string | null>(null);
   const [isCoverUploading, setIsCoverUploading] = useState(false);
+
+  // Confirm dialog state
+  const [showRemoveLogoConfirm, setShowRemoveLogoConfirm] = useState(false);
+  const [showRemoveCoverConfirm, setShowRemoveCoverConfirm] = useState(false);
 
   // Deep-link: read ?section= and ?focus= query params
   useEffect(() => {
@@ -500,7 +414,26 @@ export default function CompanyProfilePage() {
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Save name if changed (lives on User model, not CompanyProfile)
+    const nameChanged =
+      firstName !== (user?.firstName || '') || lastName !== (user?.lastName || '');
+    if (nameChanged && firstName.trim() && lastName.trim()) {
+      try {
+        const res = await authService.updateProfile({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+        });
+        if (res.data?.user) {
+          useAuthStore.getState().setUser(res.data.user);
+        }
+      } catch (err) {
+        const error = err as unknown as ApiError;
+        showToast.error(error.message || 'Failed to update name');
+        return;
+      }
+    }
+
     // Transform fields to match backend schema before sending
     const { workplacePolicies, awardsRecognitions, structuredPerks, ...rest } = form;
 
@@ -596,14 +529,37 @@ export default function CompanyProfilePage() {
                 <Eye className="mr-1.5 h-4 w-4" /> Preview as Candidate
               </Button>
             </Link>
-            <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty}>
+            <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty && firstName === (user?.firstName || '') && lastName === (user?.lastName || '')}>
               <Save className="mr-1.5 h-4 w-4" /> Save Changes
             </Button>
           </div>
         </div>
 
-        {/* Name */}
-        <NameSection />
+        {/* Your Name */}
+        <Card padding="sm">
+          <div>
+            <p className="mb-2 font-medium text-[var(--text)]">Your Name</p>
+            <p className="mb-3 text-xs text-[var(--text-muted)]">
+              Your personal name for account identification
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="First Name"
+                placeholder="Enter your first name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+              />
+              <Input
+                label="Last Name"
+                placeholder="Enter your last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+        </Card>
 
         {/* Logo */}
         <Card padding="sm">
@@ -645,21 +601,13 @@ export default function CompanyProfilePage() {
                 </label>
                 {company?.logo && (
                   <button
-                    onClick={async () => {
-                      try {
-                        setIsLogoUploading(true);
-                        await removeLogoMutation.mutateAsync();
-                      } catch (err) {
-                        // Error already handled in mutation
-                      } finally {
-                        setIsLogoUploading(false);
-                      }
-                    }}
+                    onClick={() => setShowRemoveLogoConfirm(true)}
                     disabled={isLogoUploading}
-                    className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
                     title="Remove logo"
                   >
                     <X className="h-4 w-4" />
+                    Remove Logo
                   </button>
                 )}
               </div>
@@ -684,6 +632,26 @@ export default function CompanyProfilePage() {
               outputHeight={400}
             />
           )}
+
+          <ConfirmDialog
+            isOpen={showRemoveLogoConfirm}
+            onClose={() => setShowRemoveLogoConfirm(false)}
+            onConfirm={async () => {
+              try {
+                setIsLogoUploading(true);
+                setShowRemoveLogoConfirm(false);
+                await removeLogoMutation.mutateAsync();
+              } catch {
+                // Error already handled in mutation
+              } finally {
+                setIsLogoUploading(false);
+              }
+            }}
+            title="Remove Company Logo"
+            message="Are you sure you want to remove your company logo? This action cannot be undone."
+            confirmLabel="Remove"
+            isLoading={isLogoUploading}
+          />
         </Card>
 
         {/* Cover Image */}
@@ -726,21 +694,13 @@ export default function CompanyProfilePage() {
                 </label>
                 {company?.coverImage && (
                   <button
-                    onClick={async () => {
-                      try {
-                        setIsCoverUploading(true);
-                        await removeCoverImageMutation.mutateAsync();
-                      } catch (err) {
-                        // Error already handled in mutation
-                      } finally {
-                        setIsCoverUploading(false);
-                      }
-                    }}
+                    onClick={() => setShowRemoveCoverConfirm(true)}
                     disabled={isCoverUploading}
-                    className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
                     title="Remove cover"
                   >
                     <X className="h-4 w-4" />
+                    Remove Cover
                   </button>
                 )}
               </div>
@@ -765,6 +725,26 @@ export default function CompanyProfilePage() {
               outputHeight={400}
             />
           )}
+
+          <ConfirmDialog
+            isOpen={showRemoveCoverConfirm}
+            onClose={() => setShowRemoveCoverConfirm(false)}
+            onConfirm={async () => {
+              try {
+                setIsCoverUploading(true);
+                setShowRemoveCoverConfirm(false);
+                await removeCoverImageMutation.mutateAsync();
+              } catch {
+                // Error already handled in mutation
+              } finally {
+                setIsCoverUploading(false);
+              }
+            }}
+            title="Remove Cover Image"
+            message="Are you sure you want to remove your cover image? This action cannot be undone."
+            confirmLabel="Remove"
+            isLoading={isCoverUploading}
+          />
         </Card>
 
         {/* Completeness */}

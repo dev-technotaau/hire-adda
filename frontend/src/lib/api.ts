@@ -127,6 +127,8 @@ api.interceptors.response.use(
 
     // 401 after BFF already tried refresh → session is dead
     if (error.response?.status === 401) {
+      // Clear httpOnly cookies via BFF logout (fire-and-forget)
+      axios.post('/api/auth/logout', {}, { withCredentials: true }).catch(() => {});
       broadcastLogout();
       redirectToLogin();
     }

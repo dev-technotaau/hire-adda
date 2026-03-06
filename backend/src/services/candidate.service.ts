@@ -403,31 +403,40 @@ export class CandidateService {
       limit?: number;
     }
   ) {
-    try {
-      const { hits, total, facets } = await searchService.searchCandidates(query || filters.keyword, {
-        ...filters,
-        from:
-          ((filters.page || PAGINATION.DEFAULT_PAGE) - 1) *
-          (filters.limit || PAGINATION.DEFAULT_LIMIT),
-        size: filters.limit || PAGINATION.DEFAULT_LIMIT,
-      });
+    const page = filters.page || PAGINATION.DEFAULT_PAGE;
+    const cappedLimit = Math.min(filters.limit || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT);
+    const skip = (page - 1) * cappedLimit;
 
-      return {
-        candidates: hits,
-        pagination: {
-          total,
-          page: filters.page || PAGINATION.DEFAULT_PAGE,
-          limit: filters.limit || PAGINATION.DEFAULT_LIMIT,
-          pages: Math.ceil(total / (filters.limit || PAGINATION.DEFAULT_LIMIT)),
-        },
-        facets,
-      };
-    } catch (error) {
-      logger.warn('Elasticsearch candidate search failed, falling back to DB', error);
+    // 1. Try Elasticsearch — only when actual search criteria exist (not just page/limit/sortBy)
+    const ignoreKeys = new Set(['page', 'limit', 'sortBy']);
+    const hasSearchCriteria = Object.entries(filters).some(
+      ([key, val]) => !ignoreKeys.has(key) && val !== undefined && val !== null && val !== '',
+    );
+    if (query || hasSearchCriteria) {
+      try {
+        const { hits, total, facets } = await searchService.searchCandidates(query || filters.keyword, {
+          ...filters,
+          from: skip,
+          size: cappedLimit,
+        });
 
-      const page = filters.page || PAGINATION.DEFAULT_PAGE;
-      const cappedLimit = Math.min(filters.limit || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT);
-      const skip = (page - 1) * cappedLimit;
+        return {
+          candidates: hits,
+          pagination: {
+            total,
+            page,
+            limit: cappedLimit,
+            pages: Math.ceil(total / cappedLimit),
+          },
+          facets,
+        };
+      } catch (error) {
+        logger.warn('Elasticsearch candidate search failed, falling back to DB', error);
+      }
+    }
+
+    // 2. Prisma DB fallback — used when no search criteria or when ES fails
+    {
 
       const where: any = {};
 

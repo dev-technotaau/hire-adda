@@ -24,6 +24,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import Textarea from '@/components/ui/Textarea';
 import { showToast } from '@/components/ui/Toast';
+import Select from '@/components/ui/Select';
 import { employerService } from '@/services/employer.service';
 import { jobService } from '@/services/job.service';
 import { ROUTES } from '@/constants/routes';
@@ -157,18 +158,18 @@ export default function EmployerApplicationsDashboard() {
             />
           </form>
           <div className="flex items-center gap-2">
-            <select
+            <Select
+              options={[
+                { value: 'newest', label: 'Newest First' },
+                { value: 'oldest', label: 'Oldest First' },
+                { value: 'matchScore', label: 'Match Score' },
+              ]}
               value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value as typeof sortBy);
+              onChange={(v) => {
+                setSortBy(v as typeof sortBy);
                 setPage(1);
               }}
-              className="focus:border-primary rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:outline-none"
-            >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="matchScore">Match Score</option>
-            </select>
+            />
           </div>
         </div>
 

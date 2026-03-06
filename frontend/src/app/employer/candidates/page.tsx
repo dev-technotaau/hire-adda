@@ -435,6 +435,8 @@ export default function CandidateSearchPage() {
   const [jobPickerAction, setJobPickerAction] = useState<'shortlist' | 'select'>('shortlist');
   const [jobPickerCandidateId, setJobPickerCandidateId] = useState('');
   const [jobSearch, setJobSearch] = useState('');
+  // Track candidates that have been actioned in this session (candidateId → last action)
+  const [actionedCandidates, setActionedCandidates] = useState<Record<string, 'shortlisted' | 'selected'>>({});
   const [viewMode, setViewMode] = useState<'list' | 'compact' | 'map'>(() => {
     if (typeof window !== 'undefined') {
       return (
@@ -523,8 +525,9 @@ export default function CandidateSearchPage() {
   const shortlistMutation = useMutation({
     mutationFn: ({ candidateId, jobId }: { candidateId: string; jobId: string }) =>
       employerService.shortlistCandidateForJob(candidateId, jobId),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       setJobPickerOpen(false);
+      setActionedCandidates((prev) => ({ ...prev, [vars.candidateId]: 'shortlisted' as const }));
       showToast.success('Candidate shortlisted!');
     },
     onError: (err) => {
@@ -536,8 +539,9 @@ export default function CandidateSearchPage() {
   const selectMutation = useMutation({
     mutationFn: ({ candidateId, jobId }: { candidateId: string; jobId: string }) =>
       employerService.selectCandidateForJob(candidateId, jobId),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       setJobPickerOpen(false);
+      setActionedCandidates((prev) => ({ ...prev, [vars.candidateId]: 'selected' as const }));
       showToast.success('Candidate selected!');
     },
     onError: (err) => {
@@ -1687,20 +1691,20 @@ export default function CandidateSearchPage() {
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Radius</label>
-              <select
+              <Select
+                options={[
+                  { value: '5', label: '5 km' },
+                  { value: '10', label: '10 km' },
+                  { value: '25', label: '25 km' },
+                  { value: '50', label: '50 km' },
+                  { value: '100', label: '100 km' },
+                  { value: '200', label: '200 km' },
+                ]}
                 value={filters.radiusKm || ''}
-                onChange={(e) => handleFilterChange('radiusKm', e.target.value || undefined)}
+                onChange={(v) => handleFilterChange('radiusKm', v || undefined)}
+                placeholder="Select radius"
                 disabled={!filters.latitude}
-                className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] focus:ring-2 focus:outline-none disabled:opacity-50"
-              >
-                <option value="">Select radius</option>
-                <option value="5">5 km</option>
-                <option value="10">10 km</option>
-                <option value="25">25 km</option>
-                <option value="50">50 km</option>
-                <option value="100">100 km</option>
-                <option value="200">200 km</option>
-              </select>
+              />
             </div>
           </div>
           {nearbyCities.length > 0 && (
@@ -1849,20 +1853,20 @@ export default function CandidateSearchPage() {
             {/* Sort Dropdown */}
             <div className="flex items-center gap-2">
               <label className="hidden text-sm text-[var(--text-muted)] sm:inline">Sort by:</label>
-              <select
+              <Select
+                options={[
+                  { value: 'relevance', label: 'Best Match' },
+                  { value: 'profileUpdated', label: 'Recently Updated' },
+                  { value: 'lastActive', label: 'Recently Active' },
+                  { value: 'experience', label: 'Experience: High to Low' },
+                  { value: 'experience_asc', label: 'Experience: Low to High' },
+                  { value: 'salary', label: 'Salary: High to Low' },
+                  { value: 'salary_asc', label: 'Salary: Low to High' },
+                  ...(filters.latitude ? [{ value: 'distance', label: 'Nearest First' }] : []),
+                ]}
                 value={filters.sortBy || 'relevance'}
-                onChange={(e) => handleFilterChange('sortBy', e.target.value || undefined)}
-                className="focus:border-primary focus:ring-primary/20 h-9 rounded-lg border border-[var(--border)] bg-white px-3 text-sm focus:ring-2"
-              >
-                <option value="relevance">Best Match</option>
-                <option value="profileUpdated">Recently Updated</option>
-                <option value="lastActive">Recently Active</option>
-                <option value="experience">Experience: High to Low</option>
-                <option value="experience_asc">Experience: Low to High</option>
-                <option value="salary">Salary: High to Low</option>
-                <option value="salary_asc">Salary: Low to High</option>
-                {filters.latitude && <option value="distance">Nearest First</option>}
-              </select>
+                onChange={(v) => handleFilterChange('sortBy', v || undefined)}
+              />
             </div>
             {pagination && (
               <span className="text-sm whitespace-nowrap text-[var(--text-muted)]">
@@ -2012,7 +2016,12 @@ export default function CandidateSearchPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => bulkSaveMutation.mutate(Array.from(selectedIds))}
+                  onClick={() => {
+                    const userIds = candidates
+                      .filter((c) => selectedIds.has(c.id))
+                      .map((c) => c.userId);
+                    bulkSaveMutation.mutate(userIds);
+                  }}
                   disabled={bulkSaveMutation.isPending}
                 >
                   <Bookmark className="mr-1.5 h-4 w-4" />
@@ -2078,11 +2087,11 @@ export default function CandidateSearchPage() {
                       candidate={candidate}
                       searchKeyword={keyword}
                       requiredSkills={requiredSkills}
-                      isSaved={savedCandidateIds.has(candidate.id)}
-                      onToggleSave={() => toggleSaveMutation.mutate(candidate.id)}
+                      isSaved={savedCandidateIds.has(candidate.userId)}
+                      onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
                       isSaving={
                         toggleSaveMutation.isPending &&
-                        toggleSaveMutation.variables === candidate.id
+                        toggleSaveMutation.variables === candidate.userId
                       }
                       isSelected={selectedIds.has(candidate.id)}
                       onToggleSelect={() => toggleSelect(candidate.id)}
@@ -2095,12 +2104,13 @@ export default function CandidateSearchPage() {
                       candidate={candidate}
                       searchKeyword={keyword}
                       requiredSkills={requiredSkills}
-                      isSaved={savedCandidateIds.has(candidate.id)}
-                      onToggleSave={() => toggleSaveMutation.mutate(candidate.id)}
+                      isSaved={savedCandidateIds.has(candidate.userId)}
+                      onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
                       isSaving={
                         toggleSaveMutation.isPending &&
-                        toggleSaveMutation.variables === candidate.id
+                        toggleSaveMutation.variables === candidate.userId
                       }
+                      actionedStatus={actionedCandidates[candidate.id]}
                       onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
                       onSelect={() => openJobPicker(candidate.id, 'select')}
                       onResumeDownload={() => handleResumeDownload(candidate.userId)}
@@ -2115,7 +2125,7 @@ export default function CandidateSearchPage() {
                   <SwipeableCard
                     key={candidate.id}
                     enabled={true}
-                    onSave={() => toggleSaveMutation.mutate(candidate.id)}
+                    onSave={() => toggleSaveMutation.mutate(candidate.userId)}
                     onDismiss={() => {
                       // Track dismissed candidate (optional analytics)
                     }}
@@ -2163,11 +2173,11 @@ export default function CandidateSearchPage() {
                       candidate={candidate as CandidateProfile}
                       searchKeyword={keyword}
                       requiredSkills={requiredSkills}
-                      isSaved={savedCandidateIds.has(candidate.id)}
-                      onToggleSave={() => toggleSaveMutation.mutate(candidate.id)}
+                      isSaved={savedCandidateIds.has(candidate.userId)}
+                      onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
                       isSaving={
                         toggleSaveMutation.isPending &&
-                        toggleSaveMutation.variables === candidate.id
+                        toggleSaveMutation.variables === candidate.userId
                       }
                       isSelected={selectedIds.has(candidate.id)}
                       onToggleSelect={() => toggleSelect(candidate.id)}
@@ -2180,12 +2190,13 @@ export default function CandidateSearchPage() {
                       candidate={candidate as CandidateProfile}
                       searchKeyword={keyword}
                       requiredSkills={requiredSkills}
-                      isSaved={savedCandidateIds.has(candidate.id)}
-                      onToggleSave={() => toggleSaveMutation.mutate(candidate.id)}
+                      isSaved={savedCandidateIds.has(candidate.userId)}
+                      onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
                       isSaving={
                         toggleSaveMutation.isPending &&
-                        toggleSaveMutation.variables === candidate.id
+                        toggleSaveMutation.variables === candidate.userId
                       }
+                      actionedStatus={actionedCandidates[candidate.id]}
                       onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
                       onSelect={() => openJobPicker(candidate.id, 'select')}
                       onResumeDownload={() => handleResumeDownload(candidate.userId)}
@@ -2315,6 +2326,7 @@ function CandidateCard({
   isSaved,
   onToggleSave,
   isSaving,
+  actionedStatus,
   onShortlist,
   onSelect,
   onResumeDownload,
@@ -2329,6 +2341,7 @@ function CandidateCard({
   isSaved: boolean;
   onToggleSave: () => void;
   isSaving: boolean;
+  actionedStatus?: 'shortlisted' | 'selected';
   onShortlist: () => void;
   onSelect: () => void;
   onResumeDownload: () => void;
@@ -2542,20 +2555,35 @@ function CandidateCard({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
+          {actionedStatus && (
+            <Badge variant="success" size="sm">
+              {actionedStatus === 'shortlisted' ? 'Shortlisted' : 'Selected'}
+            </Badge>
+          )}
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             <button
               type="button"
               onClick={onShortlist}
               title="Shortlist for a job"
-              className="hover:border-primary hover:text-primary hover:bg-primary-light flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
+              className={cn(
+                'flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
+                actionedStatus === 'shortlisted'
+                  ? 'border-[var(--success)]/30 text-[var(--success)] bg-[var(--success)]/10'
+                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-primary hover:text-primary hover:bg-primary-light',
+              )}
             >
-              <Star className="h-3.5 w-3.5" /> Shortlist
+              <Star className={cn('h-3.5 w-3.5', actionedStatus === 'shortlisted' && 'fill-current')} /> Shortlist
             </button>
             <button
               type="button"
               onClick={onSelect}
               title="Select for a job"
-              className="hover:border-primary hover:text-primary hover:bg-primary-light flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
+              className={cn(
+                'flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
+                actionedStatus === 'selected'
+                  ? 'border-[var(--success)]/30 text-[var(--success)] bg-[var(--success)]/10'
+                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-primary hover:text-primary hover:bg-primary-light',
+              )}
             >
               <UserCheck className="h-3.5 w-3.5" /> Select
             </button>

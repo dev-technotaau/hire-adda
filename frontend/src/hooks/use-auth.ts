@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth.store';
 import { authService } from '@/services/auth.service';
 import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
@@ -12,6 +13,7 @@ const ADMIN_ROLES: Role[] = ['ADMIN', 'SUPER_ADMIN'];
 
 export function useAuth() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const {
     user,
     isAuthenticated,
@@ -67,12 +69,14 @@ export function useAuth() {
       if (res.data.requireMfa) {
         return res;
       }
+      // Clear stale query cache from previous session before storing new user
+      queryClient.clear();
       // Tokens are set as httpOnly cookies by the BFF — just store user
       storeLogin(res.data.user);
       broadcastLogin(res.data.user);
       return res;
     },
-    [storeLogin],
+    [storeLogin, queryClient],
   );
 
   const register = useCallback(async (data: Parameters<typeof authService.register>[0], turnstileToken?: string) => {
@@ -87,10 +91,12 @@ export function useAuth() {
     } catch {
       // Continue with local logout even if API fails
     }
+    // Clear all cached query data to prevent stale data on next login
+    queryClient.clear();
     storeLogout();
     broadcastLogout();
     router.push(isAdmin ? ROUTES.PORTAL.LOGIN : '/auth/login');
-  }, [storeLogout, router, user]);
+  }, [storeLogout, router, user, queryClient]);
 
   const redirectToDashboard = useCallback(() => {
     if (user?.role) {

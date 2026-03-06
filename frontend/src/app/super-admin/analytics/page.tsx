@@ -258,7 +258,12 @@ export default function SuperAdminAnalyticsPage() {
     queryKey: QUERY_KEYS.VERIFICATIONS.STATS,
     queryFn: async () => {
       const res = await api.get(API.VERIFICATIONS.STATS);
-      return res.data as { data: Record<string, number> };
+      return res.data as {
+        data: {
+          byStatus?: Record<string, number>;
+          byType?: Record<string, number>;
+        };
+      };
     },
     enabled: activeTab === 'system',
   });
@@ -1580,7 +1585,7 @@ export default function SuperAdminAnalyticsPage() {
                 <EmptyState
                   icon={TrendingUp}
                   title="No funnel data"
-                  description="Hiring funnel data will appear when BigQuery is configured."
+                  description="Hiring funnel data No data available yet."
                 />
               )}
             </Card>
@@ -1605,7 +1610,7 @@ export default function SuperAdminAnalyticsPage() {
                   <EmptyState
                     icon={BarChart3}
                     title="No data"
-                    description="Funnel chart will appear when BigQuery is configured."
+                    description="Funnel chart No data available yet."
                   />
                 )}
               </Card>
@@ -1711,7 +1716,7 @@ export default function SuperAdminAnalyticsPage() {
                   <EmptyState
                     icon={Code}
                     title="No skill data"
-                    description="Skill demand data will appear when BigQuery is configured."
+                    description="Skill demand data No data available yet."
                   />
                 )}
               </Card>
@@ -1739,7 +1744,7 @@ export default function SuperAdminAnalyticsPage() {
                   <EmptyState
                     icon={FileText}
                     title="No funnel data"
-                    description="Application funnel chart will appear when BigQuery is configured."
+                    description="Application funnel chart No data available yet."
                   />
                 )}
               </Card>
@@ -1769,7 +1774,7 @@ export default function SuperAdminAnalyticsPage() {
                   <EmptyState
                     icon={UserPlus}
                     title="No growth data"
-                    description="User growth data will appear when BigQuery is configured."
+                    description="User growth data No data available yet."
                   />
                 )}
               </Card>
@@ -1796,7 +1801,7 @@ export default function SuperAdminAnalyticsPage() {
                   <EmptyState
                     icon={Briefcase}
                     title="No job trends data"
-                    description="Job posting trends will appear when BigQuery is configured."
+                    description="Job posting trends No data available yet."
                   />
                 )}
               </Card>
@@ -1827,7 +1832,7 @@ export default function SuperAdminAnalyticsPage() {
                 <EmptyState
                   icon={DollarSign}
                   title="No salary data"
-                  description="Salary trend data will appear when BigQuery is configured."
+                  description="Salary trend data No data available yet."
                 />
               )}
             </Card>
@@ -1894,7 +1899,8 @@ export default function SuperAdminAnalyticsPage() {
             </Card>
 
             {/* Verification Stats */}
-            {verificationStats && Object.keys(verificationStats).length > 0 && (
+            {verificationStats &&
+              (verificationStats.byStatus || verificationStats.byType) && (
               <Card
                 header={
                   <div className="flex items-center gap-2">
@@ -1905,18 +1911,54 @@ export default function SuperAdminAnalyticsPage() {
                   </div>
                 }
               >
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {Object.entries(verificationStats).map(([key, value]) => (
-                    <div key={key} className="rounded-lg bg-[var(--bg-secondary)] p-4 text-center">
-                      <p className="text-2xl font-bold text-[var(--text)]">
-                        {typeof value === 'number' ? formatNumber(value) : value}
+                {/* By Status */}
+                {verificationStats.byStatus &&
+                  Object.keys(verificationStats.byStatus).length > 0 && (
+                    <div className="mb-4">
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                        By Status
                       </p>
-                      <p className="mt-1 text-xs text-[var(--text-muted)] capitalize">
-                        {key.replace(/_/g, ' ')}
-                      </p>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {Object.entries(verificationStats.byStatus).map(([key, value]) => (
+                          <div
+                            key={`status-${key}`}
+                            className="rounded-lg bg-[var(--bg-secondary)] p-4 text-center"
+                          >
+                            <p className="text-2xl font-bold text-[var(--text)]">
+                              {formatNumber(value)}
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--text-muted)] capitalize">
+                              {key.replace(/_/g, ' ').toLowerCase()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  )}
+                {/* By Type */}
+                {verificationStats.byType &&
+                  Object.keys(verificationStats.byType).length > 0 && (
+                    <div>
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                        By Type
+                      </p>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {Object.entries(verificationStats.byType).map(([key, value]) => (
+                          <div
+                            key={`type-${key}`}
+                            className="rounded-lg bg-[var(--bg-secondary)] p-4 text-center"
+                          >
+                            <p className="text-2xl font-bold text-[var(--text)]">
+                              {formatNumber(value)}
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--text-muted)] capitalize">
+                              {key.replace(/_/g, ' ').toLowerCase()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
               </Card>
             )}
 

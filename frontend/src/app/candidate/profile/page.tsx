@@ -45,11 +45,13 @@ import FileUpload from '@/components/ui/FileUpload';
 import Skeleton from '@/components/ui/Skeleton';
 import { showToast } from '@/components/ui/Toast';
 import { candidateService } from '@/services/candidate.service';
+import { authService } from '@/services/auth.service';
 import { formatFileSize } from '@/lib/utils';
 import { getFileTypeBadge } from '@/utils/format';
 import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/use-auth';
+import { useAuthStore } from '@/store/auth.store';
 import type { UpdateCandidateRequest, ResumeReadinessItem } from '@/types/candidate';
 import type { ApiError } from '@/types/api';
 import type { ParsedResumeData, ApplyableResumeFields } from '@/types/resume-parse';
@@ -149,6 +151,8 @@ export default function CandidateProfilePage() {
     if (profile) {
       queueMicrotask(() => {
         const initial: UpdateCandidateRequest = {
+          firstName: profile.user?.firstName || '',
+          lastName: profile.user?.lastName || '',
           headline: profile.headline || '',
           pronouns: profile.pronouns || '',
           gender: profile.gender || undefined,
@@ -389,9 +393,31 @@ export default function CandidateProfilePage() {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Update name on the User model if changed
+    const { user } = useAuthStore.getState();
+    const nameChanged =
+      form.firstName !== (user?.firstName || '') || form.lastName !== (user?.lastName || '');
+    if (nameChanged && form.firstName?.trim() && form.lastName?.trim()) {
+      try {
+        const res = await authService.updateProfile({
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+        });
+        if (res.data?.user) {
+          useAuthStore.getState().setUser(res.data.user);
+        }
+      } catch (err) {
+        const error = err as unknown as ApiError;
+        showToast.error(error.message || 'Failed to update name');
+        return;
+      }
+    }
+
+    // Update candidate profile
+    const { firstName: _fn, lastName: _ln, ...profileFields } = form;
     const payload = {
-      ...form,
+      ...profileFields,
       dob: form.dob ? new Date(form.dob).toISOString() : undefined,
       dateOfAvailability: form.dateOfAvailability
         ? new Date(form.dateOfAvailability).toISOString()

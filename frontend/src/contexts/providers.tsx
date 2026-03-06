@@ -117,8 +117,10 @@ function AuthSyncListener({ children }: { children: ReactNode }) {
   useEffect(() => {
     return onAuthMessage((msg) => {
       if (msg.type === 'logout' || msg.type === 'session_expired') {
+        getQueryClient().clear();
         storeLogout();
       } else if (msg.type === 'login') {
+        getQueryClient().clear();
         storeLogin(msg.user);
       }
     });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -36,7 +36,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import { showToast } from '@/components/ui/Toast';
 import PresenceIndicator from '@/components/ui/PresenceIndicator';
 import ScreeningQuestionForm from '@/components/ui/ScreeningQuestionForm';
-import { useJob, useApplyJob, useToggleSaveJob } from '@/hooks/use-jobs';
+import { useJob, useApplyJob, useToggleSaveJob, useAppliedJobs } from '@/hooks/use-jobs';
 import { ROUTES } from '@/constants/routes';
 import {
   JOB_TYPE_LABELS,
@@ -166,13 +166,22 @@ export default function JobDetailPage() {
   const { data, isLoading } = useJob(id);
   const applyMutation = useApplyJob();
   const saveMutation = useToggleSaveJob();
+  const { data: appliedJobsData } = useAppliedJobs(1, 500);
 
   const [activeTab, setActiveTab] = useState('description');
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
   const [screeningAnswers, setScreeningAnswers] = useState<Record<string, string>>({});
+  const [justApplied, setJustApplied] = useState(false);
 
   const job = data?.data;
+
+  const isApplied = useMemo(() => {
+    if (justApplied) return true;
+    const items = appliedJobsData?.data?.items;
+    if (!items) return false;
+    return items.some((a: { jobId: string }) => a.jobId === id);
+  }, [appliedJobsData, id, justApplied]);
 
   const handleApply = async () => {
     // Validate required screening questions
@@ -195,6 +204,7 @@ export default function JobDetailPage() {
       setShowApplyModal(false);
       setCoverLetter('');
       setScreeningAnswers({});
+      setJustApplied(true);
       showToast.success('Application submitted successfully!');
     } catch (err) {
       const error = err as ApiError;
@@ -364,7 +374,13 @@ export default function JobDetailPage() {
               <Button variant="outline" size="sm" onClick={handleShare}>
                 <Share2 className="mr-1.5 h-4 w-4" /> Share
               </Button>
-              {job.applyMethod === 'EXTERNAL_URL' && job.externalApplyUrl ? (
+              {isApplied ? (
+                <Link href={ROUTES.CANDIDATE.APPLICATIONS}>
+                  <Button size="sm" variant="outline" className="text-[var(--success)] border-[var(--success)]/30">
+                    <CheckCircle className="mr-1.5 h-4 w-4" /> Applied
+                  </Button>
+                </Link>
+              ) : job.applyMethod === 'EXTERNAL_URL' && job.externalApplyUrl ? (
                 <a href={job.externalApplyUrl} target="_blank" rel="noopener noreferrer">
                   <Button size="sm">
                     <ExternalLink className="mr-1.5 h-4 w-4" /> Apply Externally
@@ -887,9 +903,17 @@ export default function JobDetailPage() {
         {/* Sticky Apply */}
         {job.applyMethod === 'IN_PLATFORM' && (
           <div className="fixed right-0 bottom-0 left-0 z-40 border-t border-[var(--border)] bg-white p-4 sm:hidden">
-            <Button fullWidth onClick={() => setShowApplyModal(true)}>
-              Apply Now
-            </Button>
+            {isApplied ? (
+              <Link href={ROUTES.CANDIDATE.APPLICATIONS}>
+                <Button fullWidth variant="outline" className="text-[var(--success)] border-[var(--success)]/30">
+                  <CheckCircle className="mr-1.5 h-4 w-4" /> Applied — View Applications
+                </Button>
+              </Link>
+            ) : (
+              <Button fullWidth onClick={() => setShowApplyModal(true)}>
+                Apply Now
+              </Button>
+            )}
           </div>
         )}
 

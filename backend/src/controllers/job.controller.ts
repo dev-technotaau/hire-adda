@@ -204,11 +204,12 @@ export const updateApplicationStatus = async (req: Request, res: Response, next:
       throw new AppError('Not authorized', 401);
     }
 
-    const { status } = req.body;
+    const { status, rejectionReason } = req.body;
     const updated = await jobService.updateApplicationStatus(
       req.user.id,
-      req.params.id as string,
-      status
+      req.params.applicationId as string,
+      status,
+      rejectionReason
     );
 
     res.status(200).json({

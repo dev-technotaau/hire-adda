@@ -138,14 +138,14 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
           </button>
         ) : (
           <div className="flex items-center gap-2">
-            <select
+            <Select
+              options={[
+                { value: 'true', label: 'Yes' },
+                { value: 'false', label: 'No' },
+              ]}
               value={String(editValue)}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--bg)] text-[var(--text)]"
-            >
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </select>
+              onChange={(v) => setEditValue(v)}
+            />
             <button
               onClick={handleSave}
               disabled={isSaving}

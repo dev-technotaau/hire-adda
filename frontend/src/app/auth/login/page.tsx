@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Mail, Lock, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import AuthLayout from '@/components/layout/AuthLayout';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -48,6 +49,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
   const { login } = useAuth();
+  const queryClient = useQueryClient();
   const storeLogin = useAuthStore((s) => s.login);
 
   const [step, setStep] = useState<Step>('email');
@@ -152,6 +154,7 @@ export default function LoginPage() {
         return;
       }
 
+      queryClient.clear();
       storeLogin(authData.user);
       showToast.success('Welcome back!');
       const role = authData.user.role as Role;
@@ -174,6 +177,7 @@ export default function LoginPage() {
       const authData = verifyRes.data;
       if (!authData) throw new Error('Authentication failed');
 
+      queryClient.clear();
       storeLogin(authData.user);
       showToast.success('Welcome back!');
       const role = authData.user.role as Role;
@@ -214,6 +218,7 @@ export default function LoginPage() {
       const res = await authService.mfaRecoveryVerify({ email, otp: recoveryOtp });
       const user = res.data?.user;
       if (user) {
+        queryClient.clear();
         storeLogin(user);
         showToast.success('MFA has been disabled. You are now logged in.');
         const role = user.role as Role;

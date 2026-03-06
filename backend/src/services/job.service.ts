@@ -274,11 +274,16 @@ export class JobService {
       logger.error('Failed to enqueue matching job', err);
     }
 
-    // Publish Kafka event
+    // Publish Kafka event (enriched for BigQuery analytics)
     publishEvent(KafkaTopics.JOB_POSTED, job.id, {
       jobId: job.id,
       companyId: company.id,
       title: data.title,
+      skills: data.skillsRequired || [],
+      salary_min: data.salaryMin ? Number(data.salaryMin) : null,
+      salary_max: data.salaryMax ? Number(data.salaryMax) : null,
+      industry: data.industry || null,
+      location: data.location || null,
     });
 
     // GA4: track job_posted
@@ -781,7 +786,7 @@ export class JobService {
   /**
    * Update Application Status (Employer)
    */
-  async updateApplicationStatus(userId: string, applicationId: string, status: ApplicationStatus) {
+  async updateApplicationStatus(userId: string, applicationId: string, status: ApplicationStatus, rejectionReason?: string) {
     const application = await prisma.jobApplication.findUnique({
       where: { id: applicationId },
       include: { job: { include: { company: true } } },
@@ -799,6 +804,7 @@ export class JobService {
       where: { id: applicationId },
       data: {
         status,
+        ...(status === 'REJECTED' && rejectionReason ? { rejectionReason } : {}),
         ...(status === 'VIEWED' && !application.viewedAt ? { viewedAt: new Date() } : {}),
         ...(status === 'SELECTED' ? { selectedAt: new Date() } : {}),
         ...(status === 'OFFERED' ? { offeredAt: new Date() } : {}),
@@ -1098,7 +1104,16 @@ export class JobService {
         .catch(() => {});
     }
 
-    publishEvent(KafkaTopics.JOB_UPDATED, jobId, { jobId, userId });
+    publishEvent(KafkaTopics.JOB_UPDATED, jobId, {
+      jobId,
+      userId,
+      title: jobForIndex?.title || data.title,
+      skills: data.skillsRequired ?? jobForIndex?.skillsRequired ?? [],
+      salary_min: data.salaryMin ? Number(data.salaryMin) : (jobForIndex?.salaryMin ? Number(jobForIndex.salaryMin) : null),
+      salary_max: data.salaryMax ? Number(data.salaryMax) : (jobForIndex?.salaryMax ? Number(jobForIndex.salaryMax) : null),
+      industry: data.industry ?? jobForIndex?.industry ?? null,
+      location: data.location ?? jobForIndex?.location ?? null,
+    });
 
     // Re-sync to Cloud Talent
     if (jobForIndex) {
@@ -1146,7 +1161,16 @@ export class JobService {
       .deleteJob(jobId)
       .catch((err) => logger.error('Failed to delete job from ES', err));
 
-    publishEvent(KafkaTopics.JOB_CLOSED, jobId, { jobId, userId });
+    publishEvent(KafkaTopics.JOB_CLOSED, jobId, {
+      jobId,
+      userId,
+      title: job.title,
+      skills: (updated as any).skillsRequired || [],
+      salary_min: (updated as any).salaryMin ? Number((updated as any).salaryMin) : null,
+      salary_max: (updated as any).salaryMax ? Number((updated as any).salaryMax) : null,
+      industry: (updated as any).industry || null,
+      location: (updated as any).location || null,
+    });
 
     // GA4: track job_closed
     trackEvent(getClientId(userId), { name: 'job_closed', params: { job_id: jobId } }).catch(

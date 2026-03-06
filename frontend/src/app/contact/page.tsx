@@ -5,6 +5,8 @@ import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
 import PublicLayout from '@/components/layout/PublicLayout';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Textarea from '@/components/ui/Textarea';
 import { showToast } from '@/components/ui/Toast';
 import { ticketService } from '@/services/ticket.service';
 import type { ApiError } from '@/types/api';
@@ -37,8 +39,7 @@ const contactInfo = [
   },
 ];
 
-const categoryOptions: { value: '' | TicketCategory; label: string }[] = [
-  { value: '', label: 'Select a category' },
+const categoryOptions = [
   { value: 'GENERAL', label: 'General Inquiry' },
   { value: 'TECHNICAL', label: 'Technical Support' },
   { value: 'BILLING', label: 'Billing & Payments' },
@@ -59,9 +60,7 @@ export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ticketNumber, setTicketNumber] = useState<string | null>(null);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
@@ -161,65 +160,32 @@ export default function ContactPage() {
                   </div>
 
                   <div className="grid gap-6 sm:grid-cols-2">
-                    <div className="w-full">
-                      <label
-                        htmlFor="subject"
-                        className="mb-1.5 block text-sm font-medium text-[var(--text)]"
-                      >
-                        Subject<span className="text-error ml-0.5">*</span>
-                      </label>
-                      <input
-                        id="subject"
-                        name="subject"
-                        type="text"
-                        placeholder="Brief summary of your issue"
-                        value={form.subject}
-                        onChange={handleChange}
-                        required
-                        className="focus:border-primary focus:ring-primary/20 h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm text-[var(--text)] transition-colors duration-200 placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-                      />
-                    </div>
-                    <div className="w-full">
-                      <label
-                        htmlFor="category"
-                        className="mb-1.5 block text-sm font-medium text-[var(--text)]"
-                      >
-                        Category
-                      </label>
-                      <select
-                        id="category"
-                        name="category"
-                        value={form.category}
-                        onChange={handleChange}
-                        className="focus:border-primary focus:ring-primary/20 h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm text-[var(--text)] transition-colors duration-200 focus:ring-2 focus:outline-none"
-                      >
-                        {categoryOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="w-full">
-                    <label
-                      htmlFor="message"
-                      className="mb-1.5 block text-sm font-medium text-[var(--text)]"
-                    >
-                      Message<span className="text-error ml-0.5">*</span>
-                    </label>
-                    <textarea
-                      id="message"
-                      name="message"
-                      rows={5}
-                      placeholder="Tell us how we can help..."
-                      value={form.message}
+                    <Input
+                      label="Subject"
+                      name="subject"
+                      placeholder="Brief summary of your issue"
+                      value={form.subject}
                       onChange={handleChange}
                       required
-                      className="focus:border-primary focus:ring-primary/20 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2.5 text-sm text-[var(--text)] transition-colors duration-200 placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-[var(--bg-secondary)] disabled:opacity-60"
+                    />
+                    <Select
+                      label="Category"
+                      options={categoryOptions}
+                      value={form.category}
+                      onChange={(v) => setForm((prev) => ({ ...prev, category: v as '' | TicketCategory }))}
+                      placeholder="Select a category"
                     />
                   </div>
+
+                  <Textarea
+                    label="Message"
+                    name="message"
+                    rows={5}
+                    placeholder="Tell us how we can help..."
+                    value={form.message}
+                    onChange={handleChange}
+                    required
+                  />
 
                   <Button
                     type="submit"

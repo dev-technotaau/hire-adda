@@ -36,6 +36,7 @@ import Input from '@/components/ui/Input';
 import PhoneInput from '@/components/ui/PhoneInput';
 import Tabs from '@/components/ui/Tabs';
 import Modal from '@/components/ui/Modal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { showToast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/use-auth';
 import { authService } from '@/services/auth.service';
@@ -590,6 +591,8 @@ function WhatsAppVerificationSection() {
   const [isResending, setIsResending] = useState(false);
   const [newWhatsappNumber, setNewWhatsappNumber] = useState('');
   const [password, setPassword] = useState('');
+  const [showRemoveWhatsappConfirm, setShowRemoveWhatsappConfirm] = useState(false);
+  const [showRemoveSeparateConfirm, setShowRemoveSeparateConfirm] = useState(false);
 
   useEffect(() => {
     if (resendTimer <= 0) return;
@@ -639,6 +642,7 @@ function WhatsAppVerificationSection() {
   };
 
   const handleRemoveSeparateNumber = async () => {
+    setShowRemoveSeparateConfirm(false);
     setIsLoading(true);
     try {
       await authService.removeWhatsappNumber();
@@ -655,6 +659,7 @@ function WhatsAppVerificationSection() {
   };
 
   const handleRemoveWhatsapp = async () => {
+    setShowRemoveWhatsappConfirm(false);
     setIsLoading(true);
     try {
       await authService.removeWhatsappNumber();
@@ -761,7 +766,7 @@ function WhatsAppVerificationSection() {
             {hasSeparateNumber && (
               <button
                 type="button"
-                onClick={handleRemoveSeparateNumber}
+                onClick={() => setShowRemoveSeparateConfirm(true)}
                 disabled={isLoading}
                 className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] hover:underline disabled:opacity-50"
               >
@@ -770,7 +775,7 @@ function WhatsAppVerificationSection() {
             )}
             <button
               type="button"
-              onClick={handleRemoveWhatsapp}
+              onClick={() => setShowRemoveWhatsappConfirm(true)}
               disabled={isLoading}
               className="text-sm font-medium text-[var(--error)] hover:underline disabled:opacity-50"
             >
@@ -890,6 +895,24 @@ function WhatsAppVerificationSection() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={showRemoveWhatsappConfirm}
+        onClose={() => setShowRemoveWhatsappConfirm(false)}
+        onConfirm={handleRemoveWhatsapp}
+        title="Remove WhatsApp Verification"
+        message="Are you sure you want to remove WhatsApp verification? You will stop receiving WhatsApp notifications."
+        confirmLabel="Remove"
+      />
+      <ConfirmDialog
+        isOpen={showRemoveSeparateConfirm}
+        onClose={() => setShowRemoveSeparateConfirm(false)}
+        onConfirm={handleRemoveSeparateNumber}
+        title="Remove Separate WhatsApp Number"
+        message="Are you sure you want to remove your separate WhatsApp number? Your mobile number will be used instead."
+        confirmLabel="Remove"
+        variant="warning"
+      />
     </Card>
   );
 }
@@ -1604,6 +1627,7 @@ function PasskeysSection() {
   const queryClient = useQueryClient();
   const [registering, setRegistering] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [friendlyName, setFriendlyName] = useState('');
   const [showNameModal, setShowNameModal] = useState(false);
   const [pendingCredential, setPendingCredential] = useState<unknown>(null);
@@ -1651,6 +1675,7 @@ function PasskeysSection() {
   };
 
   const handleDelete = async (id: string) => {
+    setConfirmDeleteId(null);
     setDeletingId(id);
     try {
       await webauthnService.deleteCredential(id);
@@ -1712,7 +1737,7 @@ function PasskeysSection() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDelete(cred.id)}
+                  onClick={() => setConfirmDeleteId(cred.id)}
                   isLoading={deletingId === cred.id}
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
@@ -1726,6 +1751,15 @@ function PasskeysSection() {
           </p>
         )}
       </Card>
+
+      <ConfirmDialog
+        isOpen={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+        title="Remove Passkey"
+        message="Are you sure you want to remove this passkey? You will no longer be able to use it to sign in."
+        confirmLabel="Remove"
+      />
 
       <Modal
         isOpen={showNameModal}
@@ -1767,6 +1801,8 @@ function ActiveSessionsSection() {
   const queryClient = useQueryClient();
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
+  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
+  const [showConfirmRevokeAll, setShowConfirmRevokeAll] = useState(false);
 
   const { data: sessionsResponse, isLoading } = useQuery({
     queryKey: QUERY_KEYS.SESSIONS.LIST,
@@ -1777,6 +1813,7 @@ function ActiveSessionsSection() {
 
   const handleRevoke = async (sessionId: string) => {
     setRevokingId(sessionId);
+    setConfirmRevokeId(null);
     try {
       await sessionService.revokeSession(sessionId);
       showToast.success('Session revoked successfully');
@@ -1791,6 +1828,7 @@ function ActiveSessionsSection() {
 
   const handleRevokeAll = async () => {
     setRevokingAll(true);
+    setShowConfirmRevokeAll(false);
     try {
       await sessionService.revokeAllSessions();
       showToast.success('All other sessions have been revoked');
@@ -1813,86 +1851,105 @@ function ActiveSessionsSection() {
   };
 
   return (
-    <Card variant="bordered">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-lg">
-            <Monitor className="text-primary h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--text)]">Active Sessions</h2>
-            <p className="text-sm text-[var(--text-secondary)]">
-              Manage your active sessions across devices
-            </p>
-          </div>
-        </div>
-        {sessions.length > 1 && (
-          <Button
-            variant="outline"
-            size="sm"
-            isLoading={revokingAll}
-            leftIcon={<LogOut className="h-4 w-4" />}
-            onClick={handleRevokeAll}
-          >
-            Revoke All Other Sessions
-          </Button>
-        )}
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-[var(--bg-secondary)]" />
-          ))}
-        </div>
-      ) : sessions.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[var(--text-muted)]">
-          No active sessions found
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className="flex items-center justify-between rounded-lg border border-[var(--border)] p-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="text-[var(--text-muted)]">
-                  {getDeviceIcon(session.deviceInfo ?? null)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-[var(--text)]">
-                      {session.deviceInfo || 'Unknown Device'}
-                    </p>
-                    {session.isCurrent && (
-                      <span className="rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-xs font-medium text-[var(--success)]">
-                        Current
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    IP: {session.ipAddress || 'Unknown'} &middot; Last active{' '}
-                    {formatRelativeDate(session.lastActive || session.createdAt)}
-                  </p>
-                </div>
-              </div>
-              {!session.isCurrent && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  isLoading={revokingId === session.id}
-                  onClick={() => handleRevoke(session.id)}
-                  className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
-                >
-                  Revoke
-                </Button>
-              )}
+    <>
+      <Card variant="bordered">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-lg">
+              <Monitor className="text-primary h-5 w-5" />
             </div>
-          ))}
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--text)]">Active Sessions</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Manage your active sessions across devices
+              </p>
+            </div>
+          </div>
+          {sessions.length > 1 && (
+            <Button
+              variant="outline"
+              size="sm"
+              isLoading={revokingAll}
+              leftIcon={<LogOut className="h-4 w-4" />}
+              onClick={() => setShowConfirmRevokeAll(true)}
+            >
+              Revoke All Other Sessions
+            </Button>
+          )}
         </div>
-      )}
-    </Card>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 animate-pulse rounded-lg bg-[var(--bg-secondary)]" />
+            ))}
+          </div>
+        ) : sessions.length === 0 ? (
+          <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+            No active sessions found
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {sessions.map((session) => (
+              <div
+                key={session.id}
+                className="flex items-center justify-between rounded-lg border border-[var(--border)] p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="text-[var(--text-muted)]">
+                    {getDeviceIcon(session.deviceInfo ?? null)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-[var(--text)]">
+                        {session.deviceInfo || 'Unknown Device'}
+                      </p>
+                      {session.isCurrent && (
+                        <span className="rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-xs font-medium text-[var(--success)]">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      IP: {session.ipAddress || 'Unknown'} &middot; Last active{' '}
+                      {formatRelativeDate(session.lastActive || session.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                {!session.isCurrent && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    isLoading={revokingId === session.id}
+                    onClick={() => setConfirmRevokeId(session.id)}
+                    className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
+                  >
+                    Revoke
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <ConfirmDialog
+        isOpen={!!confirmRevokeId}
+        onClose={() => setConfirmRevokeId(null)}
+        onConfirm={() => confirmRevokeId && handleRevoke(confirmRevokeId)}
+        title="Revoke Session"
+        message="Are you sure you want to revoke this session? The device will be signed out immediately."
+        confirmLabel="Revoke"
+      />
+      <ConfirmDialog
+        isOpen={showConfirmRevokeAll}
+        onClose={() => setShowConfirmRevokeAll(false)}
+        onConfirm={handleRevokeAll}
+        title="Revoke All Other Sessions"
+        message="Are you sure you want to revoke all other sessions? All other devices will be signed out immediately."
+        confirmLabel="Revoke All"
+      />
+    </>
   );
 }
 

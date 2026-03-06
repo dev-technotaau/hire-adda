@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Sparkles,
@@ -13,7 +13,9 @@ import {
   Bookmark,
   Building2,
   RefreshCw,
+  CheckCircle,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -24,6 +26,7 @@ import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import { recommendationService } from '@/services/recommendation.service';
+import { useAppliedJobs } from '@/hooks/use-jobs';
 import { QUERY_KEYS } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
 import type { Job } from '@/types/job';
@@ -81,6 +84,19 @@ export default function RecommendationsPage() {
   const [type, setType] = useState('');
   const [experienceLevel, setExperienceLevel] = useState('');
   const [page, setPage] = useState(1);
+
+  // Track applied jobs
+  const { data: appliedJobsData } = useAppliedJobs(1, 500);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const appliedItems = appliedJobsData?.data?.items;
+    if (appliedItems && appliedItems.length > 0) {
+      queueMicrotask(() =>
+        setAppliedJobIds(new Set(appliedItems.map((a: { jobId: string }) => a.jobId))),
+      );
+    }
+  }, [appliedJobsData]);
 
   const filters = {
     ...(workMode && { workMode }),
@@ -338,13 +354,22 @@ export default function RecommendationsPage() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 pt-1">
-                      <Button
-                        size="sm"
-                        onClick={() => router.push(ROUTES.CANDIDATE.JOB_DETAIL(job.id))}
-                      >
-                        <ExternalLink className="mr-1 h-3.5 w-3.5" />
-                        View & Apply
-                      </Button>
+                      {appliedJobIds.has(job.id) ? (
+                        <Link
+                          href={ROUTES.CANDIDATE.APPLICATIONS}
+                          className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-3 py-1.5 text-xs font-medium text-[var(--success)] transition-colors hover:bg-[var(--success)]/20"
+                        >
+                          <CheckCircle className="h-3.5 w-3.5" /> Applied
+                        </Link>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => router.push(ROUTES.CANDIDATE.JOB_DETAIL(job.id))}
+                        >
+                          <ExternalLink className="mr-1 h-3.5 w-3.5" />
+                          View & Apply
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Card>

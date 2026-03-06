@@ -332,6 +332,8 @@ export interface ResumeEntry {
 }
 
 export interface UpdateCandidateRequest {
+  firstName?: string;
+  lastName?: string;
   headline?: string;
   pronouns?: string;
   gender?: Gender;

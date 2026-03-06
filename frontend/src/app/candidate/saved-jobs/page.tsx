@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Bookmark, Building2, MapPin, Briefcase, Clock, BookmarkX } from 'lucide-react';
+import { Bookmark, Building2, MapPin, Briefcase, Clock, BookmarkX, CheckCircle } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -12,7 +12,7 @@ import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import { showToast } from '@/components/ui/Toast';
-import { useSavedJobs, useToggleSaveJob } from '@/hooks/use-jobs';
+import { useSavedJobs, useToggleSaveJob, useAppliedJobs } from '@/hooks/use-jobs';
 import { ROUTES } from '@/constants/routes';
 import { JOB_TYPE_LABELS, WORK_MODE_LABELS, FUNCTIONAL_AREA_LABELS } from '@/constants/enums';
 import { formatSalaryRange, formatRelativeDate } from '@/lib/utils';
@@ -23,6 +23,19 @@ export default function SavedJobsPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useSavedJobs(page, PAGINATION.JOBS_PER_PAGE);
   const toggleSave = useToggleSaveJob();
+
+  // Track applied jobs
+  const { data: appliedJobsData } = useAppliedJobs(1, 500);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const appliedItems = appliedJobsData?.data?.items;
+    if (appliedItems && appliedItems.length > 0) {
+      queueMicrotask(() =>
+        setAppliedJobIds(new Set(appliedItems.map((a: { jobId: string }) => a.jobId))),
+      );
+    }
+  }, [appliedJobsData]);
 
   const jobs = data?.data?.items || [];
   const pagination = data?.data;
@@ -143,6 +156,14 @@ export default function SavedJobsPage() {
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
+                    {appliedJobIds.has(job.id) && (
+                      <Link
+                        href={ROUTES.CANDIDATE.APPLICATIONS}
+                        className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-2.5 py-1.5 text-xs font-medium text-[var(--success)] transition-colors hover:bg-[var(--success)]/20"
+                      >
+                        <CheckCircle className="h-3 w-3" /> Applied
+                      </Link>
+                    )}
                     <Link href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}>
                       <Button size="sm">View</Button>
                     </Link>

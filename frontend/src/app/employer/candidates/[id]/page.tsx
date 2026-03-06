@@ -120,6 +120,7 @@ export default function EmployerCandidateDetailPage() {
   const [jobPickerAction, setJobPickerAction] = useState<'shortlist' | 'select'>('shortlist');
   const [jobSearch, setJobSearch] = useState('');
   const [contactOpen, setContactOpen] = useState(false);
+  const [actionedStatus, setActionedStatus] = useState<'shortlisted' | 'selected' | null>(null);
 
   const { data: myJobsData } = useQuery({
     queryKey: [...QUERY_KEYS.JOBS.MY_JOBS, 'picker'],
@@ -128,7 +129,7 @@ export default function EmployerCandidateDetailPage() {
   });
 
   const toggleSaveMutation = useMutation({
-    mutationFn: () => employerService.toggleSavedCandidate(id),
+    mutationFn: () => employerService.toggleSavedCandidate(data?.data?.userId || id),
     onSuccess: (res) => {
       const saved = res.data?.saved ?? false;
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.SAVED_CANDIDATES });
@@ -144,6 +145,7 @@ export default function EmployerCandidateDetailPage() {
     mutationFn: (jobId: string) => employerService.shortlistCandidateForJob(id, jobId),
     onSuccess: () => {
       setJobPickerOpen(false);
+      setActionedStatus('shortlisted');
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.DETAIL(id) });
       showToast.success('Candidate shortlisted successfully!');
     },
@@ -157,6 +159,7 @@ export default function EmployerCandidateDetailPage() {
     mutationFn: (jobId: string) => employerService.selectCandidateForJob(id, jobId),
     onSuccess: () => {
       setJobPickerOpen(false);
+      setActionedStatus('selected');
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.DETAIL(id) });
       showToast.success('Candidate selected successfully!');
     },
@@ -206,18 +209,26 @@ export default function EmployerCandidateDetailPage() {
             <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
           </Button>
           <div className="flex items-center gap-2">
+            {actionedStatus && (
+              <Badge variant="success" size="sm">
+                {actionedStatus === 'shortlisted' ? 'Shortlisted' : 'Selected'}
+              </Badge>
+            )}
             <Button
               size="sm"
+              variant={actionedStatus === 'shortlisted' ? 'outline' : 'primary'}
+              className={actionedStatus === 'shortlisted' ? 'text-[var(--success)] border-[var(--success)]/30' : ''}
               onClick={() => {
                 setJobPickerAction('shortlist');
                 setJobPickerOpen(true);
               }}
             >
-              <Star className="mr-1.5 h-4 w-4" /> Shortlist
+              <Star className={`mr-1.5 h-4 w-4${actionedStatus === 'shortlisted' ? ' fill-current' : ''}`} /> Shortlist
             </Button>
             <Button
               size="sm"
               variant="outline"
+              className={actionedStatus === 'selected' ? 'text-[var(--success)] border-[var(--success)]/30' : ''}
               onClick={() => {
                 setJobPickerAction('select');
                 setJobPickerOpen(true);

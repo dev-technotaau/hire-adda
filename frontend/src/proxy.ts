@@ -135,8 +135,13 @@ export function proxy(request: NextRequest) {
   if (authPaths.some((p) => pathname.startsWith(p))) {
     if (token && guestOnlyPaths.some((p) => pathname.startsWith(p))) {
       const role = getRoleFromToken(token);
-      const dashboard = (role && roleDashboards[role]) || '/';
-      return NextResponse.redirect(new URL(dashboard, request.url));
+      // Only redirect if the token is valid AND not expired.
+      // If role is null (expired/invalid JWT), let the user through to the login page
+      // so they can re-authenticate. Stale cookies are cleaned up by the BFF on next getMe().
+      if (role) {
+        const dashboard = roleDashboards[role] || '/';
+        return NextResponse.redirect(new URL(dashboard, request.url));
+      }
     }
     return nextWithCsp();
   }

@@ -93,19 +93,13 @@ async function proxyRequest(
       }
     }
 
-    // Refresh failed — clear stale auth cookies to prevent redirect loops
-    // (middleware checks cookie existence for routing; stale cookies cause loops)
-    const responseBody = await res.arrayBuffer();
-    const response = new NextResponse(responseBody, {
-      status: res.status,
-      headers: {
-        'content-type': res.headers.get('content-type') || 'application/json',
-      },
-    });
-    response.cookies.delete(COOKIE_NAMES.ACCESS_TOKEN);
-    response.cookies.delete(COOKIE_NAMES.REFRESH_TOKEN);
-    response.cookies.delete(COOKIE_NAMES.AUTH_SESSION);
-    return response;
+    // Refresh failed — DO NOT clear cookies here.
+    // In serverless (Vercel), concurrent requests may race: one instance refreshes
+    // successfully (setting new cookies) while another fails (token revoked by first).
+    // If the failing instance clears cookies, it overwrites the successful one's
+    // Set-Cookie headers, causing an unwanted logout.
+    // Stale cookies are harmless: the middleware now allows login-page access with
+    // expired tokens, and the client-side 401 handler triggers explicit logout.
   }
 
   // Stream the backend response through

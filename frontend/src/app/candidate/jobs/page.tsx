@@ -28,6 +28,7 @@ import {
   ExternalLink,
   Send,
   GitCompareArrows,
+  CheckCircle,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -47,7 +48,7 @@ import AdvancedFilters, {
   type FacetBucket,
 } from '@/components/ui/AdvancedFilters';
 import { showToast } from '@/components/ui/Toast';
-import { useJobSearch, useToggleSaveJob, useSavedJobs, useApplyJob } from '@/hooks/use-jobs';
+import { useJobSearch, useToggleSaveJob, useSavedJobs, useApplyJob, useAppliedJobs } from '@/hooks/use-jobs';
 import { useSuggestLocations, useDidYouMean } from '@/hooks/use-search';
 import { useSuggest, useStaticSuggestions } from '@/hooks/use-suggestions';
 import { useFieldHistory, useAddToFieldHistory, useClearFieldHistory } from '@/hooks/use-field-history';
@@ -82,6 +83,7 @@ const MapView = dynamic(() => import('@/components/jobs/MapView'), {
 });
 import { cn } from '@/lib/utils';
 import HighlightText from '@/components/ui/HighlightText';
+import Select from '@/components/ui/Select';
 import { PAGINATION, QUERY_KEYS } from '@/constants/config';
 import type { JobSearchFilters, Job } from '@/types/job';
 import type { ApiError } from '@/types/api';
@@ -494,6 +496,7 @@ export default function JobSearchPage() {
   const [locationQuery, setLocationQuery] = useState(filters.location || '');
   const [showSidebar, setShowSidebar] = useState(false);
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [showSaveSearch, setShowSaveSearch] = useState(false);
   const [saveSearchName, setSaveSearchName] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -523,6 +526,7 @@ export default function JobSearchPage() {
   // ── Queries ──
   const { data, isLoading } = useJobSearch(filters);
   const { data: savedJobsData } = useSavedJobs(1, 200);
+  const { data: appliedJobsData } = useAppliedJobs(1, 500);
   const toggleSave = useToggleSaveJob();
   const applyJob = useApplyJob();
   const { data: didYouMeanData } = useDidYouMean(keyword, 'jobs');
@@ -588,6 +592,16 @@ export default function JobSearchPage() {
       queueMicrotask(() => setSavedJobIds(new Set(savedItems.map((j: Job) => j.id))));
     }
   }, [savedJobsData]);
+
+  // ── Applied job IDs ──
+  useEffect(() => {
+    const appliedItems = appliedJobsData?.data?.items;
+    if (appliedItems && appliedItems.length > 0) {
+      queueMicrotask(() =>
+        setAppliedJobIds(new Set(appliedItems.map((a: { jobId: string }) => a.jobId))),
+      );
+    }
+  }, [appliedJobsData]);
 
   // ── Sync filters → URL (skip first render) ──
   useEffect(() => {
@@ -879,6 +893,7 @@ export default function JobSearchPage() {
   const handleQuickApply = async (jobId: string) => {
     try {
       await applyJob.mutateAsync({ jobId });
+      setAppliedJobIds((prev) => new Set(prev).add(jobId));
       showToast.success('Application submitted successfully!');
     } catch (err) {
       const error = err as unknown as ApiError;
@@ -1138,17 +1153,11 @@ export default function JobSearchPage() {
                 </div>
 
                 {/* Sort */}
-                <select
+                <Select
+                  options={sortOptions}
                   value={filters.sortBy || 'relevance'}
-                  onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                  className="focus:border-primary focus:ring-primary/20 h-9 rounded-lg border border-[var(--border)] bg-white px-3 text-sm text-[var(--text)] focus:ring-2 focus:outline-none"
-                >
-                  {sortOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => handleFilterChange('sortBy', v)}
+                />
               </div>
             </div>
 
@@ -1222,6 +1231,7 @@ export default function JobSearchPage() {
                           userLat={userLat}
                           userLng={userLng}
                           isSaved={savedJobIds.has(job.id)}
+                          isApplied={appliedJobIds.has(job.id)}
                           onSave={() => handleSaveJob(job.id)}
                           isSaving={toggleSave.isPending && toggleSave.variables === job.id}
                         />
@@ -1287,6 +1297,7 @@ export default function JobSearchPage() {
                           userLat={userLat}
                           userLng={userLng}
                           isSaved={savedJobIds.has(job.id)}
+                          isApplied={appliedJobIds.has(job.id)}
                           onSave={() => handleSaveJob(job.id)}
                           isSaving={toggleSave.isPending && toggleSave.variables === job.id}
                         />
@@ -1319,6 +1330,7 @@ export default function JobSearchPage() {
                             userLat={userLat}
                             userLng={userLng}
                             isSaved={savedJobIds.has(job.id)}
+                            isApplied={appliedJobIds.has(job.id)}
                             onSave={() => handleSaveJob(job.id)}
                             isSaving={toggleSave.isPending && toggleSave.variables === job.id}
                             isComparing={compareIds.includes(job.id)}
@@ -1335,6 +1347,7 @@ export default function JobSearchPage() {
                             isSaved={savedJobIds.has(job.id)}
                             onSave={() => handleSaveJob(job.id)}
                             isSaving={toggleSave.isPending && toggleSave.variables === job.id}
+                            isApplied={appliedJobIds.has(job.id)}
                             onQuickApply={() => handleQuickApply(job.id)}
                             isApplying={applyJob.isPending && applyJob.variables?.jobId === job.id}
                             isComparing={compareIds.includes(job.id)}
@@ -1506,6 +1519,7 @@ function JobCard({
   job,
   searchKeyword,
   isSaved,
+  isApplied,
   onSave,
   isSaving,
   onQuickApply,
@@ -1519,6 +1533,7 @@ function JobCard({
   job: Job;
   searchKeyword?: string;
   isSaved: boolean;
+  isApplied?: boolean;
   onSave: () => void;
   isSaving: boolean;
   onQuickApply?: () => void;
@@ -1765,16 +1780,24 @@ function JobCard({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Quick Apply */}
-            {canQuickApply && onQuickApply && (
+            {/* Applied indicator / Quick Apply */}
+            {isApplied ? (
+              <Link
+                href={ROUTES.CANDIDATE.APPLICATIONS}
+                className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-2.5 py-1.5 text-xs font-medium text-[var(--success)] transition-colors hover:bg-[var(--success)]/20"
+              >
+                <CheckCircle className="h-3 w-3" />
+                Applied
+              </Link>
+            ) : canQuickApply && onQuickApply ? (
               <Button size="sm" onClick={onQuickApply} isLoading={isApplying} className="text-xs">
                 <Send className="mr-1 h-3 w-3" />
                 Quick Apply
               </Button>
-            )}
+            ) : null}
 
             {/* External apply indicator */}
-            {job.applyMethod === 'EXTERNAL_URL' && (
+            {!isApplied && job.applyMethod === 'EXTERNAL_URL' && (
               <Link
                 href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
                 className="bg-primary/10 text-primary hover:bg-primary/20 flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
@@ -1831,6 +1854,7 @@ function CompactJobCard({
   job,
   searchKeyword,
   isSaved,
+  isApplied,
   onSave,
   isSaving,
   candidateSkills,
@@ -1842,6 +1866,7 @@ function CompactJobCard({
   job: Job;
   searchKeyword?: string;
   isSaved: boolean;
+  isApplied?: boolean;
   onSave: () => void;
   isSaving: boolean;
   candidateSkills?: Set<string>;
@@ -1973,6 +1998,12 @@ function CompactJobCard({
 
       {/* Actions */}
       <div className="flex shrink-0 items-center gap-1.5">
+        {isApplied && (
+          <span className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-2 py-1 text-[10px] font-medium text-[var(--success)]">
+            <CheckCircle className="h-3 w-3" />
+            Applied
+          </span>
+        )}
         <Link
           href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
           className="bg-primary/10 text-primary hover:bg-primary/20 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"

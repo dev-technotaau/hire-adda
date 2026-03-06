@@ -62,6 +62,7 @@ export default function SavedCandidatesPage() {
   const [jobPickerAction, setJobPickerAction] = useState<'shortlist' | 'select'>('shortlist');
   const [jobPickerCandidateId, setJobPickerCandidateId] = useState('');
   const [jobSearch, setJobSearch] = useState('');
+  const [actionedCandidates, setActionedCandidates] = useState<Record<string, 'shortlisted' | 'selected'>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: [...QUERY_KEYS.EMPLOYERS.SAVED_CANDIDATES, page],
@@ -88,8 +89,9 @@ export default function SavedCandidatesPage() {
   const shortlistMutation = useMutation({
     mutationFn: ({ candidateId, jobId }: { candidateId: string; jobId: string }) =>
       employerService.shortlistCandidateForJob(candidateId, jobId),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       setJobPickerOpen(false);
+      setActionedCandidates((prev) => ({ ...prev, [vars.candidateId]: 'shortlisted' as const }));
       showToast.success('Candidate shortlisted!');
     },
     onError: (err) => {
@@ -101,8 +103,9 @@ export default function SavedCandidatesPage() {
   const selectMutation = useMutation({
     mutationFn: ({ candidateId, jobId }: { candidateId: string; jobId: string }) =>
       employerService.selectCandidateForJob(candidateId, jobId),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       setJobPickerOpen(false);
+      setActionedCandidates((prev) => ({ ...prev, [vars.candidateId]: 'selected' as const }));
       showToast.success('Candidate selected!');
     },
     onError: (err) => {
@@ -282,6 +285,7 @@ export default function SavedCandidatesPage() {
                 onSelect={() => openJobPicker(candidate.id, 'select')}
                 isComparing={compareIds.includes(candidate.id)}
                 onToggleCompare={() => handleToggleCompare(candidate.id)}
+                actionedStatus={actionedCandidates[candidate.id]}
               />
             ))
           ) : (
@@ -415,6 +419,7 @@ function SavedCandidateCard({
   onSelect,
   isComparing,
   onToggleCompare,
+  actionedStatus,
 }: {
   candidate: CandidateProfile;
   isSelected: boolean;
@@ -425,6 +430,7 @@ function SavedCandidateCard({
   onSelect: () => void;
   isComparing: boolean;
   onToggleCompare: () => void;
+  actionedStatus?: 'shortlisted' | 'selected';
 }) {
   const [contactOpen, setContactOpen] = useState(false);
   const name = candidate.user
@@ -579,12 +585,21 @@ function SavedCandidateCard({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
+          {actionedStatus && (
+            <Badge variant="success" size="sm">
+              {actionedStatus === 'shortlisted' ? 'Shortlisted' : 'Selected'}
+            </Badge>
+          )}
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             <button
               type="button"
               onClick={onShortlist}
               title="Shortlist for a job"
-              className="hover:border-primary hover:text-primary hover:bg-primary-light flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
+              className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                actionedStatus === 'shortlisted'
+                  ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
+                  : 'hover:border-primary hover:text-primary hover:bg-primary-light border-[var(--border)] text-[var(--text-secondary)]'
+              }`}
             >
               <Star className="h-3.5 w-3.5" /> Shortlist
             </button>
@@ -592,7 +607,11 @@ function SavedCandidateCard({
               type="button"
               onClick={onSelect}
               title="Select for a job"
-              className="hover:border-primary hover:text-primary hover:bg-primary-light flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
+              className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                actionedStatus === 'selected'
+                  ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
+                  : 'hover:border-primary hover:text-primary hover:bg-primary-light border-[var(--border)] text-[var(--text-secondary)]'
+              }`}
             >
               <UserCheck className="h-3.5 w-3.5" /> Select
             </button>

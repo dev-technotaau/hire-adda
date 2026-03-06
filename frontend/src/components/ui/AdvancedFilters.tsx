@@ -4,6 +4,7 @@ import { useState, useCallback, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, X, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
+import Select from '@/components/ui/Select';
 
 /* ---------- types ---------- */
 
@@ -229,19 +230,15 @@ function FilterSectionBlock({
       {(!collapsible || isExpanded) && (
         <div className={cn(collapsible && 'mt-2')}>
           {section.type === 'select' && (
-            <select
+            <Select
+              options={optionsWithCounts.map(({ key, label, count }) => ({
+                value: key,
+                label: count !== undefined ? `${label} (${count})` : label,
+              }))}
               value={value || ''}
-              onChange={(e) => onChange(e.target.value || undefined)}
-              className="focus:border-primary focus:ring-primary/20 h-8 w-full rounded-lg border border-[var(--border)] bg-white px-2.5 text-sm text-[var(--text)] focus:ring-2 focus:outline-none"
-            >
-              <option value="">All</option>
-              {optionsWithCounts.map(({ key, label, count }) => (
-                <option key={key} value={key}>
-                  {label}
-                  {count !== undefined ? ` (${count})` : ''}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => onChange(v || undefined)}
+              placeholder="All"
+            />
           )}
 
           {section.type === 'multiselect' && (

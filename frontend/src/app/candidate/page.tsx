@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -47,6 +47,7 @@ import BarChart from '@/components/charts/BarChart';
 import { candidateService } from '@/services/candidate.service';
 import { jobService } from '@/services/job.service';
 import { useRecommendedJobs } from '@/hooks/use-recommendations';
+import { useAppliedJobs } from '@/hooks/use-jobs';
 import { useNotifications } from '@/hooks/use-notifications';
 import type { Job } from '@/types/job';
 import { QUERY_KEYS } from '@/constants/config';
@@ -365,6 +366,19 @@ export default function CandidateDashboard() {
 
   const { data: aiRecsData } = useRecommendedJobs();
   const aiRecommendedJobs = aiRecsData?.data?.items || [];
+
+  // Track applied jobs for recommendation badges
+  const { data: appliedJobsData } = useAppliedJobs(1, 500);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const appliedItems = appliedJobsData?.data?.items;
+    if (appliedItems && appliedItems.length > 0) {
+      queueMicrotask(() =>
+        setAppliedJobIds(new Set(appliedItems.map((a: { jobId: string }) => a.jobId))),
+      );
+    }
+  }, [appliedJobsData]);
 
   const applicationStatusData = useMemo(() => {
     if (!stats?.recentApplications?.length) return [];
@@ -836,6 +850,11 @@ export default function CandidateDashboard() {
                               match
                             </span>
                           ) : null}
+                          {appliedJobIds.has(job.id) && (
+                            <span className="flex items-center gap-1 rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-xs font-medium text-[var(--success)]">
+                              <CheckCircle className="h-3 w-3" /> Applied
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -882,6 +901,11 @@ export default function CandidateDashboard() {
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
                           {job.location && <span>{job.location}</span>}
                           {job.workMode && <span>· {job.workMode}</span>}
+                          {appliedJobIds.has(job.id) && (
+                            <span className="flex items-center gap-1 rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-xs font-medium text-[var(--success)]">
+                              <CheckCircle className="h-3 w-3" /> Applied
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

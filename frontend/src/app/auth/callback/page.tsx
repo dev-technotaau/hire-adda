@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { authService } from '@/services/auth.service';
 import { broadcastLogin } from '@/lib/auth-channel';
+import { getQueryClient } from '@/lib/query-client';
 import { showToast } from '@/components/ui/Toast';
 import { ROLE_DASHBOARDS } from '@/constants/routes';
 import type { Role } from '@/types/auth';
@@ -58,6 +59,7 @@ export default function OAuthCallbackPage() {
         const payload = meRes.data as unknown as Record<string, unknown>;
         const user = ((payload?.user as typeof meRes.data) ?? meRes.data);
 
+        getQueryClient().clear();
         storeLogin(user);
         broadcastLogin(user);
 
