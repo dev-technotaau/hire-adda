@@ -88,6 +88,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
   const [mfaSetup, setMfaSetup] = useState<MfaSetupResponse | null>(null);
   const [setupLoading, setSetupLoading] = useState(false);
   const [verifyCode, setVerifyCode] = useState('');
+  const [enablePassword, setEnablePassword] = useState('');
   const [enableLoading, setEnableLoading] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
 
@@ -124,17 +125,22 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
   };
 
   const handleEnableMfa = async () => {
+    if (!enablePassword) {
+      showToast.error('Please enter your password');
+      return;
+    }
     if (!verifyCode) {
       showToast.error('Please enter the verification code');
       return;
     }
     setEnableLoading(true);
     try {
-      await authService.mfaEnable({ token: verifyCode });
+      await authService.mfaEnable({ token: verifyCode, password: enablePassword });
       showToast.success('MFA enabled successfully');
       setShowEnableModal(false);
       setMfaSetup(null);
       setVerifyCode('');
+      setEnablePassword('');
       queryClient.invalidateQueries({ queryKey: ['auth'] });
       window.location.reload();
     } catch (err) {
@@ -279,6 +285,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
           setShowEnableModal(false);
           setMfaSetup(null);
           setVerifyCode('');
+          setEnablePassword('');
         }}
         title="Enable Two-Factor Authentication"
         size="md"
@@ -290,6 +297,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                 setShowEnableModal(false);
                 setMfaSetup(null);
                 setVerifyCode('');
+                setEnablePassword('');
               }}
             >
               Cancel
@@ -333,6 +341,15 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                 </Button>
               </div>
             </div>
+
+            <Input
+              label="Password"
+              type="password"
+              value={enablePassword}
+              onChange={(e) => setEnablePassword(e.target.value)}
+              leftIcon={<Lock className="h-4 w-4" />}
+              required
+            />
 
             <div>
               <label className="mb-2 block text-sm font-medium text-[var(--text)]">

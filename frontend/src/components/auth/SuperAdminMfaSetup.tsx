@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Shield, Copy, Check, LogOut } from 'lucide-react';
+import { Shield, Copy, Check, LogOut, Lock } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
 import OtpInput from '@/components/auth/OtpInput';
 import { showToast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -24,6 +25,7 @@ export default function SuperAdminMfaSetup() {
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [setupLoading, setSetupLoading] = useState(false);
   const [verifyCode, setVerifyCode] = useState('');
+  const [enablePassword, setEnablePassword] = useState('');
   const [enableLoading, setEnableLoading] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [continueLoading, setContinueLoading] = useState(false);
@@ -43,13 +45,17 @@ export default function SuperAdminMfaSetup() {
   };
 
   const handleEnable = async () => {
+    if (!enablePassword) {
+      showToast.error('Please enter your password');
+      return;
+    }
     if (!verifyCode || verifyCode.length !== 6) {
       showToast.error('Please enter the 6-digit verification code');
       return;
     }
     setEnableLoading(true);
     try {
-      const res = await authService.mfaEnable({ token: verifyCode });
+      const res = await authService.mfaEnable({ token: verifyCode, password: enablePassword });
       setBackupCodes(res.data?.backupCodes ?? []);
       setStep('backup-codes');
       showToast.success('MFA enabled successfully!');
@@ -155,6 +161,15 @@ export default function SuperAdminMfaSetup() {
                   </div>
                 </div>
 
+                <Input
+                  label="Password"
+                  type="password"
+                  value={enablePassword}
+                  onChange={(e) => setEnablePassword(e.target.value)}
+                  leftIcon={<Lock className="h-4 w-4" />}
+                  required
+                />
+
                 <div>
                   <label className="mb-2 block text-sm font-medium text-[var(--text)]">
                     Verification Code
@@ -166,7 +181,7 @@ export default function SuperAdminMfaSetup() {
                   fullWidth
                   isLoading={enableLoading}
                   onClick={handleEnable}
-                  disabled={verifyCode.length !== 6}
+                  disabled={!enablePassword || verifyCode.length !== 6}
                 >
                   Verify &amp; Enable
                 </Button>

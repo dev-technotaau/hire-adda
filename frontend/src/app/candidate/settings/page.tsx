@@ -956,7 +956,6 @@ function ChangePasswordSection() {
     try {
       await authService.initiateChangePassword({
         currentPassword,
-        newPassword,
       });
       showToast.success('Verification code sent to your email');
       setStep('otp');
@@ -975,7 +974,6 @@ function ChangePasswordSection() {
     try {
       await authService.initiateChangePassword({
         currentPassword,
-        newPassword,
       });
       showToast.success('New verification code sent!');
       setResendTimer(otpConfig.RESEND_COOLDOWN);
@@ -996,7 +994,7 @@ function ChangePasswordSection() {
 
     setIsLoading(true);
     try {
-      await authService.confirmChangePassword({ otp, newPassword });
+      await authService.confirmChangePassword({ otp, newPassword, confirmPassword });
       showToast.success('Password changed successfully');
       setStep('form');
       setCurrentPassword('');
@@ -1227,6 +1225,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
   const [mfaSetup, setMfaSetup] = useState<MfaSetupResponse | null>(null);
   const [setupLoading, setSetupLoading] = useState(false);
   const [verifyCode, setVerifyCode] = useState('');
+  const [enablePassword, setEnablePassword] = useState('');
   const [enableLoading, setEnableLoading] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
 
@@ -1266,17 +1265,22 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
   };
 
   const handleEnableMfa = async () => {
+    if (!enablePassword) {
+      showToast.error('Please enter your password');
+      return;
+    }
     if (!verifyCode) {
       showToast.error('Please enter the verification code');
       return;
     }
     setEnableLoading(true);
     try {
-      await authService.mfaEnable({ token: verifyCode });
+      await authService.mfaEnable({ token: verifyCode, password: enablePassword });
       showToast.success('MFA enabled successfully');
       setShowEnableModal(false);
       setMfaSetup(null);
       setVerifyCode('');
+      setEnablePassword('');
       // Refresh user data
       queryClient.invalidateQueries({ queryKey: ['auth'] });
       // Force a page reload to refresh user state
@@ -1423,6 +1427,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
           setShowEnableModal(false);
           setMfaSetup(null);
           setVerifyCode('');
+          setEnablePassword('');
         }}
         title="Enable Two-Factor Authentication"
         size="md"
@@ -1434,6 +1439,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                 setShowEnableModal(false);
                 setMfaSetup(null);
                 setVerifyCode('');
+                setEnablePassword('');
               }}
             >
               Cancel
@@ -1481,6 +1487,16 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                 </Button>
               </div>
             </div>
+
+            {/* Password */}
+            <Input
+              label="Password"
+              type="password"
+              value={enablePassword}
+              onChange={(e) => setEnablePassword(e.target.value)}
+              leftIcon={<Lock className="h-4 w-4" />}
+              required
+            />
 
             {/* Verification Code Input */}
             <div>

@@ -90,6 +90,7 @@ export interface MfaSetupResponse {
 
 export interface MfaVerifyRequest {
   token: string;
+  password: string;
 }
 
 export interface Session {

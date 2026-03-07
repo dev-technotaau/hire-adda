@@ -404,11 +404,12 @@ export const adminService = {
   },
 
   async testEmailTemplate(
-    templateId: string,
-    recipientEmail: string,
+    templateName: string,
+    toEmail: string,
   ): Promise<ApiResponse<unknown>> {
-    const res = await api.post(`${API.ADMIN.EMAIL_TEMPLATES}/${templateId}/test`, {
-      recipientEmail,
+    const res = await api.post(API.ADMIN.EMAIL_TEMPLATES_TEST, {
+      templateName,
+      toEmail,
     });
     return res.data;
   },

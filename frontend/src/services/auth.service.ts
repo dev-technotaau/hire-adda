@@ -133,7 +133,6 @@ export const authService = {
 
   async initiateChangePassword(data: {
     currentPassword: string;
-    newPassword: string;
   }): Promise<ApiResponse<null>> {
     const res = await api.post(API.AUTH.CHANGE_PASSWORD_INITIATE, data);
     return res.data;
@@ -142,6 +141,7 @@ export const authService = {
   async confirmChangePassword(data: {
     otp: string;
     newPassword: string;
+    confirmPassword: string;
   }): Promise<ApiResponse<null>> {
     const res = await api.post(API.AUTH.CHANGE_PASSWORD_CONFIRM, data);
     return res.data;
