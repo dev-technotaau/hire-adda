@@ -79,11 +79,12 @@ export const generateMfaSecret = async (
  */
 export const enableMfa = async (
   userId: string,
-  token: string
+  token: string,
+  password?: string
 ): Promise<{ success: boolean; backupCodes?: string[]; error?: string }> => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { mfaSecret: true, mfaEnabled: true },
+    select: { mfaSecret: true, mfaEnabled: true, password: true },
   });
 
   if (!user?.mfaSecret) {
@@ -92,6 +93,13 @@ export const enableMfa = async (
 
   if (user.mfaEnabled) {
     return { success: false, error: 'MFA is already enabled.' };
+  }
+
+  // Verify password before enabling MFA (skipped for privileged super-admin operations)
+  if (password) {
+    if (!user.password || !(await bcrypt.compare(password, user.password))) {
+      return { success: false, error: 'Invalid password.' };
+    }
   }
 
   // Decrypt the stored secret for verification

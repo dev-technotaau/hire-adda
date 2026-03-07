@@ -22,7 +22,7 @@ import {
   isTokenValid,
   getTokenRecord,
 } from './token.service';
-import { verifyMfaToken } from './mfa.service';
+import { verifyMfaToken, verifyTrustedDevice, createTrustedDevice } from './mfa.service';
 import type {
   RegisterInput,
   LoginInput,
@@ -248,6 +248,7 @@ export const login = async (
   refreshToken: string;
   sessionId?: string;
   requireMfa?: boolean;
+  trustedDeviceToken?: string;
 }> => {
   const { password, mfaCode } = data;
   const email = data.email?.toLowerCase();
@@ -324,40 +325,53 @@ export const login = async (
   }
 
   // Check MFA
+  let trustedDeviceToken: string | undefined;
   if (user.mfaEnabled) {
-    if (!mfaCode) {
-      return {
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          avatar: user.avatar,
-          isEmailVerified: user.isEmailVerified,
-          mfaEnabled: user.mfaEnabled,
-          createdAt: user.createdAt,
-          lastLoginAt: user.lastLoginAt,
-          companyProfile: user.companyProfile,
-        },
-        accessToken: '',
-        refreshToken: '',
-        requireMfa: true,
-      };
-    }
+    // Check if device is trusted (skip MFA)
+    const isTrusted = data.trustDeviceToken
+      ? await verifyTrustedDevice(user.id, data.trustDeviceToken)
+      : false;
 
-    const isMfaValid = await verifyMfaToken(user.id, mfaCode);
-    if (!isMfaValid) {
-      // Increment login attempts on MFA failure (prevents brute-force)
-      const newAttempts = user.loginAttempts + 1;
-      const lockData: Record<string, unknown> = { loginAttempts: newAttempts };
-      if (newAttempts >= parseInt(env.MAX_LOGIN_ATTEMPTS, 10)) {
-        lockData.lockUntil = new Date(
-          Date.now() + parseInt(env.ACCOUNT_LOCK_DURATION_MINUTES, 10) * 60 * 1000
-        );
+    if (!isTrusted) {
+      if (!mfaCode) {
+        return {
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            avatar: user.avatar,
+            isEmailVerified: user.isEmailVerified,
+            mfaEnabled: user.mfaEnabled,
+            createdAt: user.createdAt,
+            lastLoginAt: user.lastLoginAt,
+            companyProfile: user.companyProfile,
+          },
+          accessToken: '',
+          refreshToken: '',
+          requireMfa: true,
+        };
       }
-      await prisma.user.update({ where: { id: user.id }, data: lockData });
-      throw new AppError('Invalid MFA code', 401);
+
+      const isMfaValid = await verifyMfaToken(user.id, mfaCode);
+      if (!isMfaValid) {
+        // Increment login attempts on MFA failure (prevents brute-force)
+        const newAttempts = user.loginAttempts + 1;
+        const lockData: Record<string, unknown> = { loginAttempts: newAttempts };
+        if (newAttempts >= parseInt(env.MAX_LOGIN_ATTEMPTS, 10)) {
+          lockData.lockUntil = new Date(
+            Date.now() + parseInt(env.ACCOUNT_LOCK_DURATION_MINUTES, 10) * 60 * 1000
+          );
+        }
+        await prisma.user.update({ where: { id: user.id }, data: lockData });
+        throw new AppError('Invalid MFA code', 401);
+      }
+
+      // Create trusted device token if user opted in
+      if (data.trustDevice) {
+        trustedDeviceToken = await createTrustedDevice(user.id, userAgent, ipAddress);
+      }
     }
   }
 
@@ -402,7 +416,7 @@ export const login = async (
   // Post-login security checks: device fingerprint, geolocation anomaly (fire-and-forget)
   void import('../services/device-security.service')
     .then(({ postLoginChecks }) => {
-      const fingerprint = (data as Record<string, string>).deviceFingerprint;
+      const fingerprint = (data as Record<string, unknown>).deviceFingerprint as string | undefined;
       return postLoginChecks(user.id, ipAddress || '', userAgent || '', fingerprint);
     })
     .catch(() => {});
@@ -424,6 +438,7 @@ export const login = async (
     accessToken,
     refreshToken,
     sessionId: session.id,
+    trustedDeviceToken,
   };
 };
 

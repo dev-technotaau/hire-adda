@@ -235,7 +235,7 @@ export class AdminService {
   /**
    * Suspend User
    */
-  async suspendUser(userId: string, adminId: string) {
+  async suspendUser(userId: string, adminId: string, reason?: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AppError('User not found', 404);
     if (user.role === Role.SUPER_ADMIN) throw new AppError('Cannot suspend a super admin', 403);
@@ -247,7 +247,7 @@ export class AdminService {
         data: { isSuspended: true, suspendedAt: new Date(), suspendedBy: adminId },
       }),
       prisma.auditLog.create({
-        data: { action: 'SUSPEND_USER', entity: 'User', entityId: userId, performedBy: adminId },
+        data: { action: 'SUSPEND_USER', entity: 'User', entityId: userId, performedBy: adminId, details: reason ? { reason } : undefined },
       }),
     ]);
 

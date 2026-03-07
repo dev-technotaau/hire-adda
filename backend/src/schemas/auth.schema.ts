@@ -41,6 +41,9 @@ export const loginSchema = z.object({
     email: z.string().email('Invalid email address'),
     password: z.string().min(1, 'Password is required'),
     mfaCode: z.string().min(6).max(9).optional(),
+    rememberMe: z.boolean().optional(),
+    trustDevice: z.boolean().optional(),
+    trustDeviceToken: z.string().optional(),
   }),
 });
 
@@ -81,14 +84,20 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>['body'];
 // Reset Password
 // ===============================
 export const resetPasswordSchema = z.object({
-  body: z.object({
-    token: z.string().min(1, 'Reset token or OTP is required'),
-    otp: z.string().length(6, 'OTP must be 6 digits').optional(),
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .max(128, 'Password must be at most 128 characters'),
-  }),
+  body: z
+    .object({
+      token: z.string().min(1, 'Reset token or OTP is required'),
+      otp: z.string().length(6, 'OTP must be 6 digits').optional(),
+      password: z
+        .string()
+        .min(8, 'Password must be at least 8 characters')
+        .max(128, 'Password must be at most 128 characters'),
+      confirmPassword: z.string().min(1, 'Confirm password is required'),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: "Passwords don't match",
+      path: ['confirmPassword'],
+    }),
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>['body'];
@@ -139,6 +148,7 @@ export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>['body'];
 export const mfaVerifySchema = z.object({
   body: z.object({
     token: z.string().length(6, 'MFA code must be 6 digits'),
+    password: z.string().min(1, 'Password is required'),
   }),
 });
 

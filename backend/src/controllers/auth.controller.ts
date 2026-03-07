@@ -63,6 +63,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
         sessionId: result.sessionId,
+        ...(result.trustedDeviceToken && { trustedDeviceToken: result.trustedDeviceToken }),
       },
     });
   } catch (error) {
@@ -321,13 +322,13 @@ export const mfaEnable = async (req: Request, res: Response, next: NextFunction)
       throw new AppError('Not authorized', 401);
     }
 
-    const { token } = req.body;
+    const { token, password } = req.body;
 
-    if (!token) {
-      throw new AppError('MFA code is required', 400);
+    if (!token || !password) {
+      throw new AppError('MFA code and password are required', 400);
     }
 
-    const result = await mfaService.enableMfa(req.user.id, token);
+    const result = await mfaService.enableMfa(req.user.id, token, password);
 
     if (!result.success) {
       throw new AppError(result.error || 'Failed to enable MFA', 400);

@@ -30,6 +30,7 @@ export const addMessageSchema = z.object({
   body: z.object({
     body: z.string().min(1).max(5000),
     isInternal: z.boolean().optional().default(false),
+    subject: z.string().max(200).optional(),
   }),
 });
 

@@ -120,7 +120,8 @@ export const moderateJob = async (req: Request, res: Response, next: NextFunctio
 export const suspendUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) throw new AppError('Not authorized', 401);
-    await adminService.suspendUser(req.params.id as string, req.user.id);
+    const { reason } = req.body;
+    await adminService.suspendUser(req.params.id as string, req.user.id, reason);
     res.status(200).json({ status: 'success', message: 'User suspended' });
   } catch (error) {
     next(error);
