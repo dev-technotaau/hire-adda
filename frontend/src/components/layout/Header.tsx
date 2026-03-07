@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Bell, ChevronDown, LogOut, User, Settings, LayoutDashboard } from 'lucide-react';
+import { Menu, X, Bell, ChevronDown, LogOut, User, Settings, LayoutDashboard, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useUnreadCount } from '@/hooks/use-notifications';
@@ -198,6 +198,13 @@ export default function Header() {
               <Link href={ROUTES.AUTH.REGISTER}>
                 <Button size="sm">Register</Button>
               </Link>
+              <div className="mx-1 h-6 w-px bg-[var(--border)]" />
+              <Link href={`${ROUTES.AUTH.LOGIN}?tab=employer`}>
+                <Button variant="outline" size="sm">
+                  <Briefcase className="mr-1.5 h-3.5 w-3.5" />
+                  Employer Login
+                </Button>
+              </Link>
             </div>
           )}
 
@@ -246,6 +253,12 @@ export default function Header() {
                 </Link>
                 <Link href={ROUTES.AUTH.REGISTER}>
                   <Button fullWidth>Register</Button>
+                </Link>
+                <Link href={`${ROUTES.AUTH.LOGIN}?tab=employer`}>
+                  <Button variant="ghost" fullWidth>
+                    <Briefcase className="mr-1.5 h-4 w-4" />
+                    Employer Login
+                  </Button>
                 </Link>
               </div>
             )}

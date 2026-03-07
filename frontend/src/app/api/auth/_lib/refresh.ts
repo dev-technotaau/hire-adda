@@ -47,6 +47,12 @@ export async function attemptServerRefresh(): Promise<{
   return refreshPromise;
 }
 
+/** Clear cached tokens (call on logout to prevent stale session reuse) */
+export function clearRefreshCache() {
+  cachedTokens = null;
+  cachedAt = 0;
+}
+
 async function doRefresh(): Promise<{
   accessToken: string;
   refreshToken: string;

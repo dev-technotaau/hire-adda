@@ -90,25 +90,25 @@ export const webhookWorker = new Worker<WebhookJobData>(
         })
         .catch(() => {});
     } else {
-      const webhook = await prisma.webhookEndpoint.findUnique({
-        where: { id: webhookId },
-        select: { failureCount: true },
-      });
-
-      const newFailureCount = (webhook?.failureCount || 0) + 1;
-
-      await prisma.webhookEndpoint
+      // Atomic increment to avoid TOCTOU race between concurrent workers
+      const updated = await prisma.webhookEndpoint
         .update({
           where: { id: webhookId },
           data: {
-            failureCount: newFailureCount,
+            failureCount: { increment: 1 },
             lastTriggeredAt: new Date(),
-            ...(newFailureCount >= MAX_FAILURE_COUNT && { isActive: false }),
           },
+          select: { failureCount: true },
         })
-        .catch(() => {});
+        .catch(() => null);
 
-      if (newFailureCount >= MAX_FAILURE_COUNT) {
+      if (updated && updated.failureCount >= MAX_FAILURE_COUNT) {
+        await prisma.webhookEndpoint
+          .update({
+            where: { id: webhookId },
+            data: { isActive: false },
+          })
+          .catch(() => {});
         logger.warn(
           `Webhook ${webhookId} disabled after ${MAX_FAILURE_COUNT} consecutive failures`
         );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -41,13 +41,17 @@ type Step = 'info' | 'password' | 'verify' | 'success';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const otpConfig = useOtpConfig();
   const passwordRules = usePasswordRules();
   const { register: registerUser } = useAuth();
   const storeLogin = useAuthStore((s) => s.login);
 
   const [step, setStep] = useState<Step>('info');
-  const [activeTab, setActiveTab] = useState<'CANDIDATE' | 'EMPLOYER'>('CANDIDATE');
+  const roleParam = searchParams.get('role');
+  const [activeTab, setActiveTab] = useState<'CANDIDATE' | 'EMPLOYER'>(
+    roleParam === 'employer' ? 'EMPLOYER' : 'CANDIDATE',
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +78,7 @@ export default function RegisterPage() {
       email: '',
       password: '',
       confirmPassword: '',
-      role: 'CANDIDATE',
+      role: roleParam === 'employer' ? 'EMPLOYER' : 'CANDIDATE',
       mobileNumber: '',
       companyName: '',
       acceptTerms: false,

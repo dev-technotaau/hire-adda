@@ -17,7 +17,7 @@ import type {
   PostingVisibility,
   ApplyMethod,
 } from '@prisma/client';
-import { JobStatus, ApplicationStatus, Role, ScreeningQuestionType } from '@prisma/client';
+import { Prisma, JobStatus, ApplicationStatus, Role, ScreeningQuestionType } from '@prisma/client';
 import { searchService } from './search.service';
 import { PAGINATION } from '@/constants';
 import { publishEvent, KafkaTopics } from '../kafka/producer';
@@ -570,28 +570,24 @@ export class JobService {
       throw new AppError('Candidate profile not found. Please complete your profile first.', 404);
     }
 
-    const existingApplication = await prisma.jobApplication.findUnique({
-      where: {
-        jobId_candidateId: {
+    let application;
+    try {
+      application = await prisma.jobApplication.create({
+        data: {
           jobId,
           candidateId: candidate.id,
+          coverLetter,
+          resumeSnapshot: candidate.resume || null,
+          status: ApplicationStatus.APPLIED,
         },
-      },
-    });
-
-    if (existingApplication) {
-      throw new AppError('You have already applied to this job', 400);
+      });
+    } catch (err) {
+      // Unique constraint on jobId_candidateId catches concurrent duplicate applies
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new AppError('You have already applied to this job', 400);
+      }
+      throw err;
     }
-
-    const application = await prisma.jobApplication.create({
-      data: {
-        jobId,
-        candidateId: candidate.id,
-        coverLetter,
-        resumeSnapshot: candidate.resume || null,
-        status: ApplicationStatus.APPLIED,
-      },
-    });
 
     // Bulk-create screening answers
     if (screeningAnswers && screeningAnswers.length > 0) {

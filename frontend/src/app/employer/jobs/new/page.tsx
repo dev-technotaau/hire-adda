@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
@@ -225,17 +225,20 @@ export default function PostJobPage() {
     );
   };
 
-  // Auto-save draft every 30 seconds
+  // Auto-save draft every 30 seconds (ref avoids interval churn on every keystroke)
+  const formRef = useRef(form);
+  formRef.current = form;
+
   const saveDraft = useCallback(async () => {
     try {
       await draftService.saveDraft({
         formType: 'JOB_POSTING',
-        data: form as unknown as Record<string, unknown>,
+        data: formRef.current as unknown as Record<string, unknown>,
       });
     } catch {
       // silent fail for drafts
     }
-  }, [form]);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(saveDraft, 30000);

@@ -98,6 +98,12 @@ export function useSocket() {
         if (freshToken && newSocket) {
           tokenRef.current = freshToken;
           newSocket.auth = { token: freshToken };
+        } else if (!freshToken && newSocket) {
+          // Token fetch failed (logged out or session expired) — kill zombie socket
+          newSocket.disconnect();
+          globalSocket = null;
+          tokenRef.current = null;
+          notifyListeners();
         }
       });
 

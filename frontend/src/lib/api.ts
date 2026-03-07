@@ -178,6 +178,13 @@ const adminPrefixes = ['/admin', '/super-admin'];
 
 let redirectPending = false;
 
+// Reset redirect guard when page is restored from bfcache (browser back button)
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) redirectPending = false;
+  });
+}
+
 function redirectToLogin() {
   if (typeof window === 'undefined' || redirectPending) return;
 

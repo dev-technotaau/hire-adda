@@ -53,7 +53,10 @@ export default function LoginPage() {
   const storeLogin = useAuthStore((s) => s.login);
 
   const [step, setStep] = useState<Step>('email');
-  const [activeTab, setActiveTab] = useState<'candidate' | 'employer'>('candidate');
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<'candidate' | 'employer'>(
+    tabParam === 'employer' ? 'employer' : 'candidate',
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
