@@ -13,6 +13,7 @@ import { onAuthMessage } from '@/lib/auth-channel';
 import { pageView, fbPageView } from '@/lib/analytics';
 import { pushService } from '@/services/push.service';
 import { useFeatureFlags } from '@/hooks/use-feature-flags';
+import { QUERY_KEYS } from '@/constants/config';
 import { onFCMMessage } from '@/lib/firebase';
 import { showToast } from '@/components/ui/Toast';
 import MaintenancePage from '@/components/common/MaintenancePage';
@@ -39,7 +40,8 @@ function AuthHydrator({ children }: { children: ReactNode }) {
 const BYPASS_STORAGE_KEY = 'tb_maintenance_bypass';
 
 function MaintenanceGate({ children }: { children: ReactNode }) {
-  const { data: flags, isPending } = useFeatureFlags();
+  const queryClient = getQueryClient();
+  const { data: flags, isPending, dataUpdatedAt } = useFeatureFlags();
   const maintenanceFlag = flags?.maintenanceMode === true;
   const apiTriggered = useMaintenanceStore((s) => s.isMaintenanceMode);
   const clearMaintenance = useMaintenanceStore((s) => s.clearMaintenanceMode);
@@ -49,13 +51,23 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
   const resolved = useRef(false);
   if (!isPending) resolved.current = true;
 
-  // If feature flags resolved and say maintenance is OFF, clear any stale apiTriggered state
-  // Feature flags are the source of truth — the 503 store is just an early-detection shortcut
+  // Track when the 503 trigger happened so we only trust flags fetched AFTER it
+  const triggerTimestamp = useRef(0);
+
+  // When a 503 triggers maintenance, invalidate feature flags to force a fresh fetch
   useEffect(() => {
-    if (!isPending && !maintenanceFlag && apiTriggered) {
+    if (apiTriggered) {
+      triggerTimestamp.current = Date.now();
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.FEATURE_FLAGS.CLIENT });
+    }
+  }, [apiTriggered, queryClient]);
+
+  // Only clear apiTriggered if flags were fetched AFTER the 503 trigger and confirm maintenance is OFF
+  useEffect(() => {
+    if (!isPending && !maintenanceFlag && apiTriggered && dataUpdatedAt > triggerTimestamp.current) {
       clearMaintenance();
     }
-  }, [isPending, maintenanceFlag, apiTriggered, clearMaintenance]);
+  }, [isPending, maintenanceFlag, apiTriggered, clearMaintenance, dataUpdatedAt]);
 
   // Admin bypass: ADMIN/SUPER_ADMIN users skip maintenance
   const isAdminRole = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
