@@ -391,7 +391,7 @@ export default async function Home() {
               </span>
 
               <h1 className="mt-6 text-4xl font-bold tracking-tight text-[var(--text)] sm:text-5xl lg:text-6xl">
-                Find Your <span className="text-primary">Dream Job</span>,{' '}
+                Find Your <span className="whitespace-nowrap text-primary">Dream Job,</span>{' '}
                 <br className="hidden sm:block" />
                 Build Your Future
               </h1>
