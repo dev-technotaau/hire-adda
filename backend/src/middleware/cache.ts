@@ -9,6 +9,8 @@ interface CacheOptions {
   keyGenerator?: (req: Request) => string;
   /** Only cache for authenticated users (includes user ID in key) */
   perUser?: boolean;
+  /** Query param that bypasses cache when present (e.g. 'fresh') */
+  bypassParam?: string;
 }
 
 /**
@@ -16,7 +18,7 @@ interface CacheOptions {
  * Caches JSON responses and serves them on subsequent requests.
  */
 export const cache = (options: CacheOptions = {}) => {
-  const { ttl = 300, keyGenerator, perUser = false } = options;
+  const { ttl = 300, keyGenerator, perUser = false, bypassParam } = options;
 
   return async (req: Request, res: Response, next: NextFunction) => {
     // Only cache GET requests
@@ -27,6 +29,12 @@ export const cache = (options: CacheOptions = {}) => {
 
     // Skip cache if redis is not available
     if (redis.status !== 'ready') {
+      next();
+      return;
+    }
+
+    // Skip cache if bypass query param is present (e.g. ?fresh=true)
+    if (bypassParam && req.query[bypassParam] === 'true') {
       next();
       return;
     }

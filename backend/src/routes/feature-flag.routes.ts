@@ -7,8 +7,9 @@ import * as featureFlagController from '../controllers/feature-flag.controller';
 
 const router = Router();
 
-// Public: client flags (no auth required — cached 30min, rarely changes)
-router.get('/client', cache({ ttl: 1800 }), featureFlagController.getClientFlags);
+// Public: client flags (no auth required — cached 60s, short TTL so maintenance toggle works quickly)
+// ?fresh=true bypasses Redis cache entirely (used by maintenance page auto-refresh)
+router.get('/client', cache({ ttl: 60, bypassParam: 'fresh' }), featureFlagController.getClientFlags);
 
 // Admin only: all flags
 router.get('/', protect, restrictTo(Role.ADMIN, Role.SUPER_ADMIN), featureFlagController.getFlags);
