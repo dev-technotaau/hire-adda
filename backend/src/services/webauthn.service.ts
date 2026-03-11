@@ -85,7 +85,7 @@ export const webauthnService = {
   ) {
     const expectedChallenge = await getChallenge(sessionId, 'reg');
     if (!expectedChallenge) {
-      throw new Error('Registration challenge expired or not found');
+      throw new AppError('Registration challenge expired or not found', 401, 'CHALLENGE_EXPIRED');
     }
 
     const verification = await verifyRegistrationResponse({
@@ -96,7 +96,7 @@ export const webauthnService = {
     });
 
     if (!verification.verified || !verification.registrationInfo) {
-      throw new Error('Registration verification failed');
+      throw new AppError('Registration verification failed', 400, 'REGISTRATION_FAILED');
     }
 
     const {
@@ -149,7 +149,7 @@ export const webauthnService = {
   async verifyAuthentication(credential: AuthenticationResponseJSON, sessionId: string) {
     const expectedChallenge = await getChallenge(sessionId, 'auth');
     if (!expectedChallenge) {
-      throw new Error('Authentication challenge expired or not found');
+      throw new AppError('Authentication challenge expired or not found', 401, 'CHALLENGE_EXPIRED');
     }
 
     const storedCredential = await prisma.webAuthnCredential.findUnique({
@@ -158,7 +158,7 @@ export const webauthnService = {
     });
 
     if (!storedCredential) {
-      throw new Error('Credential not found');
+      throw new AppError('Credential not found', 404, 'CREDENTIAL_NOT_FOUND');
     }
 
     const verification = await verifyAuthenticationResponse({
@@ -175,7 +175,7 @@ export const webauthnService = {
     });
 
     if (!verification.verified) {
-      throw new Error('Authentication verification failed');
+      throw new AppError('Authentication verification failed', 401, 'AUTH_VERIFICATION_FAILED');
     }
 
     // Update counter
@@ -209,7 +209,7 @@ export const webauthnService = {
     });
 
     if (!credential) {
-      throw new Error('Credential not found or not owned by user');
+      throw new AppError('Credential not found or not owned by user', 404, 'CREDENTIAL_NOT_FOUND');
     }
 
     await prisma.webAuthnCredential.delete({ where: { id: credentialId } });

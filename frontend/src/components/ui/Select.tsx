@@ -152,7 +152,7 @@ function Select({
                 role="button"
                 tabIndex={-1}
                 onClick={handleClear}
-                className="p-0.5 text-[var(--text-muted)] hover:text-[var(--text)]"
+                className="cursor-pointer p-0.5 text-[var(--text-muted)] hover:text-[var(--text)]"
               >
                 <X className="h-3.5 w-3.5" />
               </span>

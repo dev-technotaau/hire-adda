@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
@@ -47,7 +48,7 @@ export default function ExperienceSection({ form, updateField }: ProfileSectionP
       header={
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--text)]">Work Experience</h2>
-          <Button size="sm" variant="outline" onClick={addExperience}>
+          <Button size="sm" variant="outline" onClick={addExperience} tooltip="Add a new work experience entry">
             <Plus className="mr-1 h-4 w-4" /> Add
           </Button>
         </div>
@@ -198,12 +199,14 @@ export default function ExperienceSection({ form, updateField }: ProfileSectionP
           <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-[var(--text)]">Experience {i + 1}</h4>
-              <button
-                onClick={() => removeExperience(i)}
-                className="text-[var(--error)] hover:text-[var(--error-dark)]"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <Tooltip content="Remove this experience entry">
+                <button
+                  onClick={() => removeExperience(i)}
+                  className="cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)]"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <ServerSuggestionInput

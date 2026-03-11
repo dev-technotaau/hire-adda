@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
 import type { SystemConfig } from '@/types/admin';
@@ -65,6 +66,7 @@ export default function SystemConfigPage() {
             variant="outline"
             leftIcon={<RefreshCw className="h-4 w-4" />}
             onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'system-config'] })}
+            tooltip="Reload configuration from server"
           >
             Refresh
           </Button>
@@ -127,6 +129,7 @@ export default function SystemConfigPage() {
                           }
                           isLoading={updateMutation.isPending}
                           className="shrink-0"
+                          tooltip="Save this configuration value"
                         >
                           Save
                         </Button>

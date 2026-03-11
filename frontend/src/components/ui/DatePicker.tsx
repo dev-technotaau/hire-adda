@@ -25,6 +25,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Tooltip from './Tooltip';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -311,13 +312,15 @@ export default function DatePicker({
       <>
         {/* Header */}
         <div className="mb-2 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setViewDate(subMonths(viewDate, 1))}
-            className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+          <Tooltip content="Previous month">
+            <button
+              type="button"
+              onClick={() => setViewDate(subMonths(viewDate, 1))}
+              className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </Tooltip>
           <button
             type="button"
             onClick={() => setViewMode('months')}
@@ -325,13 +328,15 @@ export default function DatePicker({
           >
             {format(viewDate, 'MMMM yyyy')}
           </button>
-          <button
-            type="button"
-            onClick={() => setViewDate(addMonths(viewDate, 1))}
-            className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <Tooltip content="Next month">
+            <button
+              type="button"
+              onClick={() => setViewDate(addMonths(viewDate, 1))}
+              className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </Tooltip>
         </div>
 
         {/* Day labels */}
@@ -388,13 +393,15 @@ export default function DatePicker({
     return (
       <>
         <div className="mb-3 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setViewDate(setYear(viewDate, currentYear - 1))}
-            className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+          <Tooltip content="Previous year">
+            <button
+              type="button"
+              onClick={() => setViewDate(setYear(viewDate, currentYear - 1))}
+              className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </Tooltip>
           <button
             type="button"
             onClick={() => setViewMode('years')}
@@ -402,13 +409,15 @@ export default function DatePicker({
           >
             {currentYear}
           </button>
-          <button
-            type="button"
-            onClick={() => setViewDate(setYear(viewDate, currentYear + 1))}
-            className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <Tooltip content="Next year">
+            <button
+              type="button"
+              onClick={() => setViewDate(setYear(viewDate, currentYear + 1))}
+              className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </Tooltip>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
@@ -452,23 +461,27 @@ export default function DatePicker({
     return (
       <>
         <div className="mb-3 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setViewDate(setYear(viewDate, currentYear - 12))}
-            className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+          <Tooltip content="Previous years">
+            <button
+              type="button"
+              onClick={() => setViewDate(setYear(viewDate, currentYear - 12))}
+              className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </Tooltip>
           <span className="text-sm font-semibold text-[var(--text)]">
             {startYear} &ndash; {startYear + 11}
           </span>
-          <button
-            type="button"
-            onClick={() => setViewDate(setYear(viewDate, currentYear + 12))}
-            className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <Tooltip content="Next years">
+            <button
+              type="button"
+              onClick={() => setViewDate(setYear(viewDate, currentYear + 12))}
+              className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </Tooltip>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
@@ -510,44 +523,52 @@ export default function DatePicker({
           <Clock className="mr-1.5 h-4 w-4 text-[var(--text-muted)]" />
           {/* Hour */}
           <div className="flex flex-col items-center">
-            <button
-              type="button"
-              onClick={() => setTimeHour((h) => (h + 1) % 24)}
-              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-            >
-              <ChevronUp className="h-3.5 w-3.5" />
-            </button>
+            <Tooltip content="Increase hour">
+              <button
+                type="button"
+                onClick={() => setTimeHour((h) => (h + 1) % 24)}
+                className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
             <span className="w-8 text-center text-lg font-semibold text-[var(--text)] tabular-nums">
               {pad(timeHour)}
             </span>
-            <button
-              type="button"
-              onClick={() => setTimeHour((h) => (h - 1 + 24) % 24)}
-              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-            >
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
+            <Tooltip content="Decrease hour">
+              <button
+                type="button"
+                onClick={() => setTimeHour((h) => (h - 1 + 24) % 24)}
+                className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
           </div>
           <span className="text-lg font-semibold text-[var(--text)]">:</span>
           {/* Minute */}
           <div className="flex flex-col items-center">
-            <button
-              type="button"
-              onClick={() => setTimeMinute((m) => (m + 1) % 60)}
-              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-            >
-              <ChevronUp className="h-3.5 w-3.5" />
-            </button>
+            <Tooltip content="Increase minute">
+              <button
+                type="button"
+                onClick={() => setTimeMinute((m) => (m + 1) % 60)}
+                className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
             <span className="w-8 text-center text-lg font-semibold text-[var(--text)] tabular-nums">
               {pad(timeMinute)}
             </span>
-            <button
-              type="button"
-              onClick={() => setTimeMinute((m) => (m - 1 + 60) % 60)}
-              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-            >
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
+            <Tooltip content="Decrease minute">
+              <button
+                type="button"
+                onClick={() => setTimeMinute((m) => (m - 1 + 60) % 60)}
+                className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
           </div>
         </div>
         {selectedDate && (

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, SkipForward, Check } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import { cn } from '@/lib/utils';
 
 export interface OnboardingStep {
@@ -61,13 +62,15 @@ export default function OnboardingShell({
             <span className="hidden text-xs text-[var(--text-muted)] sm:block">
               Ctrl+S to save &middot; Esc to go back
             </span>
-            <button
-              onClick={onSkip}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-            >
-              <SkipForward className="h-3.5 w-3.5" />
-              Skip for now
-            </button>
+            <Tooltip content="Skip onboarding and go to dashboard">
+              <button
+                onClick={onSkip}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+              >
+                <SkipForward className="h-3.5 w-3.5" />
+                Skip for now
+              </button>
+            </Tooltip>
           </div>
         </div>
       </header>
@@ -149,7 +152,7 @@ export default function OnboardingShell({
         <div className="mt-6 flex items-center justify-between">
           <div>
             {!isFirstStep && (
-              <Button variant="ghost" onClick={onPrev} disabled={isSubmitting}>
+              <Button variant="ghost" onClick={onPrev} disabled={isSubmitting} tooltip="Go to previous step">
                 <ArrowLeft className="mr-1.5 h-4 w-4" />
                 Back
               </Button>
@@ -157,7 +160,7 @@ export default function OnboardingShell({
           </div>
           <div className="flex items-center gap-3">
             {steps[currentStep]?.optional && (
-              <Button variant="ghost" onClick={onNext} disabled={isSubmitting}>
+              <Button variant="ghost" onClick={onNext} disabled={isSubmitting} tooltip="Skip this optional step">
                 Skip this step
               </Button>
             )}
@@ -166,6 +169,7 @@ export default function OnboardingShell({
               isLoading={isSubmitting}
               disabled={nextDisabled}
               rightIcon={!isLastStep ? <ArrowRight className="h-4 w-4" /> : undefined}
+              tooltip={isLastStep ? 'Complete your profile setup' : 'Proceed to next step'}
             >
               {nextLabel || (isLastStep ? 'Complete Setup' : 'Continue')}
             </Button>
@@ -175,9 +179,11 @@ export default function OnboardingShell({
         {/* Footer hint */}
         <p className="mt-4 text-center text-xs text-[var(--text-muted)]">
           Your progress is automatically saved. You can{' '}
-          <Link href={dashboardPath} className="text-primary hover:underline">
-            skip to dashboard
-          </Link>{' '}
+          <Tooltip content="Go to your dashboard now">
+            <Link href={dashboardPath} className="text-primary hover:underline">
+              skip to dashboard
+            </Link>
+          </Tooltip>{' '}
           and complete later.
         </p>
       </div>

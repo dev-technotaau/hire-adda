@@ -607,7 +607,19 @@ export class CandidateService {
           where,
           include: {
             user: {
-              select: { id: true, email: true, firstName: true, lastName: true, avatar: true },
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+                lastActiveAt: true,
+                mobileNumber: true,
+                whatsappNumber: true,
+                isEmailVerified: true,
+                isMobileVerified: true,
+                isWhatsappVerified: true,
+              },
             },
           },
           skip,

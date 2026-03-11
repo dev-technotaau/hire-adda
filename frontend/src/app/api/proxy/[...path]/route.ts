@@ -67,30 +67,31 @@ async function proxyRequest(
         cache: 'no-store',
       });
 
-      if (res.ok || res.status !== 401) {
-        // Refresh succeeded — stream response with new cookies
-        const responseBody = await res.arrayBuffer();
-        const response = new NextResponse(responseBody, {
-          status: res.status,
-          headers: {
-            'content-type': res.headers.get('content-type') || 'application/json',
-          },
-        });
+      // Always persist refreshed tokens in cookies, even if the retry failed.
+      // The old refresh token was already revoked during rotation — if we don't
+      // set the new cookies here, the browser keeps the revoked token and the
+      // user is permanently locked out on the next request.
+      const responseBody = await res.arrayBuffer();
+      const response = new NextResponse(responseBody, {
+        status: res.status,
+        headers: {
+          'content-type': res.headers.get('content-type') || 'application/json',
+        },
+      });
 
-        response.cookies.set(
-          COOKIE_NAMES.ACCESS_TOKEN,
-          tokens.accessToken,
-          accessTokenCookieOptions(rememberMe),
-        );
-        response.cookies.set(
-          COOKIE_NAMES.REFRESH_TOKEN,
-          tokens.refreshToken,
-          refreshTokenCookieOptions(rememberMe),
-        );
-        response.cookies.set(COOKIE_NAMES.AUTH_SESSION, '1', sessionCookieOptions(rememberMe));
+      response.cookies.set(
+        COOKIE_NAMES.ACCESS_TOKEN,
+        tokens.accessToken,
+        accessTokenCookieOptions(rememberMe),
+      );
+      response.cookies.set(
+        COOKIE_NAMES.REFRESH_TOKEN,
+        tokens.refreshToken,
+        refreshTokenCookieOptions(rememberMe),
+      );
+      response.cookies.set(COOKIE_NAMES.AUTH_SESSION, '1', sessionCookieOptions(rememberMe));
 
-        return response;
-      }
+      return response;
     }
 
     // Refresh failed — DO NOT clear cookies here.

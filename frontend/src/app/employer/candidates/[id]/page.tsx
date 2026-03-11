@@ -205,7 +205,7 @@ export default function EmployerCandidateDetailPage() {
       <div className="space-y-6">
         {/* Top Bar */}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <Button variant="ghost" size="sm" onClick={() => router.back()} tooltip="Go back">
             <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
           </Button>
           <div className="flex items-center gap-2">
@@ -222,6 +222,7 @@ export default function EmployerCandidateDetailPage() {
                 setJobPickerAction('shortlist');
                 setJobPickerOpen(true);
               }}
+              tooltip="Shortlist for a job"
             >
               <Star className={`mr-1.5 h-4 w-4${actionedStatus === 'shortlisted' ? ' fill-current' : ''}`} /> Shortlist
             </Button>
@@ -233,13 +234,14 @@ export default function EmployerCandidateDetailPage() {
                 setJobPickerAction('select');
                 setJobPickerOpen(true);
               }}
+              tooltip="Select for a job"
             >
               <UserCheck className="mr-1.5 h-4 w-4" /> Select
             </Button>
 
             {/* Contact dropdown */}
             <div className="relative">
-              <Button variant="outline" size="sm" onClick={() => setContactOpen(!contactOpen)}>
+              <Button variant="outline" size="sm" onClick={() => setContactOpen(!contactOpen)} tooltip="Contact candidate">
                 <Phone className="mr-1.5 h-4 w-4" /> Contact{' '}
                 <ChevronDown className="ml-1 h-3 w-3" />
               </Button>
@@ -291,7 +293,7 @@ export default function EmployerCandidateDetailPage() {
               size="sm"
               onClick={() => toggleSaveMutation.mutate()}
               isLoading={toggleSaveMutation.isPending}
-              title="Save Candidate"
+              tooltip="Save candidate"
             >
               <Bookmark className="h-4 w-4" />
             </Button>
@@ -299,7 +301,7 @@ export default function EmployerCandidateDetailPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                title="Download Resume"
+                tooltip="Download resume"
                 onClick={() => handleResumeDownload()}
               >
                 <Download className="h-4 w-4" />
@@ -1491,7 +1493,8 @@ export default function EmployerCandidateDetailPage() {
                         <button
                           type="button"
                           onClick={() => handleResumeDownload()}
-                          className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)] p-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                          title="Download resume"
+                          className="cursor-pointer flex w-full items-center gap-2 rounded-lg border border-[var(--border)] p-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
                         >
                           <FileText className="text-primary h-4 w-4" />
                           <span className="flex-1 text-left">
@@ -1573,7 +1576,8 @@ export default function EmployerCandidateDetailPage() {
                 </h3>
                 <button
                   onClick={() => setJobPickerOpen(false)}
-                  className="text-[var(--text-muted)] hover:text-[var(--text)]"
+                  title="Close"
+                  className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1600,6 +1604,7 @@ export default function EmployerCandidateDetailPage() {
                       <button
                         key={job.id}
                         type="button"
+                        title={`Select ${job.title}`}
                         onClick={() => {
                           if (jobPickerAction === 'shortlist') {
                             shortlistMutation.mutate(job.id);

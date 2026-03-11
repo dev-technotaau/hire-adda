@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ROUTES } from '@/constants/routes';
 import Logo from '@/components/common/Logo';
+import Tooltip from '@/components/ui/Tooltip';
 import ManageCookiesButton from '@/components/common/ManageCookiesButton';
 
 const footerLinks = {
@@ -48,12 +49,14 @@ export default function Footer() {
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
-                  >
-                    {link.label}
-                  </Link>
+                  <Tooltip content={`Go to ${link.label}`}>
+                    <Link
+                      href={link.href}
+                      className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </Tooltip>
                 </li>
               ))}
             </ul>
@@ -67,12 +70,14 @@ export default function Footer() {
             <ul className="space-y-3">
               {footerLinks.jobSeekers.map((link) => (
                 <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
-                  >
-                    {link.label}
-                  </Link>
+                  <Tooltip content={`Go to ${link.label}`}>
+                    <Link
+                      href={link.href}
+                      className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </Tooltip>
                 </li>
               ))}
             </ul>
@@ -86,12 +91,14 @@ export default function Footer() {
             <ul className="space-y-3">
               {footerLinks.employers.map((link) => (
                 <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
-                  >
-                    {link.label}
-                  </Link>
+                  <Tooltip content={`Go to ${link.label}`}>
+                    <Link
+                      href={link.href}
+                      className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </Tooltip>
                 </li>
               ))}
             </ul>
@@ -105,12 +112,14 @@ export default function Footer() {
             <ul className="space-y-3">
               {footerLinks.support.map((link) => (
                 <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
-                  >
-                    {link.label}
-                  </Link>
+                  <Tooltip content={`Go to ${link.label}`}>
+                    <Link
+                      href={link.href}
+                      className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </Tooltip>
                 </li>
               ))}
             </ul>
@@ -124,12 +133,14 @@ export default function Footer() {
             <ul className="space-y-3">
               {footerLinks.legal.map((link) => (
                 <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
-                  >
-                    {link.label}
-                  </Link>
+                  <Tooltip content={`Go to ${link.label}`}>
+                    <Link
+                      href={link.href}
+                      className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </Tooltip>
                 </li>
               ))}
               <li>

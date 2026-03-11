@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import OtpInput from '@/components/auth/OtpInput';
 import { showToast } from '@/components/ui/Toast';
 import { authService } from '@/services/auth.service';
+import Tooltip from '@/components/ui/Tooltip';
 import { ROUTES } from '@/constants/routes';
 import { useOtpConfig } from '@/hooks/use-otp-config';
 import type { ApiError } from '@/types/api';
@@ -168,7 +169,7 @@ export default function VerifyEmailPage() {
                   length={otpConfig.LENGTH}
                 />
 
-                <Button type="submit" fullWidth disabled={otp.length !== otpConfig.LENGTH}>
+                <Button type="submit" fullWidth disabled={otp.length !== otpConfig.LENGTH} tooltip="Verify your email address">
                   Verify Email
                 </Button>
 
@@ -183,6 +184,7 @@ export default function VerifyEmailPage() {
                         onClick={handleResend}
                         disabled={isResending || !email}
                         className="text-primary font-medium hover:underline disabled:opacity-50"
+                        title="Resend verification code to your email"
                       >
                         {isResending ? 'Sending...' : 'Resend Code'}
                       </button>
@@ -211,7 +213,7 @@ export default function VerifyEmailPage() {
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
                   Your email has been successfully verified. You can now log in to your account.
                 </p>
-                <Button fullWidth className="mt-6" onClick={handleContinue}>
+                <Button fullWidth className="mt-6" onClick={handleContinue} tooltip="Go to the login page">
                   Continue to Login
                 </Button>
               </div>
@@ -236,12 +238,12 @@ export default function VerifyEmailPage() {
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">{errorMessage}</p>
                 <div className="mt-6 space-y-3">
                   {email && (
-                    <Button fullWidth onClick={handleResend} isLoading={isResending}>
+                    <Button fullWidth onClick={handleResend} isLoading={isResending} tooltip="Resend verification code to your email">
                       Resend Verification Code
                     </Button>
                   )}
                   <Link href={ROUTES.AUTH.LOGIN}>
-                    <Button variant="outline" fullWidth>
+                    <Button variant="outline" fullWidth tooltip="Go back to login">
                       Back to Login
                     </Button>
                   </Link>

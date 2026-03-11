@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import PublicLayout from '@/components/layout/PublicLayout';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import StatsSection from '@/components/common/StatsSection';
 import { cn } from '@/lib/utils';
 
@@ -403,16 +404,20 @@ export default async function Home() {
               </p>
 
               <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row">
-                <Link href="/auth/register">
-                  <Button size="lg" rightIcon={<ArrowRight className="h-5 w-5" />}>
-                    Get Started
-                  </Button>
-                </Link>
-                <Link href="/auth/register?role=employer">
-                  <Button variant="outline" size="lg">
-                    Post a Job
-                  </Button>
-                </Link>
+                <Tooltip content="Create your free account and start your job search">
+                  <Link href="/auth/register">
+                    <Button size="lg" rightIcon={<ArrowRight className="h-5 w-5" />}>
+                      Get Started
+                    </Button>
+                  </Link>
+                </Tooltip>
+                <Tooltip content="Register as an employer and post job listings">
+                  <Link href="/auth/register?role=employer">
+                    <Button variant="outline" size="lg">
+                      Post a Job
+                    </Button>
+                  </Link>
+                </Tooltip>
               </div>
 
               {/* Trust badges — real numbers */}
@@ -571,11 +576,13 @@ export default async function Home() {
                   </li>
                 ))}
               </ul>
-              <Link href="/auth/register">
-                <Button size="lg" rightIcon={<ArrowRight className="h-5 w-5" />}>
-                  Start Your Job Search
-                </Button>
-              </Link>
+              <Tooltip content="Sign up and find your dream job">
+                <Link href="/auth/register">
+                  <Button size="lg" rightIcon={<ArrowRight className="h-5 w-5" />}>
+                    Start Your Job Search
+                  </Button>
+                </Link>
+              </Tooltip>
             </div>
 
             {/* For Employers */}
@@ -598,15 +605,17 @@ export default async function Home() {
                   </li>
                 ))}
               </ul>
-              <Link href="/auth/register?role=employer">
-                <Button
-                  size="lg"
-                  className="bg-accent hover:bg-accent-hover text-white"
-                  rightIcon={<ArrowRight className="h-5 w-5" />}
-                >
-                  Start Hiring Today
-                </Button>
-              </Link>
+              <Tooltip content="Register as an employer and start hiring">
+                <Link href="/auth/register?role=employer">
+                  <Button
+                    size="lg"
+                    className="bg-accent hover:bg-accent-hover text-white"
+                    rightIcon={<ArrowRight className="h-5 w-5" />}
+                  >
+                    Start Hiring Today
+                  </Button>
+                </Link>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -633,6 +642,7 @@ export default async function Home() {
                 <Link
                   href="/auth/register"
                   key={cat.title}
+                  title={`Browse ${cat.title} jobs`}
                   className="group hover:border-primary/30 rounded-xl border border-[var(--border)] bg-white p-5 transition-all hover:shadow-md"
                 >
                   <div
@@ -769,7 +779,7 @@ export default async function Home() {
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-[var(--text-secondary)]">
               Got questions? We have answers. If you can&apos;t find what you&apos;re looking for,{' '}
-              <Link href="/contact" className="text-primary hover:underline">
+              <Link href="/contact" title="Go to contact page" className="text-primary hover:underline">
                 contact us
               </Link>
               .
@@ -807,24 +817,28 @@ export default async function Home() {
             and career growth.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href="/auth/register">
-              <Button
-                size="lg"
-                className="text-primary bg-white hover:bg-white/90"
-                rightIcon={<ArrowRight className="h-5 w-5" />}
-              >
-                Create Free Account
-              </Button>
-            </Link>
-            <Link href="/auth/register?role=employer">
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-white/30 text-white hover:bg-white/10"
-              >
-                Hire Talent
-              </Button>
-            </Link>
+            <Tooltip content="Sign up for a free TalentBridge account">
+              <Link href="/auth/register">
+                <Button
+                  size="lg"
+                  className="text-primary bg-white hover:bg-white/90"
+                  rightIcon={<ArrowRight className="h-5 w-5" />}
+                >
+                  Create Free Account
+                </Button>
+              </Link>
+            </Tooltip>
+            <Tooltip content="Register as an employer and find top talent">
+              <Link href="/auth/register?role=employer">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="border-white/30 text-white hover:bg-white/10"
+                >
+                  Hire Talent
+                </Button>
+              </Link>
+            </Tooltip>
           </div>
         </div>
       </section>

@@ -8,9 +8,24 @@ import { publishEvent, KafkaTopics } from '../kafka/producer';
 import { trackEvent, getClientId } from '../services/analytics.service';
 import { setTokenCookies } from '../utils/cookie-helpers';
 import prisma from '../config/prisma';
+import redis from '../config/redis';
 
+/**
+ * Stable session ID for WebAuthn challenge matching.
+ * Uses user ID for authenticated routes (registration), IP for unauthenticated (login).
+ * req.id is a per-request UUID and MUST NOT be used here — the challenge stored
+ * during the "options" request must be retrievable during the "verify" request.
+ */
 function getSessionId(req: Request): string {
-  return req.id || req.ip || 'unknown';
+  const user = (req as any).user;
+  if (user?.id) return user.id;
+  return req.ip || 'unknown';
+}
+
+const MFA_PENDING_TTL = 300; // 5 minutes
+
+function mfaPendingKey(sessionId: string): string {
+  return `webauthn:mfa-pending:${sessionId}`;
 }
 
 /**
@@ -103,6 +118,12 @@ export const getAuthenticationOptions = async (
 /**
  * POST /api/v1/webauthn/login/verify
  * Verify authentication and return JWT tokens.
+ *
+ * Supports two flows:
+ * 1. Direct login: credential + optional mfaCode → verify WebAuthn + MFA → tokens
+ * 2. MFA continuation: credential + mfaCode after a previous "requireMfa" response
+ *    The pending verification is stored in Redis so we don't re-verify WebAuthn
+ *    (the challenge was already consumed on the first call).
  */
 export const verifyAuthentication = async (
   req: Request,
@@ -111,48 +132,78 @@ export const verifyAuthentication = async (
 ): Promise<void> => {
   try {
     const { credential, mfaCode } = req.body;
-    const { verified, user } = await webauthnService.verifyAuthentication(
-      credential,
-      getSessionId(req)
-    );
+    const sessionId = getSessionId(req);
 
-    if (!verified || !user) {
-      throw new AppError('Authentication failed', 401, 'WEBAUTHN_AUTH_FAILED');
+    let user;
+
+    // Check for pending MFA verification (second call in passkey + MFA flow)
+    if (mfaCode) {
+      const pendingUserId = await redis.get(mfaPendingKey(sessionId));
+      if (pendingUserId) {
+        await redis.del(mfaPendingKey(sessionId));
+        const pendingUser = await prisma.user.findUnique({ where: { id: pendingUserId } });
+        if (!pendingUser) {
+          throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+        }
+        // Verify MFA code
+        const isMfaValid = await verifyMfaToken(pendingUser.id, mfaCode);
+        if (!isMfaValid) {
+          throw new AppError('Invalid MFA code', 401, 'INVALID_MFA');
+        }
+        user = pendingUser;
+      }
     }
 
-    if (!user.isActive || user.isSuspended) {
-      throw new AppError('Account is suspended or inactive', 403, 'ACCOUNT_SUSPENDED');
-    }
+    // If no pending MFA was found, do full WebAuthn verification
+    if (!user) {
+      const { verified, user: webauthnUser } = await webauthnService.verifyAuthentication(
+        credential,
+        sessionId
+      );
 
-    // Check if user has MFA enabled — passkeys don't bypass TOTP
-    const mfaUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { mfaEnabled: true },
-    });
+      if (!verified || !webauthnUser) {
+        throw new AppError('Authentication failed', 401, 'WEBAUTHN_AUTH_FAILED');
+      }
 
-    if (mfaUser?.mfaEnabled) {
-      if (!mfaCode) {
-        // Return MFA required response (no tokens yet)
-        res.status(200).json({
-          status: 'success',
-          message: 'MFA required',
-          data: {
-            requireMfa: true,
-            user: {
-              id: user.id,
-              email: user.email,
-              role: user.role,
-              firstName: user.firstName,
-              lastName: user.lastName,
+      if (!webauthnUser.isActive || webauthnUser.isSuspended) {
+        throw new AppError('Account is suspended or inactive', 403, 'ACCOUNT_SUSPENDED');
+      }
+
+      // Check if user has MFA enabled — passkeys don't bypass TOTP
+      const mfaUser = await prisma.user.findUnique({
+        where: { id: webauthnUser.id },
+        select: { mfaEnabled: true },
+      });
+
+      if (mfaUser?.mfaEnabled) {
+        if (!mfaCode) {
+          // Store pending MFA verification so the second call skips WebAuthn
+          await redis.set(mfaPendingKey(sessionId), webauthnUser.id, 'EX', MFA_PENDING_TTL);
+
+          res.status(200).json({
+            status: 'success',
+            message: 'MFA required',
+            data: {
+              requireMfa: true,
+              user: {
+                id: webauthnUser.id,
+                email: webauthnUser.email,
+                role: webauthnUser.role,
+                firstName: webauthnUser.firstName,
+                lastName: webauthnUser.lastName,
+              },
             },
-          },
-        });
-        return;
+          });
+          return;
+        }
+        // MFA code provided on first call — verify immediately
+        const isMfaValid = await verifyMfaToken(webauthnUser.id, mfaCode);
+        if (!isMfaValid) {
+          throw new AppError('Invalid MFA code', 401, 'INVALID_MFA');
+        }
       }
-      const isMfaValid = await verifyMfaToken(user.id, mfaCode);
-      if (!isMfaValid) {
-        throw new AppError('Invalid MFA code', 401);
-      }
+
+      user = webauthnUser;
     }
 
     const userAgent = req.headers['user-agent'];

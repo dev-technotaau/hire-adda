@@ -24,11 +24,12 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
 } from 'recharts';
 import type { PieLabelRenderProps } from 'recharts';
+import Tooltip from '@/components/ui/Tooltip';
 import DatePicker from '@/components/ui/DatePicker';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -292,7 +293,7 @@ export default function SuperAdminTicketsPage() {
                         />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <RechartsTooltip />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -318,7 +319,7 @@ export default function SuperAdminTicketsPage() {
                       tick={{ fontSize: 12, fill: 'var(--text-muted)' }}
                       allowDecimals={false}
                     />
-                    <Tooltip />
+                    <RechartsTooltip />
                     <Legend />
                     <Area
                       type="monotone"
@@ -362,7 +363,7 @@ export default function SuperAdminTicketsPage() {
                       tick={{ fontSize: 12, fill: 'var(--text-muted)' }}
                       allowDecimals={false}
                     />
-                    <Tooltip />
+                    <RechartsTooltip />
                     <Bar dataKey="count" name="Responses" radius={[4, 4, 0, 0]}>
                       {satisfactionData.map((entry, index) => (
                         <Cell key={`sat-${index}`} fill={entry.fill} />
@@ -398,7 +399,7 @@ export default function SuperAdminTicketsPage() {
                       width={100}
                       tick={{ fontSize: 12, fill: 'var(--text-muted)' }}
                     />
-                    <Tooltip />
+                    <RechartsTooltip />
                     <Bar dataKey="count" name="Tickets" radius={[0, 4, 4, 0]}>
                       {statusBreakdownData.map((_, index) => (
                         <Cell
@@ -458,12 +459,14 @@ export default function SuperAdminTicketsPage() {
                         className="transition-colors hover:bg-[var(--bg-secondary)]"
                       >
                         <td className="px-4 py-3">
-                          <Link
-                            href={ROUTES.ADMIN.TICKET_DETAIL(ticket.id)}
-                            className="text-primary font-mono text-xs font-medium hover:underline"
-                          >
-                            {ticket.ticketNumber}
-                          </Link>
+                          <Tooltip content="View ticket details">
+                            <Link
+                              href={ROUTES.ADMIN.TICKET_DETAIL(ticket.id)}
+                              className="text-primary cursor-pointer font-mono text-xs font-medium hover:underline"
+                            >
+                              {ticket.ticketNumber}
+                            </Link>
+                          </Tooltip>
                         </td>
                         <td className="max-w-[250px] truncate px-4 py-3 text-[var(--text)]">
                           {ticket.subject}
@@ -494,13 +497,15 @@ export default function SuperAdminTicketsPage() {
 
         {/* Link to manage tickets */}
         <div className="text-center">
-          <Link
-            href={ROUTES.ADMIN.TICKETS}
-            className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
-          >
-            Manage All Tickets
-            <span aria-hidden="true">&rarr;</span>
-          </Link>
+          <Tooltip content="Go to ticket management page">
+            <Link
+              href={ROUTES.ADMIN.TICKETS}
+              className="text-primary inline-flex cursor-pointer items-center gap-2 text-sm font-medium hover:underline"
+            >
+              Manage All Tickets
+              <span aria-hidden="true">&rarr;</span>
+            </Link>
+          </Tooltip>
         </div>
       </div>
     </DashboardLayout>

@@ -3,6 +3,7 @@ import { Plus, Trash2, Layers } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
+import Tooltip from '@/components/ui/Tooltip';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import type { UpdateCompanyRequest } from '@/types/employer';
 import type { EmployerProfileSectionProps } from './types';
@@ -109,6 +110,7 @@ export default function BenefitsSection({
               className="shrink-0"
               onClick={() => addToArray('benefits', benefitInput, setBenefitInput)}
               disabled={!benefitInput.trim()}
+              tooltip="Add benefit"
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -122,19 +124,20 @@ export default function BenefitsSection({
             {QUICK_BENEFITS.map((benefit) => {
               const isAdded = (form.benefits || []).includes(benefit);
               return (
-                <button
-                  key={benefit}
-                  type="button"
-                  onClick={() => !isAdded && addToArray('benefits', benefit, () => {})}
-                  disabled={isAdded}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    isAdded
-                      ? 'border-primary/30 bg-primary-light text-primary cursor-default'
-                      : 'hover:border-primary hover:text-primary border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)]'
-                  }`}
-                >
-                  + {benefit}
-                </button>
+                <Tooltip content={isAdded ? 'Already added' : `Add ${benefit}`} key={benefit}>
+                  <button
+                    type="button"
+                    onClick={() => !isAdded && addToArray('benefits', benefit, () => {})}
+                    disabled={isAdded}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      isAdded
+                        ? 'border-primary/30 bg-primary-light text-primary cursor-default'
+                        : 'hover:border-primary hover:text-primary cursor-pointer border-[var(--border)] bg-[var(--bg)] text-[var(--text-secondary)]'
+                    }`}
+                  >
+                    + {benefit}
+                  </button>
+                </Tooltip>
               );
             })}
           </div>
@@ -182,14 +185,15 @@ export default function BenefitsSection({
             </p>
             <div className="flex flex-wrap gap-2">
               {SUGGESTED_CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => addSuggestedCategory(cat)}
-                  className="hover:border-primary hover:text-primary rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
-                >
-                  + {cat}
-                </button>
+                <Tooltip content={`Add ${cat} category`} key={cat}>
+                  <button
+                    type="button"
+                    onClick={() => addSuggestedCategory(cat)}
+                    className="hover:border-primary hover:text-primary cursor-pointer rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
+                  >
+                    + {cat}
+                  </button>
+                </Tooltip>
               ))}
             </div>
           </div>
@@ -221,14 +225,16 @@ export default function BenefitsSection({
                   onChange={(e) => updateCategoryName(catIndex, e.target.value)}
                 />
               </div>
-              <button
-                type="button"
-                onClick={() => removeCategory(catIndex)}
-                className="mt-5 rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white hover:text-[var(--error)]"
-                aria-label="Remove category"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <Tooltip content="Remove category">
+                <button
+                  type="button"
+                  onClick={() => removeCategory(catIndex)}
+                  className="mt-5 cursor-pointer rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white hover:text-[var(--error)]"
+                  aria-label="Remove category"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </div>
 
             {/* Perks within category */}
@@ -252,6 +258,7 @@ export default function BenefitsSection({
                 className="shrink-0"
                 onClick={() => addPerkToCategory(catIndex)}
                 disabled={!(perkInputs[catIndex] || '').trim()}
+                tooltip="Add perk"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -272,7 +279,7 @@ export default function BenefitsSection({
           </div>
         ))}
 
-        <Button variant="outline" onClick={addCategory}>
+        <Button variant="outline" onClick={addCategory} tooltip="Add a new perk category">
           <Plus className="mr-1 h-4 w-4" /> Add Category
         </Button>
       </div>

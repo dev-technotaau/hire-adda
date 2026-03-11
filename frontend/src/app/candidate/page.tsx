@@ -41,6 +41,7 @@ import ProgressBar from '@/components/ui/ProgressBar';
 import Skeleton from '@/components/ui/Skeleton';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
+import Tooltip from '@/components/ui/Tooltip';
 import PieChart from '@/components/charts/PieChart';
 import AreaChart from '@/components/charts/AreaChart';
 import BarChart from '@/components/charts/BarChart';
@@ -297,13 +298,6 @@ export default function CandidateDashboard() {
     if (!analytics?.summary) return [];
     return [
       {
-        label: 'Interview Rate',
-        value: `${analytics.summary.interviewRate ?? 0}%`,
-        icon: TrendingUp,
-        color: 'text-[var(--success)] bg-[var(--success-light)]',
-        description: 'of applications lead to interviews',
-      },
-      {
         label: 'Offer Rate',
         value: `${analytics.summary.offerRate ?? 0}%`,
         icon: Award,
@@ -335,7 +329,6 @@ export default function CandidateDashboard() {
       { key: 'applied', label: 'Applied', color: '#3B82F6' },
       { key: 'viewed', label: 'Reviewed', color: '#8B5CF6' },
       { key: 'shortlisted', label: 'Shortlisted', color: '#F59E0B' },
-      { key: 'interviewScheduled', label: 'Interview', color: '#6366F1' },
       { key: 'offered', label: 'Offered', color: '#10B981' },
       { key: 'hired', label: 'Hired', color: '#059669' },
     ];
@@ -443,6 +436,7 @@ export default function CandidateDashboard() {
                         <Link
                           key={s.name}
                           href={`${ROUTES.CANDIDATE.PROFILE}?section=${COMPLETENESS_SECTION_MAP[s.name] || 'personal'}`}
+                          title={`Complete your ${s.name} section`}
                         >
                           <span className="border-primary/20 text-primary hover:bg-primary inline-flex cursor-pointer items-center gap-1 rounded-full border bg-white px-3 py-1 text-xs font-medium transition-colors hover:text-white">
                             + {s.name}
@@ -452,8 +446,8 @@ export default function CandidateDashboard() {
                   </div>
                 )}
               </div>
-              <Link href={ROUTES.CANDIDATE.PROFILE} className="shrink-0 self-start">
-                <Button size="sm">Update Profile</Button>
+              <Link href={ROUTES.CANDIDATE.PROFILE} className="shrink-0 self-start" title="Go to your profile to complete missing sections">
+                <Button size="sm" tooltip="Update your profile">Update Profile</Button>
               </Link>
             </div>
           </Card>
@@ -475,6 +469,7 @@ export default function CandidateDashboard() {
                     <Link
                       key={s.name}
                       href={`${ROUTES.CANDIDATE.PROFILE}?section=${COMPLETENESS_SECTION_MAP[s.name] || 'personal'}`}
+                      title={tip.tip}
                     >
                       <div className="group hover:border-primary/30 flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4 transition-all hover:shadow-sm">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
@@ -505,7 +500,7 @@ export default function CandidateDashboard() {
                 </Card>
               ))
             : statCards.map((stat) => (
-                <Link key={stat.label} href={stat.href}>
+                <Link key={stat.label} href={stat.href} title={`View ${stat.label}`}>
                   <Card className="cursor-pointer transition-shadow hover:shadow-md">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -751,7 +746,7 @@ export default function CandidateDashboard() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-3">
-            <Link href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=upload-resume`}>
+            <Link href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=upload-resume`} title="Upload or replace your resume file">
               <div className="group hover:border-primary/30 flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--border)] p-4 transition-all hover:shadow-sm">
                 <div className="bg-primary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
                   <Upload className="text-primary h-5 w-5" />
@@ -766,7 +761,7 @@ export default function CandidateDashboard() {
                 </div>
               </div>
             </Link>
-            <Link href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=generate-resume`}>
+            <Link href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=generate-resume`} title="Create a professional resume from your profile">
               <div className="group hover:border-primary/30 flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--border)] p-4 transition-all hover:shadow-sm">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--success-light)]">
                   <FileText className="h-5 w-5 text-[var(--success)]" />
@@ -781,7 +776,7 @@ export default function CandidateDashboard() {
                 </div>
               </div>
             </Link>
-            <Link href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=parse-resume`}>
+            <Link href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=parse-resume`} title="Extract skills and experience with AI">
               <div className="group border-primary/20 bg-primary-50/20 hover:border-primary/40 flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-all hover:shadow-sm">
                 <div className="bg-primary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
                   <Brain className="text-primary h-5 w-5" />
@@ -823,15 +818,17 @@ export default function CandidateDashboard() {
                   <Sparkles className="text-primary h-5 w-5" />
                   <h2 className="text-lg font-semibold text-[var(--text)]">AI Recommended Jobs</h2>
                 </div>
-                <Link href={ROUTES.CANDIDATE.JOBS} className="text-primary text-sm hover:underline">
-                  View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-                </Link>
+                <Tooltip content="View all AI recommended jobs">
+                  <Link href={ROUTES.CANDIDATE.JOBS} className="text-primary text-sm hover:underline">
+                    View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
+                  </Link>
+                </Tooltip>
               </div>
             }
           >
             <div className="grid gap-4 sm:grid-cols-2">
               {aiRecommendedJobs.slice(0, 4).map((job) => (
-                <Link key={job.id} href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}>
+                <Link key={job.id} href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)} title={`View ${job.title} at ${job.company?.companyName || 'company'}`}>
                   <div className="border-primary/20 bg-primary-50/20 hover:border-primary/40 cursor-pointer rounded-lg border p-4 transition-all hover:shadow-sm">
                     <div className="flex items-start gap-3">
                       <div className="bg-primary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
@@ -871,15 +868,17 @@ export default function CandidateDashboard() {
             header={
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-[var(--text)]">Recommended For You</h2>
-                <Link href={ROUTES.CANDIDATE.JOBS} className="text-primary text-sm hover:underline">
-                  View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-                </Link>
+                <Tooltip content="View all recommended jobs">
+                  <Link href={ROUTES.CANDIDATE.JOBS} className="text-primary text-sm hover:underline">
+                    View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
+                  </Link>
+                </Tooltip>
               </div>
             }
           >
             <div className="grid gap-4 sm:grid-cols-2">
               {recommendedJobs.map((job) => (
-                <Link key={job.id} href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}>
+                <Link key={job.id} href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)} title={`View ${job.title} at ${job.company?.companyName || 'company'}`}>
                   <div className="hover:border-primary/30 cursor-pointer rounded-lg border border-[var(--border)] p-4 transition-all hover:shadow-sm">
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
@@ -921,12 +920,14 @@ export default function CandidateDashboard() {
           header={
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[var(--text)]">Recent Applications</h2>
-              <Link
-                href={ROUTES.CANDIDATE.APPLICATIONS}
-                className="text-primary text-sm hover:underline"
-              >
-                View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-              </Link>
+              <Tooltip content="View all applications">
+                <Link
+                  href={ROUTES.CANDIDATE.APPLICATIONS}
+                  className="text-primary text-sm hover:underline"
+                >
+                  View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
+                </Link>
+              </Tooltip>
             </div>
           }
         >
@@ -974,8 +975,8 @@ export default function CandidateDashboard() {
               title="No applications yet"
               description="Start applying to jobs to see your activity here."
               action={
-                <Link href={ROUTES.CANDIDATE.JOBS}>
-                  <Button size="sm">Browse Jobs</Button>
+                <Link href={ROUTES.CANDIDATE.JOBS} title="Browse available job listings">
+                  <Button size="sm" tooltip="Browse available jobs">Browse Jobs</Button>
                 </Link>
               }
             />
@@ -1040,9 +1041,11 @@ export default function CandidateDashboard() {
                   <Bell className="text-primary h-5 w-5" />
                   <h2 className="text-lg font-semibold text-[var(--text)]">Notifications</h2>
                 </div>
-                <Link href={ROUTES.NOTIFICATIONS} className="text-primary text-sm hover:underline">
-                  View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-                </Link>
+                <Tooltip content="View all notifications">
+                  <Link href={ROUTES.NOTIFICATIONS} className="text-primary text-sm hover:underline">
+                    View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
+                  </Link>
+                </Tooltip>
               </div>
             }
           >
@@ -1077,7 +1080,7 @@ export default function CandidateDashboard() {
         <div>
           <h2 className="mb-3 text-lg font-semibold text-[var(--text)]">Quick Actions</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Link href={ROUTES.CANDIDATE.JOBS}>
+            <Link href={ROUTES.CANDIDATE.JOBS} title="Search and browse job listings">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-lg">
@@ -1092,7 +1095,7 @@ export default function CandidateDashboard() {
                 </div>
               </Card>
             </Link>
-            <Link href={ROUTES.CANDIDATE.PROFILE}>
+            <Link href={ROUTES.CANDIDATE.PROFILE} title="Edit and update your profile">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--success-light)]">
@@ -1107,7 +1110,7 @@ export default function CandidateDashboard() {
                 </div>
               </Card>
             </Link>
-            <Link href={ROUTES.CANDIDATE.JOB_ALERTS}>
+            <Link href={ROUTES.CANDIDATE.JOB_ALERTS} title="Manage your job alert preferences">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--info-light)]">
@@ -1124,7 +1127,7 @@ export default function CandidateDashboard() {
                 </div>
               </Card>
             </Link>
-            <Link href={ROUTES.CANDIDATE.ANALYTICS}>
+            <Link href={ROUTES.CANDIDATE.ANALYTICS} title="Track your job search analytics">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">
@@ -1141,7 +1144,7 @@ export default function CandidateDashboard() {
                 </div>
               </Card>
             </Link>
-            <Link href={ROUTES.CANDIDATE.SETTINGS}>
+            <Link href={ROUTES.CANDIDATE.SETTINGS} title="Account, security and preferences">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
@@ -1158,7 +1161,7 @@ export default function CandidateDashboard() {
                 </div>
               </Card>
             </Link>
-            <Link href={ROUTES.CANDIDATE.HELP}>
+            <Link href={ROUTES.CANDIDATE.HELP} title="FAQs and support tickets">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">

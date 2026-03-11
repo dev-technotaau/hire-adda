@@ -42,6 +42,7 @@ import ProgressBar from '@/components/ui/ProgressBar';
 import Skeleton from '@/components/ui/Skeleton';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
+import Tooltip from '@/components/ui/Tooltip';
 import BarChart from '@/components/charts/BarChart';
 import AreaChart from '@/components/charts/AreaChart';
 import PieChart from '@/components/charts/PieChart';
@@ -207,8 +208,7 @@ export default function EmployerDashboard() {
     const stages = [
       { from: 'Applied', to: 'Viewed', rate: metrics.conversions.appliedToViewed },
       { from: 'Viewed', to: 'Shortlisted', rate: metrics.conversions.viewedToShortlisted },
-      { from: 'Shortlisted', to: 'Interview', rate: metrics.conversions.shortlistedToInterview },
-      { from: 'Interview', to: 'Offered', rate: metrics.conversions.interviewToOffered },
+      { from: 'Shortlisted', to: 'Offered', rate: metrics.conversions.shortlistedToInterview },
       { from: 'Offered', to: 'Hired', rate: metrics.conversions.offeredToHired },
     ];
     return stages.reduce((min, s) => (s.rate < min.rate ? s : min), stages[0]);
@@ -367,11 +367,13 @@ export default function EmployerDashboard() {
               {getDashboardSubtitle(user?.role)}
             </p>
           </div>
-          <Link href={ROUTES.EMPLOYER.POST_JOB}>
-            <Button>
-              <Plus className="mr-1.5 h-4 w-4" /> Post a Job
-            </Button>
-          </Link>
+          <Tooltip content="Create a new job listing">
+            <Link href={ROUTES.EMPLOYER.POST_JOB}>
+              <Button tooltip="Create a new job listing">
+                <Plus className="mr-1.5 h-4 w-4" /> Post a Job
+              </Button>
+            </Link>
+          </Tooltip>
         </div>
 
         {/* Profile Completeness */}
@@ -407,21 +409,24 @@ export default function EmployerDashboard() {
                     {completeness.data.sections
                       .filter((s) => !s.completed)
                       .map((s) => (
-                        <Link
-                          key={s.name}
-                          href={`${ROUTES.EMPLOYER.PROFILE}?section=${COMPLETENESS_SECTION_MAP[s.name] || 'company'}`}
-                        >
-                          <span className="border-primary/20 text-primary hover:bg-primary inline-flex cursor-pointer items-center gap-1 rounded-full border bg-white px-3 py-1 text-xs font-medium transition-colors hover:text-white">
-                            + {s.name}
-                          </span>
-                        </Link>
+                        <Tooltip key={s.name} content={`Complete your ${s.name} section`}>
+                          <Link
+                            href={`${ROUTES.EMPLOYER.PROFILE}?section=${COMPLETENESS_SECTION_MAP[s.name] || 'company'}`}
+                          >
+                            <span className="border-primary/20 text-primary hover:bg-primary inline-flex cursor-pointer items-center gap-1 rounded-full border bg-white px-3 py-1 text-xs font-medium transition-colors hover:text-white">
+                              + {s.name}
+                            </span>
+                          </Link>
+                        </Tooltip>
                       ))}
                   </div>
                 )}
               </div>
-              <Link href={ROUTES.EMPLOYER.PROFILE} className="shrink-0 self-start">
-                <Button size="sm">Update Profile</Button>
-              </Link>
+              <Tooltip content="Go to your company profile settings">
+                <Link href={ROUTES.EMPLOYER.PROFILE} className="shrink-0 self-start">
+                  <Button size="sm" tooltip="Edit your company profile">Update Profile</Button>
+                </Link>
+              </Tooltip>
             </div>
           </Card>
         )}
@@ -435,7 +440,7 @@ export default function EmployerDashboard() {
                 </Card>
               ))
             : statCards.map((stat) => (
-                <Link key={stat.label} href={stat.href}>
+                <Link key={stat.label} href={stat.href} title={`View ${stat.label} details`}>
                   <Card className="cursor-pointer transition-shadow hover:shadow-md">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -521,12 +526,14 @@ export default function EmployerDashboard() {
                     Best Performing
                   </span>
                 </div>
-                <Link
-                  href={ROUTES.EMPLOYER.JOB_DETAIL(topJob.jobId)}
-                  className="hover:text-primary text-lg font-semibold text-[var(--text)] transition-colors"
-                >
-                  {topJob.title}
-                </Link>
+                <Tooltip content="View job details">
+                  <Link
+                    href={ROUTES.EMPLOYER.JOB_DETAIL(topJob.jobId)}
+                    className="hover:text-primary text-lg font-semibold text-[var(--text)] transition-colors"
+                  >
+                    {topJob.title}
+                  </Link>
+                </Tooltip>
                 <div className="mt-3 grid grid-cols-4 gap-4">
                   <div>
                     <p className="text-xs text-[var(--text-muted)]">Views</p>
@@ -710,7 +717,7 @@ export default function EmployerDashboard() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-3">
-            <Link href={ROUTES.EMPLOYER.CANDIDATES}>
+            <Link href={ROUTES.EMPLOYER.CANDIDATES} title="Search candidates in the talent pool">
               <div className="group hover:border-primary/30 flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--border)] p-4 transition-all hover:shadow-sm">
                 <div className="bg-primary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
                   <Search className="text-primary h-5 w-5" />
@@ -723,7 +730,7 @@ export default function EmployerDashboard() {
                 </div>
               </div>
             </Link>
-            <Link href={ROUTES.EMPLOYER.SAVED_CANDIDATES}>
+            <Link href={ROUTES.EMPLOYER.SAVED_CANDIDATES} title="View your saved candidates">
               <div className="group hover:border-primary/30 flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--border)] p-4 transition-all hover:shadow-sm">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
                   <Bookmark className="h-5 w-5 text-[var(--warning)]" />
@@ -736,7 +743,7 @@ export default function EmployerDashboard() {
                 </div>
               </div>
             </Link>
-            <Link href={ROUTES.EMPLOYER.APPLICATIONS}>
+            <Link href={ROUTES.EMPLOYER.APPLICATIONS} title="Manage all job applications">
               <div className="group border-primary/20 bg-primary-50/20 hover:border-primary/40 flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-all hover:shadow-sm">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--success-light)]">
                   <FileText className="h-5 w-5 text-[var(--success)]" />
@@ -760,12 +767,14 @@ export default function EmployerDashboard() {
             header={
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-[var(--text)]">Recent Applications</h2>
-                <Link
-                  href={ROUTES.EMPLOYER.MY_JOBS}
-                  className="text-primary text-sm hover:underline"
-                >
-                  View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-                </Link>
+                <Tooltip content="View all your job listings">
+                  <Link
+                    href={ROUTES.EMPLOYER.MY_JOBS}
+                    className="text-primary text-sm hover:underline"
+                  >
+                    View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
+                  </Link>
+                </Tooltip>
               </div>
             }
           >
@@ -828,6 +837,7 @@ export default function EmployerDashboard() {
                   <Link
                     key={job.jobId}
                     href={ROUTES.EMPLOYER.JOB_DETAIL(job.jobId)}
+                    title="View job performance details"
                     className="-mx-2 flex items-center justify-between rounded-lg px-2 py-3 transition-colors first:pt-0 last:pb-0 hover:bg-[var(--bg-secondary)]"
                   >
                     <p className="truncate font-medium text-[var(--text)]">{job.jobTitle}</p>
@@ -918,12 +928,14 @@ export default function EmployerDashboard() {
                       className="transition-colors hover:bg-[var(--bg-secondary)]"
                     >
                       <td className="py-3 pr-4">
-                        <Link
-                          href={ROUTES.EMPLOYER.JOB_DETAIL(job.jobId)}
-                          className="hover:text-primary block max-w-[200px] truncate font-medium text-[var(--text)]"
-                        >
-                          {job.title}
-                        </Link>
+                        <Tooltip content="View job details">
+                          <Link
+                            href={ROUTES.EMPLOYER.JOB_DETAIL(job.jobId)}
+                            className="hover:text-primary block max-w-[200px] truncate font-medium text-[var(--text)]"
+                          >
+                            {job.title}
+                          </Link>
+                        </Tooltip>
                       </td>
                       <td className="py-3 text-right text-[var(--text-muted)]">{job.views}</td>
                       <td className="py-3 text-right text-[var(--text-muted)]">
@@ -1019,15 +1031,9 @@ export default function EmployerDashboard() {
                         color: 'bg-indigo-500',
                       },
                       {
-                        label: 'Interview',
-                        value: metrics.funnel.interviewScheduled,
-                        rate: metrics.conversions.shortlistedToInterview,
-                        color: 'bg-purple-500',
-                      },
-                      {
                         label: 'Offered',
                         value: metrics.funnel.offered,
-                        rate: metrics.conversions.interviewToOffered,
+                        rate: metrics.conversions.shortlistedToInterview,
                         color: 'bg-green-500',
                       },
                       {
@@ -1158,9 +1164,11 @@ export default function EmployerDashboard() {
                   <Bell className="text-primary h-5 w-5" />
                   <h2 className="text-lg font-semibold text-[var(--text)]">Notifications</h2>
                 </div>
-                <Link href={ROUTES.NOTIFICATIONS} className="text-primary text-sm hover:underline">
-                  View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-                </Link>
+                <Tooltip content="View all notifications">
+                  <Link href={ROUTES.NOTIFICATIONS} className="text-primary text-sm hover:underline">
+                    View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
+                  </Link>
+                </Tooltip>
               </div>
             }
           >
@@ -1195,7 +1203,7 @@ export default function EmployerDashboard() {
         <div>
           <h2 className="mb-3 text-lg font-semibold text-[var(--text)]">Quick Actions</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Link href={ROUTES.EMPLOYER.POST_JOB}>
+            <Link href={ROUTES.EMPLOYER.POST_JOB} title="Create a new job listing">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-lg">
@@ -1210,7 +1218,7 @@ export default function EmployerDashboard() {
                 </div>
               </Card>
             </Link>
-            <Link href={ROUTES.EMPLOYER.CANDIDATES}>
+            <Link href={ROUTES.EMPLOYER.CANDIDATES} title="Search the talent pool for candidates">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--success-light)]">
@@ -1225,7 +1233,7 @@ export default function EmployerDashboard() {
                 </div>
               </Card>
             </Link>
-            <Link href={ROUTES.EMPLOYER.SAVED_CANDIDATES}>
+            <Link href={ROUTES.EMPLOYER.SAVED_CANDIDATES} title="Review your shortlisted talent">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">
@@ -1242,7 +1250,7 @@ export default function EmployerDashboard() {
                 </div>
               </Card>
             </Link>
-            <Link href={ROUTES.EMPLOYER.ANALYTICS}>
+            <Link href={ROUTES.EMPLOYER.ANALYTICS} title="Track your hiring performance analytics">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--info-light)]">
@@ -1259,7 +1267,7 @@ export default function EmployerDashboard() {
                 </div>
               </Card>
             </Link>
-            <Link href={ROUTES.EMPLOYER.SETTINGS}>
+            <Link href={ROUTES.EMPLOYER.SETTINGS} title="Manage account, security and preferences">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
@@ -1276,7 +1284,7 @@ export default function EmployerDashboard() {
                 </div>
               </Card>
             </Link>
-            <Link href={ROUTES.EMPLOYER.HELP}>
+            <Link href={ROUTES.EMPLOYER.HELP} title="Get help with FAQs and support tickets">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">

@@ -16,6 +16,7 @@ import Turnstile from '@/components/auth/Turnstile';
 import { showToast } from '@/components/ui/Toast';
 import { authService } from '@/services/auth.service';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/validators/auth';
+import Tooltip from '@/components/ui/Tooltip';
 import { ROUTES } from '@/constants/routes';
 import { useOtpConfig } from '@/hooks/use-otp-config';
 import type { ApiError } from '@/types/api';
@@ -139,12 +140,14 @@ export default function ForgotPasswordPage() {
               exit="exit"
               transition={{ duration: 0.2 }}
             >
-              <Link
-                href={ROUTES.AUTH.LOGIN}
-                className="mb-6 inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-              >
-                <ArrowLeft className="h-4 w-4" /> Back to Login
-              </Link>
+              <Tooltip content="Go back to login">
+                <Link
+                  href={ROUTES.AUTH.LOGIN}
+                  className="mb-6 inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back to Login
+                </Link>
+              </Tooltip>
 
               <div className="mb-6 text-center">
                 <div className="bg-primary-light mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
@@ -169,7 +172,7 @@ export default function ForgotPasswordPage() {
 
                 <Turnstile onSuccess={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
 
-                <Button type="submit" fullWidth isLoading={isLoading}>
+                <Button type="submit" fullWidth isLoading={isLoading} tooltip="Send password reset code to your email">
                   Send Reset Code
                 </Button>
               </form>
@@ -186,16 +189,18 @@ export default function ForgotPasswordPage() {
               exit="exit"
               transition={{ duration: 0.2 }}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  setStep('email');
-                  setOtp('');
-                }}
-                className="mb-6 inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-              >
-                <ArrowLeft className="h-4 w-4" /> Back
-              </button>
+              <Tooltip content="Go back to email step">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('email');
+                    setOtp('');
+                  }}
+                  className="mb-6 inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </button>
+              </Tooltip>
 
               <div className="mb-6 text-center">
                 <div className="bg-primary-light mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
@@ -229,6 +234,7 @@ export default function ForgotPasswordPage() {
                         onClick={handleResend}
                         disabled={isResending}
                         className="text-primary font-medium hover:underline disabled:opacity-50"
+                        title="Resend verification code to your email"
                       >
                         {isResending ? 'Sending...' : 'Resend Code'}
                       </button>
@@ -279,6 +285,7 @@ export default function ForgotPasswordPage() {
                   fullWidth
                   isLoading={isLoading}
                   disabled={otp.length !== otpConfig.LENGTH || !newPassword || !confirmPassword}
+                  tooltip="Reset your password"
                 >
                   Reset Password
                 </Button>
@@ -305,7 +312,7 @@ export default function ForgotPasswordPage() {
                   Your password has been successfully reset. You can now log in with your new
                   password.
                 </p>
-                <Button fullWidth className="mt-6" onClick={() => router.push(ROUTES.AUTH.LOGIN)}>
+                <Button fullWidth className="mt-6" onClick={() => router.push(ROUTES.AUTH.LOGIN)} tooltip="Go back to login">
                   Go to Login
                 </Button>
               </div>

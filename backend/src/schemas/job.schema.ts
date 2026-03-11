@@ -148,9 +148,9 @@ export const createJobSchema = z.object({
         .optional(),
       preferredEducationField: z.string().optional(),
 
-      // Compensation
-      salaryMin: z.number().positive().optional(),
-      salaryMax: z.number().positive().optional(),
+      // Compensation (Prisma Decimal fields serialize as strings)
+      salaryMin: z.coerce.number().positive().optional(),
+      salaryMax: z.coerce.number().positive().optional(),
       currency: z.string().default('INR'),
       salaryType: z.nativeEnum(SalaryType, { error: 'Invalid salary type' }).optional(),
       salaryDisclosed: z.boolean().optional(),
@@ -236,9 +236,9 @@ export const updateJobSchema = z.object({
         .optional(),
       preferredEducationField: z.string().optional(),
 
-      // Compensation
-      salaryMin: z.number().positive().optional(),
-      salaryMax: z.number().positive().optional(),
+      // Compensation (Prisma Decimal fields serialize as strings)
+      salaryMin: z.coerce.number().positive().optional(),
+      salaryMax: z.coerce.number().positive().optional(),
       salaryType: z.nativeEnum(SalaryType, { error: 'Invalid salary type' }).optional(),
       salaryDisclosed: z.boolean().optional(),
       jobPerks: z.array(z.string()).optional(),

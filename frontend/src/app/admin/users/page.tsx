@@ -25,6 +25,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import Dropdown from '@/components/ui/Dropdown';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
@@ -311,14 +312,16 @@ export default function UsersPage() {
                   {users.map((user) => (
                     <tr key={user.id} className="transition-colors hover:bg-[var(--bg-secondary)]">
                       <td className="px-4 py-3 font-medium text-[var(--text)]">
-                        <Link
-                          href={ROUTES.ADMIN.USER_DETAIL(user.id)}
-                          className="hover:text-primary transition-colors"
-                        >
-                          {user.firstName && user.lastName
-                            ? `${user.firstName} ${user.lastName}`
-                            : user.firstName || 'N/A'}
-                        </Link>
+                        <Tooltip content="View user details">
+                          <Link
+                            href={ROUTES.ADMIN.USER_DETAIL(user.id)}
+                            className="hover:text-primary transition-colors"
+                          >
+                            {user.firstName && user.lastName
+                              ? `${user.firstName} ${user.lastName}`
+                              : user.firstName || 'N/A'}
+                          </Link>
+                        </Tooltip>
                       </td>
                       <td className="px-4 py-3 text-[var(--text-secondary)]">{user.email}</td>
                       <td className="px-4 py-3">
@@ -359,12 +362,14 @@ export default function UsersPage() {
                         <Dropdown
                           align="right"
                           trigger={
-                            <button
-                              type="button"
-                              className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
+                            <Tooltip content="User actions">
+                              <button
+                                type="button"
+                                className="cursor-pointer rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </Tooltip>
                           }
                           items={getUserActions(user)}
                         />
@@ -408,6 +413,7 @@ export default function UsersPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel suspension"
                 onClick={() => {
                   setSuspendTarget(null);
                   setSuspendReason('');
@@ -418,6 +424,7 @@ export default function UsersPage() {
               </Button>
               <Button
                 variant="destructive"
+                tooltip="Confirm user suspension"
                 onClick={handleSuspend}
                 isLoading={suspendMutation.isPending}
                 disabled={!suspendReason.trim()}
@@ -461,11 +468,12 @@ export default function UsersPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              <Button variant="outline" tooltip="Cancel deletion" onClick={() => setDeleteTarget(null)}>
                 Cancel
               </Button>
               <Button
                 variant="destructive"
+                tooltip="Permanently delete this user"
                 onClick={handleDelete}
                 isLoading={deleteMutation.isPending}
               >
@@ -497,6 +505,7 @@ export default function UsersPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel role change"
                 onClick={() => {
                   setRoleChangeTarget(null);
                   setNewRole('');
@@ -505,6 +514,7 @@ export default function UsersPage() {
                 Cancel
               </Button>
               <Button
+                tooltip="Confirm role update"
                 onClick={handleRoleChange}
                 isLoading={roleChangeMutation.isPending}
                 disabled={!newRole || newRole === roleChangeTarget?.role}

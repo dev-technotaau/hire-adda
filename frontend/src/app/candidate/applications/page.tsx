@@ -11,6 +11,7 @@ import Tabs from '@/components/ui/Tabs';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
+import Tooltip from '@/components/ui/Tooltip';
 import Modal from '@/components/ui/Modal';
 import { showToast } from '@/components/ui/Toast';
 import { useAppliedJobs, useWithdrawApplication } from '@/hooks/use-jobs';
@@ -37,7 +38,6 @@ const statusTabs = [
   { key: 'VIEWED', label: 'Viewed' },
   { key: 'SHORTLISTED', label: 'Shortlisted' },
   { key: 'SELECTED', label: 'Selected' },
-  { key: 'INTERVIEW_SCHEDULED', label: 'Interview' },
   { key: 'OFFERED', label: 'Offered' },
   { key: 'REJECTED', label: 'Rejected' },
   { key: 'WITHDRAWN', label: 'Withdrawn' },
@@ -116,8 +116,8 @@ export default function ApplicationsPage() {
               }
               description="Apply to jobs to see your applications here."
               action={
-                <Link href={ROUTES.CANDIDATE.JOBS}>
-                  <Button size="sm">Browse Jobs</Button>
+                <Link href={ROUTES.CANDIDATE.JOBS} title="Browse available job listings">
+                  <Button size="sm" tooltip="Browse available jobs">Browse Jobs</Button>
                 </Link>
               }
             />
@@ -142,13 +142,14 @@ export default function ApplicationsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setWithdrawTarget(null)}>
+              <Button variant="outline" onClick={() => setWithdrawTarget(null)} tooltip="Cancel withdrawal">
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleWithdraw}
                 isLoading={withdrawMutation.isPending}
+                tooltip="Confirm withdrawal"
               >
                 Withdraw
               </Button>
@@ -196,12 +197,14 @@ function ApplicationCard({
             )}
           </div>
           <div className="min-w-0">
-            <Link
-              href={job ? ROUTES.CANDIDATE.JOB_DETAIL(job.id) : '#'}
-              className="hover:text-primary font-medium text-[var(--text)] transition-colors"
-            >
-              {job?.title || 'Job Position'}
-            </Link>
+            <Tooltip content={`View details for ${job?.title || 'this job'}`}>
+              <Link
+                href={job ? ROUTES.CANDIDATE.JOB_DETAIL(job.id) : '#'}
+                className="hover:text-primary font-medium text-[var(--text)] transition-colors"
+              >
+                {job?.title || 'Job Position'}
+              </Link>
+            </Tooltip>
             <p className="text-sm text-[var(--text-muted)]">{job?.company?.companyName}</p>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
               {job?.location && (
@@ -231,6 +234,7 @@ function ApplicationCard({
               size="sm"
               onClick={onWithdraw}
               className="text-[var(--text-muted)]"
+              tooltip="Withdraw this application"
             >
               Withdraw
             </Button>

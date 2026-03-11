@@ -62,6 +62,7 @@ import { savedSearchService } from '@/services/saved-search.service';
 import { searchService } from '@/services/search.service';
 import { recommendationService } from '@/services/recommendation.service';
 import { showToast } from '@/components/ui/Toast';
+import ExperienceSelect, { type ExperienceValue } from '@/components/ui/ExperienceSelect';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
 import {
   useSuggestLocations,
@@ -736,6 +737,23 @@ export default function CandidateSearchPage() {
     [addLocationHistory],
   );
 
+  // ── Experience inline select ──
+  const experienceValue = useMemo((): ExperienceValue | null => {
+    if (!filters.experienceMin) return null;
+    const min = Number(filters.experienceMin);
+    const max = filters.experienceMax ? Number(filters.experienceMax) : undefined;
+    return { min, max };
+  }, [filters.experienceMin, filters.experienceMax]);
+
+  const handleExperienceChange = useCallback((val: ExperienceValue | null) => {
+    setFilters((prev) => ({
+      ...prev,
+      experienceMin: val ? String(val.min) : undefined,
+      experienceMax: val?.max != null ? String(val.max) : undefined,
+      page: '1',
+    }));
+  }, []);
+
   const handleFilterChange = (key: string, value: string | undefined) => {
     // Translate experience bucket selections into experienceMin/Max
     if (key === 'experienceBucket') {
@@ -1114,6 +1132,12 @@ export default function CandidateSearchPage() {
               size="md"
               fullWidth
               className="flex-1"
+            />
+            <ExperienceSelect
+              value={experienceValue}
+              onChange={handleExperienceChange}
+              size="md"
+              className="w-full shrink-0 sm:w-40"
             />
             <div className="flex-1 sm:max-w-xs">
               <AutoSuggest
@@ -1664,7 +1688,8 @@ export default function CandidateSearchPage() {
                   type="button"
                   onClick={handleGetLocation}
                   disabled={isGettingLocation}
-                  className="hover:border-primary hover:text-primary hover:bg-primary-light flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition-colors disabled:opacity-50"
+                  title="Detect my location"
+                  className="cursor-pointer hover:border-primary hover:text-primary hover:bg-primary-light flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition-colors disabled:opacity-50"
                 >
                   {isGettingLocation ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1677,7 +1702,8 @@ export default function CandidateSearchPage() {
                   <button
                     type="button"
                     onClick={clearGeoLocation}
-                    className="text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
+                    title="Clear location"
+                    className="cursor-pointer text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
                   >
                     Clear
                   </button>
@@ -1751,7 +1777,8 @@ export default function CandidateSearchPage() {
                   await searchService.clearSearchHistory();
                   queryClient.invalidateQueries({ queryKey: ['search-history'] });
                 }}
-                className="text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
+                title="Clear search history"
+                className="cursor-pointer text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
               >
                 Clear all
               </button>
@@ -1783,7 +1810,7 @@ export default function CandidateSearchPage() {
         {/* Toolbar */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowAdvanced(!showAdvanced)}>
+            <Button variant="outline" size="sm" onClick={() => setShowAdvanced(!showAdvanced)} tooltip="Toggle advanced filters">
               <Filter className="mr-1.5 h-4 w-4" />
               Advanced Filters
               {activeFilterCount > 0 && (
@@ -1798,12 +1825,12 @@ export default function CandidateSearchPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowSaveSearch(true)}
-                  title="Get notified when new candidates match your search criteria"
+                  tooltip="Create candidate alert"
                 >
                   <Bell className="mr-1.5 h-4 w-4" />
                   Create Alert
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setShowSaveSearch(true)}>
+                <Button variant="ghost" size="sm" onClick={() => setShowSaveSearch(true)} tooltip="Save search criteria">
                   <Star className="mr-1.5 h-4 w-4" />
                   Save Search
                 </Button>
@@ -1816,36 +1843,39 @@ export default function CandidateSearchPage() {
               <button
                 onClick={() => setViewMode('list')}
                 className={cn(
-                  'rounded-md p-1.5 transition-colors',
+                  'cursor-pointer rounded-md p-1.5 transition-colors',
                   viewMode === 'list'
                     ? 'bg-primary text-white'
                     : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
                 )}
                 aria-label="List view"
+                title="List view"
               >
                 <LayoutList className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode('compact')}
                 className={cn(
-                  'rounded-md p-1.5 transition-colors',
+                  'cursor-pointer rounded-md p-1.5 transition-colors',
                   viewMode === 'compact'
                     ? 'bg-primary text-white'
                     : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
                 )}
                 aria-label="Compact view"
+                title="Compact view"
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode('map')}
                 className={cn(
-                  'rounded-md p-1.5 transition-colors',
+                  'cursor-pointer rounded-md p-1.5 transition-colors',
                   viewMode === 'map'
                     ? 'bg-primary text-white'
                     : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
                 )}
                 aria-label="Map view"
+                title="Map view"
               >
                 <Map className="h-4 w-4" />
               </button>
@@ -1969,6 +1999,7 @@ export default function CandidateSearchPage() {
                 disabled={!saveSearchName.trim()}
                 isLoading={saveSearchMutation.isPending}
                 size="sm"
+                tooltip="Save search"
               >
                 Save
               </Button>
@@ -1979,6 +2010,7 @@ export default function CandidateSearchPage() {
                   setShowSaveSearch(false);
                   setSaveSearchName('');
                 }}
+                tooltip="Cancel save"
               >
                 Cancel
               </Button>
@@ -1999,7 +2031,8 @@ export default function CandidateSearchPage() {
                       selectAll();
                     }
                   }}
-                  className="text-primary hover:text-primary-dark flex items-center gap-1.5 text-sm font-medium"
+                  className="cursor-pointer text-primary hover:text-primary-dark flex items-center gap-1.5 text-sm font-medium"
+                  title="Toggle select all"
                 >
                   {selectedIds.size === candidates.length ? (
                     <CheckSquare className="h-4 w-4" />
@@ -2023,11 +2056,12 @@ export default function CandidateSearchPage() {
                     bulkSaveMutation.mutate(userIds);
                   }}
                   disabled={bulkSaveMutation.isPending}
+                  tooltip="Save selected"
                 >
                   <Bookmark className="mr-1.5 h-4 w-4" />
                   Save All
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setBulkActionOpen(true)}>
+                <Button variant="outline" size="sm" onClick={() => setBulkActionOpen(true)} tooltip="Shortlist selected">
                   <UserCheck className="mr-1.5 h-4 w-4" />
                   Shortlist
                 </Button>
@@ -2037,6 +2071,7 @@ export default function CandidateSearchPage() {
                   onClick={() => bulkExportMutation.mutate(Array.from(selectedIds))}
                   disabled={bulkExportMutation.isPending}
                   isLoading={bulkExportMutation.isPending}
+                  tooltip="Export as XLSX"
                 >
                   <Download className="mr-1.5 h-4 w-4" />
                   Export
@@ -2047,11 +2082,12 @@ export default function CandidateSearchPage() {
                   onClick={() => bulkExportResumesMutation.mutate(Array.from(selectedIds))}
                   disabled={bulkExportResumesMutation.isPending}
                   isLoading={bulkExportResumesMutation.isPending}
+                  tooltip="Export resumes as ZIP"
                 >
                   <FileDown className="mr-1.5 h-4 w-4" />
                   Export Resumes
                 </Button>
-                <Button variant="ghost" size="sm" onClick={clearSelection}>
+                <Button variant="ghost" size="sm" onClick={clearSelection} tooltip="Clear selection">
                   <X className="mr-1.5 h-4 w-4" />
                   Clear
                 </Button>
@@ -2142,7 +2178,7 @@ export default function CandidateSearchPage() {
                 title="No candidates found"
                 description="Try adjusting your search criteria or filters."
                 action={
-                  <Button variant="outline" size="sm" onClick={clearFilters}>
+                  <Button variant="outline" size="sm" onClick={clearFilters} tooltip="Clear all filters">
                     Clear Filters
                   </Button>
                 }
@@ -2231,7 +2267,8 @@ export default function CandidateSearchPage() {
                 </h3>
                 <button
                   onClick={() => setJobPickerOpen(false)}
-                  className="text-[var(--text-muted)] hover:text-[var(--text)]"
+                  title="Close"
+                  className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -2258,6 +2295,7 @@ export default function CandidateSearchPage() {
                       <button
                         key={job.id}
                         type="button"
+                        title={`Select ${job.title}`}
                         onClick={() => {
                           if (jobPickerAction === 'shortlist') {
                             shortlistMutation.mutate({
@@ -2974,6 +3012,7 @@ function CompactCandidateCard({
                 onClick={() => {
                   window.location.href = `/employer/candidates/${candidate.userId}`;
                 }}
+                tooltip="View profile"
               >
                 View
               </Button>

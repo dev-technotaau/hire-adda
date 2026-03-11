@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import Tooltip from '@/components/ui/Tooltip';
 import type { ParsedResumeData, ApplyableResumeFields } from '@/types/resume-parse';
 
 type FieldKey = 'summary' | 'phone' | 'skills' | 'experience' | 'education' | 'certifications';
@@ -188,7 +189,7 @@ export default function ResumeParseReview({
           <p className="text-sm text-[var(--text-secondary)]">
             No extractable data found in your resume. Try uploading a different format.
           </p>
-          <Button variant="ghost" size="sm" onClick={onCancel}>
+          <Button variant="ghost" size="sm" onClick={onCancel} tooltip="Dismiss parsed results">
             Dismiss
           </Button>
         </div>
@@ -265,17 +266,19 @@ export default function ResumeParseReview({
                     </span>
                   )}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => toggleSection(field)}
-                  className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  {isExpanded ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </button>
+                <Tooltip content={isExpanded ? 'Collapse section' : 'Expand section'}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(field)}
+                    className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
+                </Tooltip>
               </div>
 
               {/* Field content (collapsible) */}
@@ -366,14 +369,14 @@ export default function ResumeParseReview({
 
       {/* Action bar */}
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        <Button onClick={handleApply} disabled={noneSelected}>
+        <Button onClick={handleApply} disabled={noneSelected} tooltip="Apply selected fields to your profile">
           <CheckCircle2 className="mr-1.5 h-4 w-4" />
           Apply Selected ({selected.size})
         </Button>
-        <Button variant="outline" onClick={handleApplyAll}>
+        <Button variant="outline" onClick={handleApplyAll} tooltip="Apply all parsed fields to your profile">
           Apply All
         </Button>
-        <Button variant="ghost" onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel} tooltip="Cancel and discard parsed data">
           Cancel
         </Button>
       </div>

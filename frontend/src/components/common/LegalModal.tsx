@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileText, Shield, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Tooltip from '@/components/ui/Tooltip';
 
 type LegalType = 'terms' | 'privacy';
 
@@ -253,14 +254,16 @@ export default function LegalModal({ isOpen, onClose, type }: LegalModalProps) {
                   <p className="text-xs text-[var(--text-muted)]">{subtitle}</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close"
-                className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <Tooltip content="Close dialog">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close"
+                  className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </Tooltip>
             </div>
 
             {/* Scrollable content */}
@@ -287,21 +290,25 @@ export default function LegalModal({ isOpen, onClose, type }: LegalModalProps) {
 
             {/* Footer */}
             <div className="flex items-center justify-between border-t border-[var(--border)] px-6 py-4">
-              <button
-                type="button"
-                onClick={scrollToTop}
-                className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
-              >
-                <ChevronUp className="h-3.5 w-3.5" />
-                Back to top
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="bg-primary hover:bg-primary-hover rounded-lg px-5 py-2 text-sm font-medium text-white transition-colors"
-              >
-                I Understand
-              </button>
+              <Tooltip content="Scroll back to top">
+                <button
+                  type="button"
+                  onClick={scrollToTop}
+                  className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  Back to top
+                </button>
+              </Tooltip>
+              <Tooltip content="Acknowledge and close">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="bg-primary hover:bg-primary-hover rounded-lg px-5 py-2 text-sm font-medium text-white transition-colors"
+                >
+                  I Understand
+                </button>
+              </Tooltip>
             </div>
           </motion.div>
         </div>

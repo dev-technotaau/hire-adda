@@ -41,6 +41,16 @@ import { applicationWithdrawn as appWithdrawnEmailTemplate } from '../templates/
 
 const tracer = trace.getTracer('notification-service');
 
+/** Map user role to their dashboard settings path */
+function settingsLinkForRole(role: string): string {
+  switch (role) {
+    case 'EMPLOYER': return '/employer/settings';
+    case 'ADMIN': return '/admin/settings';
+    case 'SUPER_ADMIN': return '/super-admin/settings';
+    default: return '/candidate/settings';
+  }
+}
+
 export type NotificationChannel = 'email' | 'sms' | 'whatsapp' | 'fcm' | 'web_push' | 'in_app';
 
 interface SendNotificationParams {
@@ -243,7 +253,7 @@ class NotificationService {
       message: `${jobTitle} at ${companyName} matches your profile (${Math.round(matchScore * 100)}% match)`,
       type: NotificationType.SUCCESS,
       category: 'job_match',
-      link: `/jobs/${jobId}`,
+      link: `/candidate/jobs/${jobId}`,
       metadata: { jobId, matchScore },
       channels,
       emailOptions,
@@ -503,6 +513,7 @@ class NotificationService {
       where: { id: userId },
       select: {
         email: true,
+        role: true,
         mobileNumber: true,
         whatsappNumber: true,
         isEmailVerified: true,
@@ -547,7 +558,7 @@ class NotificationService {
       message: `Your password was successfully changed on ${time}.`,
       type: NotificationType.WARNING,
       category: 'security',
-      link: '/settings',
+      link: settingsLinkForRole(user.role),
       channels,
       emailOptions,
       whatsappOptions,
@@ -921,6 +932,7 @@ class NotificationService {
       where: { id: userId },
       select: {
         email: true,
+        role: true,
         firstName: true,
         mobileNumber: true,
         whatsappNumber: true,
@@ -960,7 +972,7 @@ class NotificationService {
         'Your account deletion request has been received. Your account will be deleted in 30 days. Log in to cancel.',
       type: NotificationType.WARNING,
       category: 'account',
-      link: '/settings',
+      link: settingsLinkForRole(user.role),
       channels,
       emailOptions,
       whatsappOptions,
@@ -1082,6 +1094,28 @@ class NotificationService {
         whatsappOptions,
       }).catch(() => {});
     }
+  }
+
+  /**
+   * Notify employer that all openings for a job have been filled
+   */
+  async notifyAllOpeningsFilled(
+    employerUserId: string,
+    jobTitle: string,
+    jobId: string,
+    hiredCount: number,
+    totalOpenings: number
+  ): Promise<void> {
+    await this.send({
+      userId: employerUserId,
+      title: 'All Openings Filled',
+      message: `All ${totalOpenings} opening${totalOpenings > 1 ? 's' : ''} for "${jobTitle}" ${totalOpenings > 1 ? 'have' : 'has'} been filled (${hiredCount} hired). Consider closing this job to stop receiving new applications.`,
+      type: NotificationType.INFO,
+      category: 'job',
+      link: `/employer/jobs/${jobId}`,
+      metadata: { jobId, hiredCount, totalOpenings },
+      channels: ['in_app', 'fcm', 'web_push'],
+    }).catch(() => {});
   }
 
   /**
@@ -1225,7 +1259,7 @@ class NotificationService {
    */
   async getNotifications(
     userId: string,
-    filters: { isRead?: boolean; category?: string; page?: number; limit?: number }
+    filters: { isRead?: boolean; category?: string; type?: string; page?: number; limit?: number }
   ) {
     const page = filters.page || 1;
     const limit = filters.limit || 20;
@@ -1234,6 +1268,7 @@ class NotificationService {
     const where: any = { userId };
     if (filters.isRead !== undefined) where.isRead = filters.isRead;
     if (filters.category) where.category = filters.category;
+    if (filters.type) where.type = filters.type;
 
     const [notifications, total] = await prisma.$transaction([
       prisma.notification.findMany({
@@ -1537,7 +1572,7 @@ class NotificationService {
     const time = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { mobileNumber: true, whatsappNumber: true, isWhatsappVerified: true },
+      select: { role: true, mobileNumber: true, whatsappNumber: true, isWhatsappVerified: true },
     });
 
     const { loginAlert } = await import('../templates/email/auth');
@@ -1573,7 +1608,7 @@ class NotificationService {
       message: `Login from ${deviceName} at ${location}`,
       type: NotificationType.WARNING,
       category: 'security',
-      link: '/settings',
+      link: user ? settingsLinkForRole(user.role) : '/candidate/settings',
       channels,
       emailOptions,
       smsOptions,

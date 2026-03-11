@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Select from '@/components/ui/Select';
@@ -53,7 +54,7 @@ export default function LanguagesSection({ form, updateField }: ProfileSectionPr
             <h2 className="text-lg font-semibold text-[var(--text)]">
               Language Proficiency (Detailed)
             </h2>
-            <Button size="sm" variant="outline" onClick={addLanguage}>
+            <Button size="sm" variant="outline" onClick={addLanguage} tooltip="Add a new language proficiency">
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
@@ -89,12 +90,14 @@ export default function LanguagesSection({ form, updateField }: ProfileSectionPr
                   onChange={(v) => updateLanguage(i, 'proficiency', v)}
                 />
               </div>
-              <button
-                onClick={() => removeLanguage(i)}
-                className={`text-[var(--error)] hover:text-[var(--error-dark)] ${i === 0 ? 'mt-6' : ''}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <Tooltip content="Remove this language">
+                <button
+                  onClick={() => removeLanguage(i)}
+                  className={`cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)] ${i === 0 ? 'mt-6' : ''}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </div>
           ))
         )}

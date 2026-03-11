@@ -122,7 +122,7 @@ function PasskeysSection() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRegister} isLoading={registering}>
+          <Button variant="outline" size="sm" tooltip="Register a new passkey" onClick={handleRegister} isLoading={registering}>
             <Plus className="mr-1 h-4 w-4" />
             Add Passkey
           </Button>
@@ -155,6 +155,7 @@ function PasskeysSection() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  tooltip="Remove this passkey"
                   onClick={() => setConfirmDeleteId(cred.id)}
                   isLoading={deletingId === cred.id}
                 >
@@ -191,6 +192,7 @@ function PasskeysSection() {
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
+              tooltip="Cancel passkey registration"
               onClick={() => {
                 setShowNameModal(false);
                 setPendingCredential(null);
@@ -199,7 +201,7 @@ function PasskeysSection() {
             >
               Cancel
             </Button>
-            <Button onClick={handleConfirmRegister}>Save Passkey</Button>
+            <Button tooltip="Save and register passkey" onClick={handleConfirmRegister}>Save Passkey</Button>
           </div>
         }
       >
@@ -291,6 +293,7 @@ function ActiveSessionsSection() {
             <Button
               variant="outline"
               size="sm"
+              tooltip="Sign out all other devices"
               isLoading={revokingAll}
               leftIcon={<LogOut className="h-4 w-4" />}
               onClick={() => setShowConfirmRevokeAll(true)}
@@ -342,6 +345,7 @@ function ActiveSessionsSection() {
                   <Button
                     variant="ghost"
                     size="sm"
+                    tooltip="Revoke this session"
                     isLoading={revokingId === session.id}
                     onClick={() => setConfirmRevokeId(session.id)}
                     className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"

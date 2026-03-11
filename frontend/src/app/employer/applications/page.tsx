@@ -24,6 +24,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import Textarea from '@/components/ui/Textarea';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
 import Select from '@/components/ui/Select';
 import { employerService } from '@/services/employer.service';
 import { jobService } from '@/services/job.service';
@@ -49,7 +50,6 @@ const statusTabs = [
   { key: 'APPLIED', label: 'Applied' },
   { key: 'SHORTLISTED', label: 'Shortlisted' },
   { key: 'SELECTED', label: 'Selected' },
-  { key: 'INTERVIEW_SCHEDULED', label: 'Interview' },
   { key: 'OFFERED', label: 'Offered' },
   { key: 'REJECTED', label: 'Rejected' },
   { key: 'HIRED', label: 'Hired' },
@@ -221,12 +221,14 @@ export default function EmployerApplicationsDashboard() {
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-[var(--text)]">
-                          <Link
-                            href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate?.id || '')}
-                            className="hover:text-primary transition-colors"
-                          >
-                            {name}
-                          </Link>
+                          <Tooltip content="View candidate profile">
+                            <Link
+                              href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate?.id || '')}
+                              className="hover:text-primary transition-colors"
+                            >
+                              {name}
+                            </Link>
+                          </Tooltip>
                         </p>
                         {candidate?.headline && (
                           <p className="line-clamp-1 text-sm text-[var(--text-secondary)]">
@@ -236,12 +238,14 @@ export default function EmployerApplicationsDashboard() {
                         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
                           <span className="flex items-center gap-1">
                             <Briefcase className="h-3.5 w-3.5" />
-                            <Link
-                              href={ROUTES.EMPLOYER.JOB_DETAIL(app.jobId)}
-                              className="hover:text-primary"
-                            >
-                              {app.job?.title || 'Unknown Job'}
-                            </Link>
+                            <Tooltip content="View job details">
+                              <Link
+                                href={ROUTES.EMPLOYER.JOB_DETAIL(app.jobId)}
+                                className="hover:text-primary"
+                              >
+                                {app.job?.title || 'Unknown Job'}
+                              </Link>
+                            </Tooltip>
                           </span>
                           {candidate?.experienceYears !== undefined && (
                             <span>{candidate.experienceYears} yrs exp</span>
@@ -299,6 +303,7 @@ export default function EmployerApplicationsDashboard() {
                               }
                             }}
                             disabled={updateStatusMutation.isPending}
+                            tooltip={`${action.label} this application`}
                           >
                             {action.label}
                           </Button>
@@ -357,6 +362,7 @@ export default function EmployerApplicationsDashboard() {
                   setRejectTarget(null);
                   setRejectionReason('');
                 }}
+                tooltip="Cancel rejection"
               >
                 Cancel
               </Button>
@@ -372,6 +378,7 @@ export default function EmployerApplicationsDashboard() {
                   }
                 }}
                 isLoading={updateStatusMutation.isPending}
+                tooltip="Confirm application rejection"
               >
                 Reject
               </Button>

@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query';
 import { CheckCircle, XCircle, ShieldCheck } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import Textarea from '@/components/ui/Textarea';
 import { verificationService } from '@/services/verification.service';
 import type { ApiError } from '@/types/api';
@@ -57,28 +58,32 @@ export default function VerifyEmploymentPage() {
 
           <div className="mt-6 space-y-4">
             <div className="flex gap-3">
-              <button
-                onClick={() => setAction('confirm')}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 p-3 text-sm font-medium transition-colors ${
-                  action === 'confirm'
-                    ? 'border-[var(--success)] bg-[var(--success-light)] text-[var(--success-dark)]'
-                    : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--success)]'
-                }`}
-              >
-                <CheckCircle className="h-5 w-5" />
-                Confirm Employment
-              </button>
-              <button
-                onClick={() => setAction('deny')}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 p-3 text-sm font-medium transition-colors ${
-                  action === 'deny'
-                    ? 'border-[var(--error)] bg-[var(--error-light)] text-[var(--error-dark)]'
-                    : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--error)]'
-                }`}
-              >
-                <XCircle className="h-5 w-5" />
-                Deny / Inaccurate
-              </button>
+              <Tooltip content="Confirm the candidate's employment details are accurate">
+                <button
+                  onClick={() => setAction('confirm')}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 p-3 text-sm font-medium transition-colors ${
+                    action === 'confirm'
+                      ? 'border-[var(--success)] bg-[var(--success-light)] text-[var(--success-dark)]'
+                      : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--success)]'
+                  }`}
+                >
+                  <CheckCircle className="h-5 w-5" />
+                  Confirm Employment
+                </button>
+              </Tooltip>
+              <Tooltip content="Report the employment details as inaccurate">
+                <button
+                  onClick={() => setAction('deny')}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 p-3 text-sm font-medium transition-colors ${
+                    action === 'deny'
+                      ? 'border-[var(--error)] bg-[var(--error-light)] text-[var(--error-dark)]'
+                      : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--error)]'
+                  }`}
+                >
+                  <XCircle className="h-5 w-5" />
+                  Deny / Inaccurate
+                </button>
+              </Tooltip>
             </div>
 
             <Textarea
@@ -105,6 +110,7 @@ export default function VerifyEmploymentPage() {
               variant={action === 'confirm' ? 'primary' : 'destructive'}
               onClick={() => mutation.mutate()}
               isLoading={mutation.isPending}
+              tooltip={action === 'confirm' ? 'Submit your confirmation' : 'Submit your denial'}
             >
               {action === 'confirm' ? 'Confirm Employment' : 'Deny Employment'}
             </Button>

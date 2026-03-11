@@ -40,6 +40,7 @@ import Tag from '@/components/ui/Tag';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
+import Tooltip from '@/components/ui/Tooltip';
 import SearchBar from '@/components/ui/SearchBar';
 import AutoSuggest from '@/components/ui/AutoSuggest';
 import AdvancedFilters, {
@@ -84,7 +85,8 @@ const MapView = dynamic(() => import('@/components/jobs/MapView'), {
 import { cn } from '@/lib/utils';
 import HighlightText from '@/components/ui/HighlightText';
 import Select from '@/components/ui/Select';
-import { PAGINATION, QUERY_KEYS } from '@/constants/config';
+import ExperienceSelect, { type ExperienceValue } from '@/components/ui/ExperienceSelect';
+import { PAGINATION, QUERY_KEYS, EXPERIENCE_BUCKETS } from '@/constants/config';
 import type { JobSearchFilters, Job } from '@/types/job';
 import type { ApiError } from '@/types/api';
 import type { AutocompleteResult } from '@/types/search';
@@ -136,15 +138,10 @@ const SALARY_BUCKET_MAP: Record<string, { min: string; max?: string }> = {
   '50L+': { min: '5000000' },
 };
 
-/** Experience range bucket key → { min, max } filter values. */
-const EXPERIENCE_BUCKET_MAP: Record<string, { min: string; max?: string }> = {
-  Fresher: { min: '0', max: '1' },
-  '1-3 years': { min: '1', max: '3' },
-  '3-5 years': { min: '3', max: '5' },
-  '5-8 years': { min: '5', max: '8' },
-  '8-12 years': { min: '8', max: '12' },
-  '12+ years': { min: '12' },
-};
+/** Experience range bucket key → { min, max } filter values (for sidebar). */
+const EXPERIENCE_BUCKET_MAP: Record<string, { min: string; max?: string }> = Object.fromEntries(
+  EXPERIENCE_BUCKETS.map((b) => [b.label, { min: String(b.min), max: b.max != null ? String(b.max) : undefined }]),
+);
 
 /** Build dynamic options map from facet buckets (e.g. industry, locations). */
 function facetToOptions(buckets?: FacetBucket[]): Record<string, string> {
@@ -826,6 +823,24 @@ export default function JobSearchPage() {
     sessionStorage.removeItem('dismissed-jobs');
   }, []);
 
+  // ── Experience inline select ──
+  const experienceValue = useMemo((): ExperienceValue | null => {
+    if (!filters.experience) return null;
+    const plus = filters.experience.match(/^(\d+)\+$/);
+    if (plus) return { min: Number(plus[1]) };
+    const range = filters.experience.match(/^(\d+)-(\d+)$/);
+    if (range) return { min: Number(range[1]), max: Number(range[2]) };
+    return null;
+  }, [filters.experience]);
+
+  const handleExperienceChange = useCallback((val: ExperienceValue | null) => {
+    setFilters((prev) => ({
+      ...prev,
+      experience: val ? (val.max != null ? `${val.min}-${val.max}` : `${val.min}+`) : undefined,
+      page: '1',
+    }));
+  }, []);
+
   const handleFilterChange = useCallback((key: string, value: string | undefined) => {
     // Virtual key: salary bucket → translate to salaryMin/salaryMax
     if (key === 'salaryBucket') {
@@ -950,6 +965,12 @@ export default function JobSearchPage() {
               fullWidth
               className="flex-1"
             />
+            <ExperienceSelect
+              value={experienceValue}
+              onChange={handleExperienceChange}
+              size="md"
+              className="w-full shrink-0 sm:w-40"
+            />
             <div className="flex-1 sm:max-w-xs">
               <AutoSuggest
                 placeholder="City or remote"
@@ -992,13 +1013,15 @@ export default function JobSearchPage() {
             <div className="mt-3 flex items-center gap-2 text-sm">
               <Sparkles className="h-4 w-4 text-[var(--warning)]" />
               <span className="text-[var(--text-secondary)]">Did you mean:</span>
-              <button
-                type="button"
-                onClick={() => handleKeywordSearch(didYouMean)}
-                className="text-primary font-medium hover:underline"
-              >
-                {didYouMean}
-              </button>
+              <Tooltip content={`Search for "${didYouMean}" instead`}>
+                <button
+                  type="button"
+                  onClick={() => handleKeywordSearch(didYouMean)}
+                  className="cursor-pointer text-primary font-medium hover:underline"
+                >
+                  {didYouMean}
+                </button>
+              </Tooltip>
             </div>
           )}
         </Card>
@@ -1006,19 +1029,20 @@ export default function JobSearchPage() {
         {/* ── Date Posted Pills ── */}
         <div className="flex flex-wrap items-center gap-2">
           {DATE_POSTED_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => handleDatePosted(opt.value)}
-              className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                postedDays === opt.value
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
-              )}
-            >
-              {opt.label}
-            </button>
+            <Tooltip key={opt.value} content={`Filter jobs posted ${opt.label.toLowerCase()}`}>
+              <button
+                type="button"
+                onClick={() => handleDatePosted(opt.value)}
+                className={cn(
+                  'cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  postedDays === opt.value
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
+                )}
+              >
+                {opt.label}
+              </button>
+            </Tooltip>
           ))}
         </div>
 
@@ -1057,6 +1081,7 @@ export default function JobSearchPage() {
                   size="sm"
                   onClick={() => setShowSidebar(true)}
                   className="relative lg:hidden"
+                  tooltip="Open filter panel"
                 >
                   <Filter className="mr-1.5 h-4 w-4" />
                   Filters
@@ -1070,7 +1095,7 @@ export default function JobSearchPage() {
                 {/* Save search / Create alert */}
                 {activeFilterCount > 0 && (
                   <>
-                    <Button variant="ghost" size="sm" onClick={() => setShowSaveSearch(true)}>
+                    <Button variant="ghost" size="sm" onClick={() => setShowSaveSearch(true)} tooltip="Save this search for later">
                       <Star className="mr-1.5 h-4 w-4" />
                       <span className="hidden sm:inline">Save Search</span>
                     </Button>
@@ -1093,6 +1118,7 @@ export default function JobSearchPage() {
                           showToast.error(error.message || 'Failed to create alert');
                         }
                       }}
+                      tooltip="Create a job alert for this search"
                     >
                       <Bell className="mr-1.5 h-4 w-4" />
                       <span className="hidden sm:inline">Create Alert</span>
@@ -1115,7 +1141,7 @@ export default function JobSearchPage() {
                     type="button"
                     onClick={() => setViewMode('list')}
                     className={cn(
-                      'rounded-md p-1.5 transition-colors',
+                      'cursor-pointer rounded-md p-1.5 transition-colors',
                       viewMode === 'list'
                         ? 'bg-primary text-white'
                         : 'text-[var(--text-muted)] hover:text-[var(--text)]',
@@ -1128,7 +1154,7 @@ export default function JobSearchPage() {
                     type="button"
                     onClick={() => setViewMode('compact')}
                     className={cn(
-                      'rounded-md p-1.5 transition-colors',
+                      'cursor-pointer rounded-md p-1.5 transition-colors',
                       viewMode === 'compact'
                         ? 'bg-primary text-white'
                         : 'text-[var(--text-muted)] hover:text-[var(--text)]',
@@ -1141,7 +1167,7 @@ export default function JobSearchPage() {
                     type="button"
                     onClick={() => setViewMode('map')}
                     className={cn(
-                      'rounded-md p-1.5 transition-colors',
+                      'cursor-pointer rounded-md p-1.5 transition-colors',
                       viewMode === 'map'
                         ? 'bg-primary text-white'
                         : 'text-[var(--text-muted)] hover:text-[var(--text)]',
@@ -1193,6 +1219,7 @@ export default function JobSearchPage() {
                     disabled={!saveSearchName.trim()}
                     isLoading={saveSearchMutation.isPending}
                     size="sm"
+                    tooltip="Save this search"
                   >
                     Save
                   </Button>
@@ -1203,6 +1230,7 @@ export default function JobSearchPage() {
                       setShowSaveSearch(false);
                       setSaveSearchName('');
                     }}
+                    tooltip="Cancel saving"
                   >
                     Cancel
                   </Button>
@@ -1372,7 +1400,7 @@ export default function JobSearchPage() {
                       title="No jobs found"
                       description="Try adjusting your search or filters to find more jobs."
                       action={
-                        <Button variant="outline" size="sm" onClick={clearFilters}>
+                        <Button variant="outline" size="sm" onClick={clearFilters} tooltip="Reset all filters">
                           Clear Filters
                         </Button>
                       }
@@ -1382,13 +1410,15 @@ export default function JobSearchPage() {
                   {/* Dismissed jobs notice */}
                   {dismissedCount > 0 && (
                     <div className="mt-2 text-center">
-                      <button
-                        type="button"
-                        onClick={handleShowAllDismissed}
-                        className="hover:text-primary text-xs text-[var(--text-muted)] transition-colors"
-                      >
-                        {dismissedCount} job{dismissedCount > 1 ? 's' : ''} hidden &mdash; Show all
-                      </button>
+                      <Tooltip content="Show all dismissed jobs">
+                        <button
+                          type="button"
+                          onClick={handleShowAllDismissed}
+                          className="cursor-pointer hover:text-primary text-xs text-[var(--text-muted)] transition-colors"
+                        >
+                          {dismissedCount} job{dismissedCount > 1 ? 's' : ''} hidden &mdash; Show all
+                        </button>
+                      </Tooltip>
                     </div>
                   )}
                 </div>
@@ -1461,13 +1491,15 @@ export default function JobSearchPage() {
           <div className="absolute inset-y-0 left-0 w-[320px] max-w-[85vw] overflow-y-auto bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
               <h3 className="text-sm font-semibold text-[var(--text)]">Filters</h3>
-              <button
-                type="button"
-                onClick={() => setShowSidebar(false)}
-                className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <Tooltip content="Close filters">
+                <button
+                  type="button"
+                  onClick={() => setShowSidebar(false)}
+                  className="cursor-pointer rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </Tooltip>
             </div>
             <AdvancedFilters
               sections={filterSections}
@@ -1481,7 +1513,7 @@ export default function JobSearchPage() {
               className="rounded-none border-0"
             />
             <div className="sticky bottom-0 border-t border-[var(--border)] bg-white p-4">
-              <Button className="w-full" onClick={() => setShowSidebar(false)}>
+              <Button className="w-full" onClick={() => setShowSidebar(false)} tooltip="Apply filters and show results">
                 Show Results {pagination ? `(${pagination.total.toLocaleString()})` : ''}
               </Button>
             </div>
@@ -1584,12 +1616,14 @@ function JobCard({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <Link
-                href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-                className="hover:text-primary text-base font-semibold text-[var(--text)] transition-colors"
-              >
-                <HighlightText text={job.title} highlight={searchKeyword} />
-              </Link>
+              <Tooltip content={`View details for ${job.title}`}>
+                <Link
+                  href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
+                  className="hover:text-primary text-base font-semibold text-[var(--text)] transition-colors"
+                >
+                  <HighlightText text={job.title} highlight={searchKeyword} />
+                </Link>
+              </Tooltip>
               {isNew && (
                 <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">
                   <Zap className="h-2.5 w-2.5" />
@@ -1782,15 +1816,17 @@ function JobCard({
           <div className="flex items-center gap-1.5">
             {/* Applied indicator / Quick Apply */}
             {isApplied ? (
-              <Link
-                href={ROUTES.CANDIDATE.APPLICATIONS}
-                className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-2.5 py-1.5 text-xs font-medium text-[var(--success)] transition-colors hover:bg-[var(--success)]/20"
-              >
-                <CheckCircle className="h-3 w-3" />
-                Applied
-              </Link>
+              <Tooltip content="View your application">
+                <Link
+                  href={ROUTES.CANDIDATE.APPLICATIONS}
+                  className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-2.5 py-1.5 text-xs font-medium text-[var(--success)] transition-colors hover:bg-[var(--success)]/20"
+                >
+                  <CheckCircle className="h-3 w-3" />
+                  Applied
+                </Link>
+              </Tooltip>
             ) : canQuickApply && onQuickApply ? (
-              <Button size="sm" onClick={onQuickApply} isLoading={isApplying} className="text-xs">
+              <Button size="sm" onClick={onQuickApply} isLoading={isApplying} className="text-xs" tooltip="Apply instantly without screening questions">
                 <Send className="mr-1 h-3 w-3" />
                 Quick Apply
               </Button>
@@ -1798,13 +1834,15 @@ function JobCard({
 
             {/* External apply indicator */}
             {!isApplied && job.applyMethod === 'EXTERNAL_URL' && (
-              <Link
-                href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-                className="bg-primary/10 text-primary hover:bg-primary/20 flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
-              >
-                <ExternalLink className="h-3 w-3" />
-                Apply
-              </Link>
+              <Tooltip content="Apply on external website">
+                <Link
+                  href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
+                  className="bg-primary/10 text-primary hover:bg-primary/20 flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Apply
+                </Link>
+              </Tooltip>
             )}
 
             {/* Compare button */}
@@ -1812,7 +1850,7 @@ function JobCard({
               <button
                 onClick={onToggleCompare}
                 className={cn(
-                  'rounded-lg p-2 transition-colors',
+                  'cursor-pointer rounded-lg p-2 transition-colors',
                   isComparing
                     ? 'text-primary bg-primary/10'
                     : 'hover:text-primary text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
@@ -1829,7 +1867,7 @@ function JobCard({
               onClick={onSave}
               disabled={isSaving}
               className={cn(
-                'rounded-lg p-2 transition-colors disabled:opacity-50',
+                'cursor-pointer rounded-lg p-2 transition-colors disabled:opacity-50',
                 isSaved
                   ? 'text-primary bg-primary/10'
                   : 'hover:text-primary text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
@@ -1910,12 +1948,14 @@ function CompactJobCard({
       {/* Main info */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <Link
-            href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-            className="hover:text-primary truncate text-sm font-semibold text-[var(--text)] transition-colors"
-          >
-            <HighlightText text={job.title} highlight={searchKeyword} />
-          </Link>
+          <Tooltip content={`View details for ${job.title}`}>
+            <Link
+              href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
+              className="hover:text-primary truncate text-sm font-semibold text-[var(--text)] transition-colors"
+            >
+              <HighlightText text={job.title} highlight={searchKeyword} />
+            </Link>
+          </Tooltip>
           {isNew && (
             <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">
               New
@@ -2004,17 +2044,19 @@ function CompactJobCard({
             Applied
           </span>
         )}
-        <Link
-          href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-          className="bg-primary/10 text-primary hover:bg-primary/20 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
-        >
-          View
-        </Link>
+        <Tooltip content="View job details">
+          <Link
+            href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
+            className="bg-primary/10 text-primary hover:bg-primary/20 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+          >
+            View
+          </Link>
+        </Tooltip>
         {onToggleCompare && (
           <button
             onClick={onToggleCompare}
             className={cn(
-              'rounded-lg p-1.5 transition-colors',
+              'cursor-pointer rounded-lg p-1.5 transition-colors',
               isComparing
                 ? 'text-primary bg-primary/10'
                 : 'hover:text-primary text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
@@ -2029,7 +2071,7 @@ function CompactJobCard({
           onClick={onSave}
           disabled={isSaving}
           className={cn(
-            'rounded-lg p-1.5 transition-colors disabled:opacity-50',
+            'cursor-pointer rounded-lg p-1.5 transition-colors disabled:opacity-50',
             isSaved
               ? 'text-primary bg-primary/10'
               : 'hover:text-primary text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',

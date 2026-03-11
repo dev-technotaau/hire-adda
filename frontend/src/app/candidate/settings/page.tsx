@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Lock,
@@ -37,6 +38,7 @@ import PhoneInput from '@/components/ui/PhoneInput';
 import Tabs from '@/components/ui/Tabs';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/use-auth';
 import { authService } from '@/services/auth.service';
@@ -67,7 +69,22 @@ type ProfileVisibility = 'public' | 'registered' | 'private';
 export default function CandidateSettingsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('account');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && TABS.some((t) => t.key === tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState({}, '', url.toString());
+  };
 
   return (
     <DashboardLayout requiredRole={['CANDIDATE']}>
@@ -79,7 +96,7 @@ export default function CandidateSettingsPage() {
           </p>
         </div>
 
-        <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
+        <Tabs tabs={TABS} activeTab={activeTab} onChange={handleTabChange}>
           {activeTab === 'account' && <AccountTab />}
           {activeTab === 'security' && <SecurityTab user={user} />}
           {activeTab === 'notifications' && <NotificationsTab />}
@@ -238,7 +255,7 @@ function ChangeEmailSection() {
             required
           />
           <div className="pt-2">
-            <Button type="submit" isLoading={isLoading}>
+            <Button type="submit" isLoading={isLoading} tooltip="Submit email change request">
               Change Email
             </Button>
           </div>
@@ -264,14 +281,16 @@ function ChangeEmailSection() {
               {resendTimer > 0 ? (
                 <span className="text-[var(--text-secondary)]">Resend in {resendTimer}s</span>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={isResending}
-                  className="text-primary font-medium hover:underline disabled:opacity-50"
-                >
-                  {isResending ? 'Sending...' : 'Resend Code'}
-                </button>
+                <Tooltip content="Resend verification code to your email">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={isResending}
+                    className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
+                  >
+                    {isResending ? 'Sending...' : 'Resend Code'}
+                  </button>
+                </Tooltip>
               )}
             </p>
           </div>
@@ -280,10 +299,11 @@ function ChangeEmailSection() {
               isLoading={isLoading}
               onClick={handleConfirm}
               disabled={otp.length !== otpConfig.LENGTH}
+              tooltip="Confirm email change"
             >
               Confirm Change
             </Button>
-            <Button variant="outline" onClick={handleCancel}>
+            <Button variant="outline" onClick={handleCancel} tooltip="Cancel email change">
               Cancel
             </Button>
           </div>
@@ -468,6 +488,7 @@ function MobileVerificationSection() {
                 isLoading={isLoading}
                 onClick={handleSendOtp}
                 disabled={!hasMobile && !mobileNumber}
+                tooltip="Send verification code to your phone"
               >
                 {hasMobile ? 'Verify Phone Number' : 'Add & Verify'}
               </Button>
@@ -481,6 +502,7 @@ function MobileVerificationSection() {
                   setPassword('');
                   setErrors({});
                 }}
+                tooltip="Change your phone number"
               >
                 Change Number
               </Button>
@@ -517,10 +539,10 @@ function MobileVerificationSection() {
             </p>
           </div>
           <div className="flex gap-3 pt-2">
-            <Button type="submit" isLoading={isLoading}>
+            <Button type="submit" isLoading={isLoading} tooltip="Submit number change request">
               Change Number
             </Button>
-            <Button variant="outline" onClick={handleCancel}>
+            <Button variant="outline" onClick={handleCancel} tooltip="Cancel number change">
               Cancel
             </Button>
           </div>
@@ -552,14 +574,16 @@ function MobileVerificationSection() {
               {resendTimer > 0 ? (
                 <span className="text-[var(--text-secondary)]">Resend in {resendTimer}s</span>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={isResending}
-                  className="text-primary font-medium hover:underline disabled:opacity-50"
-                >
-                  {isResending ? 'Sending...' : 'Resend Code'}
-                </button>
+                <Tooltip content="Resend verification code to your phone">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={isResending}
+                    className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
+                  >
+                    {isResending ? 'Sending...' : 'Resend Code'}
+                  </button>
+                </Tooltip>
               )}
             </p>
           </div>
@@ -568,10 +592,11 @@ function MobileVerificationSection() {
               isLoading={isLoading}
               onClick={handleVerify}
               disabled={otp.length !== otpConfig.LENGTH}
+              tooltip="Verify your phone number"
             >
               Verify
             </Button>
-            <Button variant="outline" onClick={handleCancel}>
+            <Button variant="outline" onClick={handleCancel} tooltip="Cancel verification">
               Cancel
             </Button>
           </div>
@@ -756,31 +781,37 @@ function WhatsAppVerificationSection() {
             </span>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setStep('change')}
-              className="text-primary text-sm font-medium hover:underline"
-            >
-              {hasSeparateNumber ? 'Change WhatsApp number' : 'Use a different number for WhatsApp'}
-            </button>
-            {hasSeparateNumber && (
+            <Tooltip content={hasSeparateNumber ? 'Change your WhatsApp number' : 'Use a different number for WhatsApp'}>
               <button
                 type="button"
-                onClick={() => setShowRemoveSeparateConfirm(true)}
-                disabled={isLoading}
-                className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] hover:underline disabled:opacity-50"
+                onClick={() => setStep('change')}
+                className="text-primary cursor-pointer text-sm font-medium hover:underline"
               >
-                Use mobile number instead
+                {hasSeparateNumber ? 'Change WhatsApp number' : 'Use a different number for WhatsApp'}
               </button>
+            </Tooltip>
+            {hasSeparateNumber && (
+              <Tooltip content="Revert to using your mobile number for WhatsApp">
+                <button
+                  type="button"
+                  onClick={() => setShowRemoveSeparateConfirm(true)}
+                  disabled={isLoading}
+                  className="cursor-pointer text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] hover:underline disabled:opacity-50"
+                >
+                  Use mobile number instead
+                </button>
+              </Tooltip>
             )}
-            <button
-              type="button"
-              onClick={() => setShowRemoveWhatsappConfirm(true)}
-              disabled={isLoading}
-              className="text-sm font-medium text-[var(--error)] hover:underline disabled:opacity-50"
-            >
-              Remove WhatsApp verification
-            </button>
+            <Tooltip content="Remove WhatsApp from your account">
+              <button
+                type="button"
+                onClick={() => setShowRemoveWhatsappConfirm(true)}
+                disabled={isLoading}
+                className="cursor-pointer text-sm font-medium text-[var(--error)] hover:underline disabled:opacity-50"
+              >
+                Remove WhatsApp verification
+              </button>
+            </Tooltip>
           </div>
         </div>
       ) : step === 'change' ? (
@@ -806,10 +837,10 @@ function WhatsAppVerificationSection() {
             required
           />
           <div className="flex gap-3 pt-1">
-            <Button type="submit" isLoading={isLoading} disabled={!newWhatsappNumber || !password}>
+            <Button type="submit" isLoading={isLoading} disabled={!newWhatsappNumber || !password} tooltip="Continue with WhatsApp number change">
               Continue
             </Button>
-            <Button variant="outline" onClick={resetToIdle}>
+            <Button variant="outline" onClick={resetToIdle} tooltip="Cancel WhatsApp number change">
               Cancel
             </Button>
           </div>
@@ -837,14 +868,16 @@ function WhatsAppVerificationSection() {
               {resendTimer > 0 ? (
                 <span className="text-[var(--text-secondary)]">Resend in {resendTimer}s</span>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={isResending}
-                  className="text-primary font-medium hover:underline disabled:opacity-50"
-                >
-                  {isResending ? 'Sending...' : 'Resend Code'}
-                </button>
+                <Tooltip content="Resend verification code to WhatsApp">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={isResending}
+                    className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
+                  >
+                    {isResending ? 'Sending...' : 'Resend Code'}
+                  </button>
+                </Tooltip>
               )}
             </p>
           </div>
@@ -853,10 +886,11 @@ function WhatsAppVerificationSection() {
               isLoading={isLoading}
               onClick={handleVerify}
               disabled={otp.length !== otpConfig.LENGTH}
+              tooltip="Verify your WhatsApp number"
             >
               Verify
             </Button>
-            <Button variant="outline" onClick={resetToIdle}>
+            <Button variant="outline" onClick={resetToIdle} tooltip="Cancel verification">
               Cancel
             </Button>
           </div>
@@ -881,17 +915,19 @@ function WhatsAppVerificationSection() {
           )}
           <div className="flex flex-wrap items-center gap-3 pt-1">
             {hasMobile && (
-              <Button isLoading={isLoading} onClick={handleSendOtp}>
+              <Button isLoading={isLoading} onClick={handleSendOtp} tooltip="Send verification code to your WhatsApp">
                 Verify WhatsApp
               </Button>
             )}
-            <button
-              type="button"
-              onClick={() => setStep('change')}
-              className="text-primary text-sm font-medium hover:underline"
-            >
-              {displayNumber ? 'Change WhatsApp number' : 'Add WhatsApp number'}
-            </button>
+            <Tooltip content={displayNumber ? 'Change your WhatsApp number' : 'Add a WhatsApp number'}>
+              <button
+                type="button"
+                onClick={() => setStep('change')}
+                className="text-primary cursor-pointer text-sm font-medium hover:underline"
+              >
+                {displayNumber ? 'Change WhatsApp number' : 'Add WhatsApp number'}
+              </button>
+            </Tooltip>
           </div>
         </div>
       )}
@@ -1061,7 +1097,7 @@ function ChangePasswordSection() {
             required
           />
           <div className="pt-2">
-            <Button type="submit" isLoading={isLoading}>
+            <Button type="submit" isLoading={isLoading} tooltip="Submit password change request">
               Update Password
             </Button>
           </div>
@@ -1081,14 +1117,16 @@ function ChangePasswordSection() {
               {resendTimer > 0 ? (
                 <span className="text-[var(--text-secondary)]">Resend in {resendTimer}s</span>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={isResending}
-                  className="text-primary font-medium hover:underline disabled:opacity-50"
-                >
-                  {isResending ? 'Sending...' : 'Resend Code'}
-                </button>
+                <Tooltip content="Resend verification code to your email">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={isResending}
+                    className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
+                  >
+                    {isResending ? 'Sending...' : 'Resend Code'}
+                  </button>
+                </Tooltip>
               )}
             </p>
           </div>
@@ -1097,10 +1135,11 @@ function ChangePasswordSection() {
               isLoading={isLoading}
               onClick={handleConfirm}
               disabled={otp.length !== otpConfig.LENGTH}
+              tooltip="Confirm password change"
             >
               Confirm Change
             </Button>
-            <Button variant="outline" onClick={handleCancel}>
+            <Button variant="outline" onClick={handleCancel} tooltip="Cancel password change">
               Cancel
             </Button>
           </div>
@@ -1141,6 +1180,7 @@ function DangerZoneSection() {
             size="sm"
             leftIcon={<Trash2 className="h-4 w-4" />}
             onClick={() => setShowDeleteModal(true)}
+            tooltip="Permanently delete your account"
           >
             Delete Account
           </Button>
@@ -1163,6 +1203,7 @@ function DangerZoneSection() {
                 setShowDeleteModal(false);
                 setConfirmText('');
               }}
+              tooltip="Cancel account deletion"
             >
               Cancel
             </Button>
@@ -1174,6 +1215,7 @@ function DangerZoneSection() {
                 setShowDeleteModal(false);
                 setConfirmText('');
               }}
+              tooltip="Confirm account deletion"
             >
               Delete Account
             </Button>
@@ -1377,11 +1419,11 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             </div>
           </div>
           {mfaEnabled ? (
-            <Button variant="destructive" size="sm" onClick={() => setShowDisableModal(true)}>
+            <Button variant="destructive" size="sm" onClick={() => setShowDisableModal(true)} tooltip="Disable two-factor authentication">
               Disable MFA
             </Button>
           ) : (
-            <Button variant="primary" size="sm" isLoading={setupLoading} onClick={handleSetupMfa}>
+            <Button variant="primary" size="sm" isLoading={setupLoading} onClick={handleSetupMfa} tooltip="Enable two-factor authentication">
               Enable MFA
             </Button>
           )}
@@ -1412,6 +1454,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                   setRegenCode('');
                   setNewBackupCodes([]);
                 }}
+                tooltip="Generate new backup codes"
               >
                 Regenerate
               </Button>
@@ -1441,10 +1484,11 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                 setVerifyCode('');
                 setEnablePassword('');
               }}
+              tooltip="Cancel MFA setup"
             >
               Cancel
             </Button>
-            <Button variant="primary" isLoading={enableLoading} onClick={handleEnableMfa}>
+            <Button variant="primary" isLoading={enableLoading} onClick={handleEnableMfa} tooltip="Verify code and enable MFA">
               Verify &amp; Enable
             </Button>
           </div>
@@ -1482,6 +1526,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                   leftIcon={
                     copiedSecret ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />
                   }
+                  tooltip="Copy secret to clipboard"
                 >
                   {copiedSecret ? 'Copied' : 'Copy'}
                 </Button>
@@ -1528,10 +1573,11 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                 setDisablePassword('');
                 setDisableCode('');
               }}
+              tooltip="Cancel MFA disabling"
             >
               Cancel
             </Button>
-            <Button variant="destructive" isLoading={disableLoading} onClick={handleDisableMfa}>
+            <Button variant="destructive" isLoading={disableLoading} onClick={handleDisableMfa} tooltip="Confirm disabling MFA">
               Disable MFA
             </Button>
           </div>
@@ -1579,19 +1625,21 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                   setShowRegenModal(false);
                   setNewBackupCodes([]);
                 }}
+                tooltip="Close and save backup codes"
               >
                 Done
               </Button>
             </div>
           ) : (
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowRegenModal(false)}>
+              <Button variant="outline" onClick={() => setShowRegenModal(false)} tooltip="Cancel backup code regeneration">
                 Cancel
               </Button>
               <Button
                 variant="primary"
                 isLoading={regenLoading}
                 onClick={handleRegenerateBackupCodes}
+                tooltip="Generate new backup codes"
               >
                 Regenerate
               </Button>
@@ -1720,7 +1768,7 @@ function PasskeysSection() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRegister} isLoading={registering}>
+          <Button variant="outline" size="sm" onClick={handleRegister} isLoading={registering} tooltip="Register a new passkey">
             <Plus className="mr-1 h-4 w-4" />
             Add Passkey
           </Button>
@@ -1755,6 +1803,7 @@ function PasskeysSection() {
                   size="sm"
                   onClick={() => setConfirmDeleteId(cred.id)}
                   isLoading={deletingId === cred.id}
+                  tooltip="Remove this passkey"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
@@ -1794,10 +1843,11 @@ function PasskeysSection() {
                 setPendingCredential(null);
                 setFriendlyName('');
               }}
+              tooltip="Cancel passkey registration"
             >
               Cancel
             </Button>
-            <Button onClick={handleConfirmRegister}>Save Passkey</Button>
+            <Button onClick={handleConfirmRegister} tooltip="Save and register this passkey">Save Passkey</Button>
           </div>
         }
       >
@@ -1888,6 +1938,7 @@ function ActiveSessionsSection() {
               isLoading={revokingAll}
               leftIcon={<LogOut className="h-4 w-4" />}
               onClick={() => setShowConfirmRevokeAll(true)}
+              tooltip="Sign out all other devices"
             >
               Revoke All Other Sessions
             </Button>
@@ -1939,6 +1990,7 @@ function ActiveSessionsSection() {
                     isLoading={revokingId === session.id}
                     onClick={() => setConfirmRevokeId(session.id)}
                     className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
+                    tooltip="Sign out this device"
                   >
                     Revoke
                   </Button>
@@ -2106,7 +2158,7 @@ function NotificationsTab() {
       </div>
 
       <div className="mt-4 flex justify-end">
-        <Button variant="primary" isLoading={isSaving} onClick={handleSave}>
+        <Button variant="primary" isLoading={isSaving} onClick={handleSave} tooltip="Save notification preferences">
           Save Preferences
         </Button>
       </div>
@@ -2282,6 +2334,7 @@ function PrivacyTab() {
         <Button
           variant="outline"
           isLoading={isExporting}
+          tooltip="Request a copy of all your personal data"
           onClick={async () => {
             setIsExporting(true);
             try {
@@ -2302,7 +2355,7 @@ function PrivacyTab() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button variant="primary" isLoading={isSaving} onClick={handleSave}>
+        <Button variant="primary" isLoading={isSaving} onClick={handleSave} tooltip="Save privacy settings">
           Save Privacy Settings
         </Button>
       </div>
@@ -2367,6 +2420,7 @@ function LegalTab() {
               href={link.href}
               target="_blank"
               rel="noopener noreferrer"
+              title={`View ${link.label}`}
               className="flex items-center gap-3 rounded-lg border border-[var(--border)] p-3 transition-colors hover:bg-[var(--bg-secondary)]"
             >
               <div className="bg-primary-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">

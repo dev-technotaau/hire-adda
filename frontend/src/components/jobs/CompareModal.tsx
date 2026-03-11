@@ -3,6 +3,7 @@
 import { X, MapPin, Building2, Clock, Briefcase, GraduationCap, IndianRupee } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
+import Tooltip from '@/components/ui/Tooltip';
 import { formatSalaryRange, formatRelativeDate } from '@/lib/utils';
 import { formatSalaryAsLPA } from '@/utils/format';
 import {
@@ -96,14 +97,16 @@ export default function CompareModal({ isOpen, onClose, jobs, onRemove }: Compar
                         {job.isConfidential ? 'Confidential' : job.company?.companyName}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onRemove(job.id)}
-                      className="shrink-0 rounded-md p-1 transition-colors hover:bg-[var(--bg-secondary)]"
-                      aria-label={`Remove ${job.title}`}
-                    >
-                      <X className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                    </button>
+                    <Tooltip content={`Remove ${job.title}`}>
+                      <button
+                        type="button"
+                        onClick={() => onRemove(job.id)}
+                        className="shrink-0 cursor-pointer rounded-md p-1 transition-colors hover:bg-[var(--bg-secondary)]"
+                        aria-label={`Remove ${job.title}`}
+                      >
+                        <X className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                      </button>
+                    </Tooltip>
                   </div>
                 </th>
               ))}

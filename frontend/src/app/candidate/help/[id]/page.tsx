@@ -178,6 +178,7 @@ export default function CandidateTicketDetailPage() {
             variant="link"
             className="mt-4"
             onClick={() => router.push(ROUTES.CANDIDATE.HELP)}
+            tooltip="Return to help center"
           >
             Back to Help
           </Button>
@@ -200,7 +201,8 @@ export default function CandidateTicketDetailPage() {
           <button
             type="button"
             onClick={() => router.push(ROUTES.CANDIDATE.HELP)}
-            className="hover:text-primary mb-4 inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors"
+            className="hover:text-primary mb-4 inline-flex cursor-pointer items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors"
+            title="Back to help center"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Help
@@ -237,6 +239,7 @@ export default function CandidateTicketDetailPage() {
                   onClick={() => closeMutation.mutate()}
                   isLoading={closeMutation.isPending}
                   leftIcon={<Lock className="h-4 w-4" />}
+                  tooltip="Close this ticket"
                 >
                   Close Ticket
                 </Button>
@@ -248,6 +251,7 @@ export default function CandidateTicketDetailPage() {
                   onClick={() => reopenMutation.mutate()}
                   isLoading={reopenMutation.isPending}
                   leftIcon={<RotateCcw className="h-4 w-4" />}
+                  tooltip="Reopen this ticket"
                 >
                   Reopen Ticket
                 </Button>
@@ -315,6 +319,7 @@ export default function CandidateTicketDetailPage() {
                 isLoading={replyMutation.isPending}
                 disabled={isClosed || !replyBody.trim()}
                 leftIcon={<Send className="h-4 w-4" />}
+                tooltip="Send your reply"
               >
                 Send Reply
               </Button>
@@ -338,7 +343,7 @@ export default function CandidateTicketDetailPage() {
               <button
                 type="button"
                 onClick={() => handleSatisfactionSelect('SATISFIED')}
-                className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-colors ${
+                className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
                   satisfactionRating === 'SATISFIED'
                     ? 'border-[var(--success)] bg-[var(--success-light)] text-[var(--success)]'
                     : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--success)] hover:text-[var(--success)]'
@@ -350,7 +355,7 @@ export default function CandidateTicketDetailPage() {
               <button
                 type="button"
                 onClick={() => handleSatisfactionSelect('NEUTRAL')}
-                className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-colors ${
+                className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
                   satisfactionRating === 'NEUTRAL'
                     ? 'border-[var(--warning)] bg-[var(--warning-light)] text-[var(--warning)]'
                     : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--warning)] hover:text-[var(--warning)]'
@@ -362,7 +367,7 @@ export default function CandidateTicketDetailPage() {
               <button
                 type="button"
                 onClick={() => handleSatisfactionSelect('NOT_SATISFIED')}
-                className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-colors ${
+                className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
                   satisfactionRating === 'NOT_SATISFIED'
                     ? 'border-[var(--error)] bg-[var(--error-light)] text-[var(--error)]'
                     : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--error)] hover:text-[var(--error)]'
@@ -388,6 +393,7 @@ export default function CandidateTicketDetailPage() {
                     onClick={handleSubmitSatisfaction}
                     isLoading={satisfactionMutation.isPending}
                     disabled={!satisfactionRating}
+                    tooltip="Submit your feedback"
                   >
                     Submit Feedback
                   </Button>

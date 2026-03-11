@@ -37,7 +37,7 @@ function Dropdown({ trigger, items, align = 'left', className }: DropdownProps) 
 
   return (
     <div className={cn('relative inline-block', className)} ref={containerRef}>
-      <div onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
+      <div className="cursor-pointer" onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
 
       {isOpen && (
         <div

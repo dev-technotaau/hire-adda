@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save, X, Plus } from 'lucide-react';
+import Tooltip from '@/components/ui/Tooltip';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -119,8 +120,8 @@ export default function EditJobPage() {
         preferredEducationField: job.preferredEducationField || '',
         roleCategory: job.roleCategory || '',
         numberOfOpenings: job.numberOfOpenings ?? undefined,
-        salaryMin: job.salaryMin ?? undefined,
-        salaryMax: job.salaryMax ?? undefined,
+        salaryMin: job.salaryMin != null ? Number(job.salaryMin) : undefined,
+        salaryMax: job.salaryMax != null ? Number(job.salaryMax) : undefined,
         salaryType: job.salaryType || undefined,
         currency: job.currency || '',
         salaryDisclosed: job.salaryDisclosed ?? true,
@@ -297,11 +298,13 @@ export default function EditJobPage() {
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             The job you are trying to edit does not exist.
           </p>
-          <Link href={ROUTES.EMPLOYER.MY_JOBS} className="mt-4">
-            <Button variant="outline" size="sm">
-              Back to My Jobs
-            </Button>
-          </Link>
+          <Tooltip content="Return to your job listings">
+            <Link href={ROUTES.EMPLOYER.MY_JOBS} className="mt-4">
+              <Button variant="outline" size="sm">
+                Back to My Jobs
+              </Button>
+            </Link>
+          </Tooltip>
         </div>
       </DashboardLayout>
     );
@@ -311,13 +314,15 @@ export default function EditJobPage() {
     <DashboardLayout requiredRole={['EMPLOYER']}>
       <div className="space-y-6">
         {/* Back Button */}
-        <Link
-          href={ROUTES.EMPLOYER.JOB_DETAIL(id)}
-          className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Job Details
-        </Link>
+        <Tooltip content="Return to job details">
+          <Link
+            href={ROUTES.EMPLOYER.JOB_DETAIL(id)}
+            className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Job Details
+          </Link>
+        </Tooltip>
 
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -329,6 +334,7 @@ export default function EditJobPage() {
             leftIcon={<Save className="h-4 w-4" />}
             onClick={handleSubmit}
             isLoading={updateMutation.isPending}
+            tooltip="Save all changes to this job"
           >
             Save Changes
           </Button>
@@ -449,24 +455,25 @@ export default function EditJobPage() {
               </label>
               <div className="mb-2 flex flex-wrap gap-2">
                 {specificDegreeOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      const arr = form.specificDegrees || [];
-                      if (arr.includes(opt.value as never)) {
-                        handleChange(
-                          'specificDegrees',
-                          arr.filter((d) => d !== opt.value),
-                        );
-                      } else {
-                        handleChange('specificDegrees', [...arr, opt.value]);
-                      }
-                    }}
-                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${(form.specificDegrees || []).includes(opt.value as never) ? 'bg-primary border-primary text-white' : 'hover:border-primary border-[var(--border)] text-[var(--text-muted)]'}`}
-                  >
-                    {opt.label}
-                  </button>
+                  <Tooltip key={opt.value} content={`Toggle ${opt.label}`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const arr = form.specificDegrees || [];
+                        if (arr.includes(opt.value as never)) {
+                          handleChange(
+                            'specificDegrees',
+                            arr.filter((d) => d !== opt.value),
+                          );
+                        } else {
+                          handleChange('specificDegrees', [...arr, opt.value]);
+                        }
+                      }}
+                      className={`cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors ${(form.specificDegrees || []).includes(opt.value as never) ? 'bg-primary border-primary text-white' : 'hover:border-primary border-[var(--border)] text-[var(--text-muted)]'}`}
+                    >
+                      {opt.label}
+                    </button>
+                  </Tooltip>
                 ))}
               </div>
             </div>
@@ -827,6 +834,7 @@ export default function EditJobPage() {
                   variant="outline"
                   className="shrink-0"
                   onClick={() => addToArray('tags', tagInput, setTagInput)}
+                  tooltip="Add tag"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -892,24 +900,25 @@ export default function EditJobPage() {
               </label>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(NOTICE_PERIOD_PREFERENCE_LABELS).map(([val, lbl]) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => {
-                      const arr = (form.noticePeriodPreference || []) as string[];
-                      if (arr.includes(val)) {
-                        handleChange(
-                          'noticePeriodPreference',
-                          arr.filter((v) => v !== val),
-                        );
-                      } else {
-                        handleChange('noticePeriodPreference', [...arr, val]);
-                      }
-                    }}
-                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${((form.noticePeriodPreference || []) as string[]).includes(val) ? 'bg-primary border-primary text-white' : 'hover:border-primary border-[var(--border)] text-[var(--text-muted)]'}`}
-                  >
-                    {lbl}
-                  </button>
+                  <Tooltip key={val} content={`Toggle ${lbl} preference`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const arr = (form.noticePeriodPreference || []) as string[];
+                        if (arr.includes(val)) {
+                          handleChange(
+                            'noticePeriodPreference',
+                            arr.filter((v) => v !== val),
+                          );
+                        } else {
+                          handleChange('noticePeriodPreference', [...arr, val]);
+                        }
+                      }}
+                      className={`cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors ${((form.noticePeriodPreference || []) as string[]).includes(val) ? 'bg-primary border-primary text-white' : 'hover:border-primary border-[var(--border)] text-[var(--text-muted)]'}`}
+                    >
+                      {lbl}
+                    </button>
+                  </Tooltip>
                 ))}
               </div>
             </div>
@@ -929,24 +938,25 @@ export default function EditJobPage() {
               </label>
               <div className="flex flex-wrap gap-2">
                 {DIVERSITY_TAG_OPTIONS.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => {
-                      const arr = form.diversityTags || [];
-                      if (arr.includes(tag)) {
-                        handleChange(
-                          'diversityTags',
-                          arr.filter((t) => t !== tag),
-                        );
-                      } else {
-                        handleChange('diversityTags', [...arr, tag]);
-                      }
-                    }}
-                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${(form.diversityTags || []).includes(tag) ? 'bg-primary border-primary text-white' : 'hover:border-primary border-[var(--border)] text-[var(--text-muted)]'}`}
-                  >
-                    {tag}
-                  </button>
+                  <Tooltip key={tag} content={`Toggle ${tag}`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const arr = form.diversityTags || [];
+                        if (arr.includes(tag)) {
+                          handleChange(
+                            'diversityTags',
+                            arr.filter((t) => t !== tag),
+                          );
+                        } else {
+                          handleChange('diversityTags', [...arr, tag]);
+                        }
+                      }}
+                      className={`cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors ${(form.diversityTags || []).includes(tag) ? 'bg-primary border-primary text-white' : 'hover:border-primary border-[var(--border)] text-[var(--text-muted)]'}`}
+                    >
+                      {tag}
+                    </button>
+                  </Tooltip>
                 ))}
               </div>
             </div>
@@ -1072,13 +1082,16 @@ export default function EditJobPage() {
 
         {/* Bottom Save */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Link href={ROUTES.EMPLOYER.JOB_DETAIL(id)}>
-            <Button variant="outline">Cancel</Button>
-          </Link>
+          <Tooltip content="Cancel editing and return to job details">
+            <Link href={ROUTES.EMPLOYER.JOB_DETAIL(id)}>
+              <Button variant="outline">Cancel</Button>
+            </Link>
+          </Tooltip>
           <Button
             leftIcon={<Save className="h-4 w-4" />}
             onClick={handleSubmit}
             isLoading={updateMutation.isPending}
+            tooltip="Save all changes to this job"
           >
             Save Changes
           </Button>

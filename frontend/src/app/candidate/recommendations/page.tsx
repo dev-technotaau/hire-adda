@@ -25,6 +25,7 @@ import Badge from '@/components/ui/Badge';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
+import Tooltip from '@/components/ui/Tooltip';
 import { recommendationService } from '@/services/recommendation.service';
 import { useAppliedJobs } from '@/hooks/use-jobs';
 import { QUERY_KEYS } from '@/constants/config';
@@ -162,7 +163,7 @@ export default function RecommendationsPage() {
               AI-matched jobs based on your skills, experience, and preferences.
             </p>
           </div>
-          <Button variant="outline" onClick={handleRefresh}>
+          <Button variant="outline" onClick={handleRefresh} tooltip="Refresh recommendations">
             <RefreshCw className="mr-1.5 h-4 w-4" />
             Refresh
           </Button>
@@ -223,7 +224,7 @@ export default function RecommendationsPage() {
               title="No recommendations yet"
               description="Update your profile with skills, experience, and preferences to get better job matches."
               action={
-                <Button onClick={() => router.push(ROUTES.CANDIDATE.PROFILE)}>
+                <Button onClick={() => router.push(ROUTES.CANDIDATE.PROFILE)} tooltip="Go to profile settings">
                   Update Profile
                 </Button>
               }
@@ -235,13 +236,14 @@ export default function RecommendationsPage() {
               {jobs.map((job) => (
                 <Card key={job.id} className="relative">
                   {/* Dismiss button */}
-                  <button
-                    onClick={() => dismissMutation.mutate(job.id)}
-                    className="absolute top-3 right-3 rounded-full p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-                    title="Not interested"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Not interested">
+                    <button
+                      onClick={() => dismissMutation.mutate(job.id)}
+                      className="absolute top-3 right-3 cursor-pointer rounded-full p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
 
                   <div className="space-y-3 pr-8">
                     {/* Title + Company */}
@@ -355,16 +357,19 @@ export default function RecommendationsPage() {
                     {/* Actions */}
                     <div className="flex items-center gap-2 pt-1">
                       {appliedJobIds.has(job.id) ? (
-                        <Link
-                          href={ROUTES.CANDIDATE.APPLICATIONS}
-                          className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-3 py-1.5 text-xs font-medium text-[var(--success)] transition-colors hover:bg-[var(--success)]/20"
-                        >
-                          <CheckCircle className="h-3.5 w-3.5" /> Applied
-                        </Link>
+                        <Tooltip content="View your application">
+                          <Link
+                            href={ROUTES.CANDIDATE.APPLICATIONS}
+                            className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-3 py-1.5 text-xs font-medium text-[var(--success)] transition-colors hover:bg-[var(--success)]/20"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5" /> Applied
+                          </Link>
+                        </Tooltip>
                       ) : (
                         <Button
                           size="sm"
                           onClick={() => router.push(ROUTES.CANDIDATE.JOB_DETAIL(job.id))}
+                          tooltip="View job details and apply"
                         >
                           <ExternalLink className="mr-1 h-3.5 w-3.5" />
                           View & Apply

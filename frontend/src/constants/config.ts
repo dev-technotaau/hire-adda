@@ -224,3 +224,12 @@ export const QUERY_KEYS = {
     USER_SESSIONS: (id: string) => ['super-admin', 'user-sessions', id],
   },
 } as const;
+
+export const EXPERIENCE_BUCKETS: readonly { label: string; min: number; max: number | undefined }[] = [
+  { label: 'Fresher', min: 0, max: 1 },
+  { label: '1-3 years', min: 1, max: 3 },
+  { label: '3-5 years', min: 3, max: 5 },
+  { label: '5-8 years', min: 5, max: 8 },
+  { label: '8-12 years', min: 8, max: 12 },
+  { label: '12+ years', min: 12, max: undefined },
+];

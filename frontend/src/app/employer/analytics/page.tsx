@@ -256,7 +256,6 @@ export default function EmployerAnalyticsPage() {
         { key: 'applied', label: 'Applied', color: '#3B82F6' },
         { key: 'viewed', label: 'Viewed', color: '#8B5CF6' },
         { key: 'shortlisted', label: 'Shortlisted', color: '#F59E0B' },
-        { key: 'interviewScheduled', label: 'Interview', color: '#6366F1' },
         { key: 'offered', label: 'Offered', color: '#10B981' },
         { key: 'hired', label: 'Hired', color: '#059669' },
       ]
@@ -781,8 +780,7 @@ export default function EmployerAnalyticsPage() {
                   data={
                     analytics.sourceEffectiveness.map((s) => ({
                       source: s.source,
-                      applied: s.total - s.interviews,
-                      interviews: s.interviews - s.offers,
+                      applied: s.total - s.offers,
                       offers: s.offers - s.hires,
                       hires: s.hires,
                     })) as unknown as Record<string, unknown>[]
@@ -790,7 +788,6 @@ export default function EmployerAnalyticsPage() {
                   xKey="source"
                   bars={[
                     { key: 'applied', color: '#3B82F6', name: 'Applied' },
-                    { key: 'interviews', color: '#6366F1', name: 'Interviews' },
                     { key: 'offers', color: '#F59E0B', name: 'Offers' },
                     { key: 'hires', color: '#10B981', name: 'Hires' },
                   ]}
@@ -906,11 +903,9 @@ export default function EmployerAnalyticsPage() {
                               ? 'success'
                               : activity.status === 'REJECTED'
                                 ? 'error'
-                                : activity.status === 'INTERVIEW_SCHEDULED'
-                                  ? 'info'
-                                  : activity.status === 'WITHDRAWN'
-                                    ? 'neutral'
-                                    : 'warning'
+                                : activity.status === 'WITHDRAWN'
+                                  ? 'neutral'
+                                  : 'warning'
                           }
                           size="sm"
                         >

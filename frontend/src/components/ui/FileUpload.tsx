@@ -5,6 +5,7 @@ import { useDropzone, type Accept } from 'react-dropzone';
 import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/lib/utils';
 import { Upload, File, X } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 interface FileUploadProps {
   accept?: Accept;
@@ -103,13 +104,16 @@ function FileUpload({
                 <p className="text-xs text-[var(--text-muted)]">{formatFileSize(file.size)}</p>
               </div>
               {onRemove && (
-                <button
-                  type="button"
-                  onClick={() => onRemove(index)}
-                  className="shrink-0 rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <Tooltip content="Remove file">
+                  <button
+                    type="button"
+                    onClick={() => onRemove(index)}
+                    aria-label="Remove file"
+                    className="shrink-0 rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               )}
             </div>
           ))}

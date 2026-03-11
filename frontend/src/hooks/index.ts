@@ -21,6 +21,7 @@ export {
 export { useOnboarding, wasOnboardingSkipped, markOnboardingComplete } from './use-onboarding';
 export { useOtpConfig } from './use-otp-config';
 export { usePresence } from './use-presence';
+export { usePresenceTracker } from './use-presence-tracker';
 export { useRecommendedJobs, useRecommendedCandidates } from './use-recommendations';
 export {
   useAutocomplete,

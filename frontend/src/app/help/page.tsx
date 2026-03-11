@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Search, ChevronDown, Mail, Phone, MessageCircle, TicketCheck } from 'lucide-react';
 import PublicLayout from '@/components/layout/PublicLayout';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import { useAuthStore } from '@/store/auth.store';
 
 const faqs = [
@@ -181,12 +182,14 @@ export default function HelpPage() {
               Create a support ticket to track your issue and get a dedicated response from our
               team.
             </p>
-            <Link
-              href={user.role === 'EMPLOYER' ? '/employer/help' : '/candidate/help'}
-              className="mt-4 inline-block"
-            >
-              <Button size="lg">Go to My Support Dashboard</Button>
-            </Link>
+            <Tooltip content="View your support tickets and create new ones">
+              <Link
+                href={user.role === 'EMPLOYER' ? '/employer/help' : '/candidate/help'}
+                className="mt-4 inline-block"
+              >
+                <Button size="lg">Go to My Support Dashboard</Button>
+              </Link>
+            </Tooltip>
           </div>
         </section>
       )}
@@ -223,11 +226,13 @@ export default function HelpPage() {
               </div>
               <h3 className="font-semibold text-[var(--text)]">Contact Form</h3>
               <p className="mt-1 text-sm text-[var(--text-muted)]">Send us a detailed message</p>
-              <Link href="/contact" className="mt-2 inline-block">
-                <Button variant="link" size="sm">
-                  Go to Contact Page
-                </Button>
-              </Link>
+              <Tooltip content="Send us a message via the contact form">
+                <Link href="/contact" className="mt-2 inline-block">
+                  <Button variant="link" size="sm">
+                    Go to Contact Page
+                  </Button>
+                </Link>
+              </Tooltip>
             </div>
           </div>
         </div>

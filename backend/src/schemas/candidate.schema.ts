@@ -193,9 +193,9 @@ export const updateCandidateProfileSchema = z.object({
     openToWork: z.enum(['ACTIVELY_LOOKING', 'OPEN_TO_OFFERS', 'NOT_LOOKING']).optional(),
 
     // Salary
-    currSalary: z.number().min(0).optional(),
-    expectedSalaryMin: z.number().min(0).optional(),
-    expectedSalaryMax: z.number().min(0).optional(),
+    currSalary: z.coerce.number().min(0).optional(),
+    expectedSalaryMin: z.coerce.number().min(0).optional(),
+    expectedSalaryMax: z.coerce.number().min(0).optional(),
     salaryCurrency: z.string().optional(),
 
     // Career Preferences

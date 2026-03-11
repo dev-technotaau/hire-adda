@@ -13,6 +13,7 @@ import Switch from '@/components/ui/Switch';
 import Modal from '@/components/ui/Modal';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
+import Tooltip from '@/components/ui/Tooltip';
 import { candidateService } from '@/services/candidate.service';
 import { QUERY_KEYS } from '@/constants/config';
 import type {
@@ -239,7 +240,7 @@ export default function JobAlertsPage() {
               Get notified when new jobs match your criteria. Maximum 10 alerts.
             </p>
           </div>
-          <Button onClick={openCreate} disabled={alerts.length >= 10}>
+          <Button onClick={openCreate} disabled={alerts.length >= 10} tooltip="Create a new job alert">
             <Plus className="mr-1.5 h-4 w-4" />
             Create Alert
           </Button>
@@ -261,7 +262,7 @@ export default function JobAlertsPage() {
               title="No job alerts yet"
               description="Create an alert to get notified when new jobs match your criteria."
               action={
-                <Button onClick={openCreate}>
+                <Button onClick={openCreate} tooltip="Create your first job alert">
                   <Plus className="mr-1.5 h-4 w-4" />
                   Create Your First Alert
                 </Button>
@@ -321,11 +322,11 @@ export default function JobAlertsPage() {
                         setMatchesAlertId(alert.id);
                         setMatchesPage(1);
                       }}
-                      title="View matches"
+                      tooltip="View matching jobs"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(alert)} title="Edit">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(alert)} tooltip="Edit alert">
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
@@ -336,7 +337,7 @@ export default function JobAlertsPage() {
                           deleteMutation.mutate(alert.id);
                         }
                       }}
-                      title="Delete"
+                      tooltip="Delete alert"
                     >
                       <Trash2 className="h-4 w-4 text-[var(--error)]" />
                     </Button>
@@ -392,6 +393,7 @@ export default function JobAlertsPage() {
                     size="sm"
                     disabled={matchesPage <= 1}
                     onClick={() => setMatchesPage((p) => p - 1)}
+                    tooltip="Previous page"
                   >
                     Previous
                   </Button>
@@ -403,6 +405,7 @@ export default function JobAlertsPage() {
                     size="sm"
                     disabled={!matches.hasMore}
                     onClick={() => setMatchesPage((p) => p + 1)}
+                    tooltip="Next page"
                   >
                     Next
                   </Button>
@@ -426,13 +429,14 @@ export default function JobAlertsPage() {
           size="lg"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={closeModal}>
+              <Button variant="outline" onClick={closeModal} tooltip="Cancel and close">
                 Cancel
               </Button>
               <Button
                 onClick={handleSubmit}
                 disabled={!form.name.trim() || Object.keys(formToFilters(form)).length === 0}
                 isLoading={createMutation.isPending || updateMutation.isPending}
+                tooltip={editingAlert ? 'Save alert changes' : 'Create job alert'}
               >
                 {editingAlert ? 'Save Changes' : 'Create Alert'}
               </Button>

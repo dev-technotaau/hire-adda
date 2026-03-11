@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
@@ -45,7 +46,7 @@ export default function CoursesSection({ form, updateField }: ProfileSectionProp
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Courses Completed</h2>
-            <Button size="sm" variant="outline" onClick={addCourse}>
+            <Button size="sm" variant="outline" onClick={addCourse} tooltip="Add a new course">
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
@@ -61,12 +62,14 @@ export default function CoursesSection({ form, updateField }: ProfileSectionProp
               <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Course {i + 1}</h4>
-                  <button
-                    onClick={() => removeCourse(i)}
-                    className="text-[var(--error)] hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove this course">
+                    <button
+                      onClick={() => removeCourse(i)}
+                      className="cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Input
@@ -112,7 +115,7 @@ export default function CoursesSection({ form, updateField }: ProfileSectionProp
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Test Scores</h2>
-            <Button size="sm" variant="outline" onClick={addTestScore}>
+            <Button size="sm" variant="outline" onClick={addTestScore} tooltip="Add a new test score">
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
@@ -128,12 +131,14 @@ export default function CoursesSection({ form, updateField }: ProfileSectionProp
               <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Test Score {i + 1}</h4>
-                  <button
-                    onClick={() => removeTestScore(i)}
-                    className="text-[var(--error)] hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove this test score">
+                    <button
+                      onClick={() => removeTestScore(i)}
+                      className="cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <ServerSuggestionInput

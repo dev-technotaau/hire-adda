@@ -9,7 +9,6 @@ import {
   Building2,
   MapPin,
   Clock,
-  Calendar,
   Star,
   CheckCircle2,
   XCircle,
@@ -24,6 +23,7 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import Modal from '@/components/ui/Modal';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { useApplication, useWithdrawApplication } from '@/hooks/use-jobs';
 import { ROUTES } from '@/constants/routes';
@@ -52,7 +52,6 @@ const TIMELINE_STEPS: { key: ApplicationStatus; label: string }[] = [
   { key: 'VIEWED', label: 'Viewed' },
   { key: 'SHORTLISTED', label: 'Shortlisted' },
   { key: 'SELECTED', label: 'Selected' },
-  { key: 'INTERVIEW_SCHEDULED', label: 'Interview' },
   { key: 'OFFERED', label: 'Offered' },
   { key: 'HIRED', label: 'Hired' },
 ];
@@ -62,9 +61,8 @@ const STATUS_ORDER: Record<string, number> = {
   VIEWED: 1,
   SHORTLISTED: 2,
   SELECTED: 3,
-  INTERVIEW_SCHEDULED: 4,
-  OFFERED: 5,
-  HIRED: 6,
+  OFFERED: 4,
+  HIRED: 5,
 };
 
 function canWithdraw(status: string): boolean {
@@ -115,12 +113,14 @@ export default function CandidateApplicationDetailPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <Link
-            href={ROUTES.CANDIDATE.APPLICATIONS}
-            className="rounded-lg p-2 hover:bg-[var(--bg-secondary)]"
-          >
-            <ArrowLeft className="h-5 w-5 text-[var(--text-muted)]" />
-          </Link>
+          <Tooltip content="Back to applications">
+            <Link
+              href={ROUTES.CANDIDATE.APPLICATIONS}
+              className="rounded-lg p-2 hover:bg-[var(--bg-secondary)]"
+            >
+              <ArrowLeft className="h-5 w-5 text-[var(--text-muted)]" />
+            </Link>
+          </Tooltip>
           <div>
             <h1 className="text-xl font-semibold text-[var(--text)]">Application Details</h1>
             <p className="text-sm text-[var(--text-muted)]">
@@ -149,12 +149,14 @@ export default function CandidateApplicationDetailPage() {
                       </div>
                     )}
                     <div className="flex-1">
-                      <Link
-                        href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-                        className="hover:text-primary text-lg font-semibold text-[var(--text)]"
-                      >
-                        {job.title}
-                      </Link>
+                      <Tooltip content={`View full details for ${job.title}`}>
+                        <Link
+                          href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
+                          className="hover:text-primary text-lg font-semibold text-[var(--text)]"
+                        >
+                          {job.title}
+                        </Link>
+                      </Tooltip>
                       <p className="text-sm text-[var(--text-muted)]">{job.company?.companyName}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-[var(--text-light)]">
                         <span className="flex items-center gap-1">
@@ -318,36 +320,11 @@ export default function CandidateApplicationDetailPage() {
                   <TimelineRow label="Applied" date={app.appliedAt} />
                   <TimelineRow label="Viewed by employer" date={app.viewedAt} />
                   <TimelineRow label="Selected" date={app.selectedAt} />
-                  <TimelineRow label="Interview" date={app.interviewDate} />
                   <TimelineRow label="Offered" date={app.offeredAt} />
                   <TimelineRow label="Hired" date={app.hiredAt} />
                 </div>
               </div>
             </Card>
-
-            {/* Interview Details */}
-            {(app.interviewDate || app.interviewNotes) && (
-              <Card>
-                <div className="p-6">
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text)]">
-                    <Calendar className="h-4 w-4" />
-                    Interview Details
-                  </h3>
-                  {app.interviewDate && (
-                    <p className="text-sm text-[var(--text-light)]">
-                      <span className="font-medium text-[var(--text)]">Date:</span>{' '}
-                      {formatDate(app.interviewDate, 'PPpp')}
-                    </p>
-                  )}
-                  {app.interviewNotes && (
-                    <p className="mt-2 text-sm text-[var(--text-light)]">
-                      <span className="font-medium text-[var(--text)]">Notes:</span>{' '}
-                      {app.interviewNotes}
-                    </p>
-                  )}
-                </div>
-              </Card>
-            )}
 
             {/* Offer Details */}
             {app.offerDetails && (
@@ -405,12 +382,13 @@ export default function CandidateApplicationDetailPage() {
                     variant="destructive"
                     className="w-full"
                     onClick={() => setShowWithdrawModal(true)}
+                    tooltip="Withdraw this application"
                   >
                     Withdraw Application
                   </Button>
                 )}
-                <Link href={ROUTES.CANDIDATE.APPLICATIONS}>
-                  <Button variant="outline" className="w-full">
+                <Link href={ROUTES.CANDIDATE.APPLICATIONS} title="Return to applications list">
+                  <Button variant="outline" className="w-full" tooltip="Back to applications list">
                     Back to Applications
                   </Button>
                 </Link>
@@ -433,13 +411,14 @@ export default function CandidateApplicationDetailPage() {
             be undone.
           </p>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowWithdrawModal(false)}>
+            <Button variant="outline" onClick={() => setShowWithdrawModal(false)} tooltip="Cancel withdrawal">
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleWithdraw}
               isLoading={withdrawMutation.isPending}
+              tooltip="Confirm withdrawal"
             >
               Withdraw
             </Button>

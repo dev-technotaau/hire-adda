@@ -16,6 +16,7 @@ import {
   RemoveFormatting,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Tooltip from './Tooltip';
 
 interface RichTextEditorProps {
   value: string;
@@ -41,21 +42,22 @@ function ToolbarButton({
   title: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={cn(
-        'rounded p-1.5 transition-colors',
-        active
-          ? 'bg-primary/10 text-primary'
-          : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
-        disabled && 'cursor-not-allowed opacity-40',
-      )}
-    >
-      {children}
-    </button>
+    <Tooltip content={title}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={cn(
+          'rounded p-1.5 transition-colors',
+          active
+            ? 'bg-primary/10 text-primary'
+            : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
+          disabled && 'cursor-not-allowed opacity-40',
+        )}
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }
 

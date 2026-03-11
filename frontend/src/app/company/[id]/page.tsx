@@ -37,6 +37,7 @@ import {
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Skeleton from '@/components/ui/Skeleton';
+import Tooltip from '@/components/ui/Tooltip';
 import Logo from '@/components/common/Logo';
 import { employerService } from '@/services/employer.service';
 import { QUERY_KEYS } from '@/constants/config';
@@ -48,15 +49,19 @@ function PublicPageShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[var(--bg)]">
       <header className="border-b border-[var(--border)] bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link href="/">
-            <Logo />
-          </Link>
-          <Link
-            href="/"
-            className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-          >
-            Back to Home
-          </Link>
+          <Tooltip content="Go to the home page">
+            <Link href="/">
+              <Logo />
+            </Link>
+          </Tooltip>
+          <Tooltip content="Return to the home page">
+            <Link
+              href="/"
+              className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+            >
+              Back to Home
+            </Link>
+          </Tooltip>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
@@ -107,9 +112,11 @@ export default function PublicCompanyProfilePage() {
           <p className="mt-2 text-sm text-[var(--text-muted)]">
             This company profile may have been removed or does not exist.
           </p>
-          <Link href="/" className="text-primary mt-4 text-sm hover:underline">
-            Go to Home
-          </Link>
+          <Tooltip content="Go to the home page">
+            <Link href="/" className="text-primary mt-4 text-sm hover:underline">
+              Go to Home
+            </Link>
+          </Tooltip>
         </div>
       </PublicPageShell>
     );
@@ -208,15 +215,17 @@ export default function PublicCompanyProfilePage() {
               </div>
 
               {company.website && (
-                <a
-                  href={company.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary inline-flex items-center gap-1 text-sm hover:underline"
-                >
-                  <Globe className="h-3.5 w-3.5" />{' '}
-                  {company.website.replace(/^https?:\/\//, '')}
-                </a>
+                <Tooltip content="Visit company website">
+                  <a
+                    href={company.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary inline-flex items-center gap-1 text-sm hover:underline"
+                  >
+                    <Globe className="h-3.5 w-3.5" />{' '}
+                    {company.website.replace(/^https?:\/\//, '')}
+                  </a>
+                </Tooltip>
               )}
             </div>
           </div>
@@ -255,15 +264,17 @@ export default function PublicCompanyProfilePage() {
               </div>
             }
           >
-            <a
-              href={company.companyVideoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary inline-flex items-center gap-2 text-sm hover:underline"
-            >
-              <Play className="h-4 w-4" /> Watch our company video
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            <Tooltip content="Open company video in a new tab">
+              <a
+                href={company.companyVideoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary inline-flex items-center gap-2 text-sm hover:underline"
+              >
+                <Play className="h-4 w-4" /> Watch our company video
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </Tooltip>
           </Card>
         )}
 
@@ -533,9 +544,11 @@ export default function PublicCompanyProfilePage() {
                     <div className="flex items-center gap-1">
                       <h3 className="truncate font-semibold text-[var(--text)]">{leader.name}</h3>
                       {leader.linkedinUrl && (
-                        <a href={leader.linkedinUrl} target="_blank" rel="noopener noreferrer">
-                          <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
-                        </a>
+                        <Tooltip content="View LinkedIn profile">
+                          <a href={leader.linkedinUrl} target="_blank" rel="noopener noreferrer">
+                            <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
+                          </a>
+                        </Tooltip>
                       )}
                     </div>
                     <p className="text-sm text-[var(--text-secondary)]">{leader.designation}</p>
@@ -784,84 +797,100 @@ export default function PublicCompanyProfilePage() {
           >
             <div className="flex flex-wrap gap-3">
               {company.socialLinks?.linkedin && (
-                <a
-                  href={company.socialLinks.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  <Linkedin className="h-4 w-4 text-[#0A66C2]" /> LinkedIn
-                </a>
+                <Tooltip content="Visit LinkedIn page">
+                  <a
+                    href={company.socialLinks.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
+                    <Linkedin className="h-4 w-4 text-[#0A66C2]" /> LinkedIn
+                  </a>
+                </Tooltip>
               )}
               {company.socialLinks?.twitter && (
-                <a
-                  href={company.socialLinks.twitter}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  <ExternalLink className="h-4 w-4" /> Twitter/X
-                </a>
+                <Tooltip content="Visit Twitter/X page">
+                  <a
+                    href={company.socialLinks.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
+                    <ExternalLink className="h-4 w-4" /> Twitter/X
+                  </a>
+                </Tooltip>
               )}
               {company.socialLinks?.facebook && (
-                <a
-                  href={company.socialLinks.facebook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  <Facebook className="h-4 w-4 text-[#1877F2]" /> Facebook
-                </a>
+                <Tooltip content="Visit Facebook page">
+                  <a
+                    href={company.socialLinks.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
+                    <Facebook className="h-4 w-4 text-[#1877F2]" /> Facebook
+                  </a>
+                </Tooltip>
               )}
               {company.socialLinks?.instagram && (
-                <a
-                  href={company.socialLinks.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  <Instagram className="h-4 w-4 text-[#E1306C]" /> Instagram
-                </a>
+                <Tooltip content="Visit Instagram page">
+                  <a
+                    href={company.socialLinks.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
+                    <Instagram className="h-4 w-4 text-[#E1306C]" /> Instagram
+                  </a>
+                </Tooltip>
               )}
               {company.socialLinks?.youtube && (
-                <a
-                  href={company.socialLinks.youtube}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  <Youtube className="h-4 w-4 text-[#FF0000]" /> YouTube
-                </a>
+                <Tooltip content="Visit YouTube channel">
+                  <a
+                    href={company.socialLinks.youtube}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
+                    <Youtube className="h-4 w-4 text-[#FF0000]" /> YouTube
+                  </a>
+                </Tooltip>
               )}
               {company.socialLinks?.glassdoor && (
-                <a
-                  href={company.socialLinks.glassdoor}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  <ExternalLink className="h-4 w-4 text-[#0CAA41]" /> Glassdoor
-                </a>
+                <Tooltip content="View Glassdoor reviews">
+                  <a
+                    href={company.socialLinks.glassdoor}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
+                    <ExternalLink className="h-4 w-4 text-[#0CAA41]" /> Glassdoor
+                  </a>
+                </Tooltip>
               )}
               {company.careersPageUrl && (
-                <a
-                  href={company.careersPageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  <ExternalLink className="text-primary h-4 w-4" /> Careers Page
-                </a>
+                <Tooltip content="Browse open positions on company careers page">
+                  <a
+                    href={company.careersPageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
+                    <ExternalLink className="text-primary h-4 w-4" /> Careers Page
+                  </a>
+                </Tooltip>
               )}
               {company.blogUrl && (
-                <a
-                  href={company.blogUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  <BookOpen className="h-4 w-4 text-[var(--warning)]" /> Blog
-                </a>
+                <Tooltip content="Read the company blog">
+                  <a
+                    href={company.blogUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
+                    <BookOpen className="h-4 w-4 text-[var(--warning)]" /> Blog
+                  </a>
+                </Tooltip>
               )}
             </div>
           </Card>

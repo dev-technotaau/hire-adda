@@ -44,6 +44,7 @@ import ProgressBar from '@/components/ui/ProgressBar';
 import FileUpload from '@/components/ui/FileUpload';
 import Skeleton from '@/components/ui/Skeleton';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
 import { candidateService } from '@/services/candidate.service';
 import { authService } from '@/services/auth.service';
 import { formatFileSize } from '@/lib/utils';
@@ -115,6 +116,14 @@ export default function CandidateProfilePage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>('personal');
+
+  const handleSectionChange = (section: Section) => {
+    setActiveSection(section);
+    const url = new URL(window.location.href);
+    url.searchParams.set('section', section);
+    window.history.replaceState({}, '', url.toString());
+  };
+
   const [form, setForm] = useState<UpdateCandidateRequest>({});
   const [formDirty, setFormDirty] = useState(false);
   const initialFormRef = useRef<string>('');
@@ -182,9 +191,9 @@ export default function CandidateProfilePage() {
           currentIndustry: profile.currentIndustry || '',
           currentDepartment: profile.currentDepartment || '',
           functionalArea: profile.functionalArea || '',
-          currSalary: profile.currSalary || undefined,
-          expectedSalaryMin: profile.expectedSalaryMin || undefined,
-          expectedSalaryMax: profile.expectedSalaryMax || undefined,
+          currSalary: profile.currSalary != null ? Number(profile.currSalary) : undefined,
+          expectedSalaryMin: profile.expectedSalaryMin != null ? Number(profile.expectedSalaryMin) : undefined,
+          expectedSalaryMax: profile.expectedSalaryMax != null ? Number(profile.expectedSalaryMax) : undefined,
           salaryCurrency: profile.salaryCurrency || 'INR',
           noticePeriod: profile.noticePeriod || undefined,
           servingNoticePeriod: profile.servingNoticePeriod || false,
@@ -425,6 +434,10 @@ export default function CandidateProfilePage() {
       passportExpiryDate: form.passportExpiryDate
         ? new Date(form.passportExpiryDate).toISOString()
         : undefined,
+      // Prisma Decimal fields serialize as strings — coerce back to numbers for Zod
+      currSalary: profileFields.currSalary != null ? Number(profileFields.currSalary) : undefined,
+      expectedSalaryMin: profileFields.expectedSalaryMin != null ? Number(profileFields.expectedSalaryMin) : undefined,
+      expectedSalaryMax: profileFields.expectedSalaryMax != null ? Number(profileFields.expectedSalaryMax) : undefined,
     };
     updateMutation.mutate(payload);
   };
@@ -533,12 +546,12 @@ export default function CandidateProfilePage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Link href={ROUTES.CANDIDATE.PROFILE_PREVIEW}>
-              <Button variant="outline">
+            <Link href={ROUTES.CANDIDATE.PROFILE_PREVIEW} title="See how employers view your profile">
+              <Button variant="outline" tooltip="Preview your profile as an employer">
                 <Eye className="mr-1.5 h-4 w-4" /> Preview as Employer
               </Button>
             </Link>
-            <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty}>
+            <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty} tooltip="Save all profile changes">
               <Save className="mr-1.5 h-4 w-4" /> Save Changes
             </Button>
           </div>
@@ -564,6 +577,18 @@ export default function CandidateProfilePage() {
                   size="sm"
                   className="mt-2"
                 />
+                {completeness.sections.filter((s) => !s.completed).length > 0 && (
+                  <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                    Missing:{' '}
+                    {completeness.sections
+                      .filter((s) => !s.completed)
+                      .slice(0, 3)
+                      .map((s) => s.name)
+                      .join(', ')}
+                    {completeness.sections.filter((s) => !s.completed).length > 3 &&
+                      ` +${completeness.sections.filter((s) => !s.completed).length - 3} more`}
+                  </p>
+                )}
               </div>
             </div>
           </Card>
@@ -578,8 +603,9 @@ export default function CandidateProfilePage() {
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setActiveSection(key)}
-                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    onClick={() => handleSectionChange(key)}
+                    title={`Go to ${label} section`}
+                    className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                       activeSection === key
                         ? 'bg-primary-light text-primary'
                         : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]'
@@ -731,6 +757,7 @@ export default function CandidateProfilePage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => setShowActiveResumePreview((prev) => !prev)}
+                                  tooltip={showActiveResumePreview ? 'Hide resume preview' : 'Preview your resume'}
                                 >
                                   <Eye className="mr-1.5 h-4 w-4" />{' '}
                                   {showActiveResumePreview ? 'Hide Preview' : 'Preview'}
@@ -742,6 +769,7 @@ export default function CandidateProfilePage() {
                                   onClick={() =>
                                     window.open(profile.resume!, '_blank', 'noopener,noreferrer')
                                   }
+                                  tooltip="Preview your resume"
                                 >
                                   <Eye className="mr-1.5 h-4 w-4" /> Preview
                                 </Button>
@@ -756,6 +784,7 @@ export default function CandidateProfilePage() {
                                   link.rel = 'noopener noreferrer';
                                   link.click();
                                 }}
+                                tooltip="Download your resume"
                               >
                                 <Download className="mr-1.5 h-4 w-4" /> Download
                               </Button>
@@ -776,6 +805,7 @@ export default function CandidateProfilePage() {
                                 }}
                                 disabled={deleteResumeMutation.isPending}
                                 className="text-[var(--error)] hover:bg-red-50 hover:text-[var(--error)]"
+                                tooltip="Delete this resume"
                               >
                                 <XCircle className="mr-1.5 h-4 w-4" /> Delete
                               </Button>
@@ -896,6 +926,7 @@ export default function CandidateProfilePage() {
                                   setParsedResumeData(null);
                                   setResumeParseApplied(false);
                                 }}
+                                tooltip="Remove selected file"
                               >
                                 Remove
                               </Button>
@@ -907,6 +938,7 @@ export default function CandidateProfilePage() {
                                 onClick={handleUploadOnly}
                                 isLoading={resumeMutation.isPending && !resumeParsing}
                                 disabled={resumeParsing || resumeMutation.isPending}
+                                tooltip="Upload resume without AI parsing"
                               >
                                 <Upload className="mr-1.5 h-4 w-4" />
                                 Upload Resume
@@ -916,6 +948,7 @@ export default function CandidateProfilePage() {
                                 onClick={handleUploadAndParse}
                                 isLoading={resumeMutation.isPending && resumeParsing}
                                 disabled={resumeParsing || resumeMutation.isPending}
+                                tooltip="Upload and extract details using AI"
                               >
                                 <Sparkles className="mr-1.5 h-4 w-4" />
                                 Upload & Parse with AI
@@ -966,6 +999,7 @@ export default function CandidateProfilePage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => setShowUploadedResumePreview((prev) => !prev)}
+                                    tooltip={showUploadedResumePreview ? 'Hide resume preview' : 'Preview uploaded resume'}
                                   >
                                     <Eye className="mr-1.5 h-4 w-4" />
                                     {showUploadedResumePreview ? 'Hide' : 'Preview'}
@@ -982,6 +1016,7 @@ export default function CandidateProfilePage() {
                                     setResumeParsing(false);
                                     setShowUploadedResumePreview(false);
                                   }}
+                                  tooltip="Replace with a different resume"
                                 >
                                   Replace
                                 </Button>
@@ -1002,7 +1037,7 @@ export default function CandidateProfilePage() {
 
                             {/* Parse with AI button (only if not yet parsed/applied) */}
                             {!resumeParsing && !parsedResumeData && !resumeParseApplied && (
-                              <Button variant="secondary" onClick={handleParseOnly}>
+                              <Button variant="secondary" onClick={handleParseOnly} tooltip="Extract profile details using AI">
                                 <Sparkles className="mr-1.5 h-4 w-4" />
                                 Parse with AI
                               </Button>
@@ -1114,6 +1149,7 @@ export default function CandidateProfilePage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => setShowResumePreview((prev) => !prev)}
+                                tooltip={showResumePreview ? 'Hide generated resume preview' : 'Preview generated resume'}
                               >
                                 <Eye className="mr-1.5 h-4 w-4" />{' '}
                                 {showResumePreview ? 'Hide Preview' : 'Preview'}
@@ -1129,6 +1165,7 @@ export default function CandidateProfilePage() {
                                   link.rel = 'noopener noreferrer';
                                   link.click();
                                 }}
+                                tooltip="Download generated resume as PDF"
                               >
                                 <Download className="mr-1.5 h-4 w-4" /> Download
                               </Button>
@@ -1145,6 +1182,7 @@ export default function CandidateProfilePage() {
                                     useGeneratedResumeMutation.mutate();
                                   }}
                                   isLoading={useGeneratedResumeMutation.isPending}
+                                  tooltip="Set this as your active profile resume"
                                 >
                                   <Upload className="mr-1.5 h-4 w-4" /> Use as Profile Resume
                                 </Button>
@@ -1163,6 +1201,7 @@ export default function CandidateProfilePage() {
                                 }}
                                 disabled={deleteResumeMutation.isPending}
                                 className="text-[var(--error)] hover:bg-red-50 hover:text-[var(--error)]"
+                                tooltip="Delete this generated resume"
                               >
                                 <X className="mr-1.5 h-4 w-4" /> Delete
                               </Button>
@@ -1218,15 +1257,16 @@ export default function CandidateProfilePage() {
                                 const sec = sectionMap[item.section];
                                 const Icon = sec?.icon || FileText;
                                 return (
-                                  <button
-                                    key={item.field}
-                                    onClick={() => setActiveSection(item.section as Section)}
-                                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${colorClasses}`}
-                                  >
-                                    <Icon className="h-3.5 w-3.5" />
-                                    {item.message}
-                                    <ChevronRight className="h-3 w-3 opacity-50" />
-                                  </button>
+                                  <Tooltip key={item.field} content={`Go to ${item.section} section`}>
+                                    <button
+                                      onClick={() => handleSectionChange(item.section as Section)}
+                                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${colorClasses}`}
+                                    >
+                                      <Icon className="h-3.5 w-3.5" />
+                                      {item.message}
+                                      <ChevronRight className="h-3 w-3 opacity-50" />
+                                    </button>
+                                  </Tooltip>
                                 );
                               })}
                             </div>
@@ -1293,6 +1333,7 @@ export default function CandidateProfilePage() {
                       onClick={() => generateResumeMutation.mutate()}
                       isLoading={generateResumeMutation.isPending}
                       disabled={readinessData?.data && !readinessData.data.canGenerate}
+                      tooltip="Generate a PDF resume from your profile"
                     >
                       {generateResumeMutation.isPending ? (
                         <>
@@ -1322,7 +1363,7 @@ export default function CandidateProfilePage() {
 
             {/* Save Button (bottom) */}
             <div className="flex justify-end">
-              <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty}>
+              <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty} tooltip="Save all profile changes">
                 <Save className="mr-1.5 h-4 w-4" /> Save Changes
               </Button>
             </div>
@@ -1460,13 +1501,14 @@ function ResumeParserSection({
             onClick={() => parseMutation.mutate()}
             isLoading={parseMutation.isPending || polling}
             disabled={polling}
+            tooltip="Extract profile details from your resume using AI"
           >
             <Brain className="mr-1.5 h-4 w-4" />
             {polling ? 'Analyzing...' : parsedData ? 'Re-parse Resume' : 'Parse with AI'}
           </Button>
 
           {parsedData && !showReview && !polling && (
-            <Button variant="outline" onClick={() => setShowReview(true)}>
+            <Button variant="outline" onClick={() => setShowReview(true)} tooltip="Review extracted resume data">
               <Eye className="mr-1.5 h-4 w-4" /> Review Parsed Data
             </Button>
           )}

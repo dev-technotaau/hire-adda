@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Building2, Eye, ImageIcon, Save, Upload, X, Loader2, Camera } from 'lucide-react';
+import Tooltip from '@/components/ui/Tooltip';
 import { ROUTES } from '@/constants/routes';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -89,6 +90,14 @@ export default function CompanyProfilePage() {
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
   const [activeSection, setActiveSection] = useState<Section>('company');
+
+  const handleSectionChange = (section: Section) => {
+    setActiveSection(section);
+    const url = new URL(window.location.href);
+    url.searchParams.set('section', section);
+    window.history.replaceState({}, '', url.toString());
+  };
+
   const [form, setForm] = useState<UpdateCompanyRequest>({});
   const [formDirty, setFormDirty] = useState(false);
   const initialFormRef = useRef<string>('');
@@ -524,42 +533,55 @@ export default function CompanyProfilePage() {
             <p className="mt-1 text-sm text-[var(--text-muted)]">Manage your company information</p>
           </div>
           <div className="flex gap-2">
-            <Link href={ROUTES.EMPLOYER.PROFILE_PREVIEW}>
-              <Button variant="outline">
-                <Eye className="mr-1.5 h-4 w-4" /> Preview as Candidate
-              </Button>
-            </Link>
-            <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty && firstName === (user?.firstName || '') && lastName === (user?.lastName || '')}>
+            <Tooltip content="Preview how candidates will see your profile">
+              <Link href={ROUTES.EMPLOYER.PROFILE_PREVIEW}>
+                <Button variant="outline" tooltip="Preview your company profile as a candidate">
+                  <Eye className="mr-1.5 h-4 w-4" /> Preview as Candidate
+                </Button>
+              </Link>
+            </Tooltip>
+            <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty && firstName === (user?.firstName || '') && lastName === (user?.lastName || '')} tooltip="Save all profile changes">
               <Save className="mr-1.5 h-4 w-4" /> Save Changes
             </Button>
           </div>
         </div>
 
-        {/* Your Name */}
-        <Card padding="sm">
-          <div>
-            <p className="mb-2 font-medium text-[var(--text)]">Your Name</p>
-            <p className="mb-3 text-xs text-[var(--text-muted)]">
-              Your personal name for account identification
-            </p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label="First Name"
-                placeholder="Enter your first name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-              />
-              <Input
-                label="Last Name"
-                placeholder="Enter your last name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-              />
+        {/* Completeness */}
+        {completeness && completeness.score < 100 && (
+          <Card padding="sm">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-[var(--text)]">
+                  Profile Completeness: {completeness.score}%
+                </p>
+                <ProgressBar
+                  value={completeness.score}
+                  color={
+                    completeness.score >= 80
+                      ? 'success'
+                      : completeness.score >= 50
+                        ? 'warning'
+                        : 'error'
+                  }
+                  size="sm"
+                  className="mt-2"
+                />
+                {completeness.sections.filter((s) => !s.completed).length > 0 && (
+                  <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                    Missing:{' '}
+                    {completeness.sections
+                      .filter((s) => !s.completed)
+                      .slice(0, 3)
+                      .map((s) => s.name)
+                      .join(', ')}
+                    {completeness.sections.filter((s) => !s.completed).length > 3 &&
+                      ` +${completeness.sections.filter((s) => !s.completed).length - 3} more`}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {/* Logo */}
         <Card padding="sm">
@@ -600,15 +622,17 @@ export default function CompanyProfilePage() {
                   </span>
                 </label>
                 {company?.logo && (
-                  <button
-                    onClick={() => setShowRemoveLogoConfirm(true)}
-                    disabled={isLogoUploading}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-                    title="Remove logo"
-                  >
-                    <X className="h-4 w-4" />
-                    Remove Logo
-                  </button>
+                  <Tooltip content="Remove your company logo">
+                    <button
+                      onClick={() => setShowRemoveLogoConfirm(true)}
+                      disabled={isLogoUploading}
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                      title="Remove logo"
+                    >
+                      <X className="h-4 w-4" />
+                      Remove Logo
+                    </button>
+                  </Tooltip>
                 )}
               </div>
             </div>
@@ -693,20 +717,22 @@ export default function CompanyProfilePage() {
                   </span>
                 </label>
                 {company?.coverImage && (
-                  <button
-                    onClick={() => setShowRemoveCoverConfirm(true)}
-                    disabled={isCoverUploading}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-                    title="Remove cover"
-                  >
-                    <X className="h-4 w-4" />
-                    Remove Cover
-                  </button>
+                  <Tooltip content="Remove your cover image">
+                    <button
+                      onClick={() => setShowRemoveCoverConfirm(true)}
+                      disabled={isCoverUploading}
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                      title="Remove cover"
+                    >
+                      <X className="h-4 w-4" />
+                      Remove Cover
+                    </button>
+                  </Tooltip>
                 )}
               </div>
             </div>
             <p className="mt-2 text-xs text-[var(--text-muted)]">
-              JPG, PNG, or WebP. Max 5MB. Will be cropped to 3:1 aspect ratio (1200x400px).
+              JPG, PNG, or WebP. Max 5MB. Will be cropped to 3:1 aspect ratio (1920x640px).
             </p>
           </div>
 
@@ -721,8 +747,8 @@ export default function CompanyProfilePage() {
               onCropComplete={handleCoverCropComplete}
               aspectRatio={3}
               circularCrop={false}
-              outputWidth={1200}
-              outputHeight={400}
+              outputWidth={1920}
+              outputHeight={640}
             />
           )}
 
@@ -747,60 +773,50 @@ export default function CompanyProfilePage() {
           />
         </Card>
 
-        {/* Completeness */}
-        {completeness && completeness.score < 100 && (
-          <Card padding="sm">
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-[var(--text)]">
-                  Profile Completeness: {completeness.score}%
-                </p>
-                <ProgressBar
-                  value={completeness.score}
-                  color={
-                    completeness.score >= 80
-                      ? 'success'
-                      : completeness.score >= 50
-                        ? 'warning'
-                        : 'error'
-                  }
-                  size="sm"
-                  className="mt-2"
-                />
-                {completeness.sections.filter((s) => !s.completed).length > 0 && (
-                  <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                    Missing:{' '}
-                    {completeness.sections
-                      .filter((s) => !s.completed)
-                      .slice(0, 3)
-                      .map((s) => s.name)
-                      .join(', ')}
-                    {completeness.sections.filter((s) => !s.completed).length > 3 &&
-                      ` +${completeness.sections.filter((s) => !s.completed).length - 3} more`}
-                  </p>
-                )}
-              </div>
+        {/* Your Name */}
+        <Card padding="sm">
+          <div>
+            <p className="mb-2 font-medium text-[var(--text)]">Your Name</p>
+            <p className="mb-3 text-xs text-[var(--text-muted)]">
+              Your personal name for account identification
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="First Name"
+                placeholder="Enter your first name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+              />
+              <Input
+                label="Last Name"
+                placeholder="Enter your last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+              />
             </div>
-          </Card>
-        )}
+          </div>
+        </Card>
 
         <div className="grid gap-6 lg:grid-cols-4">
           {/* Sidebar */}
           <Card padding="sm">
             <nav className="space-y-1">
               {sections.map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setActiveSection(key)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                    activeSection === key
-                      ? 'bg-primary-light text-primary'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
-                  }`}
-                >
-                  {label}
-                </button>
+                <Tooltip key={key} content={`Edit ${label} section`}>
+                  <button
+                    type="button"
+                    onClick={() => handleSectionChange(key)}
+                    className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                      activeSection === key
+                        ? 'bg-primary-light text-primary'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                </Tooltip>
               ))}
             </nav>
           </Card>
@@ -818,7 +834,7 @@ export default function CompanyProfilePage() {
             </Card>
 
             <div className="flex justify-end">
-              <Button onClick={handleSave} isLoading={updateMutation.isPending}>
+              <Button onClick={handleSave} isLoading={updateMutation.isPending} tooltip="Save all profile changes">
                 <Save className="mr-1.5 h-4 w-4" /> Save Changes
               </Button>
             </div>

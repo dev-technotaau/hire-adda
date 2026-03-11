@@ -99,7 +99,7 @@ export default function ProfilePreviewPage() {
         {/* Top Bar */}
         <div className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] p-4">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => router.push(ROUTES.CANDIDATE.PROFILE)}>
+            <Button variant="ghost" size="sm" onClick={() => router.push(ROUTES.CANDIDATE.PROFILE)} tooltip="Back to edit profile">
               <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to Edit
             </Button>
             <span className="text-sm font-medium text-[var(--text-secondary)]">
@@ -421,6 +421,7 @@ export default function ProfilePreviewPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-primary hover:underline"
+                                title="View project"
                               >
                                 <ExternalLink className="h-4 w-4" />
                               </a>
@@ -485,6 +486,7 @@ export default function ProfilePreviewPage() {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary mt-1 inline-flex items-center gap-1 text-xs hover:underline"
+                              title="Verify certification"
                             >
                               <ExternalLink className="h-3 w-3" /> Verify
                             </a>
@@ -536,6 +538,7 @@ export default function ProfilePreviewPage() {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary mt-1 inline-flex items-center gap-1 text-xs hover:underline"
+                              title="View publication"
                             >
                               <ExternalLink className="h-3 w-3" /> View
                             </a>
@@ -647,6 +650,7 @@ export default function ProfilePreviewPage() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-primary text-xs hover:underline"
+                                  title="View course"
                                 >
                                   View
                                 </a>
@@ -1043,6 +1047,7 @@ export default function ProfilePreviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
+                          title="View LinkedIn profile"
                         >
                           <Linkedin className="h-4 w-4 text-[#0A66C2]" /> LinkedIn
                         </a>
@@ -1053,6 +1058,7 @@ export default function ProfilePreviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
+                          title="View GitHub profile"
                         >
                           <Github className="h-4 w-4" /> GitHub
                         </a>
@@ -1063,6 +1069,7 @@ export default function ProfilePreviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
+                          title="View portfolio"
                         >
                           <Globe className="text-primary h-4 w-4" /> Portfolio
                         </a>
@@ -1073,6 +1080,7 @@ export default function ProfilePreviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
+                          title="View Stack Overflow profile"
                         >
                           <Code className="h-4 w-4 text-[#F48024]" /> Stack Overflow
                         </a>
@@ -1083,6 +1091,7 @@ export default function ProfilePreviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
+                          title="View Twitter/X profile"
                         >
                           <ExternalLink className="h-4 w-4" /> Twitter/X
                         </a>
@@ -1093,6 +1102,7 @@ export default function ProfilePreviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
+                          title="View personal blog"
                         >
                           <ExternalLink className="h-4 w-4" /> Blog
                         </a>
@@ -1103,6 +1113,7 @@ export default function ProfilePreviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
+                          title="View Dribbble profile"
                         >
                           <Palette className="h-4 w-4 text-[#EA4C89]" /> Dribbble
                         </a>
@@ -1113,6 +1124,7 @@ export default function ProfilePreviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
+                          title="View Behance profile"
                         >
                           <Palette className="h-4 w-4 text-[#1769FF]" /> Behance
                         </a>
@@ -1123,6 +1135,7 @@ export default function ProfilePreviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
+                          title="View Medium profile"
                         >
                           <BookOpen className="h-4 w-4" /> Medium
                         </a>
@@ -1133,6 +1146,7 @@ export default function ProfilePreviewPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
+                          title="View YouTube channel"
                         >
                           <Video className="h-4 w-4 text-[#FF0000]" /> YouTube
                         </a>

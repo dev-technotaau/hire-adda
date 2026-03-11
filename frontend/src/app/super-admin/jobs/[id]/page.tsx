@@ -199,7 +199,7 @@ export default function SuperAdminJobDetailPage() {
             The job you are looking for does not exist.
           </p>
           <Link href={ROUTES.SUPER_ADMIN.JOBS} className="mt-4">
-            <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="h-4 w-4" />}>
+            <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="h-4 w-4" />} tooltip="Return to jobs list">
               Back to Jobs
             </Button>
           </Link>
@@ -319,6 +319,7 @@ export default function SuperAdminJobDetailPage() {
                   variant="primary"
                   size="sm"
                   leftIcon={<Pencil className="h-4 w-4" />}
+                  tooltip="Edit this job posting"
                 >
                   Edit Job
                 </Button>
@@ -329,6 +330,7 @@ export default function SuperAdminJobDetailPage() {
                 leftIcon={<CheckCircle className="h-4 w-4" />}
                 onClick={() => setShowApproveModal(true)}
                 className="text-[var(--success)] border-[var(--success)]/30"
+                tooltip="Approve this job"
               >
                 Approve
               </Button>
@@ -338,6 +340,7 @@ export default function SuperAdminJobDetailPage() {
                 leftIcon={<XCircle className="h-4 w-4" />}
                 onClick={() => setShowRejectModal(true)}
                 className="text-error border-error/30"
+                tooltip="Reject this job"
               >
                 Reject
               </Button>
@@ -347,6 +350,7 @@ export default function SuperAdminJobDetailPage() {
                 leftIcon={<Flag className="h-4 w-4" />}
                 onClick={() => setShowFlagModal(true)}
                 className="text-[var(--warning)]"
+                tooltip="Flag for review"
               >
                 Flag
               </Button>
@@ -356,12 +360,13 @@ export default function SuperAdminJobDetailPage() {
                 leftIcon={<Trash2 className="h-4 w-4" />}
                 onClick={() => setShowDeleteModal(true)}
                 className="text-error"
+                tooltip="Delete this job"
               >
                 Delete
               </Button>
               {job.company?.userId && (
                 <Link href={ROUTES.SUPER_ADMIN.USER_DETAIL(job.company.userId)}>
-                  <Button variant="outline" size="sm" leftIcon={<Users className="h-4 w-4" />}>
+                  <Button variant="outline" size="sm" leftIcon={<Users className="h-4 w-4" />} tooltip="View employer profile">
                     View Employer
                   </Button>
                 </Link>
@@ -421,12 +426,13 @@ export default function SuperAdminJobDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowApproveModal(false)}>
+              <Button variant="outline" onClick={() => setShowApproveModal(false)} tooltip="Cancel approval">
                 Cancel
               </Button>
               <Button
                 onClick={() => moderateMutation.mutate({ status: 'OPEN' })}
                 isLoading={moderateMutation.isPending}
+                tooltip="Confirm job approval"
               >
                 Approve
               </Button>
@@ -460,6 +466,7 @@ export default function SuperAdminJobDetailPage() {
                   setShowRejectModal(false);
                   setRejectReason('');
                 }}
+                tooltip="Cancel rejection"
               >
                 Cancel
               </Button>
@@ -468,6 +475,7 @@ export default function SuperAdminJobDetailPage() {
                 onClick={() => moderateMutation.mutate({ status: 'CLOSED', reason: rejectReason })}
                 isLoading={moderateMutation.isPending}
                 disabled={!rejectReason.trim()}
+                tooltip="Confirm job rejection"
               >
                 Reject
               </Button>
@@ -510,6 +518,7 @@ export default function SuperAdminJobDetailPage() {
                   setShowFlagModal(false);
                   setFlagReason('');
                 }}
+                tooltip="Cancel flagging"
               >
                 Cancel
               </Button>
@@ -517,6 +526,7 @@ export default function SuperAdminJobDetailPage() {
                 onClick={() => flagMutation.mutate(flagReason)}
                 isLoading={flagMutation.isPending}
                 disabled={!flagReason.trim()}
+                tooltip="Confirm flagging job"
               >
                 Flag Job
               </Button>
@@ -549,13 +559,14 @@ export default function SuperAdminJobDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)} tooltip="Cancel deletion">
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => deleteMutation.mutate()}
                 isLoading={deleteMutation.isPending}
+                tooltip="Permanently delete job"
               >
                 Delete
               </Button>
@@ -800,6 +811,7 @@ function OverviewTab({ job }: { job: Job }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary max-w-[180px] truncate text-xs"
+                  title="Open external apply URL"
                 >
                   {job.externalApplyUrl}
                 </a>

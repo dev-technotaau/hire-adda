@@ -16,18 +16,25 @@ export async function GET(request: NextRequest) {
           headers: { Authorization: `Bearer ${tokens.accessToken}` },
         });
 
+        // Always persist refreshed tokens regardless of retry result.
+        // The old refresh token was revoked during rotation — losing the
+        // new tokens permanently locks the user out on the next request.
+        const { rememberMe } = await getTokensFromCookies();
+
         if (res.ok) {
           const data = await res.json();
-          const { rememberMe } = await getTokensFromCookies();
           const response = NextResponse.json(data);
           return setAuthCookies(response, tokens.accessToken, tokens.refreshToken, rememberMe);
         }
+
+        // Retry failed but tokens are still valid — preserve them so the
+        // next request can succeed (e.g. after lastActiveAt propagates).
+        const errorData = await res.json().catch(() => ({ status: 'error', message: 'Not authenticated' }));
+        const response = NextResponse.json(errorData, { status: res.status });
+        return setAuthCookies(response, tokens.accessToken, tokens.refreshToken, rememberMe);
       }
 
-      // Session is truly dead — clear stale cookies so middleware doesn't keep
-      // allowing access to protected routes with a dead session.
-      // This is safe here (unlike the catch-all proxy) because getMe() is the
-      // authoritative session check called once on mount, not concurrent bulk requests.
+      // Refresh itself failed (no valid refresh token) — session is truly dead.
       const response = NextResponse.json(
         { status: 'error', message: 'Not authenticated' },
         { status: 401 },

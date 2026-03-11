@@ -23,6 +23,7 @@ import { webauthnService } from '@/services/webauthn.service';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { loginSchema, type LoginFormData } from '@/validators/auth';
 import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
+import Tooltip from '@/components/ui/Tooltip';
 import { cn } from '@/lib/utils';
 import type { Role } from '@/types/auth';
 import type { ApiError } from '@/types/api';
@@ -309,7 +310,7 @@ export default function LoginPage() {
                   autoFocus
                   {...register('email')}
                 />
-                <Button type="submit" fullWidth className="mt-4">
+                <Button type="submit" fullWidth className="mt-4" tooltip="Continue to password step">
                   Continue
                 </Button>
               </motion.div>
@@ -327,13 +328,15 @@ export default function LoginPage() {
                 <div className="mb-4 flex items-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2">
                   <Mail className="h-4 w-4 text-[var(--text-muted)]" />
                   <span className="text-sm text-[var(--text-secondary)]">{getValues('email')}</span>
-                  <button
-                    type="button"
-                    onClick={() => setStep('email')}
-                    className="text-primary hover:text-primary-hover ml-auto text-xs"
-                  >
-                    Change
-                  </button>
+                  <Tooltip content="Change email address">
+                    <button
+                      type="button"
+                      onClick={() => setStep('email')}
+                      className="text-primary hover:text-primary-hover ml-auto text-xs"
+                    >
+                      Change
+                    </button>
+                  </Tooltip>
                 </div>
 
                 <Input
@@ -357,17 +360,19 @@ export default function LoginPage() {
 
                 <div className="mt-3 flex items-center justify-between">
                   <Checkbox label="Remember me" {...register('rememberMe')} />
-                  <Link
-                    href={`${ROUTES.AUTH.FORGOT_PASSWORD}?email=${encodeURIComponent(getValues('email') || '')}`}
-                    className="text-primary hover:text-primary-hover text-sm whitespace-nowrap"
-                  >
-                    Forgot password?
-                  </Link>
+                  <Tooltip content="Reset your password">
+                    <Link
+                      href={`${ROUTES.AUTH.FORGOT_PASSWORD}?email=${encodeURIComponent(getValues('email') || '')}`}
+                      className="text-primary hover:text-primary-hover text-sm whitespace-nowrap"
+                    >
+                      Forgot password?
+                    </Link>
+                  </Tooltip>
                 </div>
 
                 <Turnstile onSuccess={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
 
-                <Button type="submit" fullWidth className="mt-4" isLoading={isLoading}>
+                <Button type="submit" fullWidth className="mt-4" isLoading={isLoading} tooltip="Sign in to your account">
                   Sign In
                 </Button>
               </motion.div>
@@ -424,50 +429,57 @@ export default function LoginPage() {
                   className="mt-4"
                   isLoading={isLoading}
                   disabled={useBackupCode ? mfaCode.length < 8 : mfaCode.length !== 6}
+                  tooltip="Verify MFA code and sign in"
                 >
                   Verify & Sign In
                 </Button>
 
                 <div className="mt-3 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUseBackupCode(!useBackupCode);
-                      setMfaCode('');
-                    }}
-                    className="text-primary hover:text-primary-hover text-sm"
-                  >
-                    {useBackupCode ? 'Use authenticator code' : 'Use backup code'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep('password');
-                      setMfaRequired(false);
-                      setMfaCode('');
-                      setPasskeyMfaRequired(false);
-                      setPasskeyCredential(null);
-                      setUseBackupCode(false);
-                      setTrustDevice(false);
-                    }}
-                    className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-                  >
-                    Back to login
-                  </button>
+                  <Tooltip content={useBackupCode ? 'Switch to authenticator code' : 'Switch to backup code'}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseBackupCode(!useBackupCode);
+                        setMfaCode('');
+                      }}
+                      className="text-primary hover:text-primary-hover text-sm"
+                    >
+                      {useBackupCode ? 'Use authenticator code' : 'Use backup code'}
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Go back to login">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep('password');
+                        setMfaRequired(false);
+                        setMfaCode('');
+                        setPasskeyMfaRequired(false);
+                        setPasskeyCredential(null);
+                        setUseBackupCode(false);
+                        setTrustDevice(false);
+                      }}
+                      className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                    >
+                      Back to login
+                    </button>
+                  </Tooltip>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep('mfa-recovery');
-                    setRecoveryStep('request');
-                    setRecoveryOtp('');
-                    setMfaCode('');
-                  }}
-                  className="mt-4 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-                >
-                  Can&apos;t access authenticator?
-                </button>
+                <Tooltip content="Recover your account without authenticator">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('mfa-recovery');
+                      setRecoveryStep('request');
+                      setRecoveryOtp('');
+                      setMfaCode('');
+                    }}
+                    className="mt-4 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                  >
+                    Can&apos;t access authenticator?
+                  </button>
+                </Tooltip>
               </motion.div>
             )}
 
@@ -504,6 +516,7 @@ export default function LoginPage() {
                       fullWidth
                       onClick={handleRecoveryRequest}
                       isLoading={recoveryLoading}
+                      tooltip="Send a recovery code to your email"
                     >
                       Send Recovery Code
                     </Button>
@@ -531,32 +544,37 @@ export default function LoginPage() {
                       className="mt-4"
                       isLoading={recoveryLoading}
                       disabled={recoveryOtp.length !== 6}
+                      tooltip="Verify recovery code and sign in"
                     >
                       Verify & Sign In
                     </Button>
 
-                    <button
-                      type="button"
-                      onClick={handleRecoveryRequest}
-                      disabled={resendTimer > 0 || recoveryLoading}
-                      className="mt-3 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-50"
-                    >
-                      {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend code'}
-                    </button>
+                    <Tooltip content="Resend the recovery code to your email">
+                      <button
+                        type="button"
+                        onClick={handleRecoveryRequest}
+                        disabled={resendTimer > 0 || recoveryLoading}
+                        className="mt-3 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-50"
+                      >
+                        {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend code'}
+                      </button>
+                    </Tooltip>
                   </>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep('mfa');
-                    setRecoveryStep('request');
-                    setRecoveryOtp('');
-                  }}
-                  className="mt-3 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-                >
-                  Back to MFA
-                </button>
+                <Tooltip content="Return to MFA verification">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('mfa');
+                      setRecoveryStep('request');
+                      setRecoveryOtp('');
+                    }}
+                    className="mt-3 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                  >
+                    Back to MFA
+                  </button>
+                </Tooltip>
               </motion.div>
             )}
           </AnimatePresence>
@@ -571,6 +589,7 @@ export default function LoginPage() {
             fullWidth
             onClick={handlePasskeyLogin}
             isLoading={passkeyLoading}
+            tooltip="Authenticate using your passkey or biometrics"
           >
             <Fingerprint className="mr-2 h-4 w-4" />
             Sign in with Passkey
@@ -583,6 +602,7 @@ export default function LoginPage() {
           <Link
             href={ROUTES.AUTH.REGISTER}
             className="text-primary hover:text-primary-hover font-medium"
+            title="Create a new account"
           >
             Sign Up
           </Link>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import Input from '@/components/ui/Input';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import Select from '@/components/ui/Select';
@@ -83,7 +84,7 @@ export default function SkillsSection({ form, updateField }: ProfileSectionProps
                 }}
               />
             </div>
-            <Button variant="outline" onClick={addSkill} className="shrink-0">
+            <Button variant="outline" onClick={addSkill} className="shrink-0" tooltip="Add this skill">
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -108,7 +109,7 @@ export default function SkillsSection({ form, updateField }: ProfileSectionProps
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Skills with Proficiency</h2>
-            <Button size="sm" variant="outline" onClick={addSkillWithProficiency}>
+            <Button size="sm" variant="outline" onClick={addSkillWithProficiency} tooltip="Add a skill with proficiency level">
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
@@ -161,12 +162,14 @@ export default function SkillsSection({ form, updateField }: ProfileSectionProps
                     }
                   />
                 </div>
-                <button
-                  onClick={() => removeSkillWithProficiency(i)}
-                  className={`text-[var(--error)] hover:text-[var(--error-dark)] ${i === 0 ? 'mt-6' : ''}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <Tooltip content="Remove this skill">
+                  <button
+                    onClick={() => removeSkillWithProficiency(i)}
+                    className={`cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)] ${i === 0 ? 'mt-6' : ''}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               </div>
             ))
           )}
@@ -178,7 +181,7 @@ export default function SkillsSection({ form, updateField }: ProfileSectionProps
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">IT Skills</h2>
-            <Button size="sm" variant="outline" onClick={addITSkill}>
+            <Button size="sm" variant="outline" onClick={addITSkill} tooltip="Add a new IT skill">
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
@@ -235,12 +238,14 @@ export default function SkillsSection({ form, updateField }: ProfileSectionProps
                     }
                   />
                 </div>
-                <button
-                  onClick={() => removeITSkill(i)}
-                  className={`text-[var(--error)] hover:text-[var(--error-dark)] ${i === 0 ? 'mt-6' : ''}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <Tooltip content="Remove this IT skill">
+                  <button
+                    onClick={() => removeITSkill(i)}
+                    className={`cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)] ${i === 0 ? 'mt-6' : ''}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               </div>
             ))
           )}

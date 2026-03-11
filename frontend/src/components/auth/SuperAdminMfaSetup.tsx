@@ -120,7 +120,7 @@ export default function SuperAdminMfaSetup() {
                   </p>
                 </div>
 
-                <Button fullWidth isLoading={setupLoading} onClick={handleSetup}>
+                <Button fullWidth isLoading={setupLoading} onClick={handleSetup} tooltip="Begin MFA setup">
                   Set Up MFA
                 </Button>
               </div>
@@ -155,6 +155,7 @@ export default function SuperAdminMfaSetup() {
                       leftIcon={
                         copiedSecret ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />
                       }
+                      tooltip="Copy secret key"
                     >
                       {copiedSecret ? 'Copied' : 'Copy'}
                     </Button>
@@ -182,6 +183,7 @@ export default function SuperAdminMfaSetup() {
                   isLoading={enableLoading}
                   onClick={handleEnable}
                   disabled={!enablePassword || verifyCode.length !== 6}
+                  tooltip="Verify code and enable MFA"
                 >
                   Verify &amp; Enable
                 </Button>
@@ -212,7 +214,7 @@ export default function SuperAdminMfaSetup() {
                   </div>
                 </div>
 
-                <Button fullWidth isLoading={continueLoading} onClick={handleContinue}>
+                <Button fullWidth isLoading={continueLoading} onClick={handleContinue} tooltip="Go to dashboard">
                   Continue to Dashboard
                 </Button>
               </div>
@@ -222,7 +224,8 @@ export default function SuperAdminMfaSetup() {
             <button
               type="button"
               onClick={() => logout()}
-              className="mt-4 flex w-full items-center justify-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+              className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+              title="Sign out of your account"
             >
               <LogOut className="h-4 w-4" />
               Sign Out

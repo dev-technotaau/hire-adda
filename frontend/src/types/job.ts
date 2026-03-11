@@ -148,6 +148,7 @@ export interface Job {
   updatedAt: string;
   company?: JobCompany;
   _applicationCount?: number;
+  _hiredCount?: number;
   isSaved?: boolean;
   // Enterprise fields
   functionalArea: FunctionalArea | null;

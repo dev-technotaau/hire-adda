@@ -21,6 +21,7 @@ import Select from '@/components/ui/Select';
 import FileUpload from '@/components/ui/FileUpload';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { verificationService } from '@/services/verification.service';
 import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
@@ -135,6 +136,7 @@ export default function CandidateVerificationPage() {
             <Button
               onClick={() => setShowForm(true)}
               leftIcon={<ShieldCheck className="h-4 w-4" />}
+              tooltip="Submit a new verification request"
             >
               New Request
             </Button>
@@ -198,6 +200,7 @@ export default function CandidateVerificationPage() {
                     setShowForm(false);
                     setDocumentFile(null);
                   }}
+                  tooltip="Cancel verification request"
                 >
                   Cancel
                 </Button>
@@ -206,6 +209,7 @@ export default function CandidateVerificationPage() {
                   isLoading={submitMutation.isPending}
                   disabled={hasPendingOfType(selectedType)}
                   leftIcon={<Upload className="h-4 w-4" />}
+                  tooltip="Submit verification request"
                 >
                   Submit
                 </Button>
@@ -257,15 +261,17 @@ export default function CandidateVerificationPage() {
                           </div>
                         )}
                         {v.documentUrl && (
-                          <a
-                            href={v.documentUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary mt-2 inline-flex items-center gap-1 text-xs hover:underline"
-                          >
-                            <FileText className="h-3 w-3" />
-                            View uploaded document
-                          </a>
+                          <Tooltip content="Open document in new tab">
+                            <a
+                              href={v.documentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary mt-2 inline-flex items-center gap-1 text-xs hover:underline"
+                            >
+                              <FileText className="h-3 w-3" />
+                              View uploaded document
+                            </a>
+                          </Tooltip>
                         )}
                       </div>
                     </div>
@@ -283,7 +289,7 @@ export default function CandidateVerificationPage() {
               title="No verification requests"
               description="Submit your identity or employment documents for verification."
               action={
-                <Button onClick={() => setShowForm(true)} size="sm">
+                <Button onClick={() => setShowForm(true)} size="sm" tooltip="Submit a new verification request">
                   Submit Request
                 </Button>
               }

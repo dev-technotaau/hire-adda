@@ -33,6 +33,7 @@ import { createRegisterSchema, type RegisterFormData } from '@/validators/auth';
 import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
 import { useOtpConfig } from '@/hooks/use-otp-config';
 import { usePasswordRules } from '@/hooks/use-security-config';
+import Tooltip from '@/components/ui/Tooltip';
 import { cn } from '@/lib/utils';
 import type { Role } from '@/types/auth';
 import type { ApiError } from '@/types/api';
@@ -323,7 +324,7 @@ export default function RegisterPage() {
                   onValueChange={(val) => setValue('mobileNumber', val)}
                 />
 
-                <Button type="submit" fullWidth>
+                <Button type="submit" fullWidth tooltip="Continue to password step">
                   Continue
                 </Button>
               </motion.div>
@@ -339,13 +340,15 @@ export default function RegisterPage() {
                 transition={{ duration: 0.2 }}
                 className="space-y-4"
               >
-                <button
-                  type="button"
-                  onClick={() => setStep('info')}
-                  className="mb-2 flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-                >
-                  <ArrowLeft className="h-4 w-4" /> Back
-                </button>
+                <Tooltip content="Go back to personal information">
+                  <button
+                    type="button"
+                    onClick={() => setStep('info')}
+                    className="mb-2 flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                  >
+                    <ArrowLeft className="h-4 w-4" /> Back
+                  </button>
+                </Tooltip>
 
                 <Input
                   label="Password"
@@ -390,6 +393,7 @@ export default function RegisterPage() {
                       type="button"
                       onClick={() => setLegalModal('terms')}
                       className="text-primary hover:underline"
+                      title="View Terms of Service"
                     >
                       Terms of Service
                     </button>{' '}
@@ -398,6 +402,7 @@ export default function RegisterPage() {
                       type="button"
                       onClick={() => setLegalModal('privacy')}
                       className="text-primary hover:underline"
+                      title="View Privacy Policy"
                     >
                       Privacy Policy
                     </button>
@@ -409,7 +414,7 @@ export default function RegisterPage() {
 
                 <Turnstile onSuccess={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
 
-                <Button type="submit" fullWidth isLoading={isLoading}>
+                <Button type="submit" fullWidth isLoading={isLoading} tooltip="Create your new account">
                   Create Account
                 </Button>
               </motion.div>
@@ -448,6 +453,7 @@ export default function RegisterPage() {
                     fullWidth
                     isLoading={isVerifying}
                     disabled={otp.length !== otpConfig.LENGTH}
+                    tooltip="Verify your email and continue"
                   >
                     Verify & Continue
                   </Button>
@@ -465,6 +471,7 @@ export default function RegisterPage() {
                           onClick={handleResendOtp}
                           disabled={isResending}
                           className="text-primary font-medium hover:underline disabled:opacity-50"
+                          title="Resend verification code to your email"
                         >
                           {isResending ? 'Sending...' : 'Resend Code'}
                         </button>
@@ -514,6 +521,7 @@ export default function RegisterPage() {
             <Link
               href={ROUTES.AUTH.LOGIN}
               className="text-primary hover:text-primary-hover font-medium"
+              title="Sign in to your existing account"
             >
               Sign In
             </Link>

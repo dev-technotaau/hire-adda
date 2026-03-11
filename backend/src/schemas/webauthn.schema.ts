@@ -43,6 +43,7 @@ export const loginVerifySchema = z.object({
       clientExtensionResults: z.record(z.string(), z.unknown()).optional(),
       authenticatorAttachment: z.string().optional(),
     }),
+    mfaCode: z.string().optional(),
   }),
 });
 

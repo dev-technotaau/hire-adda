@@ -10,7 +10,6 @@ import {
   Building2,
   MapPin,
   Clock,
-  Calendar,
   Star,
   CheckCircle2,
   XCircle,
@@ -29,6 +28,7 @@ import Modal from '@/components/ui/Modal';
 import Tag from '@/components/ui/Tag';
 import Textarea from '@/components/ui/Textarea';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
 import { useApplication, useUpdateApplicationStatus } from '@/hooks/use-jobs';
 import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS } from '@/constants/config';
@@ -52,7 +52,6 @@ const TIMELINE_STEPS: { key: ApplicationStatus; label: string }[] = [
   { key: 'VIEWED', label: 'Viewed' },
   { key: 'SHORTLISTED', label: 'Shortlisted' },
   { key: 'SELECTED', label: 'Selected' },
-  { key: 'INTERVIEW_SCHEDULED', label: 'Interview' },
   { key: 'OFFERED', label: 'Offered' },
   { key: 'HIRED', label: 'Hired' },
 ];
@@ -62,9 +61,8 @@ const STATUS_ORDER: Record<string, number> = {
   VIEWED: 1,
   SHORTLISTED: 2,
   SELECTED: 3,
-  INTERVIEW_SCHEDULED: 4,
-  OFFERED: 5,
-  HIRED: 6,
+  OFFERED: 4,
+  HIRED: 5,
 };
 
 interface StatusAction {
@@ -174,12 +172,14 @@ export default function EmployerApplicationDetailPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <Link
-            href={ROUTES.EMPLOYER.APPLICATIONS}
-            className="rounded-lg p-2 hover:bg-[var(--bg-secondary)]"
-          >
-            <ArrowLeft className="h-5 w-5 text-[var(--text-muted)]" />
-          </Link>
+          <Tooltip content="Back to all applications">
+            <Link
+              href={ROUTES.EMPLOYER.APPLICATIONS}
+              className="rounded-lg p-2 hover:bg-[var(--bg-secondary)]"
+            >
+              <ArrowLeft className="h-5 w-5 text-[var(--text-muted)]" />
+            </Link>
+          </Tooltip>
           <div>
             <h1 className="text-xl font-semibold text-[var(--text)]">Application Details</h1>
             <p className="text-sm text-[var(--text-muted)]">
@@ -208,12 +208,14 @@ export default function EmployerApplicationDetailPage() {
                       </div>
                     )}
                     <div className="flex-1">
-                      <Link
-                        href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate.id)}
-                        className="hover:text-primary text-lg font-semibold text-[var(--text)]"
-                      >
-                        {candidateName}
-                      </Link>
+                      <Tooltip content="View candidate profile">
+                        <Link
+                          href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate.id)}
+                          className="hover:text-primary text-lg font-semibold text-[var(--text)]"
+                        >
+                          {candidateName}
+                        </Link>
+                      </Tooltip>
                       {candidate.headline && (
                         <p className="text-sm text-[var(--text-muted)]">{candidate.headline}</p>
                       )}
@@ -374,54 +376,6 @@ export default function EmployerApplicationDetailPage() {
               </Card>
             )}
 
-            {/* Interview Feedback */}
-            {app.interviewFeedback && app.interviewFeedback.length > 0 && (
-              <Card>
-                <div className="p-6">
-                  <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--text)]">
-                    <Calendar className="h-4 w-4" />
-                    Interview Feedback
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)]">
-                          <th className="pr-4 pb-2 font-medium">Stage</th>
-                          <th className="pr-4 pb-2 font-medium">Interviewer</th>
-                          <th className="pr-4 pb-2 font-medium">Rating</th>
-                          <th className="pr-4 pb-2 font-medium">Date</th>
-                          <th className="pb-2 font-medium">Feedback</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {app.interviewFeedback.map((fb, idx) => (
-                          <tr key={idx} className="border-b border-[var(--border)] last:border-0">
-                            <td className="py-3 pr-4 font-medium text-[var(--text)]">{fb.stage}</td>
-                            <td className="py-3 pr-4 text-[var(--text-light)]">
-                              {fb.interviewer || '-'}
-                            </td>
-                            <td className="py-3 pr-4">
-                              {fb.rating != null ? (
-                                <div className="flex items-center gap-1">
-                                  <Star className="h-3.5 w-3.5 text-[var(--warning)]" />
-                                  <span className="text-[var(--text)]">{fb.rating}/5</span>
-                                </div>
-                              ) : (
-                                '-'
-                              )}
-                            </td>
-                            <td className="py-3 pr-4 text-[var(--text-light)]">
-                              {fb.date ? formatDate(fb.date) : '-'}
-                            </td>
-                            <td className="py-3 text-[var(--text-light)]">{fb.feedback || '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </Card>
-            )}
           </div>
 
           {/* Right Column (Sidebar) */}
@@ -446,6 +400,7 @@ export default function EmployerApplicationDetailPage() {
                         className="w-full"
                         onClick={() => handleStatusUpdate(action.status)}
                         isLoading={updateStatus.isPending}
+                        tooltip={`${action.label} this application`}
                       >
                         {action.label}
                       </Button>
@@ -478,7 +433,6 @@ export default function EmployerApplicationDetailPage() {
                   <TimelineRow label="Applied" date={app.appliedAt} />
                   <TimelineRow label="Viewed" date={app.viewedAt} />
                   <TimelineRow label="Selected" date={app.selectedAt} />
-                  <TimelineRow label="Interview" date={app.interviewDate} />
                   <TimelineRow label="Offered" date={app.offeredAt} />
                   <TimelineRow label="Hired" date={app.hiredAt} />
                 </div>
@@ -490,12 +444,14 @@ export default function EmployerApplicationDetailPage() {
               <Card>
                 <div className="p-6">
                   <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Job Details</h3>
-                  <Link
-                    href={ROUTES.EMPLOYER.JOB_DETAIL(job.id)}
-                    className="text-primary font-medium hover:underline"
-                  >
-                    {job.title}
-                  </Link>
+                  <Tooltip content="View job details">
+                    <Link
+                      href={ROUTES.EMPLOYER.JOB_DETAIL(job.id)}
+                      className="text-primary font-medium hover:underline"
+                    >
+                      {job.title}
+                    </Link>
+                  </Tooltip>
                   <div className="mt-2 space-y-1 text-sm text-[var(--text-light)]">
                     <p className="flex items-center gap-1.5">
                       <Building2 className="h-3.5 w-3.5" />
@@ -511,11 +467,13 @@ export default function EmployerApplicationDetailPage() {
             )}
 
             {/* Back to Applications */}
-            <Link href={ROUTES.EMPLOYER.APPLICATIONS}>
-              <Button variant="outline" className="w-full">
-                Back to Applications
-              </Button>
-            </Link>
+            <Tooltip content="Return to all applications">
+              <Link href={ROUTES.EMPLOYER.APPLICATIONS}>
+                <Button variant="outline" className="w-full" tooltip="Go back to applications list">
+                  Back to Applications
+                </Button>
+              </Link>
+            </Tooltip>
           </div>
         </div>
       </div>
@@ -544,10 +502,11 @@ export default function EmployerApplicationDetailPage() {
                 setRejectTarget(false);
                 setRejectionReason('');
               }}
+              tooltip="Cancel rejection"
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleReject} isLoading={updateStatus.isPending}>
+            <Button variant="destructive" onClick={handleReject} isLoading={updateStatus.isPending} tooltip="Confirm application rejection">
               Reject
             </Button>
           </div>

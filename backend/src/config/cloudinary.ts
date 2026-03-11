@@ -34,7 +34,7 @@ export const uploadOptions = {
     folder: 'talent_bridge/companies/covers',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
     transformation: [
-      { width: 1200, height: 400, crop: 'fill' },
+      { width: 1920, height: 640, crop: 'fill' },
       { quality: 'auto', fetch_format: 'auto' },
     ],
   } as UploadApiOptions,

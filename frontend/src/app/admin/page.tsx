@@ -37,6 +37,7 @@ import { adminService } from '@/services/admin.service';
 import { QUERY_KEYS } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
 import { getGreeting, getDashboardSubtitle } from '@/lib/utils';
+import Tooltip from '@/components/ui/Tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import api from '@/lib/api';
 import { API } from '@/constants/api';
@@ -453,14 +454,16 @@ export default function AdminDashboard() {
           {/* Alerts */}
           <div className="flex items-center gap-2">
             {(stats?.pendingVerifications ?? 0) > 0 && (
-              <Link
-                href={ROUTES.ADMIN.VERIFICATIONS}
-                className="flex items-center gap-1.5 rounded-lg bg-[var(--warning-light)] px-3 py-1.5 text-sm font-medium text-[var(--warning)] transition-colors hover:bg-[var(--warning)]/20"
-              >
-                <AlertTriangle className="h-4 w-4" />
-                {stats!.pendingVerifications} pending verification
-                {stats!.pendingVerifications > 1 ? 's' : ''}
-              </Link>
+              <Tooltip content="View and review pending verifications">
+                <Link
+                  href={ROUTES.ADMIN.VERIFICATIONS}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-[var(--warning-light)] px-3 py-1.5 text-sm font-medium text-[var(--warning)] transition-colors hover:bg-[var(--warning)]/20"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  {stats!.pendingVerifications} pending verification
+                  {stats!.pendingVerifications > 1 ? 's' : ''}
+                </Link>
+              </Tooltip>
             )}
           </div>
         </div>
@@ -1092,7 +1095,7 @@ export default function AdminDashboard() {
           <h2 className="mb-4 text-lg font-semibold text-[var(--text)]">Quick Actions</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {quickLinks.map((link) => (
-              <Link key={link.label} href={link.href}>
+              <Link key={link.label} href={link.href} title={link.description}>
                 <Card className="group hover:border-primary/30 h-full cursor-pointer transition-all hover:shadow-md">
                   <div className="flex items-center gap-3">
                     <div

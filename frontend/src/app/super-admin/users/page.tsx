@@ -33,6 +33,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import Dropdown from '@/components/ui/Dropdown';
 import OtpInput from '@/components/auth/OtpInput';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
@@ -431,6 +432,7 @@ export default function SuperAdminUsersPage() {
           <Button
             leftIcon={<UserPlus className="h-4 w-4" />}
             onClick={() => setShowCreateModal(true)}
+            tooltip="Create a new user account"
           >
             Create User
           </Button>
@@ -478,6 +480,7 @@ export default function SuperAdminUsersPage() {
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
                 leftIcon={<Filter className="h-4 w-4" />}
+                tooltip="Toggle advanced filters"
               >
                 Filters
                 {(profileCompletenessMin !== undefined ||
@@ -512,6 +515,7 @@ export default function SuperAdminUsersPage() {
                   setVerifiedFilters([]);
                   setPage(1);
                 }}
+                tooltip="Reset all advanced filters"
               >
                 Clear All
               </Button>
@@ -633,6 +637,7 @@ export default function SuperAdminUsersPage() {
                   variant="outline"
                   onClick={() => setSelectedUserIds(new Set())}
                   leftIcon={<X className="h-4 w-4" />}
+                  tooltip="Deselect all users"
                 >
                   Clear
                 </Button>
@@ -644,6 +649,7 @@ export default function SuperAdminUsersPage() {
                   onClick={() => bulkExportMutation.mutate({ format: 'csv' })}
                   disabled={bulkExportMutation.isPending}
                   leftIcon={<Download className="h-4 w-4" />}
+                  tooltip="Export selected users as CSV"
                 >
                   Export CSV
                 </Button>
@@ -653,6 +659,7 @@ export default function SuperAdminUsersPage() {
                   onClick={() => bulkExportMutation.mutate({ format: 'xlsx' })}
                   disabled={bulkExportMutation.isPending}
                   leftIcon={<Download className="h-4 w-4" />}
+                  tooltip="Export selected users as XLSX"
                 >
                   Export XLSX
                 </Button>
@@ -661,6 +668,7 @@ export default function SuperAdminUsersPage() {
                   variant="secondary"
                   onClick={() => setShowBulkNotifyModal(true)}
                   leftIcon={<Bell className="h-4 w-4" />}
+                  tooltip="Send notification to selected users"
                 >
                   Notify
                 </Button>
@@ -669,6 +677,7 @@ export default function SuperAdminUsersPage() {
                   variant="destructive"
                   onClick={() => setShowBulkSuspendModal(true)}
                   leftIcon={<Ban className="h-4 w-4" />}
+                  tooltip="Suspend selected users"
                 >
                   Suspend
                 </Button>
@@ -678,6 +687,7 @@ export default function SuperAdminUsersPage() {
                   onClick={() => bulkActivateMutation.mutate()}
                   disabled={bulkActivateMutation.isPending}
                   leftIcon={<CheckCircle className="h-4 w-4" />}
+                  tooltip="Activate selected users"
                 >
                   Activate
                 </Button>
@@ -756,14 +766,16 @@ export default function SuperAdminUsersPage() {
                         />
                       </td>
                       <td className="px-4 py-3 font-medium text-[var(--text)]">
-                        <Link
-                          href={ROUTES.SUPER_ADMIN.USER_DETAIL(user.id)}
-                          className="hover:text-primary transition-colors"
-                        >
-                          {user.firstName && user.lastName
-                            ? `${user.firstName} ${user.lastName}`
-                            : user.firstName || 'N/A'}
-                        </Link>
+                        <Tooltip content="View user details">
+                          <Link
+                            href={ROUTES.SUPER_ADMIN.USER_DETAIL(user.id)}
+                            className="hover:text-primary cursor-pointer transition-colors"
+                          >
+                            {user.firstName && user.lastName
+                              ? `${user.firstName} ${user.lastName}`
+                              : user.firstName || 'N/A'}
+                          </Link>
+                        </Tooltip>
                       </td>
                       <td className="px-4 py-3 text-[var(--text-secondary)]">{user.email}</td>
                       <td className="px-4 py-3">
@@ -804,12 +816,14 @@ export default function SuperAdminUsersPage() {
                         <Dropdown
                           align="right"
                           trigger={
-                            <button
-                              type="button"
-                              className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
+                            <Tooltip content="User actions">
+                              <button
+                                type="button"
+                                className="cursor-pointer rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </Tooltip>
                           }
                           items={getUserActions(user)}
                         />
@@ -856,7 +870,7 @@ export default function SuperAdminUsersPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+              <Button variant="outline" onClick={() => setShowCreateModal(false)} tooltip="Cancel and close">
                 Cancel
               </Button>
               <Button
@@ -868,6 +882,7 @@ export default function SuperAdminUsersPage() {
                   !createForm.firstName ||
                   !createForm.lastName
                 }
+                tooltip="Create the user account"
               >
                 Create
               </Button>
@@ -937,6 +952,7 @@ export default function SuperAdminUsersPage() {
                   setSuspendReason('');
                   setSuspendDuration('');
                 }}
+                tooltip="Cancel suspension"
               >
                 Cancel
               </Button>
@@ -952,6 +968,7 @@ export default function SuperAdminUsersPage() {
                 }}
                 isLoading={suspendMutation.isPending}
                 disabled={!suspendReason.trim()}
+                tooltip="Confirm user suspension"
               >
                 Suspend
               </Button>
@@ -992,7 +1009,7 @@ export default function SuperAdminUsersPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)} tooltip="Cancel deletion">
                 Cancel
               </Button>
               <Button
@@ -1001,6 +1018,7 @@ export default function SuperAdminUsersPage() {
                   if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
                 }}
                 isLoading={deleteMutation.isPending}
+                tooltip="Permanently delete this user"
               >
                 Delete
               </Button>
@@ -1034,6 +1052,7 @@ export default function SuperAdminUsersPage() {
                   setRoleChangeTarget(null);
                   setNewRole('');
                 }}
+                tooltip="Cancel role change"
               >
                 Cancel
               </Button>
@@ -1044,6 +1063,7 @@ export default function SuperAdminUsersPage() {
                 }}
                 isLoading={roleChangeMutation.isPending}
                 disabled={!newRole || newRole === roleChangeTarget?.role}
+                tooltip="Confirm role update"
               >
                 Update Role
               </Button>
@@ -1072,11 +1092,11 @@ export default function SuperAdminUsersPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={closeResetPwModal}>
+              <Button variant="outline" onClick={closeResetPwModal} tooltip="Cancel password reset">
                 Cancel
               </Button>
               {resetStep === 'send' ? (
-                <Button onClick={handleSendResetOtp} isLoading={isSendingOtp}>
+                <Button onClick={handleSendResetOtp} isLoading={isSendingOtp} tooltip="Send verification code to user email">
                   Send Verification Code
                 </Button>
               ) : (
@@ -1096,6 +1116,7 @@ export default function SuperAdminUsersPage() {
                     newPassword.length < passwordRules.MIN_LENGTH ||
                     resetOtp.length !== otpConfig.LENGTH
                   }
+                  tooltip="Confirm password reset"
                 >
                   Reset Password
                 </Button>
@@ -1134,14 +1155,16 @@ export default function SuperAdminUsersPage() {
                   {resendTimer > 0 ? (
                     <span className="text-[var(--text-secondary)]">Resend in {resendTimer}s</span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleResendResetOtp}
-                      disabled={isResending}
-                      className="text-primary font-medium hover:underline disabled:opacity-50"
-                    >
-                      {isResending ? 'Sending...' : 'Resend Code'}
-                    </button>
+                    <Tooltip content="Resend verification code">
+                      <button
+                        type="button"
+                        onClick={handleResendResetOtp}
+                        disabled={isResending}
+                        className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
+                      >
+                        {isResending ? 'Sending...' : 'Resend Code'}
+                      </button>
+                    </Tooltip>
                   )}
                 </p>
               </div>
@@ -1210,12 +1233,14 @@ export default function SuperAdminUsersPage() {
                   setBulkNotificationMessage('');
                   setBulkNotificationType('INFO');
                 }}
+                tooltip="Cancel sending notification"
               >
                 Cancel
               </Button>
               <Button
                 onClick={() => bulkNotifyMutation.mutate()}
                 disabled={!bulkNotificationTitle || !bulkNotificationMessage || bulkNotifyMutation.isPending}
+                tooltip="Send notification to selected users"
               >
                 {bulkNotifyMutation.isPending ? 'Sending...' : 'Send Notification'}
               </Button>
@@ -1263,6 +1288,7 @@ export default function SuperAdminUsersPage() {
                   setShowBulkSuspendModal(false);
                   setBulkSuspendReason('');
                 }}
+                tooltip="Cancel bulk suspension"
               >
                 Cancel
               </Button>
@@ -1270,6 +1296,7 @@ export default function SuperAdminUsersPage() {
                 variant="destructive"
                 onClick={() => bulkSuspendMutation.mutate()}
                 disabled={bulkSuspendMutation.isPending}
+                tooltip="Confirm suspending selected users"
               >
                 {bulkSuspendMutation.isPending ? 'Suspending...' : 'Suspend Users'}
               </Button>

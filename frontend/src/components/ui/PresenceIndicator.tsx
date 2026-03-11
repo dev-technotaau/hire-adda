@@ -28,6 +28,9 @@ export default function PresenceIndicator({
 }: PresenceIndicatorProps) {
   const { online, lastSeen } = usePresence(userId);
 
+  // Don't render anything if we have no presence data at all
+  if (!online && !lastSeen) return null;
+
   const dotSize = size === 'sm' ? 'h-2 w-2' : 'h-3 w-3';
 
   return (

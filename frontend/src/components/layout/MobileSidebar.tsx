@@ -14,6 +14,7 @@ import { QUERY_KEYS } from '@/constants/config';
 import { employerService } from '@/services/employer.service';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
+import Tooltip from '@/components/ui/Tooltip';
 import Logo from '@/components/common/Logo';
 import { getNavItems } from './Sidebar';
 import type { Role } from '@/types/auth';
@@ -96,13 +97,15 @@ export default function MobileSidebar() {
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b border-[var(--border)] px-4">
           <Logo size="sm" href={dashboardPath} />
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-            aria-label="Close sidebar"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <Tooltip content="Close sidebar">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+              aria-label="Close sidebar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </Tooltip>
         </div>
 
         {/* User info */}
@@ -144,19 +147,21 @@ export default function MobileSidebar() {
 
               return (
                 <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                      isActive
-                        ? 'bg-primary-light text-primary'
-                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
-                    )}
-                  >
-                    <Icon className="h-5 w-5 shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
+                  <Tooltip content={`Navigate to ${item.label}`}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-primary-light text-primary'
+                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
+                      )}
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </Tooltip>
                 </li>
               );
             })}
@@ -165,16 +170,18 @@ export default function MobileSidebar() {
 
         {/* Footer */}
         <div className="border-t border-[var(--border)] p-3">
-          <button
-            onClick={() => {
-              setSidebarOpen(false);
-              logout();
-            }}
-            className="text-error hover:bg-error-light flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            Logout
-          </button>
+          <Tooltip content="Sign out of your account">
+            <button
+              onClick={() => {
+                setSidebarOpen(false);
+                logout();
+              }}
+              className="text-error hover:bg-error-light flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
+            >
+              <LogOut className="h-5 w-5" />
+              Logout
+            </button>
+          </Tooltip>
         </div>
       </aside>
     </div>

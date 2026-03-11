@@ -14,6 +14,7 @@ import {
   Power,
   AlertCircle,
   MoreVertical,
+  UserCheck,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -26,6 +27,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import Dropdown from '@/components/ui/Dropdown';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
 import { jobService } from '@/services/job.service';
 import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
@@ -96,9 +98,11 @@ export default function MyJobsPage() {
             <h1 className="text-2xl font-bold text-[var(--text)]">My Jobs</h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">Manage your posted job listings</p>
           </div>
-          <Link href={ROUTES.EMPLOYER.POST_JOB}>
-            <Button leftIcon={<Plus className="h-4 w-4" />}>Post New Job</Button>
-          </Link>
+          <Tooltip content="Create a new job listing">
+            <Link href={ROUTES.EMPLOYER.POST_JOB}>
+              <Button leftIcon={<Plus className="h-4 w-4" />} tooltip="Create a new job listing">Post New Job</Button>
+            </Link>
+          </Tooltip>
         </div>
 
         {/* Status Tabs */}
@@ -135,11 +139,13 @@ export default function MyJobsPage() {
               }
               description="Post your first job to start receiving applications from top candidates."
               action={
-                <Link href={ROUTES.EMPLOYER.POST_JOB}>
-                  <Button size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-                    Post a Job
-                  </Button>
-                </Link>
+                <Tooltip content="Create your first job listing">
+                  <Link href={ROUTES.EMPLOYER.POST_JOB}>
+                    <Button size="sm" leftIcon={<Plus className="h-4 w-4" />} tooltip="Post your first job">
+                      Post a Job
+                    </Button>
+                  </Link>
+                </Tooltip>
               }
             />
           )}
@@ -164,13 +170,14 @@ export default function MyJobsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDeactivateTarget(null)}>
+              <Button variant="outline" onClick={() => setDeactivateTarget(null)} tooltip="Cancel deactivation">
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleDeactivate}
                 isLoading={deactivateMutation.isPending}
+                tooltip="Confirm job deactivation"
               >
                 Deactivate
               </Button>
@@ -235,12 +242,14 @@ function JobCard({ job, onDeactivate }: { job: Job; onDeactivate: () => void }) 
               <Briefcase className="h-5 w-5 text-[var(--text-muted)]" />
             </div>
             <div className="min-w-0">
-              <Link
-                href={ROUTES.EMPLOYER.JOB_DETAIL(job.id)}
-                className="hover:text-primary font-medium text-[var(--text)] transition-colors"
-              >
-                {job.title}
-              </Link>
+              <Tooltip content="View job details">
+                <Link
+                  href={ROUTES.EMPLOYER.JOB_DETAIL(job.id)}
+                  className="hover:text-primary font-medium text-[var(--text)] transition-colors"
+                >
+                  {job.title}
+                </Link>
+              </Tooltip>
               <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
                 {job.location && (
                   <span className="flex items-center gap-1">
@@ -256,6 +265,11 @@ function JobCard({ job, onDeactivate }: { job: Job; onDeactivate: () => void }) 
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" /> Posted {formatRelativeDate(job.createdAt)}
                 </span>
+                {job.numberOfOpenings && (
+                  <span className="flex items-center gap-1">
+                    <UserCheck className="h-3 w-3" /> {job._hiredCount ?? 0}/{job.numberOfOpenings} filled
+                  </span>
+                )}
               </div>
               {(job.salaryMin || job.salaryMax) && (
                 <p className="mt-1 text-xs text-[var(--text)]">
@@ -302,28 +316,35 @@ function JobCard({ job, onDeactivate }: { job: Job; onDeactivate: () => void }) 
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <Link href={ROUTES.EMPLOYER.JOB_DETAIL(job.id)}>
-            <Button variant="outline" size="sm">
-              View
-            </Button>
-          </Link>
-          <Link href={ROUTES.EMPLOYER.JOB_EDIT(job.id)}>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={job.status === 'CLOSED' || job.status === 'EXPIRED'}
-            >
-              Edit
-            </Button>
-          </Link>
+          <Tooltip content="View job details">
+            <Link href={ROUTES.EMPLOYER.JOB_DETAIL(job.id)}>
+              <Button variant="outline" size="sm" tooltip="View job details">
+                View
+              </Button>
+            </Link>
+          </Tooltip>
+          <Tooltip content="Edit this job listing">
+            <Link href={ROUTES.EMPLOYER.JOB_EDIT(job.id)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={job.status === 'CLOSED' || job.status === 'EXPIRED'}
+                tooltip="Edit job listing"
+              >
+                Edit
+              </Button>
+            </Link>
+          </Tooltip>
           <Dropdown
             trigger={
-              <button
-                type="button"
-                className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </button>
+              <Tooltip content="More actions">
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </Tooltip>
             }
             items={dropdownItems}
             align="right"

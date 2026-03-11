@@ -519,13 +519,15 @@ export const refreshTokens = async (
   // Revoke old token
   await revokeToken(oldRefreshToken);
 
-  // Update lastActiveAt so session timeout resets on token refresh
-  prisma.user
-    .update({
-      where: { id: tokenRecord.user.id },
-      data: { lastActiveAt: new Date() },
-    })
-    .catch(() => {});
+  // Update lastActiveAt so session timeout resets on token refresh.
+  // Must be awaited: the BFF retries /auth/me immediately after refresh,
+  // and the auth middleware checks lastActiveAt for session timeout.
+  // Fire-and-forget here causes a race where the retry sees stale lastActiveAt,
+  // triggering session timeout and permanently locking the user out.
+  await prisma.user.update({
+    where: { id: tokenRecord.user.id },
+    data: { lastActiveAt: new Date() },
+  });
 
   // Update session lastSeenAt
   if (sessionId) {

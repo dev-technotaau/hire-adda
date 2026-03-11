@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
 import { ROUTES } from '@/constants/routes';
+import Tooltip from '@/components/ui/Tooltip';
 import type { LucideIcon } from 'lucide-react';
 
 export interface NavItem {
@@ -140,20 +141,24 @@ export default function Sidebar() {
 
             return (
               <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                    isActive
-                      ? 'bg-primary-light text-primary'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
-                    sidebarCollapsed && 'justify-center px-2',
-                  )}
-                  title={sidebarCollapsed ? item.label : undefined}
+                <Tooltip
+                  content={sidebarCollapsed ? item.label : `Navigate to ${item.label}`}
+                  position={sidebarCollapsed ? 'right' : 'top'}
                 >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  {!sidebarCollapsed && <span>{item.label}</span>}
-                </Link>
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                      isActive
+                        ? 'bg-primary-light text-primary'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
+                      sidebarCollapsed && 'justify-center px-2',
+                    )}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    {!sidebarCollapsed && <span>{item.label}</span>}
+                  </Link>
+                </Tooltip>
               </li>
             );
           })}
@@ -162,16 +167,18 @@ export default function Sidebar() {
 
       {/* Collapse toggle */}
       <div className="border-t border-[var(--border)] p-3">
-        <button
-          onClick={toggleSidebarCollapsed}
-          className="flex w-full items-center justify-center rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-        >
-          {sidebarCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </button>
+        <Tooltip content={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} position="right">
+          <button
+            onClick={toggleSidebarCollapsed}
+            className="flex w-full items-center justify-center rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </button>
+        </Tooltip>
       </div>
     </aside>
   );

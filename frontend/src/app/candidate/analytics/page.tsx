@@ -32,6 +32,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import AreaChart from '@/components/charts/AreaChart';
 import BarChart from '@/components/charts/BarChart';
 import PieChart from '@/components/charts/PieChart';
@@ -207,12 +208,6 @@ export default function CandidateAnalyticsPage() {
           color: 'text-[var(--info)] bg-[var(--info-light)]',
         },
         {
-          label: 'Interview Rate',
-          value: `${analytics.summary.interviewRate}%`,
-          icon: Target,
-          color: 'text-[var(--success)] bg-[var(--success-light)]',
-        },
-        {
           label: 'Offer Rate',
           value: `${analytics.summary.offerRate}%`,
           icon: Award,
@@ -255,7 +250,6 @@ export default function CandidateAnalyticsPage() {
         { key: 'applied', label: 'Applied', color: '#3B82F6' },
         { key: 'viewed', label: 'Viewed', color: '#8B5CF6' },
         { key: 'shortlisted', label: 'Shortlisted', color: '#F59E0B' },
-        { key: 'interviewScheduled', label: 'Interview', color: '#6366F1' },
         { key: 'offered', label: 'Offered', color: '#10B981' },
         { key: 'hired', label: 'Hired', color: '#059669' },
       ]
@@ -297,7 +291,7 @@ export default function CandidateAnalyticsPage() {
               Track your job search progress and identify areas for improvement.
             </p>
           </div>
-          <Button variant="outline" onClick={handleExport} disabled={isLoading || !analytics}>
+          <Button variant="outline" onClick={handleExport} disabled={isLoading || !analytics} tooltip="Download analytics data as CSV">
             <Download className="mr-1.5 h-4 w-4" />
             Export CSV
           </Button>
@@ -309,29 +303,32 @@ export default function CandidateAnalyticsPage() {
             {/* Quick Date Presets */}
             <div className="flex flex-wrap gap-2">
               {DATE_PRESETS.map((preset) => (
-                <button
-                  key={preset.key}
-                  onClick={() => handlePreset(preset.key)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    activePreset === preset.key
-                      ? 'bg-primary text-white'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
-                  }`}
-                >
-                  {preset.label}
-                </button>
+                <Tooltip key={preset.key} content={`Filter by ${preset.label.toLowerCase()}`}>
+                  <button
+                    onClick={() => handlePreset(preset.key)}
+                    className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                      activePreset === preset.key
+                        ? 'bg-primary text-white'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                </Tooltip>
               ))}
               {(startDate || endDate) && (
-                <button
-                  onClick={() => {
-                    setStartDate('');
-                    setEndDate('');
-                    setActivePreset(null);
-                  }}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
-                >
-                  Clear
-                </button>
+                <Tooltip content="Clear date filters">
+                  <button
+                    onClick={() => {
+                      setStartDate('');
+                      setEndDate('');
+                      setActivePreset(null);
+                    }}
+                    className="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+                  >
+                    Clear
+                  </button>
+                </Tooltip>
               )}
             </div>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
@@ -716,8 +713,7 @@ export default function CandidateAnalyticsPage() {
                   data={
                     analytics.sourceEffectiveness.map((s) => ({
                       source: s.source,
-                      applied: s.total - s.interviews,
-                      interviews: s.interviews - s.offers,
+                      applied: s.total - s.offers,
                       offers: s.offers - s.hires,
                       hires: s.hires,
                     })) as unknown as Record<string, unknown>[]
@@ -725,7 +721,6 @@ export default function CandidateAnalyticsPage() {
                   xKey="source"
                   bars={[
                     { key: 'applied', color: '#3B82F6', name: 'Applied' },
-                    { key: 'interviews', color: '#6366F1', name: 'Interviews' },
                     { key: 'offers', color: '#F59E0B', name: 'Offers' },
                     { key: 'hires', color: '#10B981', name: 'Hires' },
                   ]}
@@ -812,11 +807,9 @@ export default function CandidateAnalyticsPage() {
                               ? 'success'
                               : activity.status === 'REJECTED'
                                 ? 'error'
-                                : activity.status === 'INTERVIEW_SCHEDULED'
-                                  ? 'info'
-                                  : activity.status === 'WITHDRAWN'
-                                    ? 'neutral'
-                                    : 'warning'
+                                : activity.status === 'WITHDRAWN'
+                                  ? 'neutral'
+                                  : 'warning'
                           }
                           size="sm"
                         >

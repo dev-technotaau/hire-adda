@@ -308,6 +308,7 @@ export default function AdminTicketDetailPage() {
           <p className="text-[var(--text-muted)]">Ticket not found.</p>
           <Link
             href={ROUTES.ADMIN.TICKETS}
+            title="Return to tickets list"
             className="text-primary mt-4 inline-block hover:underline"
           >
             Back to tickets
@@ -342,6 +343,7 @@ export default function AdminTicketDetailPage() {
           </div>
           <Link
             href={ROUTES.ADMIN.TICKETS}
+            title="Return to tickets list"
             className="text-primary text-sm whitespace-nowrap hover:underline"
           >
             Back to all tickets
@@ -423,6 +425,7 @@ export default function AdminTicketDetailPage() {
                 />
                 <div className="flex justify-end">
                   <Button
+                    tooltip={isInternal ? 'Add internal note' : 'Send reply to user'}
                     onClick={handleSendReply}
                     isLoading={addMessageMutation.isPending}
                     disabled={!replyBody.trim()}
@@ -461,6 +464,7 @@ export default function AdminTicketDetailPage() {
                   </div>
                   <Link
                     href={ROUTES.ADMIN.USER_DETAIL(ticket.user.id)}
+                    title="View user profile details"
                     className="text-primary inline-flex items-center gap-1 text-xs hover:underline"
                   >
                     View user profile
@@ -594,6 +598,7 @@ export default function AdminTicketDetailPage() {
               <div className="flex flex-col gap-2">
                 <Button
                   variant="outline"
+                  tooltip="Mark this ticket as resolved"
                   onClick={handleResolve}
                   isLoading={updateStatusMutation.isPending && selectedStatus === 'RESOLVED'}
                   disabled={ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'}
@@ -604,6 +609,7 @@ export default function AdminTicketDetailPage() {
                 </Button>
                 <Button
                   variant="outline"
+                  tooltip="Close this ticket"
                   onClick={handleClose}
                   isLoading={updateStatusMutation.isPending && selectedStatus === 'CLOSED'}
                   disabled={ticket.status === 'CLOSED'}

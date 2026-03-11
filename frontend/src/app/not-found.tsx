@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { FileQuestion } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 
 export default function NotFound() {
   return (
@@ -16,12 +17,16 @@ export default function NotFound() {
           on track.
         </p>
         <div className="flex items-center justify-center gap-3">
-          <Link href="/">
-            <Button>Go Home</Button>
-          </Link>
-          <Link href="/help">
-            <Button variant="outline">Help Center</Button>
-          </Link>
+          <Tooltip content="Go to the home page">
+            <Link href="/">
+              <Button>Go Home</Button>
+            </Link>
+          </Tooltip>
+          <Tooltip content="Visit the help center for assistance">
+            <Link href="/help">
+              <Button variant="outline">Help Center</Button>
+            </Link>
+          </Tooltip>
         </div>
       </div>
     </div>

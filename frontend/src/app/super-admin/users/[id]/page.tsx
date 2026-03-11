@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import {
@@ -67,6 +67,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import Modal from '@/components/ui/Modal';
 import Tabs from '@/components/ui/Tabs';
 import OtpInput from '@/components/auth/OtpInput';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
 import { QUERY_KEYS } from '@/constants/config';
@@ -129,13 +130,15 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
       <div className={`flex items-center gap-2 ${className}`}>
         <span>{value ? 'Yes' : 'No'}</span>
         {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="text-primary hover:text-primary/80 p-1"
-            title="Edit"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
+          <Tooltip content="Edit this field">
+            <button
+              onClick={() => setIsEditing(true)}
+              className="cursor-pointer text-primary hover:text-primary/80 p-1"
+              title="Edit"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+          </Tooltip>
         ) : (
           <div className="flex items-center gap-2">
             <Select
@@ -146,22 +149,26 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
               value={String(editValue)}
               onChange={(v) => setEditValue(v)}
             />
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="text-success hover:text-success/80 p-1"
-              title="Save"
-            >
-              <Save className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleCancel}
-              disabled={isSaving}
-              className="text-error hover:text-error/80 p-1"
-              title="Cancel"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <Tooltip content="Save changes">
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="cursor-pointer text-success hover:text-success/80 p-1"
+                title="Save"
+              >
+                <Save className="w-4 h-4" />
+              </button>
+            </Tooltip>
+            <Tooltip content="Discard changes">
+              <button
+                onClick={handleCancel}
+                disabled={isSaving}
+                className="cursor-pointer text-error hover:text-error/80 p-1"
+                title="Cancel"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </Tooltip>
           </div>
         )}
       </div>
@@ -172,16 +179,18 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
     return (
       <div className={`flex items-center gap-2 group ${className}`}>
         <span>{value || placeholder || '—'}</span>
-        <button
-          onClick={() => {
-            setEditValue(value != null ? String(value) : '');
-            setIsEditing(true);
-          }}
-          className="text-primary hover:text-primary/80 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-          title="Edit"
-        >
-          <Edit className="w-4 h-4" />
-        </button>
+        <Tooltip content="Edit this field">
+          <button
+            onClick={() => {
+              setEditValue(value != null ? String(value) : '');
+              setIsEditing(true);
+            }}
+            className="cursor-pointer text-primary hover:text-primary/80 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Edit"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+        </Tooltip>
       </div>
     );
   }
@@ -209,22 +218,26 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
           autoFocus
         />
       )}
-      <button
-        onClick={handleSave}
-        disabled={isSaving}
-        className="text-success hover:text-success/80 p-1"
-        title="Save"
-      >
-        <Save className="w-4 h-4" />
-      </button>
-      <button
-        onClick={handleCancel}
-        disabled={isSaving}
-        className="text-error hover:text-error/80 p-1"
-        title="Cancel"
-      >
-        <X className="w-4 h-4" />
-      </button>
+      <Tooltip content="Save changes">
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="cursor-pointer text-success hover:text-success/80 p-1"
+          title="Save"
+        >
+          <Save className="w-4 h-4" />
+        </button>
+      </Tooltip>
+      <Tooltip content="Discard changes">
+        <button
+          onClick={handleCancel}
+          disabled={isSaving}
+          className="cursor-pointer text-error hover:text-error/80 p-1"
+          title="Cancel"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </Tooltip>
     </div>
   );
 }
@@ -233,13 +246,30 @@ export default function SuperAdminUserDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const otpConfig = useOtpConfig();
   const passwordRules = usePasswordRules();
   const userId = params.id as string;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'applications' | 'jobs' | 'activity' | 'verification'>('account');
+  type TabKey = 'account' | 'profile' | 'applications' | 'jobs' | 'activity' | 'verification';
+  const validTabs: TabKey[] = ['account', 'profile', 'applications', 'jobs', 'activity', 'verification'];
+  const [activeTab, setActiveTab] = useState<TabKey>('account');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && validTabs.includes(tab as TabKey)) {
+      setActiveTab(tab as TabKey);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (key: string) => {
+    setActiveTab(key as TabKey);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', key);
+    window.history.replaceState({}, '', url.toString());
+  };
 
   // Modals
   const [showSuspendModal, setShowSuspendModal] = useState(false);
@@ -855,15 +885,15 @@ export default function SuperAdminUserDetailPage() {
           )}
 
           {/* Work Preferences */}
-          {((profile.preferredJobTypes?.length ?? 0) > 0 || (profile.preferredWorkModes?.length ?? 0) > 0) && (
+          {((profile.preferredJobType?.length ?? 0) > 0 || (profile.preferredWorkMode?.length ?? 0) > 0) && (
             <Card>
               <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Work Preferences</h3>
               <div className="space-y-2">
-                {(profile.preferredJobTypes?.length ?? 0) > 0 && (
+                {(profile.preferredJobType?.length ?? 0) > 0 && (
                   <div>
                     <p className="mb-1 text-xs text-[var(--text-muted)]">Job Types</p>
                     <div className="flex flex-wrap gap-1">
-                      {profile.preferredJobTypes!.map((type, i) => (
+                      {profile.preferredJobType.map((type, i) => (
                         <Badge key={i} variant="neutral" size="sm">
                           {type}
                         </Badge>
@@ -871,11 +901,11 @@ export default function SuperAdminUserDetailPage() {
                     </div>
                   </div>
                 )}
-                {(profile.preferredWorkModes?.length ?? 0) > 0 && (
+                {(profile.preferredWorkMode?.length ?? 0) > 0 && (
                   <div>
                     <p className="mb-1 text-xs text-[var(--text-muted)]">Work Modes</p>
                     <div className="flex flex-wrap gap-1">
-                      {profile.preferredWorkModes!.map((mode, i) => (
+                      {profile.preferredWorkMode.map((mode, i) => (
                         <Badge key={i} variant="neutral" size="sm">
                           {mode}
                         </Badge>
@@ -977,6 +1007,7 @@ export default function SuperAdminUserDetailPage() {
                   size="sm"
                   leftIcon={<Download className="h-4 w-4" />}
                   onClick={() => window.open(profile.resume!, '_blank')}
+                  tooltip="Download user resume"
                 >
                   Download
                 </Button>
@@ -1123,6 +1154,7 @@ export default function SuperAdminUserDetailPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        title="Open project link"
                       >
                         View Project <ExternalLink className="h-3 w-3" />
                       </a>
@@ -1286,6 +1318,7 @@ export default function SuperAdminUserDetailPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        title="Open publication link"
                       >
                         View Publication <ExternalLink className="h-3 w-3" />
                       </a>
@@ -1336,6 +1369,7 @@ export default function SuperAdminUserDetailPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        title="Open patent link"
                       >
                         View Patent <ExternalLink className="h-3 w-3" />
                       </a>
@@ -1392,6 +1426,7 @@ export default function SuperAdminUserDetailPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        title="Open certificate link"
                       >
                         View Certificate <ExternalLink className="h-3 w-3" />
                       </a>
@@ -1587,29 +1622,31 @@ export default function SuperAdminUserDetailPage() {
           )}
 
           {/* Social Profiles */}
-          {(profile.githubUrl || profile.linkedinUrl || profile.portfolioUrl) && (
+          {(profile.githubProfile || profile.linkedinProfile || profile.portfolioUrl) && (
             <Card>
               <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
                 <Globe className="h-5 w-5" />
                 Social Profiles
               </h3>
               <div className="flex flex-wrap gap-2">
-                {profile.githubUrl && (
+                {profile.githubProfile && (
                   <Button
                     variant="outline"
                     size="sm"
                     leftIcon={<Github className="h-4 w-4" />}
-                    onClick={() => window.open(profile.githubUrl!, '_blank')}
+                    onClick={() => window.open(profile.githubProfile!, '_blank')}
+                    tooltip="Open GitHub profile"
                   >
                     GitHub
                   </Button>
                 )}
-                {profile.linkedinUrl && (
+                {profile.linkedinProfile && (
                   <Button
                     variant="outline"
                     size="sm"
                     leftIcon={<Linkedin className="h-4 w-4" />}
-                    onClick={() => window.open(profile.linkedinUrl!, '_blank')}
+                    onClick={() => window.open(profile.linkedinProfile!, '_blank')}
+                    tooltip="Open LinkedIn profile"
                   >
                     LinkedIn
                   </Button>
@@ -1620,6 +1657,7 @@ export default function SuperAdminUserDetailPage() {
                     size="sm"
                     leftIcon={<Globe className="h-4 w-4" />}
                     onClick={() => window.open(profile.portfolioUrl!, '_blank')}
+                    tooltip="Open portfolio website"
                   >
                     Portfolio
                   </Button>
@@ -1702,7 +1740,7 @@ export default function SuperAdminUserDetailPage() {
                 {profile.website && (
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-[var(--text-muted)]" />
-                    <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                    <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline" title="Open company website">
                       Website
                     </a>
                   </div>
@@ -1917,6 +1955,7 @@ export default function SuperAdminUserDetailPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      title="Open LinkedIn profile"
                     >
                       LinkedIn <ExternalLink className="h-3 w-3" />
                     </a>
@@ -2152,39 +2191,42 @@ export default function SuperAdminUserDetailPage() {
         )}
 
         {/* Social Links */}
-        {(profile.linkedinUrl || profile.twitterUrl || profile.facebookUrl) && (
+        {(profile.socialLinks?.linkedin || profile.socialLinks?.twitter || profile.socialLinks?.facebook) && (
           <Card>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
               <Globe className="h-5 w-5" />
               Social Links
             </h3>
             <div className="flex flex-wrap gap-2">
-              {profile.linkedinUrl && (
+              {profile.socialLinks?.linkedin && (
                 <Button
                   variant="outline"
                   size="sm"
                   leftIcon={<Linkedin className="h-4 w-4" />}
-                  onClick={() => window.open(profile.linkedinUrl!, '_blank')}
+                  onClick={() => window.open(profile.socialLinks!.linkedin!, '_blank')}
+                  tooltip="Open company LinkedIn page"
                 >
                   LinkedIn
                 </Button>
               )}
-              {profile.twitterUrl && (
+              {profile.socialLinks?.twitter && (
                 <Button
                   variant="outline"
                   size="sm"
                   leftIcon={<Globe className="h-4 w-4" />}
-                  onClick={() => window.open(profile.twitterUrl!, '_blank')}
+                  onClick={() => window.open(profile.socialLinks!.twitter!, '_blank')}
+                  tooltip="Open company Twitter page"
                 >
                   Twitter
                 </Button>
               )}
-              {profile.facebookUrl && (
+              {profile.socialLinks?.facebook && (
                 <Button
                   variant="outline"
                   size="sm"
                   leftIcon={<Globe className="h-4 w-4" />}
-                  onClick={() => window.open(profile.facebookUrl!, '_blank')}
+                  onClick={() => window.open(profile.socialLinks!.facebook!, '_blank')}
+                  tooltip="Open company Facebook page"
                 >
                   Facebook
                 </Button>
@@ -2233,23 +2275,27 @@ export default function SuperAdminUserDetailPage() {
                       )}
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center gap-1 rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="rounded-full p-1.5 text-white hover:bg-white/20"
-                        title="Upload avatar"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </button>
-                      {user.avatar && (
+                      <Tooltip content="Upload new avatar">
                         <button
                           type="button"
-                          onClick={() => removeAvatarMutation.mutate()}
-                          className="rounded-full p-1.5 text-white hover:bg-white/20"
-                          title="Remove avatar"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="cursor-pointer rounded-full p-1.5 text-white hover:bg-white/20"
+                          title="Upload avatar"
                         >
-                          <X className="h-4 w-4" />
+                          <Camera className="h-4 w-4" />
                         </button>
+                      </Tooltip>
+                      {user.avatar && (
+                        <Tooltip content="Remove avatar">
+                          <button
+                            type="button"
+                            onClick={() => removeAvatarMutation.mutate()}
+                            className="cursor-pointer rounded-full p-1.5 text-white hover:bg-white/20"
+                            title="Remove avatar"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </Tooltip>
                       )}
                     </div>
                     <input
@@ -2306,6 +2352,7 @@ export default function SuperAdminUserDetailPage() {
                       leftIcon={<CheckCircle className="h-4 w-4" />}
                       onClick={() => activateMutation.mutate()}
                       isLoading={activateMutation.isPending}
+                      tooltip="Reactivate this user"
                     >
                       Activate
                     </Button>
@@ -2315,6 +2362,7 @@ export default function SuperAdminUserDetailPage() {
                       size="sm"
                       leftIcon={<Ban className="h-4 w-4" />}
                       onClick={() => setShowSuspendModal(true)}
+                      tooltip="Suspend this user"
                     >
                       Suspend
                     </Button>
@@ -2326,6 +2374,7 @@ export default function SuperAdminUserDetailPage() {
                       leftIcon={<Power className="h-4 w-4" />}
                       onClick={() => deactivateMutation.mutate()}
                       isLoading={deactivateMutation.isPending}
+                      tooltip="Deactivate this user account"
                     >
                       Deactivate
                     </Button>
@@ -2338,6 +2387,7 @@ export default function SuperAdminUserDetailPage() {
                       setShowRoleModal(true);
                       setNewRole(user.role);
                     }}
+                    tooltip="Change user role"
                   >
                     Change Role
                   </Button>
@@ -2346,6 +2396,7 @@ export default function SuperAdminUserDetailPage() {
                     size="sm"
                     leftIcon={<Key className="h-4 w-4" />}
                     onClick={() => setShowResetPwModal(true)}
+                    tooltip="Reset user password"
                   >
                     Reset Password
                   </Button>
@@ -2355,6 +2406,7 @@ export default function SuperAdminUserDetailPage() {
                     leftIcon={<LogOut className="h-4 w-4" />}
                     onClick={() => revokeSessionsMutation.mutate()}
                     isLoading={revokeSessionsMutation.isPending}
+                    tooltip="Revoke all active sessions"
                   >
                     Revoke Sessions
                   </Button>
@@ -2363,6 +2415,7 @@ export default function SuperAdminUserDetailPage() {
                     size="sm"
                     leftIcon={<Trash2 className="h-4 w-4" />}
                     onClick={() => setShowDeleteModal(true)}
+                    tooltip="Permanently delete this user"
                   >
                     Delete
                   </Button>
@@ -2371,7 +2424,7 @@ export default function SuperAdminUserDetailPage() {
             </Card>
 
             {/* Tabs */}
-            <Tabs tabs={tabItems} activeTab={activeTab} onChange={(key) => setActiveTab(key as typeof activeTab)} variant="underline" />
+            <Tabs tabs={tabItems} activeTab={activeTab} onChange={handleTabChange} variant="underline" />
 
             {/* Tab Content */}
             <div className="space-y-6">
@@ -2384,7 +2437,7 @@ export default function SuperAdminUserDetailPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-[var(--text)]">Edit Profile</h2>
                   {!isEditing && (
-                    <Button variant="outline" size="sm" onClick={startEditing}>
+                    <Button variant="outline" size="sm" onClick={startEditing} tooltip="Edit user profile">
                       Edit
                     </Button>
                   )}
@@ -2452,10 +2505,10 @@ export default function SuperAdminUserDetailPage() {
                     </p>
                   )}
                   <div className="flex gap-3">
-                    <Button onClick={handleSaveProfile} isLoading={updateProfileMutation.isPending} disabled={!hasUnsavedChanges}>
+                    <Button onClick={handleSaveProfile} isLoading={updateProfileMutation.isPending} disabled={!hasUnsavedChanges} tooltip="Save profile changes">
                       Save Changes
                     </Button>
-                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    <Button variant="outline" onClick={() => setIsEditing(false)} tooltip="Discard changes">
                       Cancel
                     </Button>
                   </div>
@@ -2597,6 +2650,7 @@ export default function SuperAdminUserDetailPage() {
                       leftIcon={<LogOut className="h-4 w-4" />}
                       onClick={() => revokeSessionsMutation.mutate()}
                       isLoading={revokeSessionsMutation.isPending}
+                      tooltip="Revoke all active sessions for this user"
                     >
                       Revoke All
                     </Button>
@@ -2650,6 +2704,7 @@ export default function SuperAdminUserDetailPage() {
                             isLoading={revokingSessionId === session.id}
                             onClick={() => handleRevokeSession(session.id)}
                             className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
+                            tooltip="Revoke this session"
                           >
                             Revoke
                           </Button>
@@ -2740,6 +2795,7 @@ export default function SuperAdminUserDetailPage() {
                             size="sm"
                             onClick={() => setApplicationsPage(p => Math.max(1, p - 1))}
                             disabled={applicationsPage === 1}
+                            tooltip="Go to previous page"
                           >
                             Previous
                           </Button>
@@ -2751,6 +2807,7 @@ export default function SuperAdminUserDetailPage() {
                             size="sm"
                             onClick={() => setApplicationsPage(p => p + 1)}
                             disabled={!applicationsData.data.hasMore}
+                            tooltip="Go to next page"
                           >
                             Next
                           </Button>
@@ -2821,6 +2878,7 @@ export default function SuperAdminUserDetailPage() {
                             size="sm"
                             onClick={() => setJobsPage(p => Math.max(1, p - 1))}
                             disabled={jobsPage === 1}
+                            tooltip="Go to previous page"
                           >
                             Previous
                           </Button>
@@ -2832,6 +2890,7 @@ export default function SuperAdminUserDetailPage() {
                             size="sm"
                             onClick={() => setJobsPage(p => p + 1)}
                             disabled={!jobsData.data.hasMore}
+                            tooltip="Go to next page"
                           >
                             Next
                           </Button>
@@ -2906,6 +2965,7 @@ export default function SuperAdminUserDetailPage() {
                             size="sm"
                             onClick={() => setActivityPage(p => Math.max(1, p - 1))}
                             disabled={activityPage === 1}
+                            tooltip="Go to previous page"
                           >
                             Previous
                           </Button>
@@ -2917,6 +2977,7 @@ export default function SuperAdminUserDetailPage() {
                             size="sm"
                             onClick={() => setActivityPage(p => p + 1)}
                             disabled={!activityData.data.hasMore}
+                            tooltip="Go to next page"
                           >
                             Next
                           </Button>
@@ -2992,6 +3053,7 @@ export default function SuperAdminUserDetailPage() {
                                       });
                                     }}
                                     isLoading={updateVerificationMutation.isPending}
+                                    tooltip="Approve this verification request"
                                   >
                                     Approve
                                   </Button>
@@ -3009,6 +3071,7 @@ export default function SuperAdminUserDetailPage() {
                                       }
                                     }}
                                     isLoading={updateVerificationMutation.isPending}
+                                    tooltip="Reject this verification request"
                                   >
                                     Reject
                                   </Button>
@@ -3025,6 +3088,7 @@ export default function SuperAdminUserDetailPage() {
                             size="sm"
                             onClick={() => setVerificationsPage(p => Math.max(1, p - 1))}
                             disabled={verificationsPage === 1}
+                            tooltip="Go to previous page"
                           >
                             Previous
                           </Button>
@@ -3036,6 +3100,7 @@ export default function SuperAdminUserDetailPage() {
                             size="sm"
                             onClick={() => setVerificationsPage(p => p + 1)}
                             disabled={!verificationsData.data.hasMore}
+                            tooltip="Go to next page"
                           >
                             Next
                           </Button>
@@ -3059,7 +3124,7 @@ export default function SuperAdminUserDetailPage() {
             <div className="py-12 text-center">
               <p className="text-[var(--text-muted)]">User not found.</p>
               <Link href={ROUTES.SUPER_ADMIN.USERS}>
-                <Button variant="outline" size="sm" className="mt-4">
+                <Button variant="outline" size="sm" className="mt-4" tooltip="Return to user list">
                   Back to Users
                 </Button>
               </Link>
@@ -3086,6 +3151,7 @@ export default function SuperAdminUserDetailPage() {
                   setSuspendReason('');
                   setSuspendDuration('');
                 }}
+                tooltip="Cancel suspension"
               >
                 Cancel
               </Button>
@@ -3100,6 +3166,7 @@ export default function SuperAdminUserDetailPage() {
                 }}
                 isLoading={suspendMutation.isPending}
                 disabled={!suspendReason.trim()}
+                tooltip="Confirm user suspension"
               >
                 Suspend
               </Button>
@@ -3138,13 +3205,14 @@ export default function SuperAdminUserDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)} tooltip="Cancel deletion">
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => deleteMutation.mutate()}
                 isLoading={deleteMutation.isPending}
+                tooltip="Permanently delete this user"
               >
                 Delete
               </Button>
@@ -3177,6 +3245,7 @@ export default function SuperAdminUserDetailPage() {
                   setShowRoleModal(false);
                   setNewRole('');
                 }}
+                tooltip="Cancel role change"
               >
                 Cancel
               </Button>
@@ -3184,6 +3253,7 @@ export default function SuperAdminUserDetailPage() {
                 onClick={() => roleChangeMutation.mutate(newRole as Role)}
                 isLoading={roleChangeMutation.isPending}
                 disabled={!newRole || newRole === user?.role}
+                tooltip="Confirm role update"
               >
                 Update Role
               </Button>
@@ -3214,7 +3284,7 @@ export default function SuperAdminUserDetailPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={closeResetPwModal}>
+              <Button variant="outline" onClick={closeResetPwModal} tooltip="Cancel password reset">
                 Cancel
               </Button>
               {resetStep === 'send' ? (
@@ -3222,6 +3292,7 @@ export default function SuperAdminUserDetailPage() {
                   onClick={handleSendResetOtp}
                   isLoading={isSendingOtp}
                   disabled={isAdminPasswordFlow && (!resetSuperAdminPassword || !newPassword || !resetConfirmPassword)}
+                  tooltip="Send verification code to user email"
                 >
                   Send Verification Code
                 </Button>
@@ -3236,6 +3307,7 @@ export default function SuperAdminUserDetailPage() {
                       : newPassword.length < passwordRules.MIN_LENGTH ||
                         resetOtp.length !== otpConfig.LENGTH
                   }
+                  tooltip="Confirm password reset"
                 >
                   {isAdminPasswordFlow ? 'Confirm Password Change' : 'Reset Password'}
                 </Button>
@@ -3312,14 +3384,16 @@ export default function SuperAdminUserDetailPage() {
                   {resendTimer > 0 ? (
                     <span className="text-[var(--text-secondary)]">Resend in {resendTimer}s</span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleResendResetOtp}
-                      disabled={isResending}
-                      className="text-primary font-medium hover:underline disabled:opacity-50"
-                    >
-                      {isResending ? 'Sending...' : 'Resend Code'}
-                    </button>
+                    <Tooltip content="Resend verification code">
+                      <button
+                        type="button"
+                        onClick={handleResendResetOtp}
+                        disabled={isResending}
+                        className="cursor-pointer text-primary font-medium hover:underline disabled:opacity-50"
+                      >
+                        {isResending ? 'Sending...' : 'Resend Code'}
+                      </button>
+                    </Tooltip>
                   )}
                 </p>
               </div>
@@ -3437,7 +3511,7 @@ function AdminEmailSection({ userId, user, invalidateUser }: AdminSectionProps) 
               <Badge variant="success" size="sm">Verified</Badge>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setStep('form')}>Change Email</Button>
+          <Button variant="outline" size="sm" onClick={() => setStep('form')} tooltip="Change admin email address">Change Email</Button>
         </div>
       )}
 
@@ -3446,8 +3520,8 @@ function AdminEmailSection({ userId, user, invalidateUser }: AdminSectionProps) 
           <Input label="New Email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="new@example.com" />
           <Input label="Your Password (Super Admin)" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password to confirm" />
           <div className="flex gap-3">
-            <Button onClick={handleInitiate} isLoading={loading} disabled={!newEmail || !password}>Send Verification Code</Button>
-            <Button variant="outline" onClick={reset}>Cancel</Button>
+            <Button onClick={handleInitiate} isLoading={loading} disabled={!newEmail || !password} tooltip="Send verification code to new email">Send Verification Code</Button>
+            <Button variant="outline" onClick={reset} tooltip="Cancel email change">Cancel</Button>
           </div>
         </div>
       )}
@@ -3463,13 +3537,13 @@ function AdminEmailSection({ userId, user, invalidateUser }: AdminSectionProps) 
               {resendTimer > 0 ? (
                 <span>Resend in {resendTimer}s</span>
               ) : (
-                <button type="button" onClick={handleResend} className="text-primary font-medium hover:underline">Resend Code</button>
+                <Tooltip content="Resend verification code"><button type="button" onClick={handleResend} className="cursor-pointer text-primary font-medium hover:underline">Resend Code</button></Tooltip>
               )}
             </p>
           </div>
           <div className="flex gap-3">
-            <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH}>Confirm Email Change</Button>
-            <Button variant="outline" onClick={reset}>Cancel</Button>
+            <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH} tooltip="Confirm email change">Confirm Email Change</Button>
+            <Button variant="outline" onClick={reset} tooltip="Cancel email change">Cancel</Button>
           </div>
         </div>
       )}
@@ -3566,14 +3640,14 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setStep('form')}>Change</Button>
-                  <Button variant="outline" size="sm" className="text-[var(--error)]" onClick={() => setShowRemoveModal(true)}>Remove</Button>
+                  <Button variant="outline" size="sm" onClick={() => setStep('form')} tooltip="Change mobile number">Change</Button>
+                  <Button variant="outline" size="sm" className="text-[var(--error)]" onClick={() => setShowRemoveModal(true)} tooltip="Remove mobile number">Remove</Button>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-between">
                 <p className="text-sm text-[var(--text-muted)]">No mobile number set</p>
-                <Button variant="outline" size="sm" onClick={() => setStep('form')}>Add Mobile</Button>
+                <Button variant="outline" size="sm" onClick={() => setStep('form')} tooltip="Add a mobile number">Add Mobile</Button>
               </div>
             )}
           </>
@@ -3605,10 +3679,10 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
               </div>
             )}
             <div className="flex gap-3">
-              <Button onClick={handleInitiate} isLoading={loading} disabled={!mobileNumber || (!!user.mobileNumber && !password)}>
+              <Button onClick={handleInitiate} isLoading={loading} disabled={!mobileNumber || (!!user.mobileNumber && !password)} tooltip="Send SMS verification code">
                 Send SMS Code
               </Button>
-              <Button variant="outline" onClick={reset}>Cancel</Button>
+              <Button variant="outline" onClick={reset} tooltip="Cancel mobile change">Cancel</Button>
             </div>
           </div>
         )}
@@ -3624,13 +3698,13 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
                 {resendTimer > 0 ? (
                   <span>Resend in {resendTimer}s</span>
                 ) : (
-                  <button type="button" onClick={handleResend} className="text-primary font-medium hover:underline">Resend Code</button>
+                  <Tooltip content="Resend verification code"><button type="button" onClick={handleResend} className="cursor-pointer text-primary font-medium hover:underline">Resend Code</button></Tooltip>
                 )}
               </p>
             </div>
             <div className="flex gap-3">
-              <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH}>Confirm</Button>
-              <Button variant="outline" onClick={reset}>Cancel</Button>
+              <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH} tooltip="Confirm mobile number change">Confirm</Button>
+              <Button variant="outline" onClick={reset} tooltip="Cancel mobile change">Cancel</Button>
             </div>
           </div>
         )}
@@ -3643,8 +3717,8 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowRemoveModal(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleRemove} isLoading={removing}>Remove</Button>
+            <Button variant="outline" onClick={() => setShowRemoveModal(false)} tooltip="Cancel removal">Cancel</Button>
+            <Button variant="destructive" onClick={handleRemove} isLoading={removing} tooltip="Confirm removing mobile number">Remove</Button>
           </div>
         }
       >
@@ -3770,9 +3844,9 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setStep('change')}>Change</Button>
+                  <Button variant="outline" size="sm" onClick={() => setStep('change')} tooltip="Change WhatsApp number">Change</Button>
                   {user.whatsappNumber && (
-                    <Button variant="outline" size="sm" className="text-[var(--error)]" onClick={() => setShowRemoveModal(true)}>Remove</Button>
+                    <Button variant="outline" size="sm" className="text-[var(--error)]" onClick={() => setShowRemoveModal(true)} tooltip="Remove WhatsApp number">Remove</Button>
                   )}
                 </div>
               </div>
@@ -3784,11 +3858,11 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
                 </div>
                 <div className="flex gap-2">
                   {hasMobile && (
-                    <Button variant="outline" size="sm" onClick={handleVerifyMobile} isLoading={loading}>
+                    <Button variant="outline" size="sm" onClick={handleVerifyMobile} isLoading={loading} tooltip="Verify mobile number for WhatsApp">
                       Verify Mobile for WhatsApp
                     </Button>
                   )}
-                  <Button variant="outline" size="sm" onClick={() => setStep('add-separate')}>
+                  <Button variant="outline" size="sm" onClick={() => setStep('add-separate')} tooltip="Add a separate WhatsApp number">
                     Add Separate Number
                   </Button>
                 </div>
@@ -3806,8 +3880,8 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
               onChange={(e) => setWhatsappNumber(e.target.value)}
             />
             <div className="flex gap-3">
-              <Button onClick={handleAddSeparate} isLoading={loading} disabled={!whatsappNumber}>Send WhatsApp OTP</Button>
-              <Button variant="outline" onClick={reset}>Cancel</Button>
+              <Button onClick={handleAddSeparate} isLoading={loading} disabled={!whatsappNumber} tooltip="Send OTP via WhatsApp">Send WhatsApp OTP</Button>
+              <Button variant="outline" onClick={reset} tooltip="Cancel adding WhatsApp number">Cancel</Button>
             </div>
           </div>
         )}
@@ -3828,8 +3902,8 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
               placeholder="Enter your password to confirm"
             />
             <div className="flex gap-3">
-              <Button onClick={handleChange} isLoading={loading} disabled={!whatsappNumber || !password}>Send WhatsApp OTP</Button>
-              <Button variant="outline" onClick={reset}>Cancel</Button>
+              <Button onClick={handleChange} isLoading={loading} disabled={!whatsappNumber || !password} tooltip="Send OTP to new WhatsApp number">Send WhatsApp OTP</Button>
+              <Button variant="outline" onClick={reset} tooltip="Cancel WhatsApp change">Cancel</Button>
             </div>
           </div>
         )}
@@ -3846,8 +3920,8 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
               </p>
             </div>
             <div className="flex gap-3">
-              <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH}>Confirm</Button>
-              <Button variant="outline" onClick={reset}>Cancel</Button>
+              <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH} tooltip="Confirm WhatsApp verification">Confirm</Button>
+              <Button variant="outline" onClick={reset} tooltip="Cancel WhatsApp verification">Cancel</Button>
             </div>
           </div>
         )}
@@ -3860,8 +3934,8 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowRemoveModal(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleRemove} isLoading={removing}>Remove</Button>
+            <Button variant="outline" onClick={() => setShowRemoveModal(false)} tooltip="Cancel removal">Cancel</Button>
+            <Button variant="destructive" onClick={handleRemove} isLoading={removing} tooltip="Confirm removing WhatsApp number">Remove</Button>
           </div>
         }
       >

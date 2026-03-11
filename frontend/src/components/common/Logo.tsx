@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import Tooltip from '@/components/ui/Tooltip';
 
 interface LogoProps {
   href?: string;
@@ -29,9 +30,11 @@ export default function Logo({ href = '/', className, size = 'md' }: LogoProps) 
 
   if (href) {
     return (
-      <Link href={href} className="flex items-center">
-        {img}
-      </Link>
+      <Tooltip content="Go to homepage">
+        <Link href={href} className="flex items-center">
+          {img}
+        </Link>
+      </Tooltip>
     );
   }
 

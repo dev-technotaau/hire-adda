@@ -201,7 +201,7 @@ export default function SavedCandidatesPage() {
             </p>
           </div>
           <Link href={ROUTES.EMPLOYER.CANDIDATES}>
-            <Button variant="outline" leftIcon={<Search className="h-4 w-4" />}>
+            <Button variant="outline" leftIcon={<Search className="h-4 w-4" />} tooltip="Search candidates">
               Search Candidates
             </Button>
           </Link>
@@ -220,7 +220,8 @@ export default function SavedCandidatesPage() {
                       selectAll();
                     }
                   }}
-                  className="text-primary hover:text-primary-dark flex items-center gap-1.5 text-sm font-medium"
+                  title="Toggle select all"
+                  className="cursor-pointer text-primary hover:text-primary-dark flex items-center gap-1.5 text-sm font-medium"
                 >
                   {selectedIds.size === candidates.length ? (
                     <CheckSquare className="h-4 w-4" />
@@ -240,6 +241,7 @@ export default function SavedCandidatesPage() {
                   onClick={() => bulkExportMutation.mutate(Array.from(selectedIds))}
                   disabled={bulkExportMutation.isPending}
                   isLoading={bulkExportMutation.isPending}
+                  tooltip="Export as XLSX"
                 >
                   <Download className="mr-1.5 h-4 w-4" />
                   Export
@@ -250,11 +252,12 @@ export default function SavedCandidatesPage() {
                   onClick={() => bulkExportResumesMutation.mutate(Array.from(selectedIds))}
                   disabled={bulkExportResumesMutation.isPending}
                   isLoading={bulkExportResumesMutation.isPending}
+                  tooltip="Export resumes as ZIP"
                 >
                   <FileDown className="mr-1.5 h-4 w-4" />
                   Export Resumes
                 </Button>
-                <Button variant="ghost" size="sm" onClick={clearSelection}>
+                <Button variant="ghost" size="sm" onClick={clearSelection} tooltip="Clear selection">
                   <X className="mr-1.5 h-4 w-4" />
                   Clear
                 </Button>
@@ -295,7 +298,7 @@ export default function SavedCandidatesPage() {
               description="Save candidates from search results to review them later."
               action={
                 <Link href={ROUTES.EMPLOYER.CANDIDATES}>
-                  <Button size="sm">Browse Candidates</Button>
+                  <Button size="sm" tooltip="Browse candidates">Browse Candidates</Button>
                 </Link>
               }
             />
@@ -321,7 +324,8 @@ export default function SavedCandidatesPage() {
                 </h3>
                 <button
                   onClick={() => setJobPickerOpen(false)}
-                  className="text-[var(--text-muted)] hover:text-[var(--text)]"
+                  title="Close"
+                  className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -348,6 +352,7 @@ export default function SavedCandidatesPage() {
                       <button
                         key={job.id}
                         type="button"
+                        title={`Select ${job.title}`}
                         onClick={() => {
                           if (jobPickerAction === 'shortlist') {
                             shortlistMutation.mutate({
@@ -452,7 +457,7 @@ function SavedCandidateCard({
           <button
             type="button"
             onClick={onToggleSelect}
-            className="mt-1 shrink-0 text-[var(--text-muted)] hover:text-primary"
+            className="cursor-pointer mt-1 shrink-0 text-[var(--text-muted)] hover:text-primary"
             title={isSelected ? 'Deselect' : 'Select'}
           >
             {isSelected ? (
@@ -680,7 +685,7 @@ function SavedCandidateCard({
           </div>
           <div className="flex items-center gap-2">
             <Link href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate.id)}>
-              <Button size="sm">View Profile</Button>
+              <Button size="sm" tooltip="View profile">View Profile</Button>
             </Link>
             {candidate.resume && (
               <a

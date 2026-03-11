@@ -35,6 +35,7 @@ import Modal from '@/components/ui/Modal';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import ScreeningQuestionBuilder from '@/components/ui/ScreeningQuestionBuilder';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
 import DOMPurify from 'isomorphic-dompurify';
 import { jobService } from '@/services/job.service';
 import { jobTemplateService } from '@/services/job-template.service';
@@ -377,10 +378,10 @@ export default function PostJobPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleDismissDraft}>
+              <Button variant="outline" size="sm" onClick={handleDismissDraft} tooltip="Discard saved draft">
                 Dismiss
               </Button>
-              <Button variant="primary" size="sm" onClick={handleRestoreDraft}>
+              <Button variant="primary" size="sm" onClick={handleRestoreDraft} tooltip="Restore your previously saved draft">
                 Restore Draft
               </Button>
             </div>
@@ -395,13 +396,13 @@ export default function PostJobPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={openLoadTemplateModal}>
+            <Button variant="outline" size="sm" onClick={openLoadTemplateModal} tooltip="Load a saved job template">
               <Download className="mr-1.5 h-4 w-4" /> Load Template
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowSaveTemplateModal(true)}>
+            <Button variant="outline" size="sm" onClick={() => setShowSaveTemplateModal(true)} tooltip="Save current form as a reusable template">
               <Upload className="mr-1.5 h-4 w-4" /> Save as Template
             </Button>
-            <Button variant="outline" size="sm" onClick={saveDraft}>
+            <Button variant="outline" size="sm" onClick={saveDraft} tooltip="Save current progress as draft">
               <Save className="mr-1.5 h-4 w-4" /> Save Draft
             </Button>
           </div>
@@ -411,13 +412,14 @@ export default function PostJobPage() {
         <div className="flex items-center justify-between">
           {steps.map((s, i) => (
             <div key={i} className="flex flex-1 items-center">
-              <button
-                type="button"
-                onClick={() => {
-                  if (i <= step) setStep(i as Step);
-                }}
-                className={`flex flex-col items-center gap-1.5 ${i <= step ? 'cursor-pointer' : 'cursor-default'}`}
-              >
+              <Tooltip content={`Go to ${s.label} step`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (i <= step) setStep(i as Step);
+                  }}
+                  className={`flex flex-col items-center gap-1.5 ${i <= step ? 'cursor-pointer' : 'cursor-default'}`}
+                >
                 <div
                   className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors ${
                     i < step
@@ -437,6 +439,7 @@ export default function PostJobPage() {
                   {s.label}
                 </span>
               </button>
+              </Tooltip>
               {i < steps.length - 1 && (
                 <div
                   className={`mx-2 h-0.5 flex-1 ${
@@ -923,6 +926,7 @@ export default function PostJobPage() {
                     variant="outline"
                     className="shrink-0"
                     onClick={() => addToArray('tags', tagInput, setTagInput)}
+                    tooltip="Add tag"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -1672,18 +1676,18 @@ export default function PostJobPage() {
 
         {/* Navigation Buttons */}
         <div className="flex items-center justify-between">
-          <Button variant="outline" onClick={handleBack} disabled={step === 0}>
+          <Button variant="outline" onClick={handleBack} disabled={step === 0} tooltip="Go to previous step">
             <ChevronLeft className="mr-1 h-4 w-4" /> Back
           </Button>
           <span className="text-sm text-[var(--text-muted)]">
             Step {step + 1} of {steps.length}
           </span>
           {step < 7 ? (
-            <Button onClick={handleNext} disabled={!canGoNext()}>
+            <Button onClick={handleNext} disabled={!canGoNext()} tooltip="Continue to next step">
               Next <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} isLoading={createMutation.isPending}>
+            <Button onClick={handleSubmit} isLoading={createMutation.isPending} tooltip="Publish your job listing">
               <Briefcase className="mr-1.5 h-4 w-4" /> Post Job
             </Button>
           )}
@@ -1710,13 +1714,14 @@ export default function PostJobPage() {
               onChange={(e) => setTemplateDesc(e.target.value)}
             />
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowSaveTemplateModal(false)}>
+              <Button variant="outline" onClick={() => setShowSaveTemplateModal(false)} tooltip="Cancel saving template">
                 Cancel
               </Button>
               <Button
                 onClick={handleSaveAsTemplate}
                 isLoading={saveTemplateMutation.isPending}
                 disabled={!templateName.trim()}
+                tooltip="Save this template for future use"
               >
                 Save Template
               </Button>
@@ -1737,12 +1742,12 @@ export default function PostJobPage() {
               </p>
             ) : (
               templatesData.data.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  onClick={() => handleLoadTemplate(tpl.templateData)}
-                  className="hover:border-primary/50 w-full rounded-lg border border-[var(--border)] p-3 text-left transition-colors hover:bg-[var(--bg-secondary)]"
-                >
+                <Tooltip key={tpl.id} content={`Load the "${tpl.name}" template`}>
+                  <button
+                    type="button"
+                    onClick={() => handleLoadTemplate(tpl.templateData)}
+                    className="hover:border-primary/50 w-full cursor-pointer rounded-lg border border-[var(--border)] p-3 text-left transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
                   <p className="text-sm font-medium text-[var(--text)]">{tpl.name}</p>
                   {tpl.description && (
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">{tpl.description}</p>
@@ -1750,11 +1755,12 @@ export default function PostJobPage() {
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
                     Saved {new Date(tpl.updatedAt).toLocaleDateString()}
                   </p>
-                </button>
+                  </button>
+                </Tooltip>
               ))
             )}
             <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setShowLoadTemplateModal(false)}>
+              <Button variant="outline" onClick={() => setShowLoadTemplateModal(false)} tooltip="Close template selector">
                 Close
               </Button>
             </div>

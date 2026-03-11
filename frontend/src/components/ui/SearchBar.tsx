@@ -347,7 +347,8 @@ export default function SearchBar({
     setDebouncedQuery('');
     setActiveIndex(-1);
     inputRef.current?.focus();
-  }, []);
+    onSearch?.('');
+  }, [onSearch]);
 
   /* ---- click outside ---- */
   useEffect(() => {

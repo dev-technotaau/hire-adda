@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { useAuthStore } from '@/store/auth.store';
+import Tooltip from '@/components/ui/Tooltip';
 
 const shortcuts: { label: string; path: string; roles: string[] }[] = [
   { label: 'Search Jobs', path: ROUTES.CANDIDATE.JOBS, roles: ['CANDIDATE'] },
@@ -89,12 +90,14 @@ export default function KeyboardShortcuts() {
             }}
             className="flex-1 bg-transparent text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
           />
-          <button
-            onClick={() => setOpen(false)}
-            className="text-[var(--text-muted)] hover:text-[var(--text)]"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <Tooltip content="Close command palette">
+            <button
+              onClick={() => setOpen(false)}
+              className="text-[var(--text-muted)] hover:text-[var(--text)]"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </Tooltip>
         </div>
 
         <div className="max-h-64 overflow-y-auto p-2">

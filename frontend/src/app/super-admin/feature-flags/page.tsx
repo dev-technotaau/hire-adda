@@ -67,7 +67,7 @@ export default function FeatureFlagsPage() {
               the Firebase console.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} tooltip="Refresh feature flags from Firebase">
             <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -129,7 +129,8 @@ export default function FeatureFlagsPage() {
               href="https://console.firebase.google.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline"
+              className="text-primary cursor-pointer hover:underline"
+              title="Open Firebase Console to manage Remote Config"
             >
               Firebase Console
             </a>{' '}

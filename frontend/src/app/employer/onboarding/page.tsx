@@ -965,6 +965,7 @@ export default function EmployerOnboardingPage() {
             onClick={() => addSpecialty(specialtyInput)}
             disabled={!specialtyInput.trim()}
             className="shrink-0"
+            tooltip="Add specialty"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -1100,7 +1101,8 @@ export default function EmployerOnboardingPage() {
                   setLogoFile(null);
                   setLogoPreview(null);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]"
+                title="Change logo"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]"
               >
                 <Camera className="h-4 w-4" />
                 Change Logo
@@ -1110,7 +1112,8 @@ export default function EmployerOnboardingPage() {
                   setLogoFile(null);
                   setLogoPreview(null);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)]"
+                title="Remove logo"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)]"
               >
                 <Trash2 className="h-4 w-4" />
                 Remove
@@ -1129,7 +1132,7 @@ export default function EmployerOnboardingPage() {
           Cover Image <span className="text-[var(--text-muted)]">(Optional)</span>
         </label>
         <p className="mb-3 text-xs text-[var(--text-muted)]">
-          Banner image for your profile (1200x400px recommended)
+          Banner image for your profile (1920x640px recommended)
         </p>
         {!coverImagePreview ? (
           <FileUpload
@@ -1159,7 +1162,8 @@ export default function EmployerOnboardingPage() {
                   setCoverImageFile(null);
                   setCoverImagePreview(null);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]"
+                title="Change cover image"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]"
               >
                 <Camera className="h-4 w-4" />
                 Change Cover
@@ -1169,7 +1173,8 @@ export default function EmployerOnboardingPage() {
                   setCoverImageFile(null);
                   setCoverImagePreview(null);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)]"
+                title="Remove cover image"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)]"
               >
                 <Trash2 className="h-4 w-4" />
                 Remove
@@ -1178,7 +1183,7 @@ export default function EmployerOnboardingPage() {
           </div>
         )}
         <p className="mt-2 text-xs text-[var(--text-muted)]">
-          JPG, PNG, or WebP. Max 5MB. Will be cropped to 3:1 aspect ratio (1200x400px).
+          JPG, PNG, or WebP. Max 5MB. Will be cropped to 3:1 aspect ratio (1920x640px).
         </p>
       </div>
     </div>
@@ -1239,6 +1244,7 @@ export default function EmployerOnboardingPage() {
             onClick={() => addCoreValue(coreValueInput)}
             disabled={!coreValueInput.trim()}
             className="shrink-0"
+            tooltip="Add core value"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -1276,6 +1282,7 @@ export default function EmployerOnboardingPage() {
             onClick={() => addErg(ergInput)}
             disabled={!ergInput.trim()}
             className="shrink-0"
+            tooltip="Add resource group"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -1344,6 +1351,7 @@ export default function EmployerOnboardingPage() {
             onClick={() => addBenefit(benefitInput)}
             disabled={!benefitInput.trim()}
             className="shrink-0"
+            tooltip="Add benefit"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -1363,10 +1371,11 @@ export default function EmployerOnboardingPage() {
                 type="button"
                 onClick={() => !isAdded && addBenefit(benefit)}
                 disabled={isAdded}
+                title={isAdded ? 'Already added' : `Add ${benefit}`}
                 className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   isAdded
                     ? 'border-primary/30 bg-primary-light text-primary cursor-default'
-                    : 'hover:border-primary hover:text-primary border-[var(--border)] bg-white text-[var(--text-secondary)]'
+                    : 'hover:border-primary hover:text-primary cursor-pointer border-[var(--border)] bg-white text-[var(--text-secondary)]'
                 }`}
               >
                 {isAdded ? '+ ' : '+ '}
@@ -1426,7 +1435,8 @@ export default function EmployerOnboardingPage() {
                         structuredPerks: [...data.structuredPerks, { category: cat, perks: [] }],
                       })
                     }
-                    className="hover:border-primary hover:text-primary rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
+                    title={`Add ${cat} category`}
+                    className="hover:border-primary hover:text-primary cursor-pointer rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
                   >
                     + {cat}
                   </button>
@@ -1468,8 +1478,9 @@ export default function EmployerOnboardingPage() {
                     structuredPerks: data.structuredPerks.filter((_, i) => i !== catIndex),
                   })
                 }
-                className="mt-5 rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white hover:text-[var(--error)]"
+                className="mt-5 cursor-pointer rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white hover:text-[var(--error)]"
                 aria-label="Remove category"
+                title="Remove category"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -1509,6 +1520,7 @@ export default function EmployerOnboardingPage() {
                   }
                 }}
                 disabled={!(perkInputs[catIndex] || '').trim()}
+                tooltip="Add perk"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -1543,6 +1555,7 @@ export default function EmployerOnboardingPage() {
               structuredPerks: [...data.structuredPerks, { category: '', perks: [] }],
             })
           }
+          tooltip="Add perk category"
         >
           <Plus className="mr-1 h-4 w-4" /> Add Category
         </Button>
@@ -1573,6 +1586,7 @@ export default function EmployerOnboardingPage() {
             onClick={() => addTech(techInput)}
             disabled={!techInput.trim()}
             className="shrink-0"
+            tooltip="Add technology"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -1611,6 +1625,7 @@ export default function EmployerOnboardingPage() {
             onClick={() => addProduct(productInput)}
             disabled={!productInput.trim()}
             className="shrink-0"
+            tooltip="Add product or service"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -1690,7 +1705,8 @@ export default function EmployerOnboardingPage() {
               <button
                 type="button"
                 onClick={() => removeLeadership(index)}
-                className="hover:text-error rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
+                title="Remove leader"
+                className="hover:text-error cursor-pointer rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -1731,7 +1747,7 @@ export default function EmployerOnboardingPage() {
           </div>
         ))}
 
-        <Button variant="outline" onClick={addLeadership}>
+        <Button variant="outline" onClick={addLeadership} tooltip="Add team leader">
           <Plus className="h-4 w-4" />
           Add Leader
         </Button>
@@ -1773,7 +1789,8 @@ export default function EmployerOnboardingPage() {
               <button
                 type="button"
                 onClick={() => removeTestimonial(index)}
-                className="hover:text-error rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
+                title="Remove testimonial"
+                className="hover:text-error cursor-pointer rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -1812,7 +1829,7 @@ export default function EmployerOnboardingPage() {
           </div>
         ))}
 
-        <Button variant="outline" onClick={addTestimonial}>
+        <Button variant="outline" onClick={addTestimonial} tooltip="Add testimonial">
           <Plus className="h-4 w-4" />
           Add Testimonial
         </Button>
@@ -1851,7 +1868,8 @@ export default function EmployerOnboardingPage() {
             <button
               type="button"
               onClick={() => removeAward(index)}
-              className="hover:text-error rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
+              title="Remove award"
+              className="hover:text-error cursor-pointer rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -1883,7 +1901,7 @@ export default function EmployerOnboardingPage() {
         </div>
       ))}
 
-      <Button variant="outline" onClick={addAward}>
+      <Button variant="outline" onClick={addAward} tooltip="Add award">
         <Plus className="h-4 w-4" />
         Add Award
       </Button>
@@ -1940,6 +1958,7 @@ export default function EmployerOnboardingPage() {
             onClick={() => addInvestor(investorInput)}
             disabled={!investorInput.trim()}
             className="shrink-0"
+            tooltip="Add investor"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -2129,6 +2148,7 @@ export default function EmployerOnboardingPage() {
             onClick={() => addLocation(locationInput)}
             disabled={!locationInput.trim()}
             className="shrink-0"
+            tooltip="Add location"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -2574,7 +2594,8 @@ export default function EmployerOnboardingPage() {
               <button
                 type="button"
                 onClick={() => goToStep(section.stepIndex)}
-                className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
+                title="Edit this section"
+                className="text-primary mb-3 flex cursor-pointer items-center gap-2 text-sm font-semibold hover:underline"
               >
                 <Icon className="h-4 w-4" />
                 {section.title}
@@ -2888,8 +2909,8 @@ export default function EmployerOnboardingPage() {
           onCropComplete={handleCoverCropComplete}
           aspectRatio={3}
           circularCrop={false}
-          outputWidth={1200}
-          outputHeight={400}
+          outputWidth={1920}
+          outputHeight={640}
         />
       )}
 

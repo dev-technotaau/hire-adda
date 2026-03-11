@@ -31,6 +31,7 @@ import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
 import { PAGINATION, QUERY_KEYS } from '@/constants/config';
@@ -278,6 +279,7 @@ export default function SuperAdminJobsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowBulkApproveModal(true)}
+                  tooltip="Approve all selected jobs"
                 >
                   Bulk Approve
                 </Button>
@@ -285,10 +287,11 @@ export default function SuperAdminJobsPage() {
                   variant="destructive"
                   size="sm"
                   onClick={() => setShowBulkDeleteModal(true)}
+                  tooltip="Delete all selected jobs"
                 >
                   Bulk Delete
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedJobs(new Set())}>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedJobs(new Set())} tooltip="Deselect all jobs">
                   Clear Selection
                 </Button>
               </div>
@@ -463,6 +466,7 @@ export default function SuperAdminJobsPage() {
                     setConfidentialFilter('');
                     setPage(1);
                   }}
+                  tooltip="Reset advanced filters"
                 >
                   Clear Advanced
                 </Button>
@@ -545,21 +549,25 @@ export default function SuperAdminJobsPage() {
                       {JOB_STATUS_LABELS[job.status] || job.status}
                     </Badge>
                     <div className="flex items-center gap-2">
-                      <Link href={`/super-admin/jobs/${job.id}`}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          leftIcon={<Eye className="h-3.5 w-3.5" />}
-                        >
-                          View
-                        </Button>
-                      </Link>
+                      <Tooltip content="View job details">
+                        <Link href={`/super-admin/jobs/${job.id}`}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Eye className="h-3.5 w-3.5" />}
+                            tooltip="View job details"
+                          >
+                            View
+                          </Button>
+                        </Link>
+                      </Tooltip>
                       <Button
                         variant="outline"
                         size="sm"
                         leftIcon={<CheckCircle className="h-3.5 w-3.5" />}
                         onClick={() => handleApprove(job)}
                         disabled={moderateMutation.isPending}
+                        tooltip="Approve and publish this job"
                       >
                         Approve
                       </Button>
@@ -569,6 +577,7 @@ export default function SuperAdminJobsPage() {
                         leftIcon={<XCircle className="h-3.5 w-3.5" />}
                         onClick={() => setRejectTarget(job)}
                         className="text-error border-error/30 hover:bg-[var(--error-light)]"
+                        tooltip="Reject this job posting"
                       >
                         Reject
                       </Button>
@@ -578,6 +587,7 @@ export default function SuperAdminJobsPage() {
                         leftIcon={<Flag className="h-3.5 w-3.5" />}
                         onClick={() => setFlagTarget(job)}
                         className="text-[var(--warning)]"
+                        tooltip="Flag this job for review"
                       >
                         Flag
                       </Button>
@@ -587,6 +597,7 @@ export default function SuperAdminJobsPage() {
                         leftIcon={<Trash2 className="h-3.5 w-3.5" />}
                         onClick={() => setDeleteTarget(job)}
                         className="text-error"
+                        tooltip="Delete this job permanently"
                       >
                         Delete
                       </Button>
@@ -632,6 +643,7 @@ export default function SuperAdminJobsPage() {
                   setRejectTarget(null);
                   setRejectReason('');
                 }}
+                tooltip="Cancel rejection"
               >
                 Cancel
               </Button>
@@ -640,6 +652,7 @@ export default function SuperAdminJobsPage() {
                 onClick={handleReject}
                 isLoading={moderateMutation.isPending}
                 disabled={!rejectReason.trim()}
+                tooltip="Confirm job rejection"
               >
                 Reject
               </Button>
@@ -682,6 +695,7 @@ export default function SuperAdminJobsPage() {
                   setFlagTarget(null);
                   setFlagReason('');
                 }}
+                tooltip="Cancel flagging"
               >
                 Cancel
               </Button>
@@ -689,6 +703,7 @@ export default function SuperAdminJobsPage() {
                 onClick={handleFlag}
                 isLoading={flagMutation.isPending}
                 disabled={!flagReason.trim()}
+                tooltip="Confirm flagging this job"
               >
                 Flag Job
               </Button>
@@ -721,13 +736,14 @@ export default function SuperAdminJobsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)} tooltip="Cancel deletion">
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
                 isLoading={deleteMutation.isPending}
+                tooltip="Permanently delete this job"
               >
                 Delete
               </Button>
@@ -752,12 +768,13 @@ export default function SuperAdminJobsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowBulkApproveModal(false)}>
+              <Button variant="outline" onClick={() => setShowBulkApproveModal(false)} tooltip="Cancel bulk approval">
                 Cancel
               </Button>
               <Button
                 onClick={handleBulkApprove}
                 isLoading={bulkApproveMutation.isPending}
+                tooltip="Confirm approving selected jobs"
               >
                 Approve {selectedJobs.size} Job{selectedJobs.size !== 1 ? 's' : ''}
               </Button>
@@ -781,10 +798,10 @@ export default function SuperAdminJobsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowBulkDeleteModal(false)}>
+              <Button variant="outline" onClick={() => setShowBulkDeleteModal(false)} tooltip="Cancel bulk deletion">
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleBulkDelete}>
+              <Button variant="destructive" onClick={handleBulkDelete} tooltip="Permanently delete selected jobs">
                 Delete {selectedJobs.size} Job{selectedJobs.size !== 1 ? 's' : ''}
               </Button>
             </div>

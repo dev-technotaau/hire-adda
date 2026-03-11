@@ -6,6 +6,7 @@ import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '@/hooks/use-n
 import { ROUTES } from '@/constants/routes';
 import { formatRelativeDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import Tooltip from '@/components/ui/Tooltip';
 import type { Notification, NotificationType } from '@/types/notification';
 
 const typeIcons: Record<NotificationType, typeof Info> = {
@@ -45,12 +46,14 @@ export default function NotificationDropdown({ onClose }: NotificationDropdownPr
       <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
         <h3 className="font-semibold text-[var(--text)]">Notifications</h3>
         {notifications.some((n) => !n.isRead) && (
-          <button
-            onClick={() => markAll.mutate()}
-            className="text-primary flex items-center gap-1 text-xs hover:underline"
-          >
-            <CheckCheck className="h-3.5 w-3.5" /> Mark all read
-          </button>
+          <Tooltip content="Mark all notifications as read">
+            <button
+              onClick={() => markAll.mutate()}
+              className="text-primary flex items-center gap-1 text-xs hover:underline"
+            >
+              <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+            </button>
+          </Tooltip>
         )}
       </div>
 
@@ -118,13 +121,15 @@ export default function NotificationDropdown({ onClose }: NotificationDropdownPr
       </div>
 
       <div className="border-t border-[var(--border)] p-2">
-        <Link
-          href={ROUTES.NOTIFICATIONS}
-          onClick={onClose}
-          className="text-primary hover:bg-primary-light block rounded-lg py-2 text-center text-sm font-medium transition-colors"
-        >
-          View All Notifications
-        </Link>
+        <Tooltip content="Go to notifications page">
+          <Link
+            href={ROUTES.NOTIFICATIONS}
+            onClick={onClose}
+            className="text-primary hover:bg-primary-light block rounded-lg py-2 text-center text-sm font-medium transition-colors"
+          >
+            View All Notifications
+          </Link>
+        </Tooltip>
       </div>
     </div>
   );

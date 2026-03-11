@@ -14,10 +14,12 @@ import { QUERY_KEYS } from '@/constants/config';
 import { employerService } from '@/services/employer.service';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
+import Tooltip from '@/components/ui/Tooltip';
 import Logo from '@/components/common/Logo';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import SearchBar from '@/components/ui/SearchBar';
 import AutoSuggest from '@/components/ui/AutoSuggest';
+import ExperienceSelect, { type ExperienceValue } from '@/components/ui/ExperienceSelect';
 import { useSuggestLocations } from '@/hooks/use-search';
 import { useSuggest, useStaticSuggestions } from '@/hooks/use-suggestions';
 import { useFieldHistory, useAddToFieldHistory, useClearFieldHistory } from '@/hooks/use-field-history';
@@ -44,6 +46,7 @@ export default function DashboardHeader() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [location, setLocation] = useState('');
   const [locationInput, setLocationInput] = useState('');
+  const [experience, setExperience] = useState<ExperienceValue | null>(null);
 
   const { data: companyData } = useQuery({
     queryKey: QUERY_KEYS.EMPLOYERS.COMPANY,
@@ -145,10 +148,20 @@ export default function DashboardHeader() {
       const params = new URLSearchParams();
       if (query) params.set('q', query);
       if (location) params.set('location', location);
+      if (experience) {
+        if (user.role === 'CANDIDATE') {
+          // Job search uses single "experience" string like "3-5" or "12+"
+          params.set('experience', experience.max != null ? `${experience.min}-${experience.max}` : `${experience.min}+`);
+        } else {
+          // Candidate search uses separate experienceMin/experienceMax
+          params.set('experienceMin', String(experience.min));
+          if (experience.max != null) params.set('experienceMax', String(experience.max));
+        }
+      }
       const qs = params.toString();
       router.push(qs ? `${basePath}?${qs}` : basePath);
     },
-    [user, location, router],
+    [user, location, experience, router],
   );
 
   const handleSearch = useCallback(
@@ -188,13 +201,15 @@ export default function DashboardHeader() {
         {/* Left section */}
         <div className="flex shrink-0 items-center gap-2">
           {/* Mobile sidebar toggle */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] lg:hidden"
-            aria-label="Open sidebar"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          <Tooltip content="Open sidebar">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] lg:hidden"
+              aria-label="Open sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </Tooltip>
 
           <Logo size="md" href={dashboardPath} />
         </div>
@@ -202,13 +217,21 @@ export default function DashboardHeader() {
         {/* Center — Search section */}
         {hasSearchPage ? (
           <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 px-6 md:flex">
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-sm">
               <SearchBar
                 placeholder={searchPlaceholder}
                 searchType={searchType}
                 onSearch={handleSearch}
                 onSelect={handleSelect}
                 fullWidth
+              />
+            </div>
+            <div className="hidden w-36 shrink-0 lg:block">
+              <ExperienceSelect
+                value={experience}
+                onChange={setExperience}
+                size="sm"
+                className="w-full"
               />
             </div>
             <div className="hidden w-full max-w-[220px] lg:block">
@@ -230,16 +253,18 @@ export default function DashboardHeader() {
         ) : (
           <div className="hidden min-w-0 flex-1 px-6 md:block">
             {/* Ctrl+K trigger for admin/super-admin */}
-            <button
-              onClick={openCommandPalette}
-              className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--text-muted)] hover:bg-white"
-            >
-              <Search className="h-4 w-4" />
-              <span className="hidden lg:inline">Search...</span>
-              <kbd className="ml-4 hidden rounded border border-[var(--border)] bg-white px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-muted)] lg:inline-flex">
-                Ctrl K
-              </kbd>
-            </button>
+            <Tooltip content="Open command palette (Ctrl+K)">
+              <button
+                onClick={openCommandPalette}
+                className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--text-muted)] hover:bg-white"
+              >
+                <Search className="h-4 w-4" />
+                <span className="hidden lg:inline">Search...</span>
+                <kbd className="ml-4 hidden rounded border border-[var(--border)] bg-white px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-muted)] lg:inline-flex">
+                  Ctrl K
+                </kbd>
+              </button>
+            </Tooltip>
           </div>
         )}
 
@@ -250,52 +275,56 @@ export default function DashboardHeader() {
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {/* Mobile search icon — navigates to search page */}
           {hasSearchPage && (
-            <button
-              onClick={() => router.push(SEARCH_ROUTES[user.role] || '/')}
-              className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] md:hidden"
-              aria-label="Search"
-            >
-              <Search className="h-5 w-5" />
-            </button>
+            <Tooltip content="Search">
+              <button
+                onClick={() => router.push(SEARCH_ROUTES[user.role] || '/')}
+                className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] md:hidden"
+                aria-label="Search"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </Tooltip>
           )}
 
           <NotificationBell />
 
           {/* User menu */}
           <div className="relative">
-            <button
-              onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-[var(--bg-secondary)]"
-              aria-expanded={userMenuOpen}
-              aria-haspopup="true"
-            >
-              {companyLogo && (
-                <img
-                  src={companyLogo}
-                  alt="Company"
-                  loading="lazy"
-                  className="h-8 w-8 rounded-md border border-[var(--border)] object-contain"
-                />
-              )}
-              <Avatar
-                src={user.avatar}
-                firstName={user.firstName}
-                lastName={user.lastName}
-                size="sm"
-              />
-              <div className="hidden items-center gap-2 xl:flex">
-                <span className="text-sm font-medium text-[var(--text)]">{user.firstName}</span>
-                <Badge variant={ROLE_BADGE_VARIANT[user.role] || 'info'} size="sm">
-                  {ROLE_LABELS[user.role] || user.role}
-                </Badge>
-              </div>
-              <ChevronDown
-                className={cn(
-                  'hidden h-4 w-4 text-[var(--text-muted)] transition-transform sm:block',
-                  userMenuOpen && 'rotate-180',
+            <Tooltip content="Open user menu">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-[var(--bg-secondary)]"
+                aria-expanded={userMenuOpen}
+                aria-haspopup="true"
+              >
+                {companyLogo && (
+                  <img
+                    src={companyLogo}
+                    alt="Company"
+                    loading="lazy"
+                    className="h-8 w-8 rounded-md border border-[var(--border)] object-contain"
+                  />
                 )}
-              />
-            </button>
+                <Avatar
+                  src={user.avatar}
+                  firstName={user.firstName}
+                  lastName={user.lastName}
+                  size="sm"
+                />
+                <div className="hidden items-center gap-2 xl:flex">
+                  <span className="text-sm font-medium text-[var(--text)]">{user.firstName}</span>
+                  <Badge variant={ROLE_BADGE_VARIANT[user.role] || 'info'} size="sm">
+                    {ROLE_LABELS[user.role] || user.role}
+                  </Badge>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    'hidden h-4 w-4 text-[var(--text-muted)] transition-transform sm:block',
+                    userMenuOpen && 'rotate-180',
+                  )}
+                />
+              </button>
+            </Tooltip>
 
             {userMenuOpen && (
               <>

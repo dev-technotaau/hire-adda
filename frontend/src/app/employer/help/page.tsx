@@ -132,7 +132,8 @@ function FaqSection() {
             <button
               type="button"
               onClick={() => toggle(index)}
-              className="hover:text-primary flex w-full items-center justify-between py-4 text-left transition-colors"
+              title="Toggle answer"
+              className="hover:text-primary flex w-full cursor-pointer items-center justify-between py-4 text-left transition-colors"
             >
               <span className="pr-4 text-sm font-medium text-[var(--text)]">{faq.question}</span>
               <ChevronDown
@@ -229,6 +230,7 @@ function TicketsSection() {
           size="sm"
           leftIcon={<Plus className="h-4 w-4" />}
           onClick={() => setShowCreateForm(!showCreateForm)}
+          tooltip={showCreateForm ? 'Cancel creation' : 'Create new ticket'}
         >
           {showCreateForm ? 'Cancel' : 'Create New Ticket'}
         </Button>
@@ -268,6 +270,7 @@ function TicketsSection() {
               type="submit"
               isLoading={createMutation.isPending}
               leftIcon={<Send className="h-4 w-4" />}
+              tooltip="Submit support ticket"
             >
               Submit Ticket
             </Button>
@@ -300,6 +303,7 @@ function TicketsSection() {
                   size="sm"
                   leftIcon={<Plus className="h-4 w-4" />}
                   onClick={() => setShowCreateForm(true)}
+                  tooltip="Create new ticket"
                 >
                   Create New Ticket
                 </Button>

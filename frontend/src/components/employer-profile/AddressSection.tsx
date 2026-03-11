@@ -98,6 +98,7 @@ export default function AddressSection({
             className="shrink-0"
             onClick={() => addToArray('locations', locationInput, setLocationInput)}
             disabled={!locationInput.trim()}
+            tooltip="Add location"
           >
             <Plus className="h-4 w-4" />
           </Button>

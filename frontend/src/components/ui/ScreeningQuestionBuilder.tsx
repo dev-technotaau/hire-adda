@@ -72,6 +72,7 @@ export default function ScreeningQuestionBuilder({
           size="sm"
           onClick={addQuestion}
           disabled={questions.length >= MAX_QUESTIONS}
+          tooltip="Add screening question"
         >
           <Plus className="mr-1 h-3.5 w-3.5" /> Add Question
         </Button>
@@ -92,7 +93,7 @@ export default function ScreeningQuestionBuilder({
                   type="button"
                   onClick={() => moveQuestion(idx, -1)}
                   disabled={idx === 0}
-                  className="text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-30"
+                  className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-30"
                   title="Move up"
                 >
                   <GripVertical className="h-4 w-4" />
@@ -110,6 +111,7 @@ export default function ScreeningQuestionBuilder({
                 size="sm"
                 onClick={() => removeQuestion(idx)}
                 className="mt-0.5 shrink-0"
+                tooltip="Remove question"
               >
                 <X className="h-4 w-4" />
               </Button>

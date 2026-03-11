@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Briefcase,
@@ -32,6 +32,7 @@ import Badge from '@/components/ui/Badge';
 import Skeleton from '@/components/ui/Skeleton';
 import Modal from '@/components/ui/Modal';
 import Tag from '@/components/ui/Tag';
+import Tooltip from '@/components/ui/Tooltip';
 import Input from '@/components/ui/Input';
 import Tabs from '@/components/ui/Tabs';
 import Pagination from '@/components/ui/Pagination';
@@ -89,9 +90,25 @@ export default function AdminJobDetailPage() {
   const id = params.id as string;
   const router = useRouter();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
 
+  const validTabs: TabKey[] = ['overview', 'requirements', 'applications', 'activity'];
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [applicationsPage, setApplicationsPage] = useState(1);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && validTabs.includes(tab as TabKey)) {
+      setActiveTab(tab as TabKey);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (key: string) => {
+    setActiveTab(key as TabKey);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', key);
+    window.history.replaceState({}, '', url.toString());
+  };
   const [activityPage, setActivityPage] = useState(1);
 
   // Modals
@@ -197,7 +214,7 @@ export default function AdminJobDetailPage() {
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             The job you are looking for does not exist.
           </p>
-          <Link href={ROUTES.ADMIN.JOBS} className="mt-4">
+          <Link href={ROUTES.ADMIN.JOBS} className="mt-4" title="Return to jobs list">
             <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="h-4 w-4" />}>
               Back to Jobs
             </Button>
@@ -316,6 +333,7 @@ export default function AdminJobDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
+                tooltip="Approve this job listing"
                 leftIcon={<CheckCircle className="h-4 w-4" />}
                 onClick={() => setShowApproveModal(true)}
                 className="text-[var(--success)] border-[var(--success)]/30"
@@ -325,6 +343,7 @@ export default function AdminJobDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
+                tooltip="Reject this job listing"
                 leftIcon={<XCircle className="h-4 w-4" />}
                 onClick={() => setShowRejectModal(true)}
                 className="text-error border-error/30"
@@ -334,6 +353,7 @@ export default function AdminJobDetailPage() {
               <Button
                 variant="ghost"
                 size="sm"
+                tooltip="Flag this job for review"
                 leftIcon={<Flag className="h-4 w-4" />}
                 onClick={() => setShowFlagModal(true)}
                 className="text-[var(--warning)]"
@@ -343,6 +363,7 @@ export default function AdminJobDetailPage() {
               <Button
                 variant="ghost"
                 size="sm"
+                tooltip="Delete this job listing"
                 leftIcon={<Trash2 className="h-4 w-4" />}
                 onClick={() => setShowDeleteModal(true)}
                 className="text-error"
@@ -350,7 +371,7 @@ export default function AdminJobDetailPage() {
                 Delete
               </Button>
               {job.company?.userId && (
-                <Link href={ROUTES.ADMIN.USER_DETAIL(job.company.userId)}>
+                <Link href={ROUTES.ADMIN.USER_DETAIL(job.company.userId)} title="View employer profile">
                   <Button variant="outline" size="sm" leftIcon={<Users className="h-4 w-4" />}>
                     View Employer
                   </Button>
@@ -364,7 +385,7 @@ export default function AdminJobDetailPage() {
         <Tabs
           tabs={tabs}
           activeTab={activeTab}
-          onChange={(key) => setActiveTab(key as TabKey)}
+          onChange={handleTabChange}
           variant="underline"
         />
 
@@ -411,10 +432,11 @@ export default function AdminJobDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowApproveModal(false)}>
+              <Button variant="outline" tooltip="Cancel approval" onClick={() => setShowApproveModal(false)}>
                 Cancel
               </Button>
               <Button
+                tooltip="Confirm job approval"
                 onClick={() => moderateMutation.mutate({ status: 'OPEN' })}
                 isLoading={moderateMutation.isPending}
               >
@@ -446,6 +468,7 @@ export default function AdminJobDetailPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel rejection"
                 onClick={() => {
                   setShowRejectModal(false);
                   setRejectReason('');
@@ -455,6 +478,7 @@ export default function AdminJobDetailPage() {
               </Button>
               <Button
                 variant="destructive"
+                tooltip="Confirm job rejection"
                 onClick={() => moderateMutation.mutate({ status: 'CLOSED', reason: rejectReason })}
                 isLoading={moderateMutation.isPending}
                 disabled={!rejectReason.trim()}
@@ -496,6 +520,7 @@ export default function AdminJobDetailPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel flagging"
                 onClick={() => {
                   setShowFlagModal(false);
                   setFlagReason('');
@@ -504,6 +529,7 @@ export default function AdminJobDetailPage() {
                 Cancel
               </Button>
               <Button
+                tooltip="Confirm flagging this job"
                 onClick={() => flagMutation.mutate(flagReason)}
                 isLoading={flagMutation.isPending}
                 disabled={!flagReason.trim()}
@@ -539,11 +565,12 @@ export default function AdminJobDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              <Button variant="outline" tooltip="Cancel deletion" onClick={() => setShowDeleteModal(false)}>
                 Cancel
               </Button>
               <Button
                 variant="destructive"
+                tooltip="Permanently delete this job"
                 onClick={() => deleteMutation.mutate()}
                 isLoading={deleteMutation.isPending}
               >
@@ -725,7 +752,7 @@ function OverviewTab({ job }: { job: Job }) {
               />
             )}
             {job.numberOfOpenings && (
-              <InfoRow label="Openings" value={job.numberOfOpenings.toString()} />
+              <InfoRow label="Openings" value={`${job._hiredCount ?? 0}/${job.numberOfOpenings} filled`} />
             )}
             {job.industry && <InfoRow label="Industry" value={job.industry} />}
             {job.department && <InfoRow label="Department" value={job.department} />}
@@ -785,14 +812,16 @@ function OverviewTab({ job }: { job: Job }) {
             {job.externalApplyUrl && (
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">External URL</span>
-                <a
-                  href={job.externalApplyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary max-w-[180px] truncate text-xs"
-                >
-                  {job.externalApplyUrl}
-                </a>
+                <Tooltip content="Open external application link">
+                  <a
+                    href={job.externalApplyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary max-w-[180px] truncate text-xs"
+                  >
+                    {job.externalApplyUrl}
+                  </a>
+                </Tooltip>
               </div>
             )}
             {job.referenceCode && <InfoRow label="Reference" value={job.referenceCode} />}

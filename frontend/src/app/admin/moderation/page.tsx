@@ -93,6 +93,7 @@ export default function ModerationPage() {
                 className="max-w-md"
               />
               <Button
+                tooltip="Add keyword to block list"
                 onClick={handleAdd}
                 disabled={!newKeyword.trim() || addMutation.isPending}
                 isLoading={addMutation.isPending}

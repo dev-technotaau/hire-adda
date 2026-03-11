@@ -39,6 +39,7 @@ import { QUERY_KEYS } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
 import { getGreeting, getDashboardSubtitle } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import Tooltip from '@/components/ui/Tooltip';
 import api from '@/lib/api';
 import { API } from '@/constants/api';
 import type { RecentActivity } from '@/types/admin';
@@ -501,13 +502,15 @@ export default function SuperAdminDashboard() {
           </div>
           <div className="flex items-center gap-2">
             {(stats?.pendingVerifications ?? 0) > 0 && (
-              <Link
-                href={ROUTES.ADMIN.VERIFICATIONS}
-                className="flex items-center gap-1.5 rounded-lg bg-[var(--warning-light)] px-3 py-1.5 text-sm font-medium text-[var(--warning)] transition-colors hover:bg-[var(--warning)]/20"
-              >
-                <AlertTriangle className="h-4 w-4" />
-                {stats!.pendingVerifications} pending
-              </Link>
+              <Tooltip content="View pending verifications">
+                <Link
+                  href={ROUTES.ADMIN.VERIFICATIONS}
+                  className="flex items-center gap-1.5 rounded-lg bg-[var(--warning-light)] px-3 py-1.5 text-sm font-medium text-[var(--warning)] transition-colors hover:bg-[var(--warning)]/20 cursor-pointer"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  {stats!.pendingVerifications} pending
+                </Link>
+              </Tooltip>
             )}
             {regDelta !== null && (
               <div className="flex items-center gap-1 rounded-lg bg-[var(--bg-secondary)] px-3 py-1.5">
@@ -1225,7 +1228,7 @@ export default function SuperAdminDashboard() {
           <h2 className="mb-4 text-lg font-semibold text-[var(--text)]">Quick Actions</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {quickActions.map((action) => (
-              <Link key={action.label} href={action.href}>
+              <Link key={action.label} href={action.href} title={action.desc}>
                 <Card className="group hover:border-primary/30 h-full cursor-pointer transition-all hover:shadow-md">
                   <div className="flex items-center gap-3">
                     <div

@@ -23,6 +23,7 @@ import {
   Shield,
   Calendar,
   ShieldCheck,
+  Ban,
 } from 'lucide-react';
 import DOMPurify from 'isomorphic-dompurify';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -34,6 +35,7 @@ import Tabs from '@/components/ui/Tabs';
 import Modal from '@/components/ui/Modal';
 import Skeleton from '@/components/ui/Skeleton';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
 import PresenceIndicator from '@/components/ui/PresenceIndicator';
 import ScreeningQuestionForm from '@/components/ui/ScreeningQuestionForm';
 import { useJob, useApplyJob, useToggleSaveJob, useAppliedJobs } from '@/hooks/use-jobs';
@@ -183,6 +185,11 @@ export default function JobDetailPage() {
     return items.some((a: { jobId: string }) => a.jobId === id);
   }, [appliedJobsData, id, justApplied]);
 
+  const isFullyFilled = useMemo(
+    () => job?.numberOfOpenings != null && (job._hiredCount ?? 0) >= job.numberOfOpenings,
+    [job?.numberOfOpenings, job?._hiredCount],
+  );
+
   const handleApply = async () => {
     // Validate required screening questions
     const requiredQs = (job?.screeningQuestions || []).filter((q) => q.isRequired);
@@ -255,8 +262,8 @@ export default function JobDetailPage() {
         <div className="flex flex-col items-center justify-center py-20">
           <AlertCircle className="h-12 w-12 text-[var(--text-muted)]" />
           <h2 className="mt-4 text-lg font-semibold text-[var(--text)]">Job Not Found</h2>
-          <Link href={ROUTES.CANDIDATE.JOBS}>
-            <Button variant="outline" className="mt-4">
+          <Link href={ROUTES.CANDIDATE.JOBS} title="Return to job listings">
+            <Button variant="outline" className="mt-4" tooltip="Return to job listings">
               Back to Jobs
             </Button>
           </Link>
@@ -274,12 +281,14 @@ export default function JobDetailPage() {
       />
       <div className="space-y-6">
         {/* Back */}
-        <Link
-          href={ROUTES.CANDIDATE.JOBS}
-          className="inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to Jobs
-        </Link>
+        <Tooltip content="Back to job listings">
+          <Link
+            href={ROUTES.CANDIDATE.JOBS}
+            className="inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Jobs
+          </Link>
+        </Tooltip>
 
         {/* Header */}
         <Card>
@@ -368,34 +377,42 @@ export default function JobDetailPage() {
                 size="sm"
                 onClick={handleSave}
                 disabled={saveMutation.isPending}
+                tooltip="Save this job for later"
               >
                 <Bookmark className="mr-1.5 h-4 w-4" /> Save
               </Button>
-              <Button variant="outline" size="sm" onClick={handleShare}>
+              <Button variant="outline" size="sm" onClick={handleShare} tooltip="Share this job listing">
                 <Share2 className="mr-1.5 h-4 w-4" /> Share
               </Button>
               {isApplied ? (
-                <Link href={ROUTES.CANDIDATE.APPLICATIONS}>
-                  <Button size="sm" variant="outline" className="text-[var(--success)] border-[var(--success)]/30">
-                    <CheckCircle className="mr-1.5 h-4 w-4" /> Applied
-                  </Button>
-                </Link>
+                <Tooltip content="View your application">
+                  <Link href={ROUTES.CANDIDATE.APPLICATIONS}>
+                    <Button size="sm" variant="outline" className="text-[var(--success)] border-[var(--success)]/30">
+                      <CheckCircle className="mr-1.5 h-4 w-4" /> Applied
+                    </Button>
+                  </Link>
+                </Tooltip>
+              ) : isFullyFilled ? (
+                <Button size="sm" variant="outline" disabled className="opacity-60" tooltip="All openings for this position have been filled">
+                  <Ban className="mr-1.5 h-4 w-4" /> Positions Filled
+                </Button>
               ) : job.applyMethod === 'EXTERNAL_URL' && job.externalApplyUrl ? (
-                <a href={job.externalApplyUrl} target="_blank" rel="noopener noreferrer">
-                  <Button size="sm">
+                <a href={job.externalApplyUrl} target="_blank" rel="noopener noreferrer" title="Apply on external website">
+                  <Button size="sm" tooltip="Apply on external website">
                     <ExternalLink className="mr-1.5 h-4 w-4" /> Apply Externally
                   </Button>
                 </a>
               ) : job.applyMethod === 'EMAIL' && job.contactEmail ? (
                 <a
                   href={`mailto:${job.contactEmail}?subject=Application for ${encodeURIComponent(job.title)}`}
+                  title="Send application via email"
                 >
-                  <Button size="sm">
+                  <Button size="sm" tooltip="Send application via email">
                     <Mail className="mr-1.5 h-4 w-4" /> Apply via Email
                   </Button>
                 </a>
               ) : (
-                <Button size="sm" onClick={() => setShowApplyModal(true)}>
+                <Button size="sm" onClick={() => setShowApplyModal(true)} tooltip="Submit your application">
                   Apply Now
                 </Button>
               )}
@@ -406,7 +423,7 @@ export default function JobDetailPage() {
         {/* Key Details */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: 'Openings', value: job.numberOfOpenings || 'N/A', icon: Users },
+            { label: 'Openings', value: job.numberOfOpenings ? `${job._hiredCount ?? 0}/${job.numberOfOpenings} filled` : 'N/A', icon: Users },
             {
               label: 'Education',
               value: job.educationRequired ? EDUCATION_LEVEL_LABELS[job.educationRequired] : 'Any',
@@ -855,15 +872,17 @@ export default function JobDetailPage() {
                       </p>
                     )}
                     {job.company.website && (
-                      <a
-                        href={job.company.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary inline-flex items-center gap-1 text-sm hover:underline"
-                      >
-                        <Globe className="h-3.5 w-3.5" />{' '}
-                        {job.company.website.replace(/^https?:\/\//, '')}
-                      </a>
+                      <Tooltip content="Visit company website">
+                        <a
+                          href={job.company.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary inline-flex items-center gap-1 text-sm hover:underline"
+                        >
+                          <Globe className="h-3.5 w-3.5" />{' '}
+                          {job.company.website.replace(/^https?:\/\//, '')}
+                        </a>
+                      </Tooltip>
                     )}
                     {job.company.locations && job.company.locations.length > 0 && (
                       <div>
@@ -884,13 +903,15 @@ export default function JobDetailPage() {
                     )}
 
                     {/* View Full Profile */}
-                    <Link
-                      href={ROUTES.PUBLIC.COMPANY(job.company.id)}
-                      className="text-primary mt-2 inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
-                    >
-                      <Building2 className="h-4 w-4" /> View Full Company Profile
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
+                    <Tooltip content="View the full company profile">
+                      <Link
+                        href={ROUTES.PUBLIC.COMPANY(job.company.id)}
+                        className="text-primary mt-2 inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
+                      >
+                        <Building2 className="h-4 w-4" /> View Full Company Profile
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </Tooltip>
                   </div>
                 ) : (
                   <p className="text-[var(--text-muted)]">Company information not available.</p>
@@ -904,13 +925,17 @@ export default function JobDetailPage() {
         {job.applyMethod === 'IN_PLATFORM' && (
           <div className="fixed right-0 bottom-0 left-0 z-40 border-t border-[var(--border)] bg-white p-4 sm:hidden">
             {isApplied ? (
-              <Link href={ROUTES.CANDIDATE.APPLICATIONS}>
-                <Button fullWidth variant="outline" className="text-[var(--success)] border-[var(--success)]/30">
+              <Link href={ROUTES.CANDIDATE.APPLICATIONS} title="View your applications">
+                <Button fullWidth variant="outline" className="text-[var(--success)] border-[var(--success)]/30" tooltip="View your applications">
                   <CheckCircle className="mr-1.5 h-4 w-4" /> Applied — View Applications
                 </Button>
               </Link>
+            ) : isFullyFilled ? (
+              <Button fullWidth variant="outline" disabled className="opacity-60" tooltip="All openings for this position have been filled">
+                <Ban className="mr-1.5 h-4 w-4" /> Positions Filled
+              </Button>
             ) : (
-              <Button fullWidth onClick={() => setShowApplyModal(true)}>
+              <Button fullWidth onClick={() => setShowApplyModal(true)} tooltip="Submit your application">
                 Apply Now
               </Button>
             )}
@@ -925,10 +950,10 @@ export default function JobDetailPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowApplyModal(false)}>
+              <Button variant="outline" onClick={() => setShowApplyModal(false)} tooltip="Cancel application">
                 Cancel
               </Button>
-              <Button onClick={handleApply} isLoading={applyMutation.isPending}>
+              <Button onClick={handleApply} isLoading={applyMutation.isPending} tooltip="Submit your application">
                 Submit Application
               </Button>
             </div>

@@ -346,9 +346,11 @@ export class JobService {
       include: {
         company: {
           select: {
+            id: true,
             companyName: true,
             companyType: true,
             logo: true,
+            coverImage: true,
             tagline: true,
             industry: true,
             subIndustry: true,
@@ -380,7 +382,11 @@ export class JobService {
       data: { views: { increment: 1 } },
     });
 
-    return job;
+    const _hiredCount = await prisma.jobApplication.count({
+      where: { jobId: id, status: 'HIRED' },
+    });
+
+    return { ...job, _hiredCount };
   }
 
   /**
@@ -523,7 +529,7 @@ export class JobService {
       orderBy = { createdAt: 'desc' };
     }
 
-    const [jobs, total] = await prisma.$transaction([
+    const [rawJobs, total] = await prisma.$transaction([
       prisma.jobPost.findMany({
         where,
         include: {
@@ -536,8 +542,10 @@ export class JobService {
               companyType: true,
               companySize: true,
               isVerified: true,
+              locations: true,
             },
           },
+          applications: { where: { status: 'HIRED' }, select: { id: true } },
         },
         orderBy,
         skip,
@@ -545,6 +553,11 @@ export class JobService {
       }),
       prisma.jobPost.count({ where }),
     ]);
+
+    const jobs = rawJobs.map(({ applications, ...job }) => ({
+      ...job,
+      _hiredCount: applications.length,
+    }));
 
     return {
       jobs,
@@ -561,6 +574,24 @@ export class JobService {
     coverLetter?: string,
     screeningAnswers?: ScreeningAnswerInput[]
   ) {
+    // Check job exists and is accepting applications
+    const jobPost = await prisma.jobPost.findUnique({
+      where: { id: jobId },
+      select: { status: true, numberOfOpenings: true },
+    });
+    if (!jobPost) throw new AppError('Job not found', 404);
+    if (jobPost.status !== 'OPEN') {
+      throw new AppError('This job is no longer accepting applications', 400);
+    }
+    if (jobPost.numberOfOpenings) {
+      const hiredCount = await prisma.jobApplication.count({
+        where: { jobId, status: 'HIRED' },
+      });
+      if (hiredCount >= jobPost.numberOfOpenings) {
+        throw new AppError('All openings for this position have been filled', 400);
+      }
+    }
+
     const candidate = await prisma.candidateProfile.findUnique({
       where: { userId },
       select: { id: true, resume: true },
@@ -836,6 +867,24 @@ export class JobService {
         .catch((err: any) => logger.error('Failed to send status notification', err));
     }
 
+    // Check if all openings are now filled and notify employer
+    if (status === 'HIRED' && application.job.numberOfOpenings) {
+      const hiredCount = await prisma.jobApplication.count({
+        where: { jobId: application.job.id, status: 'HIRED' },
+      });
+      if (hiredCount >= application.job.numberOfOpenings) {
+        notificationService
+          .notifyAllOpeningsFilled(
+            application.job.company.userId,
+            application.job.title,
+            application.job.id,
+            hiredCount,
+            application.job.numberOfOpenings
+          )
+          .catch(() => {});
+      }
+    }
+
     return updated;
   }
 
@@ -862,7 +911,7 @@ export class JobService {
           job: {
             include: {
               company: {
-                select: { companyName: true, logo: true, locations: true },
+                select: { id: true, companyName: true, logo: true, locations: true },
               },
             },
           },
@@ -922,7 +971,7 @@ export class JobService {
           job: {
             include: {
               company: {
-                select: { companyName: true, logo: true, locations: true },
+                select: { id: true, companyName: true, logo: true, locations: true },
               },
             },
           },
@@ -1012,16 +1061,23 @@ export class JobService {
     const where: any = { companyId: company.id };
     if (filters.status) where.status = filters.status;
 
-    const [jobs, total] = await prisma.$transaction([
+    const [rawJobs, total] = await prisma.$transaction([
       prisma.jobPost.findMany({
         where,
-        include: { _count: { select: { applications: true } } },
+        include: {
+          _count: { select: { applications: true } },
+          applications: { where: { status: 'HIRED' }, select: { id: true } },
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take: cappedLimit,
       }),
       prisma.jobPost.count({ where }),
     ]);
+    const jobs = rawJobs.map(({ applications, ...job }) => ({
+      ...job,
+      _hiredCount: applications.length,
+    }));
     return {
       jobs,
       pagination: { total, page, limit: cappedLimit, pages: Math.ceil(total / cappedLimit) },

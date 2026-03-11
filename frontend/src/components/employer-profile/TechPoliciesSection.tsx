@@ -44,6 +44,7 @@ export default function TechPoliciesSection({
             className="shrink-0"
             onClick={() => addToArray('techStack', techInput, setTechInput)}
             disabled={!techInput.trim()}
+            tooltip="Add technology"
           >
             <Plus className="h-4 w-4" />
           </Button>
@@ -85,6 +86,7 @@ export default function TechPoliciesSection({
             className="shrink-0"
             onClick={() => addToArray('productsServices', productInput, setProductInput)}
             disabled={!productInput.trim()}
+            tooltip="Add product or service"
           >
             <Plus className="h-4 w-4" />
           </Button>

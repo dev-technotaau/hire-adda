@@ -15,11 +15,12 @@ export const getNotifications = async (
       throw new AppError('Not authorized', 401);
     }
 
-    const { isRead, category, page, limit } = req.query;
+    const { isRead, category, type, page, limit } = req.query;
 
     const filters = {
       isRead: isRead !== undefined ? isRead === 'true' : undefined,
       category: category as string | undefined,
+      type: type as string | undefined,
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 20,
     };

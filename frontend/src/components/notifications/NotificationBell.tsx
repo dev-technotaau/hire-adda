@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { useUnreadCount } from '@/hooks/use-notifications';
 import NotificationDropdown from './NotificationDropdown';
+import Tooltip from '@/components/ui/Tooltip';
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -30,22 +31,24 @@ export default function NotificationBell() {
 
   return (
     <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="relative rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-        aria-label="Notifications"
-      >
-        <Bell className="h-5 w-5" />
-        {count > 0 && (
-          <span
-            role="status"
-            aria-label={`${count} unread notification${count === 1 ? '' : 's'}`}
-            className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--error)] px-1 text-xs font-medium text-white"
-          >
-            {count > 99 ? '99+' : count}
-          </span>
-        )}
-      </button>
+      <Tooltip content="View notifications">
+        <button
+          onClick={() => setOpen(!open)}
+          className="relative rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+          aria-label="Notifications"
+        >
+          <Bell className="h-5 w-5" />
+          {count > 0 && (
+            <span
+              role="status"
+              aria-label={`${count} unread notification${count === 1 ? '' : 's'}`}
+              className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--error)] px-1 text-xs font-medium text-white"
+            >
+              {count > 99 ? '99+' : count}
+            </span>
+          )}
+        </button>
+      </Tooltip>
 
       {open && <NotificationDropdown onClose={() => setOpen(false)} />}
     </div>

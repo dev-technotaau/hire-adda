@@ -67,6 +67,7 @@ export default function CultureSection({
             className="shrink-0"
             onClick={() => addToArray('coreValues', coreValueInput, setCoreValueInput)}
             disabled={!coreValueInput.trim()}
+            tooltip="Add core value"
           >
             <Plus className="h-4 w-4" />
           </Button>
@@ -108,6 +109,7 @@ export default function CultureSection({
             className="shrink-0"
             onClick={() => addToArray('employeeResourceGroups', ergInput, setErgInput)}
             disabled={!ergInput.trim()}
+            tooltip="Add resource group"
           >
             <Plus className="h-4 w-4" />
           </Button>

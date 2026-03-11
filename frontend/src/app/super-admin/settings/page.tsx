@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Shield,
@@ -28,6 +29,7 @@ import Tabs from '@/components/ui/Tabs';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import OtpInput from '@/components/auth/OtpInput';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/use-auth';
 import { authService } from '@/services/auth.service';
@@ -49,7 +51,22 @@ const SETTINGS_TABS = [
 
 export default function SuperAdminSettingsPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('security');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && SETTINGS_TABS.some((t) => t.key === tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState({}, '', url.toString());
+  };
 
   return (
     <DashboardLayout requiredRole={['SUPER_ADMIN']}>
@@ -61,7 +78,7 @@ export default function SuperAdminSettingsPage() {
           </p>
         </div>
 
-        <Tabs tabs={SETTINGS_TABS} activeTab={activeTab} onChange={setActiveTab}>
+        <Tabs tabs={SETTINGS_TABS} activeTab={activeTab} onChange={handleTabChange}>
           {activeTab === 'security' && (
             <div className="space-y-6">
               <MfaSection mfaEnabled={user?.mfaEnabled ?? false} />
@@ -235,11 +252,11 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             </div>
           </div>
           {mfaEnabled ? (
-            <Button variant="destructive" size="sm" onClick={() => setShowDisableModal(true)}>
+            <Button variant="destructive" size="sm" onClick={() => setShowDisableModal(true)} tooltip="Disable two-factor authentication">
               Disable MFA
             </Button>
           ) : (
-            <Button variant="primary" size="sm" isLoading={setupLoading} onClick={handleSetupMfa}>
+            <Button variant="primary" size="sm" isLoading={setupLoading} onClick={handleSetupMfa} tooltip="Enable two-factor authentication">
               Enable MFA
             </Button>
           )}
@@ -270,6 +287,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                   setRegenCode('');
                   setNewBackupCodes([]);
                 }}
+                tooltip="Generate new backup codes"
               >
                 Regenerate
               </Button>
@@ -299,10 +317,11 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                 setVerifyCode('');
                 setEnablePassword('');
               }}
+              tooltip="Cancel MFA setup"
             >
               Cancel
             </Button>
-            <Button variant="primary" isLoading={enableLoading} onClick={handleEnableMfa}>
+            <Button variant="primary" isLoading={enableLoading} onClick={handleEnableMfa} tooltip="Verify code and enable MFA">
               Verify &amp; Enable
             </Button>
           </div>
@@ -336,6 +355,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                   leftIcon={
                     copiedSecret ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />
                   }
+                  tooltip="Copy secret to clipboard"
                 >
                   {copiedSecret ? 'Copied' : 'Copy'}
                 </Button>
@@ -380,10 +400,11 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                 setDisablePassword('');
                 setDisableCode('');
               }}
+              tooltip="Cancel and keep MFA enabled"
             >
               Cancel
             </Button>
-            <Button variant="destructive" isLoading={disableLoading} onClick={handleDisableMfa}>
+            <Button variant="destructive" isLoading={disableLoading} onClick={handleDisableMfa} tooltip="Confirm disabling MFA">
               Disable MFA
             </Button>
           </div>
@@ -431,19 +452,21 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
                   setShowRegenModal(false);
                   setNewBackupCodes([]);
                 }}
+                tooltip="Close and dismiss backup codes"
               >
                 Done
               </Button>
             </div>
           ) : (
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowRegenModal(false)}>
+              <Button variant="outline" onClick={() => setShowRegenModal(false)} tooltip="Cancel backup code regeneration">
                 Cancel
               </Button>
               <Button
                 variant="primary"
                 isLoading={regenLoading}
                 onClick={handleRegenerateBackupCodes}
+                tooltip="Generate new backup codes"
               >
                 Regenerate
               </Button>
@@ -576,7 +599,7 @@ function PasskeysSection() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRegister} isLoading={registering}>
+          <Button variant="outline" size="sm" onClick={handleRegister} isLoading={registering} tooltip="Register a new passkey for passwordless login">
             <Plus className="mr-1 h-4 w-4" />
             Add Passkey
           </Button>
@@ -611,6 +634,7 @@ function PasskeysSection() {
                   size="sm"
                   onClick={() => setConfirmDeleteId(cred.id)}
                   isLoading={deletingId === cred.id}
+                  tooltip="Remove this passkey"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
@@ -650,10 +674,11 @@ function PasskeysSection() {
                 setPendingCredential(null);
                 setFriendlyName('');
               }}
+              tooltip="Cancel passkey registration"
             >
               Cancel
             </Button>
-            <Button onClick={handleConfirmRegister}>Save Passkey</Button>
+            <Button onClick={handleConfirmRegister} tooltip="Save and register this passkey">Save Passkey</Button>
           </div>
         }
       >
@@ -748,6 +773,7 @@ function ActiveSessionsSection() {
               isLoading={revokingAll}
               leftIcon={<LogOut className="h-4 w-4" />}
               onClick={() => setShowConfirmRevokeAll(true)}
+              tooltip="Sign out all other devices"
             >
               Revoke All Other Sessions
             </Button>
@@ -799,6 +825,7 @@ function ActiveSessionsSection() {
                     isLoading={revokingId === session.id}
                     onClick={() => setConfirmRevokeId(session.id)}
                     className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
+                    tooltip="Revoke this session"
                   >
                     Revoke
                   </Button>
@@ -995,6 +1022,7 @@ function AdminMfaManagement() {
                           onClick={() =>
                             setExpandedAdminId(expandedAdminId === admin.id ? null : admin.id)
                           }
+                          tooltip={expandedAdminId === admin.id ? 'Collapse details' : 'Expand details'}
                         >
                           {expandedAdminId === admin.id ? (
                             <ChevronUp className="h-4 w-4" />
@@ -1006,6 +1034,7 @@ function AdminMfaManagement() {
                           variant="destructive"
                           size="sm"
                           onClick={() => setDisableTarget(admin)}
+                          tooltip="Disable MFA for this admin"
                         >
                           Disable
                         </Button>
@@ -1016,6 +1045,7 @@ function AdminMfaManagement() {
                         size="sm"
                         isLoading={setupLoading && setupTarget?.id === admin.id}
                         onClick={() => handleSetupMfa(admin)}
+                        tooltip="Setup MFA for this admin"
                       >
                         Setup MFA
                       </Button>
@@ -1064,13 +1094,14 @@ function AdminMfaManagement() {
                   setSetupData(null);
                   setBackupCodes([]);
                 }}
+                tooltip="Close and dismiss backup codes"
               >
                 Done
               </Button>
             </div>
           ) : setupData ? (
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setSetupTarget(null)}>
+              <Button variant="outline" onClick={() => setSetupTarget(null)} tooltip="Cancel admin MFA setup">
                 Cancel
               </Button>
               <Button
@@ -1078,6 +1109,7 @@ function AdminMfaManagement() {
                 isLoading={enableLoading}
                 onClick={handleEnableMfa}
                 disabled={verifyCode.length !== 6}
+                tooltip="Verify code and enable MFA for this admin"
               >
                 Verify & Enable
               </Button>
@@ -1135,6 +1167,7 @@ function AdminMfaManagement() {
                   leftIcon={
                     copiedSecret ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />
                   }
+                  tooltip="Copy secret to clipboard"
                 >
                   {copiedSecret ? 'Copied' : 'Copy'}
                 </Button>
@@ -1159,10 +1192,10 @@ function AdminMfaManagement() {
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setDisableTarget(null)}>
+            <Button variant="outline" onClick={() => setDisableTarget(null)} tooltip="Cancel and keep MFA enabled">
               Cancel
             </Button>
-            <Button variant="destructive" isLoading={disableLoading} onClick={handleDisableMfa}>
+            <Button variant="destructive" isLoading={disableLoading} onClick={handleDisableMfa} tooltip="Confirm disabling MFA for this admin">
               Disable MFA
             </Button>
           </div>
@@ -1200,16 +1233,17 @@ function AdminMfaManagement() {
                   setRegenTarget(null);
                   setRegenCodes([]);
                 }}
+                tooltip="Close and dismiss backup codes"
               >
                 Done
               </Button>
             </div>
           ) : (
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setRegenTarget(null)}>
+              <Button variant="outline" onClick={() => setRegenTarget(null)} tooltip="Cancel backup code regeneration">
                 Cancel
               </Button>
-              <Button variant="primary" isLoading={regenLoading} onClick={handleRegenBackupCodes}>
+              <Button variant="primary" isLoading={regenLoading} onClick={handleRegenBackupCodes} tooltip="Generate new backup codes for this admin">
                 Regenerate
               </Button>
             </div>
@@ -1328,6 +1362,7 @@ function AdminExpandedDetails({
           size="sm"
           onClick={onRegenerate}
           leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+          tooltip="Regenerate backup codes for this admin"
         >
           Regenerate
         </Button>
@@ -1348,6 +1383,7 @@ function AdminExpandedDetails({
               onClick={handleRevokeAllSessions}
               className="text-[var(--error)] hover:text-[var(--error)]"
               leftIcon={<LogOut className="h-3.5 w-3.5" />}
+              tooltip="Revoke all sessions for this admin"
             >
               Revoke All
             </Button>
@@ -1391,6 +1427,7 @@ function AdminExpandedDetails({
                     isLoading={revokingSessionId === session.id}
                     onClick={() => handleRevokeSession(session.id)}
                     className="text-[var(--error)] hover:text-[var(--error)]"
+                    tooltip="Revoke this session"
                   >
                     Revoke
                   </Button>

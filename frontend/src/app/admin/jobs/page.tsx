@@ -274,7 +274,7 @@ export default function JobModerationPage() {
                       {JOB_STATUS_LABELS[job.status] || job.status}
                     </Badge>
                     <div className="flex items-center gap-2">
-                      <Link href={`/admin/jobs/${job.id}`}>
+                      <Link href={`/admin/jobs/${job.id}`} title="View job details">
                         <Button
                           variant="outline"
                           size="sm"
@@ -286,6 +286,7 @@ export default function JobModerationPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        tooltip="Approve this job listing"
                         leftIcon={<CheckCircle className="h-3.5 w-3.5" />}
                         onClick={() => handleApprove(job)}
                         disabled={moderateMutation.isPending}
@@ -295,6 +296,7 @@ export default function JobModerationPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        tooltip="Reject this job listing"
                         leftIcon={<XCircle className="h-3.5 w-3.5" />}
                         onClick={() => setRejectTarget(job)}
                         className="text-error border-error/30 hover:bg-[var(--error-light)]"
@@ -304,6 +306,7 @@ export default function JobModerationPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        tooltip="Flag this job for review"
                         leftIcon={<Flag className="h-3.5 w-3.5" />}
                         onClick={() => setFlagTarget(job)}
                         className="text-[var(--warning)]"
@@ -313,6 +316,7 @@ export default function JobModerationPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        tooltip="Delete this job listing"
                         leftIcon={<Trash2 className="h-3.5 w-3.5" />}
                         onClick={() => setDeleteTarget(job)}
                         className="text-error"
@@ -357,6 +361,7 @@ export default function JobModerationPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel rejection"
                 onClick={() => {
                   setRejectTarget(null);
                   setRejectReason('');
@@ -366,6 +371,7 @@ export default function JobModerationPage() {
               </Button>
               <Button
                 variant="destructive"
+                tooltip="Confirm job rejection"
                 onClick={handleReject}
                 isLoading={moderateMutation.isPending}
                 disabled={!rejectReason.trim()}
@@ -407,6 +413,7 @@ export default function JobModerationPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel flagging"
                 onClick={() => {
                   setFlagTarget(null);
                   setFlagReason('');
@@ -415,6 +422,7 @@ export default function JobModerationPage() {
                 Cancel
               </Button>
               <Button
+                tooltip="Confirm flagging this job"
                 onClick={handleFlag}
                 isLoading={flagMutation.isPending}
                 disabled={!flagReason.trim()}
@@ -450,11 +458,12 @@ export default function JobModerationPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              <Button variant="outline" tooltip="Cancel deletion" onClick={() => setDeleteTarget(null)}>
                 Cancel
               </Button>
               <Button
                 variant="destructive"
+                tooltip="Permanently delete this job"
                 onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
                 isLoading={deleteMutation.isPending}
               >

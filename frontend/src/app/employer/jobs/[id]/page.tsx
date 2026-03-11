@@ -184,11 +184,13 @@ export default function JobDetailPage() {
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             The job you are looking for does not exist.
           </p>
-          <Link href={ROUTES.EMPLOYER.MY_JOBS} className="mt-4">
-            <Button variant="outline" size="sm">
-              Back to My Jobs
-            </Button>
-          </Link>
+          <Tooltip content="Return to your job listings">
+            <Link href={ROUTES.EMPLOYER.MY_JOBS} className="mt-4">
+              <Button variant="outline" size="sm" tooltip="Go back to My Jobs">
+                Back to My Jobs
+              </Button>
+            </Link>
+          </Tooltip>
         </div>
       </DashboardLayout>
     );
@@ -354,6 +356,31 @@ export default function JobDetailPage() {
           </div>
         </Card>
 
+        {/* All Openings Filled Banner */}
+        {job.status === 'OPEN' &&
+          job.numberOfOpenings != null &&
+          (job._hiredCount ?? 0) >= job.numberOfOpenings && (
+            <Card className="border-[var(--warning)]/30 bg-[var(--warning-light)]">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 shrink-0 text-[var(--warning)]" />
+                  <p className="text-sm text-[var(--text)]">
+                    All <strong>{job.numberOfOpenings}</strong> opening{job.numberOfOpenings > 1 ? 's have' : ' has'} been filled. Consider closing this job to stop receiving new applications.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Power className="h-4 w-4" />}
+                  onClick={() => setShowDeactivateModal(true)}
+                  className="shrink-0"
+                >
+                  Close Job
+                </Button>
+              </div>
+            </Card>
+          )}
+
         {/* Quick Stats */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card>
@@ -423,7 +450,6 @@ export default function JobDetailPage() {
               { label: 'Applied', status: 'APPLIED', color: 'bg-blue-500' },
               { label: 'Shortlisted', status: 'SHORTLISTED', color: 'bg-yellow-500' },
               { label: 'Selected', status: 'SELECTED', color: 'bg-emerald-500' },
-              { label: 'Interview', status: 'INTERVIEW_SCHEDULED', color: 'bg-orange-500' },
               { label: 'Offered', status: 'OFFERED', color: 'bg-purple-500' },
               { label: 'Hired', status: 'HIRED', color: 'bg-green-600' },
             ].map((stage, i) => {
@@ -435,6 +461,7 @@ export default function JobDetailPage() {
                   {i > 0 && <div className="mx-1 h-px w-4 bg-[var(--border)]" />}
                   <Link
                     href={`${ROUTES.EMPLOYER.JOB_APPLICATIONS(job.id)}?status=${stage.status}`}
+                    title={`View ${stage.label} applications`}
                     className="hover:border-primary/30 flex flex-col items-center rounded-lg border border-[var(--border)] px-4 py-3 transition-colors hover:bg-[var(--bg-secondary)]"
                   >
                     <div className={`mb-1 h-2 w-2 rounded-full ${stage.color}`} />
@@ -563,7 +590,9 @@ export default function JobDetailPage() {
                 {job.numberOfOpenings && (
                   <div className="flex justify-between">
                     <span className="text-[var(--text-muted)]">Openings</span>
-                    <span className="text-[var(--text)]">{job.numberOfOpenings}</span>
+                    <span className="text-[var(--text)]">
+                      {job._hiredCount ?? 0}/{job.numberOfOpenings} filled
+                    </span>
                   </div>
                 )}
                 {job.industry && (
@@ -716,14 +745,16 @@ export default function JobDetailPage() {
                 {job.externalApplyUrl && (
                   <div className="flex justify-between">
                     <span className="text-[var(--text-muted)]">External URL</span>
-                    <a
-                      href={job.externalApplyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary max-w-[180px] truncate"
-                    >
-                      {job.externalApplyUrl}
-                    </a>
+                    <Tooltip content="Open external application URL in new tab">
+                      <a
+                        href={job.externalApplyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary max-w-[180px] truncate"
+                      >
+                        {job.externalApplyUrl}
+                      </a>
+                    </Tooltip>
                   </div>
                 )}
                 <div className="flex justify-between">
@@ -958,34 +989,37 @@ export default function JobDetailPage() {
                   AI Recommended Candidates
                 </h2>
               </div>
-              <Link
-                href={`${ROUTES.EMPLOYER.CANDIDATES}?${(() => {
-                  const params = new URLSearchParams();
-                  if (job.skillsRequired?.length)
-                    params.set('skills', job.skillsRequired.join(','));
-                  if (job.location) params.set('location', job.location);
-                  if (job.experienceMin != null)
-                    params.set('experienceMin', job.experienceMin.toString());
-                  if (job.experienceMax != null)
-                    params.set('experienceMax', job.experienceMax.toString());
-                  if (job.experienceLevel) params.set('experienceLevel', job.experienceLevel);
-                  if (job.educationRequired)
-                    params.set('highestEducationLevel', job.educationRequired);
-                  if (job.workMode) params.set('preferredWorkMode', job.workMode);
-                  if (job.type) params.set('preferredJobType', job.type);
-                  if (job.industry) params.set('industry', job.industry);
-                  if (job.department) params.set('department', job.department);
-                  return params.toString();
-                })()}`}
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  rightIcon={<ChevronRight className="h-4 w-4" />}
+              <Tooltip content="View all AI-matched candidates">
+                <Link
+                  href={`${ROUTES.EMPLOYER.CANDIDATES}?${(() => {
+                    const params = new URLSearchParams();
+                    if (job.skillsRequired?.length)
+                      params.set('skills', job.skillsRequired.join(','));
+                    if (job.location) params.set('location', job.location);
+                    if (job.experienceMin != null)
+                      params.set('experienceMin', job.experienceMin.toString());
+                    if (job.experienceMax != null)
+                      params.set('experienceMax', job.experienceMax.toString());
+                    if (job.experienceLevel) params.set('experienceLevel', job.experienceLevel);
+                    if (job.educationRequired)
+                      params.set('highestEducationLevel', job.educationRequired);
+                    if (job.workMode) params.set('preferredWorkMode', job.workMode);
+                    if (job.type) params.set('preferredJobType', job.type);
+                    if (job.industry) params.set('industry', job.industry);
+                    if (job.department) params.set('department', job.department);
+                    return params.toString();
+                  })()}`}
                 >
-                  View All Matches
-                </Button>
-              </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    rightIcon={<ChevronRight className="h-4 w-4" />}
+                    tooltip="Browse all matching candidates"
+                  >
+                    View All Matches
+                  </Button>
+                </Link>
+              </Tooltip>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {aiCandidates.slice(0, 4).map((candidate, i) => {
@@ -1045,11 +1079,13 @@ export default function JobDetailPage() {
         <Card>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold text-[var(--text)]">Recent Applications</h2>
-            <Link href={ROUTES.EMPLOYER.JOB_APPLICATIONS(job.id)}>
-              <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="h-4 w-4" />}>
-                View All
-              </Button>
-            </Link>
+            <Tooltip content="View all applications for this job">
+              <Link href={ROUTES.EMPLOYER.JOB_APPLICATIONS(job.id)}>
+                <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="h-4 w-4" />} tooltip="View all applications">
+                  View All
+                </Button>
+              </Link>
+            </Tooltip>
           </div>
 
           {appsLoading ? (
@@ -1076,12 +1112,14 @@ export default function JobDetailPage() {
                     className="flex flex-col gap-3 rounded-lg border border-[var(--border)] p-4 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
-                      <Link
-                        href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate?.id || '')}
-                        className="hover:text-primary font-medium text-[var(--text)] hover:underline"
-                      >
-                        {name}
-                      </Link>
+                      <Tooltip content="View candidate profile">
+                        <Link
+                          href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate?.id || '')}
+                          className="hover:text-primary font-medium text-[var(--text)] hover:underline"
+                        >
+                          {name}
+                        </Link>
+                      </Tooltip>
                       {candidate?.headline && (
                         <p className="text-sm text-[var(--text-muted)]">{candidate.headline}</p>
                       )}
@@ -1109,6 +1147,7 @@ export default function JobDetailPage() {
                             statusMutation.mutate({ applicationId: app.id, status: 'SHORTLISTED' })
                           }
                           disabled={statusMutation.isPending}
+                          tooltip="Shortlist this candidate"
                         >
                           <Star className="mr-1 h-3 w-3" /> Shortlist
                         </Button>
@@ -1121,6 +1160,7 @@ export default function JobDetailPage() {
                             statusMutation.mutate({ applicationId: app.id, status: 'SELECTED' })
                           }
                           disabled={statusMutation.isPending}
+                          tooltip="Select this candidate"
                         >
                           <UserCheck className="mr-1 h-3 w-3" /> Select
                         </Button>
@@ -1134,6 +1174,7 @@ export default function JobDetailPage() {
                           }
                           disabled={statusMutation.isPending}
                           className="text-[var(--error)]"
+                          tooltip="Reject this candidate"
                         >
                           <UserX className="h-3 w-3" />
                         </Button>
@@ -1158,13 +1199,14 @@ export default function JobDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDeactivateModal(false)}>
+              <Button variant="outline" onClick={() => setShowDeactivateModal(false)} tooltip="Cancel deactivation">
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => deactivateMutation.mutate()}
                 isLoading={deactivateMutation.isPending}
+                tooltip="Confirm job deactivation"
               >
                 Deactivate
               </Button>

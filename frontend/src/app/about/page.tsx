@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowRight, Lightbulb, ShieldCheck, Heart, Award, Linkedin, Twitter } from 'lucide-react';
 import PublicLayout from '@/components/layout/PublicLayout';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import StatsSection from '@/components/common/StatsSection';
 
 export const metadata: Metadata = {
@@ -213,24 +214,28 @@ export default function AboutPage() {
             your next role or your next hire, TalentBridge is the place to start.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href="/auth/register">
-              <Button
-                size="lg"
-                className="text-primary bg-white hover:bg-white/90"
-                rightIcon={<ArrowRight className="h-5 w-5" />}
-              >
-                Get Started Free
-              </Button>
-            </Link>
-            <Link href="/contact">
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-white/30 text-white hover:bg-white/10"
-              >
-                Contact Us
-              </Button>
-            </Link>
+            <Tooltip content="Create your free TalentBridge account">
+              <Link href="/auth/register">
+                <Button
+                  size="lg"
+                  className="text-primary bg-white hover:bg-white/90"
+                  rightIcon={<ArrowRight className="h-5 w-5" />}
+                >
+                  Get Started Free
+                </Button>
+              </Link>
+            </Tooltip>
+            <Tooltip content="Get in touch with our team">
+              <Link href="/contact">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="border-white/30 text-white hover:bg-white/10"
+                >
+                  Contact Us
+                </Button>
+              </Link>
+            </Tooltip>
           </div>
         </div>
       </section>

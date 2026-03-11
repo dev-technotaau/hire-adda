@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import Tooltip from '@/components/ui/Tooltip';
 import api from '@/lib/api';
 import { API } from '@/constants/api';
 
@@ -85,23 +86,24 @@ export default function EmailTemplatesPage() {
             ) : (
               <div className="max-h-[calc(100vh-16rem)] space-y-1 overflow-y-auto">
                 {templates.map((tpl) => (
-                  <button
-                    key={tpl.key}
-                    onClick={() => setSelectedTemplate(tpl.key)}
-                    className={`w-full rounded-lg px-3 py-2.5 text-left transition-colors ${
-                      selectedTemplate === tpl.key
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-[var(--text)] hover:bg-[var(--bg-secondary)]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium">{tpl.key}</p>
-                        <p className="text-xs text-[var(--text-muted)]">{tpl.description}</p>
+                  <Tooltip key={tpl.key} content={`Preview ${tpl.key} template`}>
+                    <button
+                      onClick={() => setSelectedTemplate(tpl.key)}
+                      className={`w-full cursor-pointer rounded-lg px-3 py-2.5 text-left transition-colors ${
+                        selectedTemplate === tpl.key
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-[var(--text)] hover:bg-[var(--bg-secondary)]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium">{tpl.key}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{tpl.description}</p>
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                  </Tooltip>
                 ))}
               </div>
             )}
@@ -160,6 +162,7 @@ export default function EmailTemplatesPage() {
                       />
                     </div>
                     <Button
+                      tooltip="Send a test email to the specified address"
                       onClick={() => sendTestMutation.mutate()}
                       isLoading={sendTestMutation.isPending}
                       disabled={!testEmail || !selectedTemplate}

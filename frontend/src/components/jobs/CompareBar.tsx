@@ -2,6 +2,7 @@
 
 import { X, GitCompareArrows } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import type { Job } from '@/types/job';
 
 interface CompareBarProps {
@@ -29,23 +30,25 @@ export default function CompareBar({ jobs, onRemove, onClear, onCompare }: Compa
               className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-1 text-xs whitespace-nowrap text-[var(--text)]"
             >
               {job.title}
-              <button
-                type="button"
-                onClick={() => onRemove(job.id)}
-                className="rounded-full p-0.5 transition-colors hover:bg-[var(--bg-tertiary)]"
-                aria-label={`Remove ${job.title} from comparison`}
-              >
-                <X className="h-3 w-3" />
-              </button>
+              <Tooltip content={`Remove ${job.title}`}>
+                <button
+                  type="button"
+                  onClick={() => onRemove(job.id)}
+                  className="cursor-pointer rounded-full p-0.5 transition-colors hover:bg-[var(--bg-tertiary)]"
+                  aria-label={`Remove ${job.title} from comparison`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Tooltip>
             </span>
           ))}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onClear} className="text-xs">
+          <Button variant="ghost" size="sm" onClick={onClear} className="text-xs" tooltip="Clear all selected jobs">
             Clear
           </Button>
-          <Button size="sm" onClick={onCompare} disabled={jobs.length < 2} className="text-xs">
+          <Button size="sm" onClick={onCompare} disabled={jobs.length < 2} className="text-xs" tooltip="Compare selected jobs side by side">
             Compare
           </Button>
         </div>

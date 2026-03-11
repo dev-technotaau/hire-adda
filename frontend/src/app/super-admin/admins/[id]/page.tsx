@@ -182,7 +182,7 @@ export default function AdminDetailPage() {
             <p className="mt-2 text-sm text-[var(--text-muted)]">
               The admin you&apos;re looking for doesn&apos;t exist or has been removed.
             </p>
-            <Button className="mt-6" onClick={() => router.push(ROUTES.SUPER_ADMIN.ADMINS)}>
+            <Button className="mt-6" onClick={() => router.push(ROUTES.SUPER_ADMIN.ADMINS)} tooltip="Return to admin list">
               Back to Admins
             </Button>
           </div>
@@ -268,6 +268,7 @@ export default function AdminDetailPage() {
                 size="sm"
                 leftIcon={<ArrowLeft className="h-4 w-4" />}
                 onClick={() => router.push(ROUTES.SUPER_ADMIN.ADMINS)}
+                tooltip="Return to admin list"
               >
                 Back
               </Button>
@@ -278,6 +279,7 @@ export default function AdminDetailPage() {
                   leftIcon={<Ban className="h-4 w-4" />}
                   onClick={() => setShowSuspendModal(true)}
                   className="text-[var(--warning)]"
+                  tooltip="Suspend this admin"
                 >
                   Suspend
                 </Button>
@@ -288,6 +290,7 @@ export default function AdminDetailPage() {
                   leftIcon={<CheckCircle className="h-4 w-4" />}
                   onClick={() => activateMutation.mutate()}
                   isLoading={activateMutation.isPending}
+                  tooltip="Reactivate this admin"
                 >
                   Activate
                 </Button>
@@ -298,6 +301,7 @@ export default function AdminDetailPage() {
                   size="sm"
                   leftIcon={<ShieldOff className="h-4 w-4" />}
                   onClick={() => setShowResetMfaModal(true)}
+                  tooltip="Reset MFA settings"
                 >
                   Reset MFA
                 </Button>
@@ -307,6 +311,7 @@ export default function AdminDetailPage() {
                 size="sm"
                 leftIcon={<Trash2 className="h-4 w-4" />}
                 onClick={() => setShowDeleteModal(true)}
+                tooltip="Delete this admin"
               >
                 Delete
               </Button>
@@ -517,6 +522,7 @@ export default function AdminDetailPage() {
                         size="sm"
                         onClick={() => revokeSessionMutation.mutate(session.id)}
                         isLoading={revokeSessionMutation.isPending}
+                        tooltip="Revoke this session"
                       >
                         Revoke
                       </Button>
@@ -640,6 +646,7 @@ export default function AdminDetailPage() {
                   setShowSuspendModal(false);
                   setSuspendReason('');
                 }}
+                tooltip="Cancel suspension"
               >
                 Cancel
               </Button>
@@ -648,6 +655,7 @@ export default function AdminDetailPage() {
                 onClick={() => suspendMutation.mutate()}
                 isLoading={suspendMutation.isPending}
                 disabled={!suspendReason.trim()}
+                tooltip="Confirm suspension"
               >
                 Suspend
               </Button>
@@ -679,13 +687,14 @@ export default function AdminDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)} tooltip="Cancel deletion">
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => deleteMutation.mutate()}
                 isLoading={deleteMutation.isPending}
+                tooltip="Permanently delete admin"
               >
                 Delete
               </Button>
@@ -709,13 +718,14 @@ export default function AdminDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowResetMfaModal(false)}>
+              <Button variant="outline" onClick={() => setShowResetMfaModal(false)} tooltip="Cancel MFA reset">
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => resetMfaMutation.mutate()}
                 isLoading={resetMfaMutation.isPending}
+                tooltip="Confirm MFA reset"
               >
                 Reset MFA
               </Button>

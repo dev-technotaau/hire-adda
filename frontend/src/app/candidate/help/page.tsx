@@ -23,6 +23,7 @@ import Textarea from '@/components/ui/Textarea';
 import Pagination from '@/components/ui/Pagination';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { ticketService } from '@/services/ticket.service';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
@@ -186,7 +187,7 @@ export default function CandidateHelpPage() {
               <Card key={idx} variant="bordered" padding="sm">
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between text-left"
+                  className="flex w-full cursor-pointer items-center justify-between text-left"
                   onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
                 >
                   <span className="pr-4 text-sm font-medium text-[var(--text)]">
@@ -220,6 +221,7 @@ export default function CandidateHelpPage() {
               leftIcon={showCreateForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               variant={showCreateForm ? 'outline' : 'primary'}
               onClick={() => setShowCreateForm(!showCreateForm)}
+              tooltip={showCreateForm ? 'Cancel creating ticket' : 'Create a new support ticket'}
             >
               {showCreateForm ? 'Cancel' : 'Create New Ticket'}
             </Button>
@@ -261,6 +263,7 @@ export default function CandidateHelpPage() {
                     type="submit"
                     isLoading={createMutation.isPending}
                     leftIcon={<Send className="h-4 w-4" />}
+                    tooltip="Submit your support ticket"
                   >
                     Submit Ticket
                   </Button>
@@ -307,6 +310,7 @@ export default function CandidateHelpPage() {
                     size="sm"
                     leftIcon={<Plus className="h-4 w-4" />}
                     onClick={() => setShowCreateForm(true)}
+                    tooltip="Create a new support ticket"
                   >
                     Create New Ticket
                   </Button>
@@ -321,7 +325,7 @@ export default function CandidateHelpPage() {
                   variant="bordered"
                   padding="sm"
                   onClick={() => router.push(ROUTES.CANDIDATE.TICKET_DETAIL(ticket.id))}
-                  className="hover:border-primary/40"
+                  className="cursor-pointer hover:border-primary/40"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     {/* Left: ticket info */}

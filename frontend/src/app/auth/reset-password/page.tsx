@@ -14,6 +14,7 @@ import PasswordStrength from '@/components/auth/PasswordStrength';
 import { showToast } from '@/components/ui/Toast';
 import { authService } from '@/services/auth.service';
 import { createResetPasswordSchema, type ResetPasswordFormData } from '@/validators/auth';
+import Tooltip from '@/components/ui/Tooltip';
 import { ROUTES } from '@/constants/routes';
 import { usePasswordRules } from '@/hooks/use-security-config';
 import type { ApiError } from '@/types/api';
@@ -84,7 +85,7 @@ export default function ResetPasswordPage() {
               This password reset link is invalid or has expired. Please request a new one.
             </p>
             <Link href={ROUTES.AUTH.FORGOT_PASSWORD}>
-              <Button fullWidth className="mt-6">
+              <Button fullWidth className="mt-6" tooltip="Request a new password reset link">
                 Request New Link
               </Button>
             </Link>
@@ -151,7 +152,7 @@ export default function ResetPasswordPage() {
                   {...register('confirmPassword')}
                 />
 
-                <Button type="submit" fullWidth isLoading={isLoading}>
+                <Button type="submit" fullWidth isLoading={isLoading} tooltip="Set your new password">
                   Reset Password
                 </Button>
               </form>
@@ -174,7 +175,7 @@ export default function ResetPasswordPage() {
                   Your password has been successfully reset. You can now log in with your new
                   password.
                 </p>
-                <Button fullWidth className="mt-6" onClick={() => router.push(ROUTES.AUTH.LOGIN)}>
+                <Button fullWidth className="mt-6" onClick={() => router.push(ROUTES.AUTH.LOGIN)} tooltip="Go back to login">
                   Go to Login
                 </Button>
               </div>

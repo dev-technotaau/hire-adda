@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
@@ -51,7 +52,7 @@ export default function PublicationsSection({ form, updateField }: ProfileSectio
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Publications</h2>
-            <Button size="sm" variant="outline" onClick={addPublication}>
+            <Button size="sm" variant="outline" onClick={addPublication} tooltip="Add a new publication">
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
@@ -67,12 +68,14 @@ export default function PublicationsSection({ form, updateField }: ProfileSectio
               <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Publication {i + 1}</h4>
-                  <button
-                    onClick={() => removePublication(i)}
-                    className="text-[var(--error)] hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove this publication">
+                    <button
+                      onClick={() => removePublication(i)}
+                      className="cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <Input
                   label="Title"
@@ -125,7 +128,7 @@ export default function PublicationsSection({ form, updateField }: ProfileSectio
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Patents</h2>
-            <Button size="sm" variant="outline" onClick={addPatent}>
+            <Button size="sm" variant="outline" onClick={addPatent} tooltip="Add a new patent">
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
@@ -141,12 +144,14 @@ export default function PublicationsSection({ form, updateField }: ProfileSectio
               <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Patent {i + 1}</h4>
-                  <button
-                    onClick={() => removePatent(i)}
-                    className="text-[var(--error)] hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove this patent">
+                    <button
+                      onClick={() => removePatent(i)}
+                      className="cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <Input
                   label="Title"

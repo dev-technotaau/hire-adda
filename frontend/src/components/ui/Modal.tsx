@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Tooltip from './Tooltip';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
@@ -31,49 +32,55 @@ function Modal({ isOpen, onClose, title, children, footer, size = 'md', classNam
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const titleId = title ? 'modal-title' : undefined;
 
-  const handleEscape = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    },
-    [onClose],
-  );
-
-  // Focus trap
-  const handleTab = useCallback((e: KeyboardEvent) => {
-    if (e.key !== 'Tab' || !dialogRef.current) return;
-    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-    );
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey) {
-      if (document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      }
-    } else {
-      if (document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-  }, []);
+  // Store latest callbacks in refs so the keydown listener always calls the
+  // current version without needing to re-attach (which would re-focus the
+  // dialog container and steal focus from inputs inside the modal).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
-    if (isOpen) {
-      previousFocusRef.current = document.activeElement as HTMLElement;
-      document.addEventListener('keydown', handleEscape);
-      document.addEventListener('keydown', handleTab);
-      document.body.style.overflow = 'hidden';
-      // Focus the dialog on open
-      requestAnimationFrame(() => {
-        dialogRef.current?.focus();
-      });
-    }
+    if (!isOpen) return;
+
+    previousFocusRef.current = document.activeElement as HTMLElement;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Escape
+      if (e.key === 'Escape') {
+        onCloseRef.current();
+        return;
+      }
+      // Focus trap
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+
+    // Focus the dialog only on initial open
+    requestAnimationFrame(() => {
+      dialogRef.current?.focus();
+    });
+
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener('keydown', handleTab);
+      document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = '';
       // Restore focus on close
       if (previousFocusRef.current) {
@@ -81,7 +88,7 @@ function Modal({ isOpen, onClose, title, children, footer, size = 'md', classNam
         previousFocusRef.current = null;
       }
     };
-  }, [isOpen, handleEscape, handleTab]);
+  }, [isOpen]);
 
   if (typeof window === 'undefined') return null;
 
@@ -119,25 +126,29 @@ function Modal({ isOpen, onClose, title, children, footer, size = 'md', classNam
                 <h2 id={titleId} className="text-lg font-semibold text-[var(--text)]">
                   {title}
                 </h2>
+                <Tooltip content="Close dialog">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Close dialog"
+                    className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </Tooltip>
+              </div>
+            )}
+            {!title && (
+              <Tooltip content="Close dialog">
                 <button
                   type="button"
                   onClick={onClose}
                   aria-label="Close dialog"
-                  className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+                  className="absolute top-4 right-4 z-10 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
                 >
                   <X className="h-5 w-5" />
                 </button>
-              </div>
-            )}
-            {!title && (
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close dialog"
-                className="absolute top-4 right-4 z-10 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              </Tooltip>
             )}
             <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
             {footer && <div className="border-t border-[var(--border)] px-6 py-4">{footer}</div>}

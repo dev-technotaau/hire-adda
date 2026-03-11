@@ -164,7 +164,8 @@ export default function EmployerTicketDetailPage() {
           <button
             type="button"
             onClick={() => router.push(ROUTES.EMPLOYER.HELP)}
-            className="hover:text-primary inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors"
+            title="Back to Help"
+            className="hover:text-primary inline-flex cursor-pointer items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Help
@@ -177,6 +178,7 @@ export default function EmployerTicketDetailPage() {
                 size="sm"
                 className="mt-4"
                 onClick={() => router.push(ROUTES.EMPLOYER.HELP)}
+                tooltip="Return to Help"
               >
                 Return to Help
               </Button>
@@ -198,7 +200,8 @@ export default function EmployerTicketDetailPage() {
         <button
           type="button"
           onClick={() => router.push(ROUTES.EMPLOYER.HELP)}
-          className="hover:text-primary inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors"
+          title="Back to Help"
+          className="hover:text-primary inline-flex cursor-pointer items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Help
@@ -253,6 +256,7 @@ export default function EmployerTicketDetailPage() {
                   leftIcon={<Unlock className="h-4 w-4" />}
                   onClick={() => reopenMutation.mutate()}
                   isLoading={reopenMutation.isPending}
+                  tooltip="Reopen this ticket"
                 >
                   Reopen Ticket
                 </Button>
@@ -263,6 +267,7 @@ export default function EmployerTicketDetailPage() {
                   leftIcon={<Lock className="h-4 w-4" />}
                   onClick={() => closeMutation.mutate()}
                   isLoading={closeMutation.isPending}
+                  tooltip="Close this ticket"
                 >
                   Close Ticket
                 </Button>
@@ -295,6 +300,7 @@ export default function EmployerTicketDetailPage() {
                       onClick={() => handleSatisfaction('SATISFIED')}
                       isLoading={satisfactionMutation.isPending}
                       className="border-[var(--success)]/30 text-[var(--success)] hover:bg-[var(--success-light)]"
+                      tooltip="Rate as satisfied"
                     >
                       Satisfied
                     </Button>
@@ -305,6 +311,7 @@ export default function EmployerTicketDetailPage() {
                       onClick={() => handleSatisfaction('NEUTRAL')}
                       isLoading={satisfactionMutation.isPending}
                       className="border-[var(--warning)]/30 text-[var(--warning)] hover:bg-[var(--warning-light)]"
+                      tooltip="Rate as neutral"
                     >
                       Neutral
                     </Button>
@@ -315,13 +322,14 @@ export default function EmployerTicketDetailPage() {
                       onClick={() => handleSatisfaction('NOT_SATISFIED')}
                       isLoading={satisfactionMutation.isPending}
                       className="border-[var(--error)]/30 text-[var(--error)] hover:bg-[var(--error-light)]"
+                      tooltip="Rate as not satisfied"
                     >
                       Not Satisfied
                     </Button>
                   </div>
                 </div>
               ) : (
-                <Button variant="primary" size="sm" onClick={() => setShowSatisfaction(true)}>
+                <Button variant="primary" size="sm" onClick={() => setShowSatisfaction(true)} tooltip="Provide feedback">
                   Rate Your Experience
                 </Button>
               )}
@@ -456,6 +464,7 @@ export default function EmployerTicketDetailPage() {
                   leftIcon={<Send className="h-4 w-4" />}
                   isLoading={replyMutation.isPending}
                   disabled={!replyBody.trim()}
+                  tooltip="Send reply"
                 >
                   Send Reply
                 </Button>

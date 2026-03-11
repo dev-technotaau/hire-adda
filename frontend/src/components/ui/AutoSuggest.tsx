@@ -444,7 +444,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
             error
               ? 'border-error focus-within:border-error focus-within:ring-error/20'
               : 'border-[var(--border)]',
-            disabled && 'cursor-not-allowed bg-[var(--bg-secondary)] opacity-60',
+            disabled ? 'cursor-not-allowed bg-[var(--bg-secondary)] opacity-60' : 'cursor-text',
             SIZE_STYLES[inputSize],
           )}
           onClick={() => {
@@ -502,10 +502,26 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
             )}
           />
 
-          {/* Right side: loading / dropdown arrow */}
+          {/* Right side: loading / clear / dropdown arrow */}
           <div className="flex shrink-0 items-center gap-1">
             {isLoading && <Spinner size="sm" />}
-            {!multiple && !disabled && (
+            {!multiple && !disabled && inputValue && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setInputValue('');
+                  handleChange('');
+                  onInputChange?.('');
+                  inputRef.current?.focus();
+                }}
+                className="rounded-full p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)]"
+                aria-label="Clear"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {!multiple && !disabled && !inputValue && (
               <ChevronDown
                 className={cn(
                   'h-4 w-4 text-[var(--text-muted)] transition-transform duration-200',

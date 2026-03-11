@@ -21,6 +21,7 @@ import FileUpload from '@/components/ui/FileUpload';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
 import { verificationService } from '@/services/verification.service';
 import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
 import { formatDate } from '@/lib/utils';
@@ -111,6 +112,7 @@ export default function VerificationPage() {
             <Button
               onClick={() => setShowForm(true)}
               leftIcon={<ShieldCheck className="h-4 w-4" />}
+              tooltip="Submit a new verification request"
             >
               New Request
             </Button>
@@ -158,6 +160,7 @@ export default function VerificationPage() {
                     setShowForm(false);
                     setDocumentFile(null);
                   }}
+                  tooltip="Cancel verification request"
                 >
                   Cancel
                 </Button>
@@ -165,6 +168,7 @@ export default function VerificationPage() {
                   onClick={handleSubmit}
                   isLoading={submitMutation.isPending}
                   leftIcon={<Upload className="h-4 w-4" />}
+                  tooltip="Submit verification request for review"
                 >
                   Submit
                 </Button>
@@ -230,7 +234,7 @@ export default function VerificationPage() {
               title="No verification requests"
               description="Submit a verification request to build trust with candidates."
               action={
-                <Button onClick={() => setShowForm(true)} size="sm">
+                <Button onClick={() => setShowForm(true)} size="sm" tooltip="Submit a new verification request">
                   Submit Request
                 </Button>
               }

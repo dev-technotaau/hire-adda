@@ -192,6 +192,7 @@ export default function ContactPage() {
                     size="lg"
                     isLoading={isSubmitting}
                     leftIcon={<Send className="h-4 w-4" />}
+                    tooltip="Submit your message to our support team"
                   >
                     Send Message
                   </Button>

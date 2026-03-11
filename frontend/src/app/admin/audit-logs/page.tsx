@@ -13,6 +13,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import { adminService } from '@/services/admin.service';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
 import { formatDate } from '@/lib/utils';
@@ -221,21 +222,23 @@ export default function AuditLogsPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           {log.details ? (
-                            <button
-                              type="button"
-                              onClick={() => toggleRow(log.id)}
-                              className="text-primary inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors hover:bg-[var(--bg-secondary)]"
-                            >
-                              {expandedRow === log.id ? (
-                                <>
-                                  Hide <ChevronUp className="h-3 w-3" />
-                                </>
-                              ) : (
-                                <>
-                                  View <ChevronDown className="h-3 w-3" />
-                                </>
-                              )}
-                            </button>
+                            <Tooltip content={expandedRow === log.id ? 'Hide log details' : 'View log details'}>
+                              <button
+                                type="button"
+                                onClick={() => toggleRow(log.id)}
+                                className="text-primary cursor-pointer inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors hover:bg-[var(--bg-secondary)]"
+                              >
+                                {expandedRow === log.id ? (
+                                  <>
+                                    Hide <ChevronUp className="h-3 w-3" />
+                                  </>
+                                ) : (
+                                  <>
+                                    View <ChevronDown className="h-3 w-3" />
+                                  </>
+                                )}
+                              </button>
+                            </Tooltip>
                           ) : (
                             <span className="text-[var(--text-muted)]">-</span>
                           )}
@@ -251,6 +254,7 @@ export default function AuditLogsPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                tooltip="View full log details in modal"
                                 onClick={() => setDetailsModal(log)}
                               >
                                 Full View

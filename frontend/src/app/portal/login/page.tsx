@@ -257,7 +257,7 @@ export default function AdminLoginPage() {
                       autoFocus
                       {...register('email')}
                     />
-                    <Button type="submit" fullWidth className="mt-4">
+                    <Button type="submit" fullWidth className="mt-4" tooltip="Continue to password">
                       Continue
                     </Button>
                   </motion.div>
@@ -280,7 +280,8 @@ export default function AdminLoginPage() {
                       <button
                         type="button"
                         onClick={() => setStep('email')}
-                        className="text-primary hover:text-primary-hover ml-auto text-xs"
+                        className="text-primary hover:text-primary-hover ml-auto cursor-pointer text-xs"
+                        title="Change email address"
                       >
                         Change
                       </button>
@@ -295,7 +296,8 @@ export default function AdminLoginPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="text-[var(--text-muted)] hover:text-[var(--text)]"
+                          className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
+                          title={showPassword ? 'Hide password' : 'Show password'}
                         >
                           {showPassword ? (
                             <EyeOff className="h-4 w-4" />
@@ -321,7 +323,7 @@ export default function AdminLoginPage() {
                       onExpire={() => setTurnstileToken('')}
                     />
 
-                    <Button type="submit" fullWidth className="mt-4" isLoading={isLoading}>
+                    <Button type="submit" fullWidth className="mt-4" isLoading={isLoading} tooltip="Sign in to admin portal">
                       Sign In
                     </Button>
                   </motion.div>
@@ -353,6 +355,7 @@ export default function AdminLoginPage() {
                       className="mt-6"
                       isLoading={isLoading}
                       disabled={mfaCode.length !== 6}
+                      tooltip="Verify MFA and sign in"
                     >
                       Verify & Sign In
                     </Button>
@@ -364,7 +367,8 @@ export default function AdminLoginPage() {
                         setMfaRequired(false);
                         setMfaCode('');
                       }}
-                      className="mt-3 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                      className="mt-3 w-full cursor-pointer text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                      title="Return to login"
                     >
                       Back to login
                     </button>
@@ -379,7 +383,8 @@ export default function AdminLoginPage() {
                           setRecoveryOtp('');
                           setMfaCode('');
                         }}
-                        className="mt-4 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                        className="mt-4 w-full cursor-pointer text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                        title="Recover MFA access"
                       >
                         Can&apos;t access authenticator?
                       </button>
@@ -420,6 +425,7 @@ export default function AdminLoginPage() {
                           fullWidth
                           onClick={handleRecoveryRequest}
                           isLoading={recoveryLoading}
+                          tooltip="Send recovery code via email"
                         >
                           Send Recovery Code
                         </Button>
@@ -447,6 +453,7 @@ export default function AdminLoginPage() {
                           className="mt-4"
                           isLoading={recoveryLoading}
                           disabled={recoveryOtp.length !== 6}
+                          tooltip="Verify recovery code"
                         >
                           Verify & Sign In
                         </Button>
@@ -455,7 +462,8 @@ export default function AdminLoginPage() {
                           type="button"
                           onClick={handleRecoveryRequest}
                           disabled={resendTimer > 0 || recoveryLoading}
-                          className="mt-3 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-50"
+                          className="mt-3 w-full cursor-pointer text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)] disabled:opacity-50"
+                          title="Resend recovery code"
                         >
                           {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend code'}
                         </button>
@@ -469,7 +477,8 @@ export default function AdminLoginPage() {
                         setRecoveryStep('request');
                         setRecoveryOtp('');
                       }}
-                      className="mt-3 w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                      className="mt-3 w-full cursor-pointer text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                      title="Return to MFA verification"
                     >
                       Back to MFA
                     </button>
@@ -487,6 +496,7 @@ export default function AdminLoginPage() {
                 fullWidth
                 onClick={handlePasskeyLogin}
                 isLoading={passkeyLoading}
+                tooltip="Authenticate using your registered passkey"
               >
                 <Fingerprint className="mr-2 h-4 w-4" />
                 Sign in with Passkey

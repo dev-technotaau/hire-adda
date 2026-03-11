@@ -2,6 +2,7 @@ import { Plus, Trash2, Linkedin, UserCircle, BookOpen } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import type {
   UpdateCompanyRequest,
   LeadershipEntry,
@@ -90,14 +91,16 @@ export default function PeopleSection({ form, updateField }: PeopleSectionProps)
           >
             <div className="mb-3 flex items-center justify-between">
               <span className="text-sm font-medium text-[var(--text)]">Leader #{index + 1}</span>
-              <button
-                type="button"
-                onClick={() => removeLeadership(index)}
-                className="hover:text-error rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
-                aria-label="Remove leader"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <Tooltip content="Remove leader">
+                <button
+                  type="button"
+                  onClick={() => removeLeadership(index)}
+                  className="hover:text-error cursor-pointer rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
+                  aria-label="Remove leader"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
@@ -135,7 +138,7 @@ export default function PeopleSection({ form, updateField }: PeopleSectionProps)
           </div>
         ))}
 
-        <Button variant="outline" onClick={addLeadership}>
+        <Button variant="outline" onClick={addLeadership} tooltip="Add a new leader">
           <Plus className="mr-1 h-4 w-4" /> Add Leader
         </Button>
       </div>
@@ -173,14 +176,16 @@ export default function PeopleSection({ form, updateField }: PeopleSectionProps)
               <span className="text-sm font-medium text-[var(--text)]">
                 Testimonial #{index + 1}
               </span>
-              <button
-                type="button"
-                onClick={() => removeTestimonial(index)}
-                className="hover:text-error rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
-                aria-label="Remove testimonial"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <Tooltip content="Remove testimonial">
+                <button
+                  type="button"
+                  onClick={() => removeTestimonial(index)}
+                  className="hover:text-error cursor-pointer rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
+                  aria-label="Remove testimonial"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <Input
@@ -216,7 +221,7 @@ export default function PeopleSection({ form, updateField }: PeopleSectionProps)
           </div>
         ))}
 
-        <Button variant="outline" onClick={addTestimonial}>
+        <Button variant="outline" onClick={addTestimonial} tooltip="Add a new testimonial">
           <Plus className="mr-1 h-4 w-4" /> Add Testimonial
         </Button>
       </div>

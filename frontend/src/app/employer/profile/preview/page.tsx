@@ -62,7 +62,7 @@ export default function CompanyProfilePreviewPage() {
         {/* Top Bar */}
         <div className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] p-4">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => router.push(ROUTES.EMPLOYER.PROFILE)}>
+            <Button variant="ghost" size="sm" onClick={() => router.push(ROUTES.EMPLOYER.PROFILE)} tooltip="Back to edit profile">
               <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to Edit
             </Button>
             <span className="text-sm font-medium text-[var(--text-secondary)]">
@@ -196,6 +196,7 @@ export default function CompanyProfilePreviewPage() {
                       href={company.website}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title="Visit company website"
                       className="text-primary inline-flex items-center gap-1 text-sm hover:underline"
                     >
                       <Globe className="h-3.5 w-3.5" />{' '}
@@ -243,6 +244,7 @@ export default function CompanyProfilePreviewPage() {
                   href={company.companyVideoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  title="Watch company video"
                   className="text-primary inline-flex items-center gap-2 text-sm hover:underline"
                 >
                   <Play className="h-4 w-4" /> Watch our company video
@@ -522,7 +524,7 @@ export default function CompanyProfilePreviewPage() {
                             {leader.name}
                           </h3>
                           {leader.linkedinUrl && (
-                            <a href={leader.linkedinUrl} target="_blank" rel="noopener noreferrer">
+                            <a href={leader.linkedinUrl} target="_blank" rel="noopener noreferrer" title="View LinkedIn profile">
                               <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
                             </a>
                           )}
@@ -792,6 +794,7 @@ export default function CompanyProfilePreviewPage() {
                       href={company.socialLinks.linkedin}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title="Visit LinkedIn page"
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                     >
                       <Linkedin className="h-4 w-4 text-[#0A66C2]" /> LinkedIn
@@ -802,6 +805,7 @@ export default function CompanyProfilePreviewPage() {
                       href={company.socialLinks.twitter}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title="Visit Twitter/X page"
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                     >
                       <ExternalLink className="h-4 w-4" /> Twitter/X
@@ -812,6 +816,7 @@ export default function CompanyProfilePreviewPage() {
                       href={company.socialLinks.facebook}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title="Visit Facebook page"
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                     >
                       <Facebook className="h-4 w-4 text-[#1877F2]" /> Facebook
@@ -822,6 +827,7 @@ export default function CompanyProfilePreviewPage() {
                       href={company.socialLinks.instagram}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title="Visit Instagram page"
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                     >
                       <Instagram className="h-4 w-4 text-[#E1306C]" /> Instagram
@@ -832,6 +838,7 @@ export default function CompanyProfilePreviewPage() {
                       href={company.socialLinks.youtube}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title="Visit YouTube channel"
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                     >
                       <Youtube className="h-4 w-4 text-[#FF0000]" /> YouTube
@@ -842,6 +849,7 @@ export default function CompanyProfilePreviewPage() {
                       href={company.socialLinks.glassdoor}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title="Visit Glassdoor page"
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                     >
                       <ExternalLink className="h-4 w-4 text-[#0CAA41]" /> Glassdoor
@@ -852,6 +860,7 @@ export default function CompanyProfilePreviewPage() {
                       href={company.careersPageUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title="Visit careers page"
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                     >
                       <ExternalLink className="text-primary h-4 w-4" /> Careers Page
@@ -862,6 +871,7 @@ export default function CompanyProfilePreviewPage() {
                       href={company.blogUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      title="Visit company blog"
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                     >
                       <BookOpen className="h-4 w-4 text-[var(--warning)]" /> Blog

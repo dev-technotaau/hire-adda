@@ -6,6 +6,7 @@ import L from 'leaflet';
 import Link from 'next/link';
 import { Bookmark, BookmarkCheck } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import { ROUTES } from '@/constants/routes';
 import { formatSalaryRange } from '@/lib/utils';
 import { formatSalaryAsLPA } from '@/utils/format';
@@ -96,6 +97,7 @@ function SearchAreaButton({
           setMoved(false);
         }}
         className="shadow-lg"
+        tooltip="Search for jobs in the visible map area"
       >
         Search this area
       </Button>
@@ -164,12 +166,14 @@ export default function MapView({
           >
             <Popup maxWidth={280} minWidth={220}>
               <div className="space-y-1.5">
-                <Link
-                  href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-                  className="hover:text-primary block text-sm leading-tight font-semibold text-[var(--text)] transition-colors"
-                >
-                  {job.title}
-                </Link>
+                <Tooltip content="View job details">
+                  <Link
+                    href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
+                    className="hover:text-primary block cursor-pointer text-sm leading-tight font-semibold text-[var(--text)] transition-colors"
+                  >
+                    {job.title}
+                  </Link>
+                </Tooltip>
                 <p className="text-xs text-[var(--text-muted)]">
                   {job.isConfidential ? 'Confidential' : job.company?.companyName}
                 </p>
@@ -179,24 +183,26 @@ export default function MapView({
                       ? formatSalaryAsLPA(job.salaryMin, job.salaryMax)
                       : formatSalaryRange(job.salaryMin, job.salaryMax, job.currency)}
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSaveJob(job.id);
-                    }}
-                    className={
-                      isSaved
-                        ? 'text-primary'
-                        : 'hover:text-primary text-[var(--text-muted)] transition-colors'
-                    }
-                    title={isSaved ? 'Unsave' : 'Save'}
-                  >
-                    {isSaved ? (
-                      <BookmarkCheck className="h-4 w-4" />
-                    ) : (
-                      <Bookmark className="h-4 w-4" />
-                    )}
-                  </button>
+                  <Tooltip content={isSaved ? 'Remove from saved jobs' : 'Save this job'}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSaveJob(job.id);
+                      }}
+                      className={`cursor-pointer ${
+                        isSaved
+                          ? 'text-primary'
+                          : 'hover:text-primary text-[var(--text-muted)] transition-colors'
+                      }`}
+                      aria-label={isSaved ? 'Unsave job' : 'Save job'}
+                    >
+                      {isSaved ? (
+                        <BookmarkCheck className="h-4 w-4" />
+                      ) : (
+                        <Bookmark className="h-4 w-4" />
+                      )}
+                    </button>
+                  </Tooltip>
                 </div>
                 {job.skillsRequired?.length > 0 && (
                   <div className="flex flex-wrap gap-1 pt-0.5">

@@ -12,6 +12,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import OtpInput from '@/components/auth/OtpInput';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { adminService } from '@/services/admin.service';
 import { useOtpConfig } from '@/hooks/use-otp-config';
@@ -150,7 +151,7 @@ export default function ManageAdminsPage() {
               Create and manage admin accounts
             </p>
           </div>
-          <Button leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => setShowCreate(true)}>
+          <Button leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => setShowCreate(true)} tooltip="Create a new admin account">
             Create Admin
           </Button>
         </div>
@@ -190,16 +191,18 @@ export default function ManageAdminsPage() {
                     <span className="text-xs text-[var(--text-muted)]">
                       Joined {formatRelativeDate(admin.createdAt)}
                     </span>
-                    <Link href={ROUTES.SUPER_ADMIN.ADMIN_DETAIL(admin.id)}>
-                      <Button variant="outline" size="sm" leftIcon={<Eye className="h-3.5 w-3.5" />}>
-                        View
-                      </Button>
-                    </Link>
+                    <Tooltip content="View admin details">
+                      <Link href={ROUTES.SUPER_ADMIN.ADMIN_DETAIL(admin.id)}>
+                        <Button variant="outline" size="sm" leftIcon={<Eye className="h-3.5 w-3.5" />} tooltip="View admin details">
+                          View
+                        </Button>
+                      </Link>
+                    </Tooltip>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setResetTarget({ id: admin.id, email: admin.email })}
-                      title="Reset Password"
+                      tooltip="Reset admin password"
                     >
                       <KeyRound className="h-4 w-4" />
                     </Button>
@@ -208,6 +211,7 @@ export default function ManageAdminsPage() {
                       size="sm"
                       onClick={() => setRemoveTarget({ id: admin.id, email: admin.email })}
                       className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
+                      tooltip="Remove admin"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -232,13 +236,14 @@ export default function ManageAdminsPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowCreate(false)}>
+              <Button variant="outline" onClick={() => setShowCreate(false)} tooltip="Cancel and close">
                 Cancel
               </Button>
               <Button
                 onClick={() => createMutation.mutate()}
                 isLoading={createMutation.isPending}
                 disabled={!newAdmin.email || !newAdmin.password}
+                tooltip="Create the admin account"
               >
                 Create Admin
               </Button>
@@ -284,13 +289,14 @@ export default function ManageAdminsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setRemoveTarget(null)}>
+              <Button variant="outline" onClick={() => setRemoveTarget(null)} tooltip="Cancel and close">
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => removeTarget && removeMutation.mutate(removeTarget.id)}
                 isLoading={removeMutation.isPending}
+                tooltip="Confirm admin removal"
               >
                 Remove
               </Button>
@@ -314,11 +320,11 @@ export default function ManageAdminsPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={closeResetModal}>
+              <Button variant="outline" onClick={closeResetModal} tooltip="Cancel and close">
                 Cancel
               </Button>
               {resetStep === 'send' ? (
-                <Button onClick={handleSendResetOtp} isLoading={isSendingOtp}>
+                <Button onClick={handleSendResetOtp} isLoading={isSendingOtp} tooltip="Send OTP verification code">
                   Send Verification Code
                 </Button>
               ) : (
@@ -326,6 +332,7 @@ export default function ManageAdminsPage() {
                   onClick={handleConfirmReset}
                   isLoading={isResettingPassword}
                   disabled={resetOtp.length !== otpConfig.LENGTH || !resetPassword}
+                  tooltip="Confirm password reset"
                 >
                   Reset Password
                 </Button>
@@ -363,14 +370,16 @@ export default function ManageAdminsPage() {
                   {resendTimer > 0 ? (
                     <span className="text-[var(--text-secondary)]">Resend in {resendTimer}s</span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleResendOtp}
-                      disabled={isResending}
-                      className="text-primary font-medium hover:underline disabled:opacity-50"
-                    >
-                      {isResending ? 'Sending...' : 'Resend Code'}
-                    </button>
+                    <Tooltip content="Resend verification code to admin email">
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={isResending}
+                        className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
+                      >
+                        {isResending ? 'Sending...' : 'Resend Code'}
+                      </button>
+                    </Tooltip>
                   )}
                 </p>
               </div>

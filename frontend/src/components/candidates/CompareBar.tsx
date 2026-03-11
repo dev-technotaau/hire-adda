@@ -2,6 +2,7 @@
 
 import { X, GitCompareArrows } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import type { CandidateProfile } from '@/types/candidate';
 
 interface CompareBarProps {
@@ -33,21 +34,23 @@ export default function CompareBar({ candidates, onRemove, onClear, onCompare }:
                 className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-1 text-xs whitespace-nowrap text-[var(--text)]"
               >
                 {name}
-                <button
-                  type="button"
-                  onClick={() => onRemove(candidate.id)}
-                  className="rounded-full p-0.5 transition-colors hover:bg-[var(--bg-tertiary)]"
-                  aria-label={`Remove ${name} from comparison`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                <Tooltip content={`Remove ${name}`}>
+                  <button
+                    type="button"
+                    onClick={() => onRemove(candidate.id)}
+                    className="cursor-pointer rounded-full p-0.5 transition-colors hover:bg-[var(--bg-tertiary)]"
+                    aria-label={`Remove ${name} from comparison`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Tooltip>
               </span>
             );
           })}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onClear} className="text-xs">
+          <Button variant="ghost" size="sm" onClick={onClear} className="text-xs" tooltip="Clear all selected candidates">
             Clear
           </Button>
           <Button
@@ -55,6 +58,7 @@ export default function CompareBar({ candidates, onRemove, onClear, onCompare }:
             onClick={onCompare}
             disabled={candidates.length < 2}
             className="text-xs"
+            tooltip="Compare selected candidates side by side"
           >
             Compare
           </Button>

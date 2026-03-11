@@ -27,6 +27,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import Textarea from '@/components/ui/Textarea';
 import Pagination from '@/components/ui/Pagination';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { verificationService } from '@/services/verification.service';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
@@ -429,14 +430,16 @@ export default function AdminVerificationsPage() {
                       </td>
                       <td className="px-4 py-3">
                         {v.documentUrl ? (
-                          <a
-                            href={v.documentUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary inline-flex items-center gap-1 hover:underline"
-                          >
-                            View <ExternalLink className="h-3 w-3" />
-                          </a>
+                          <Tooltip content="Open verification document in new tab">
+                            <a
+                              href={v.documentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary inline-flex items-center gap-1 hover:underline"
+                            >
+                              View <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </Tooltip>
                         ) : (
                           <span className="text-[var(--text-muted)]">None</span>
                         )}
@@ -448,6 +451,7 @@ export default function AdminVerificationsPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                tooltip="Review this verification request"
                                 onClick={() => {
                                   setReviewTarget(v);
                                   setReviewAction('APPROVED');
@@ -459,6 +463,7 @@ export default function AdminVerificationsPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  tooltip="Contact previous employer for verification"
                                   leftIcon={<Mail className="h-3.5 w-3.5" />}
                                   onClick={() => openContactModal(v)}
                                 >
@@ -468,6 +473,7 @@ export default function AdminVerificationsPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
+                                tooltip="Escalate for higher-level review"
                                 onClick={() => setEscalateTarget(v)}
                               >
                                 Escalate
@@ -475,6 +481,7 @@ export default function AdminVerificationsPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
+                                tooltip="Set SLA deadline for this verification"
                                 leftIcon={<CalendarClock className="h-3.5 w-3.5" />}
                                 onClick={() => {
                                   setSlaTarget(v);
@@ -493,6 +500,7 @@ export default function AdminVerificationsPage() {
                             <Button
                               size="sm"
                               variant="outline"
+                              tooltip="Re-review updated verification"
                               onClick={() => {
                                 setReviewTarget(v);
                                 setReviewAction('APPROVED');
@@ -540,6 +548,7 @@ export default function AdminVerificationsPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel review"
                 onClick={() => {
                   setReviewTarget(null);
                   setReviewComments('');
@@ -549,6 +558,7 @@ export default function AdminVerificationsPage() {
               </Button>
               <Button
                 variant={reviewAction === 'REJECTED' ? 'destructive' : 'primary'}
+                tooltip="Submit verification decision"
                 onClick={() => reviewMutation.mutate()}
                 isLoading={reviewMutation.isPending}
               >
@@ -604,6 +614,7 @@ export default function AdminVerificationsPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel escalation"
                 onClick={() => {
                   setEscalateTarget(null);
                   setEscalateReason('');
@@ -612,6 +623,7 @@ export default function AdminVerificationsPage() {
                 Cancel
               </Button>
               <Button
+                tooltip="Confirm escalation"
                 onClick={() => escalateMutation.mutate()}
                 isLoading={escalateMutation.isPending}
                 disabled={!escalateReason.trim()}
@@ -644,10 +656,11 @@ export default function AdminVerificationsPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setContactTarget(null)}>
+              <Button variant="outline" tooltip="Cancel employer contact" onClick={() => setContactTarget(null)}>
                 Cancel
               </Button>
               <Button
+                tooltip="Send verification email to employer"
                 onClick={() => contactMutation.mutate()}
                 isLoading={contactMutation.isPending}
                 disabled={
@@ -732,6 +745,7 @@ export default function AdminVerificationsPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel SLA configuration"
                 onClick={() => {
                   setSlaTarget(null);
                   setSlaDeadline('');
@@ -740,6 +754,7 @@ export default function AdminVerificationsPage() {
                 Cancel
               </Button>
               <Button
+                tooltip="Confirm SLA deadline"
                 onClick={() => slaMutation.mutate()}
                 isLoading={slaMutation.isPending}
                 disabled={!slaDeadline}

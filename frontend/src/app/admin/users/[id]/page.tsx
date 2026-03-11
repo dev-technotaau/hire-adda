@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import {
@@ -54,6 +54,7 @@ import Select from '@/components/ui/Select';
 import Skeleton from '@/components/ui/Skeleton';
 import Modal from '@/components/ui/Modal';
 import Tabs from '@/components/ui/Tabs';
+import Tooltip from '@/components/ui/Tooltip';
 import Pagination from '@/components/ui/Pagination';
 import EmptyState from '@/components/ui/EmptyState';
 import { showToast } from '@/components/ui/Toast';
@@ -76,10 +77,27 @@ export default function AdminUserDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const userId = params.id as string;
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'applications' | 'jobs' | 'activity'>('account');
+  type TabKey = 'account' | 'profile' | 'applications' | 'jobs' | 'activity';
+  const validTabs: TabKey[] = ['account', 'profile', 'applications', 'jobs', 'activity'];
+  const [activeTab, setActiveTab] = useState<TabKey>('account');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && validTabs.includes(tab as TabKey)) {
+      setActiveTab(tab as TabKey);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (key: string) => {
+    setActiveTab(key as TabKey);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', key);
+    window.history.replaceState({}, '', url.toString());
+  };
 
   // Modals
   const [showSuspendModal, setShowSuspendModal] = useState(false);
@@ -242,7 +260,7 @@ export default function AdminUserDetailPage() {
       (profile.education?.length ?? 0) > 0,
       (profile.experience?.length ?? 0) > 0,
       profile.currentLocation,
-      profile.expectedSalary ?? profile.expectedSalaryMin,
+      profile.expectedSalaryMin,
     ];
     const filled = fields.filter(Boolean).length;
     return Math.round((filled / fields.length) * 100);
@@ -338,6 +356,7 @@ export default function AdminUserDetailPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      tooltip="Reactivate this user"
                       leftIcon={<CheckCircle className="h-4 w-4" />}
                       onClick={() => activateMutation.mutate()}
                       isLoading={activateMutation.isPending}
@@ -348,6 +367,7 @@ export default function AdminUserDetailPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      tooltip="Suspend this user"
                       leftIcon={<Ban className="h-4 w-4" />}
                       onClick={() => setShowSuspendModal(true)}
                     >
@@ -357,6 +377,7 @@ export default function AdminUserDetailPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    tooltip="Change user role"
                     leftIcon={<UserCog className="h-4 w-4" />}
                     onClick={() => {
                       setShowRoleModal(true);
@@ -368,6 +389,7 @@ export default function AdminUserDetailPage() {
                   <Button
                     variant="destructive"
                     size="sm"
+                    tooltip="Permanently delete this user"
                     leftIcon={<Trash2 className="h-4 w-4" />}
                     onClick={() => setShowDeleteModal(true)}
                   >
@@ -381,7 +403,7 @@ export default function AdminUserDetailPage() {
             <Tabs
               tabs={tabs}
               activeTab={activeTab}
-              onChange={(key) => setActiveTab(key as typeof activeTab)}
+              onChange={handleTabChange}
               variant="underline"
             />
 
@@ -683,7 +705,7 @@ export default function AdminUserDetailPage() {
           <Card>
             <div className="py-12 text-center">
               <p className="text-[var(--text-muted)]">User not found.</p>
-              <Link href={ROUTES.ADMIN.USERS}>
+              <Link href={ROUTES.ADMIN.USERS} title="Return to users list">
                 <Button variant="outline" size="sm" className="mt-4">
                   Back to Users
                 </Button>
@@ -706,6 +728,7 @@ export default function AdminUserDetailPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel suspension"
                 onClick={() => {
                   setShowSuspendModal(false);
                   setSuspendReason('');
@@ -716,6 +739,7 @@ export default function AdminUserDetailPage() {
               </Button>
               <Button
                 variant="destructive"
+                tooltip="Confirm user suspension"
                 onClick={handleSuspend}
                 isLoading={suspendMutation.isPending}
                 disabled={!suspendReason.trim()}
@@ -757,11 +781,12 @@ export default function AdminUserDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              <Button variant="outline" tooltip="Cancel deletion" onClick={() => setShowDeleteModal(false)}>
                 Cancel
               </Button>
               <Button
                 variant="destructive"
+                tooltip="Permanently delete this user"
                 onClick={() => deleteMutation.mutate()}
                 isLoading={deleteMutation.isPending}
               >
@@ -792,6 +817,7 @@ export default function AdminUserDetailPage() {
             <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
+                tooltip="Cancel role change"
                 onClick={() => {
                   setShowRoleModal(false);
                   setNewRole('');
@@ -800,6 +826,7 @@ export default function AdminUserDetailPage() {
                 Cancel
               </Button>
               <Button
+                tooltip="Confirm role update"
                 onClick={() => roleChangeMutation.mutate(newRole as Role)}
                 isLoading={roleChangeMutation.isPending}
                 disabled={!newRole || newRole === user?.role}
@@ -919,10 +946,16 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
                 <p className="text-[var(--text)]">{profile.experienceYears} years</p>
               </div>
             )}
-            {profile.expectedSalary && (
+            {(profile.expectedSalaryMin || profile.expectedSalaryMax) && (
               <div>
                 <p className="text-xs text-[var(--text-muted)]">Expected Salary</p>
-                <p className="text-[var(--text)]">₹{profile.expectedSalary.toLocaleString()}</p>
+                <p className="text-[var(--text)]">
+                  {profile.expectedSalaryMin && profile.expectedSalaryMax
+                    ? `₹${Number(profile.expectedSalaryMin).toLocaleString()} - ₹${Number(profile.expectedSalaryMax).toLocaleString()}`
+                    : profile.expectedSalaryMin
+                      ? `₹${Number(profile.expectedSalaryMin).toLocaleString()}+`
+                      : `Up to ₹${Number(profile.expectedSalaryMax).toLocaleString()}`}
+                </p>
               </div>
             )}
             {profile.currentLocation && (
@@ -994,10 +1027,10 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
                 <p className="text-sm text-[var(--text)]">{profile.gender}</p>
               </div>
             )}
-            {profile.dateOfBirth && (
+            {profile.dob && (
               <div>
                 <p className="text-xs text-[var(--text-muted)]">Date of Birth</p>
-                <p className="text-sm text-[var(--text)]">{profile.dateOfBirth}</p>
+                <p className="text-sm text-[var(--text)]">{profile.dob}</p>
               </div>
             )}
             {profile.nationality && (
@@ -1098,14 +1131,16 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
                     <p className="text-xs text-[var(--text-muted)]">Issued: {cert.issueDate}</p>
                   )}
                   {cert.url && (
-                    <a
-                      href={cert.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                    >
-                      View Certificate <ExternalLink className="h-3 w-3" />
-                    </a>
+                    <Tooltip content="Open certificate in new tab">
+                      <a
+                        href={cert.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        View Certificate <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Tooltip>
                   )}
                 </div>
               ))}
@@ -1137,14 +1172,16 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
                     </div>
                   )}
                   {project.url && (
-                    <a
-                      href={project.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                    >
-                      View Project <ExternalLink className="h-3 w-3" />
-                    </a>
+                    <Tooltip content="Open project in new tab">
+                      <a
+                        href={project.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        View Project <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Tooltip>
                   )}
                 </div>
               ))}
@@ -1153,29 +1190,31 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
         )}
 
         {/* Social Profiles */}
-        {(profile.githubUrl || profile.linkedinUrl || profile.portfolioUrl) && (
+        {(profile.githubProfile || profile.linkedinProfile || profile.portfolioUrl) && (
           <Card>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
               <Globe className="h-5 w-5" />
               Social Profiles
             </h3>
             <div className="flex flex-wrap gap-2">
-              {profile.githubUrl && (
+              {profile.githubProfile && (
                 <Button
                   variant="outline"
                   size="sm"
+                  tooltip="Open GitHub profile"
                   leftIcon={<Github className="h-4 w-4" />}
-                  onClick={() => window.open(profile.githubUrl!, '_blank')}
+                  onClick={() => window.open(profile.githubProfile!, '_blank')}
                 >
                   GitHub
                 </Button>
               )}
-              {profile.linkedinUrl && (
+              {profile.linkedinProfile && (
                 <Button
                   variant="outline"
                   size="sm"
+                  tooltip="Open LinkedIn profile"
                   leftIcon={<Linkedin className="h-4 w-4" />}
-                  onClick={() => window.open(profile.linkedinUrl!, '_blank')}
+                  onClick={() => window.open(profile.linkedinProfile!, '_blank')}
                 >
                   LinkedIn
                 </Button>
@@ -1184,6 +1223,7 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
                 <Button
                   variant="outline"
                   size="sm"
+                  tooltip="Open portfolio website"
                   leftIcon={<Globe className="h-4 w-4" />}
                   onClick={() => window.open(profile.portfolioUrl!, '_blank')}
                 >
@@ -1244,14 +1284,16 @@ function EmployerProfileViewer({ profile }: { profile: CompanyProfile }) {
               {profile.website && (
                 <div className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-[var(--text-muted)]" />
-                  <a
-                    href={profile.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Website
-                  </a>
+                  <Tooltip content="Open company website">
+                    <a
+                      href={profile.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Website
+                    </a>
+                  </Tooltip>
                 </div>
               )}
               {profile.foundedYear && (
@@ -1388,39 +1430,42 @@ function EmployerProfileViewer({ profile }: { profile: CompanyProfile }) {
       )}
 
       {/* Social Links */}
-      {(profile.linkedinUrl || profile.twitterUrl || profile.facebookUrl) && (
+      {(profile.socialLinks?.linkedin || profile.socialLinks?.twitter || profile.socialLinks?.facebook) && (
         <Card>
           <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
             <Globe className="h-5 w-5" />
             Social Media
           </h3>
           <div className="flex flex-wrap gap-2">
-            {profile.linkedinUrl && (
+            {profile.socialLinks?.linkedin && (
               <Button
                 variant="outline"
                 size="sm"
+                tooltip="Open LinkedIn page"
                 leftIcon={<Linkedin className="h-4 w-4" />}
-                onClick={() => window.open(profile.linkedinUrl!, '_blank')}
+                onClick={() => window.open(profile.socialLinks!.linkedin!, '_blank')}
               >
                 LinkedIn
               </Button>
             )}
-            {profile.twitterUrl && (
+            {profile.socialLinks?.twitter && (
               <Button
                 variant="outline"
                 size="sm"
+                tooltip="Open Twitter page"
                 leftIcon={<Globe className="h-4 w-4" />}
-                onClick={() => window.open(profile.twitterUrl!, '_blank')}
+                onClick={() => window.open(profile.socialLinks!.twitter!, '_blank')}
               >
                 Twitter
               </Button>
             )}
-            {profile.facebookUrl && (
+            {profile.socialLinks?.facebook && (
               <Button
                 variant="outline"
                 size="sm"
+                tooltip="Open Facebook page"
                 leftIcon={<Globe className="h-4 w-4" />}
-                onClick={() => window.open(profile.facebookUrl!, '_blank')}
+                onClick={() => window.open(profile.socialLinks!.facebook!, '_blank')}
               >
                 Facebook
               </Button>

@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, X, RotateCcw, SlidersHorizontal } from 'lucide-
 import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
+import Tooltip from './Tooltip';
 
 /* ---------- types ---------- */
 
@@ -118,14 +119,16 @@ export default function AdvancedFilters({
               </button>
             )}
             {onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-                aria-label="Close filters"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <Tooltip content="Close filters">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  aria-label="Close filters"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>
@@ -499,22 +502,24 @@ export function ActiveFilterTags({
         >
           <span className="text-primary/70">{tag.label}:</span>
           <span>{tag.displayValue}</span>
-          <button
-            type="button"
-            onClick={() => {
-              const section = sections.find((s) => s.key === tag.key);
-              if (section?.type === 'range') {
-                onChange(`${tag.key}Min`, undefined);
-                onChange(`${tag.key}Max`, undefined);
-              } else {
-                onChange(tag.key, undefined);
-              }
-            }}
-            className="hover:bg-primary/10 ml-0.5 rounded-full p-0.5 transition-colors"
-            aria-label={`Remove ${tag.label} filter`}
-          >
-            <X className="h-3 w-3" />
-          </button>
+          <Tooltip content={`Remove ${tag.label} filter`}>
+            <button
+              type="button"
+              onClick={() => {
+                const section = sections.find((s) => s.key === tag.key);
+                if (section?.type === 'range') {
+                  onChange(`${tag.key}Min`, undefined);
+                  onChange(`${tag.key}Max`, undefined);
+                } else {
+                  onChange(tag.key, undefined);
+                }
+              }}
+              className="hover:bg-primary/10 ml-0.5 rounded-full p-0.5 transition-colors"
+              aria-label={`Remove ${tag.label} filter`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Tooltip>
         </span>
       ))}
       <button

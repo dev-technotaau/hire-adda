@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 type TagVariant = 'default' | 'primary' | 'outline' | 'success';
 type TagSize = 'sm' | 'md';
@@ -38,18 +39,20 @@ function Tag({ label, onRemove, variant = 'default', size = 'md', className }: T
     >
       {label}
       {onRemove && (
-        <button
-          type="button"
-          onClick={onRemove}
-          className={cn(
-            'inline-flex shrink-0 items-center justify-center rounded-sm transition-colors',
-            'hover:bg-black/10',
-            size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4',
-          )}
-          aria-label={`Remove ${label}`}
-        >
-          <X className={size === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
-        </button>
+        <Tooltip content={`Remove ${label}`}>
+          <button
+            type="button"
+            onClick={onRemove}
+            className={cn(
+              'inline-flex shrink-0 items-center justify-center rounded-sm transition-colors',
+              'hover:bg-black/10',
+              size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4',
+            )}
+            aria-label={`Remove ${label}`}
+          >
+            <X className={size === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
+          </button>
+        </Tooltip>
       )}
     </span>
   );

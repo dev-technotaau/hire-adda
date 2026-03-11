@@ -97,6 +97,7 @@ export default function CompanyInfoSection({
             className="shrink-0"
             onClick={() => addToArray('specialties', specialtyInput, setSpecialtyInput)}
             disabled={!specialtyInput.trim()}
+            tooltip="Add specialty"
           >
             <Plus className="h-4 w-4" />
           </Button>

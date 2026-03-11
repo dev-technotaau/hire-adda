@@ -11,6 +11,7 @@ import { useUIStore } from '@/store/ui.store';
 import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
 import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
+import Tooltip from '@/components/ui/Tooltip';
 import Logo from '@/components/common/Logo';
 import type { Role } from '@/types/auth';
 
@@ -81,18 +82,19 @@ export default function Header() {
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-1 md:flex">
           {publicNavItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                pathname === item.href
-                  ? 'bg-primary-light text-primary'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
-              )}
-            >
-              {item.label}
-            </Link>
+            <Tooltip key={item.href} content={`Go to ${item.label}`}>
+              <Link
+                href={item.href}
+                className={cn(
+                  'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  pathname === item.href
+                    ? 'bg-primary-light text-primary'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
+                )}
+              >
+                {item.label}
+              </Link>
+            </Tooltip>
           ))}
         </nav>
 
@@ -101,41 +103,45 @@ export default function Header() {
           {isAuthenticated && user ? (
             <>
               {/* Notifications */}
-              <Link
-                href={ROUTES.NOTIFICATIONS}
-                className="relative rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
-                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
-              >
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="bg-error absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-medium text-white">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </Link>
+              <Tooltip content="View notifications">
+                <Link
+                  href={ROUTES.NOTIFICATIONS}
+                  className="relative rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="bg-error absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-medium text-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+              </Tooltip>
 
               {/* User Menu */}
               <div className="relative">
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  <Avatar
-                    src={user.avatar}
-                    firstName={user.firstName}
-                    lastName={user.lastName}
-                    size="sm"
-                  />
-                  <span className="hidden text-sm font-medium text-[var(--text)] lg:block">
-                    {user.firstName}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      'hidden h-4 w-4 text-[var(--text-muted)] transition-transform lg:block',
-                      userMenuOpen && 'rotate-180',
-                    )}
-                  />
-                </button>
+                <Tooltip content="Open user menu">
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-[var(--bg-secondary)]"
+                  >
+                    <Avatar
+                      src={user.avatar}
+                      firstName={user.firstName}
+                      lastName={user.lastName}
+                      size="sm"
+                    />
+                    <span className="hidden text-sm font-medium text-[var(--text)] lg:block">
+                      {user.firstName}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'hidden h-4 w-4 text-[var(--text-muted)] transition-transform lg:block',
+                        userMenuOpen && 'rotate-180',
+                      )}
+                    />
+                  </button>
+                </Tooltip>
 
                 {userMenuOpen && (
                   <>
@@ -191,16 +197,16 @@ export default function Header() {
           ) : (
             <div className="hidden items-center gap-2 sm:flex">
               <Link href={ROUTES.AUTH.LOGIN}>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" tooltip="Sign in to your account">
                   Login
                 </Button>
               </Link>
               <Link href={ROUTES.AUTH.REGISTER}>
-                <Button size="sm">Register</Button>
+                <Button size="sm" tooltip="Create a new account">Register</Button>
               </Link>
               <div className="mx-1 h-6 w-px bg-[var(--border)]" />
               <Link href={`${ROUTES.AUTH.LOGIN}?tab=employer`}>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" tooltip="Sign in as an employer">
                   <Briefcase className="mr-1.5 h-3.5 w-3.5" />
                   Employer Login
                 </Button>
@@ -209,15 +215,17 @@ export default function Header() {
           )}
 
           {/* Mobile hamburger */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] md:hidden"
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileMenuOpen}
-            aria-controls="mobile-nav"
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          <Tooltip content={mobileMenuOpen ? 'Close menu' : 'Open menu'}>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] md:hidden"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-nav"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </Tooltip>
         </div>
       </div>
 

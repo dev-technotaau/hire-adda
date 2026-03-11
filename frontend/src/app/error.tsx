@@ -31,7 +31,7 @@ export default function Error({
           <p className="mb-4 text-xs text-[var(--text-muted)]">Error ID: {error.digest}</p>
         )}
         <div className="flex items-center justify-center gap-3">
-          <Button onClick={reset} leftIcon={<RefreshCw className="h-4 w-4" />}>
+          <Button onClick={reset} leftIcon={<RefreshCw className="h-4 w-4" />} tooltip="Retry loading the page">
             Try Again
           </Button>
           <Button
@@ -40,6 +40,7 @@ export default function Error({
               window.location.href = '/';
             }}
             leftIcon={<Home className="h-4 w-4" />}
+            tooltip="Go to the home page"
           >
             Go Home
           </Button>

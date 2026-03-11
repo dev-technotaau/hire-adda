@@ -27,6 +27,7 @@ import Modal from '@/components/ui/Modal';
 import Tag from '@/components/ui/Tag';
 import Textarea from '@/components/ui/Textarea';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
 import { jobService } from '@/services/job.service';
 import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
@@ -51,7 +52,6 @@ const statusTabs = [
   { key: 'VIEWED', label: 'Viewed' },
   { key: 'SHORTLISTED', label: 'Shortlisted' },
   { key: 'SELECTED', label: 'Selected' },
-  { key: 'INTERVIEW_SCHEDULED', label: 'Interview' },
   { key: 'OFFERED', label: 'Offered' },
   { key: 'REJECTED', label: 'Rejected' },
   { key: 'HIRED', label: 'Hired' },
@@ -169,13 +169,15 @@ export default function JobApplicationsPage() {
     <DashboardLayout requiredRole={['EMPLOYER']}>
       <div className="space-y-6">
         {/* Back Button */}
-        <Link
-          href={ROUTES.EMPLOYER.JOB_DETAIL(jobId)}
-          className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Job Details
-        </Link>
+        <Tooltip content="Return to job details">
+          <Link
+            href={ROUTES.EMPLOYER.JOB_DETAIL(jobId)}
+            className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Job Details
+          </Link>
+        </Tooltip>
 
         {/* Header */}
         <div>
@@ -258,6 +260,7 @@ export default function JobApplicationsPage() {
                   setRejectTarget(null);
                   setRejectionReason('');
                 }}
+                tooltip="Cancel rejection"
               >
                 Cancel
               </Button>
@@ -265,6 +268,7 @@ export default function JobApplicationsPage() {
                 variant="destructive"
                 onClick={handleReject}
                 isLoading={updateStatusMutation.isPending}
+                tooltip="Confirm application rejection"
               >
                 Reject Application
               </Button>
@@ -331,12 +335,14 @@ function ApplicationCard({
             </div>
 
             <div className="min-w-0">
-              <Link
-                href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate?.id || '')}
-                className="hover:text-primary font-medium text-[var(--text)] hover:underline"
-              >
-                {name}
-              </Link>
+              <Tooltip content="View candidate profile">
+                <Link
+                  href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate?.id || '')}
+                  className="hover:text-primary font-medium text-[var(--text)] hover:underline"
+                >
+                  {name}
+                </Link>
+              </Tooltip>
               {candidate?.headline && (
                 <p className="text-sm text-[var(--text-muted)]">{candidate.headline}</p>
               )}
@@ -397,6 +403,7 @@ function ApplicationCard({
                     size="sm"
                     onClick={() => onStatusChange(actions[0].status)}
                     disabled={isUpdating}
+                    tooltip={`${actions[0].label} this application`}
                   >
                     {actions[0].label}
                   </Button>
@@ -410,6 +417,7 @@ function ApplicationCard({
                       size="sm"
                       onClick={() => setShowActions(!showActions)}
                       rightIcon={<ChevronDown className="h-3.5 w-3.5" />}
+                      tooltip="More status actions"
                     >
                       More
                     </Button>
@@ -445,6 +453,7 @@ function ApplicationCard({
                     size="sm"
                     onClick={() => onStatusChange('REJECTED')}
                     disabled={isUpdating}
+                    tooltip="Reject this application"
                   >
                     Reject
                   </Button>

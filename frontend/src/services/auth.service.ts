@@ -1,7 +1,7 @@
 import api from '@/lib/api';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { API } from '@/constants/api';
-import type { ApiResponse } from '@/types/api';
+import type { ApiResponse, ApiError } from '@/types/api';
 import type {
   AuthResponse,
   RegisterResponse,
@@ -37,6 +37,25 @@ function getDeviceFingerprint(): string {
   return hash.toString(16);
 }
 
+/**
+ * Extract a meaningful error from raw axios errors (used by BFF auth calls
+ * that bypass the api interceptor).
+ */
+function toBffError(err: unknown): never {
+  const axiosErr = err as AxiosError;
+  const data = axiosErr.response?.data as Record<string, unknown> | undefined;
+  const nested = data?.error as Record<string, unknown> | undefined;
+  const message =
+    (nested?.message as string) || (data?.message as string) || 'An unexpected error occurred';
+  throw {
+    status: 'error',
+    message,
+    statusCode: axiosErr.response?.status || 0,
+    code: nested?.code as string | undefined,
+    requestId: nested?.requestId as string | undefined,
+  } as ApiError;
+}
+
 /** Auth response with tokens stripped (BFF sets them as httpOnly cookies) */
 type BffAuthResponse = Omit<AuthResponse, 'accessToken' | 'refreshToken'>;
 
@@ -47,67 +66,81 @@ export const authService = {
     data: RegisterRequest,
     turnstileToken?: string,
   ): Promise<ApiResponse<RegisterResponse>> {
-    const res = await axios.post(
-      '/api/auth/register',
-      {
-        ...data,
-        ...(turnstileToken && { 'cf-turnstile-response': turnstileToken }),
-      },
-      { withCredentials: true },
-    );
-    return res.data;
+    try {
+      const res = await axios.post(
+        '/api/auth/register',
+        {
+          ...data,
+          ...(turnstileToken && { 'cf-turnstile-response': turnstileToken }),
+        },
+        { withCredentials: true },
+      );
+      return res.data;
+    } catch (err) { toBffError(err); }
   },
 
   async login(
     data: LoginRequest,
     turnstileToken?: string,
   ): Promise<ApiResponse<BffAuthResponse>> {
-    const res = await axios.post(
-      '/api/auth/login',
-      {
-        ...data,
-        ...(turnstileToken && { 'cf-turnstile-response': turnstileToken }),
-      },
-      {
-        withCredentials: true,
-        headers: { 'X-Device-Fingerprint': getDeviceFingerprint() },
-      },
-    );
-    return res.data;
+    try {
+      const res = await axios.post(
+        '/api/auth/login',
+        {
+          ...data,
+          ...(turnstileToken && { 'cf-turnstile-response': turnstileToken }),
+        },
+        {
+          withCredentials: true,
+          headers: { 'X-Device-Fingerprint': getDeviceFingerprint() },
+        },
+      );
+      return res.data;
+    } catch (err) { toBffError(err); }
   },
 
   async logout(): Promise<ApiResponse<null>> {
-    const res = await axios.post('/api/auth/logout', {}, { withCredentials: true });
-    return res.data;
+    try {
+      const res = await axios.post('/api/auth/logout', {}, { withCredentials: true });
+      return res.data;
+    } catch (err) { toBffError(err); }
   },
 
   async getMe(): Promise<ApiResponse<User>> {
-    const res = await axios.get('/api/auth/me', { withCredentials: true });
-    return res.data;
+    try {
+      const res = await axios.get('/api/auth/me', { withCredentials: true });
+      return res.data;
+    } catch (err) { toBffError(err); }
   },
 
   async refresh(): Promise<ApiResponse<null>> {
-    const res = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
-    return res.data;
+    try {
+      const res = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
+      return res.data;
+    } catch (err) { toBffError(err); }
   },
 
   async firebaseLogin(
     idToken: string,
     role?: string,
   ): Promise<ApiResponse<BffAuthResponse & { isNewUser: boolean }>> {
-    const res = await axios.post(
-      '/api/auth/firebase-login',
-      { idToken, role },
-      { withCredentials: true },
-    );
-    return res.data;
+    try {
+      const res = await axios.post(
+        '/api/auth/firebase-login',
+        { idToken, role },
+        { withCredentials: true },
+      );
+      return res.data;
+    } catch (err) { toBffError(err); }
   },
 
   // ─── Non-token endpoints go through the generic proxy ───
 
   async verifyEmail(data: VerifyEmailRequest): Promise<ApiResponse<BffAuthResponse>> {
-    const res = await axios.post('/api/auth/verify-email', data, { withCredentials: true });
-    return res.data;
+    try {
+      const res = await axios.post('/api/auth/verify-email', data, { withCredentials: true });
+      return res.data;
+    } catch (err) { toBffError(err); }
   },
 
   async resendEmailVerification(email: string): Promise<ApiResponse<null>> {
@@ -189,8 +222,10 @@ export const authService = {
     email: string;
     otp: string;
   }): Promise<ApiResponse<BffAuthResponse>> {
-    const res = await axios.post('/api/auth/mfa-recovery', data, { withCredentials: true });
-    return res.data;
+    try {
+      const res = await axios.post('/api/auth/mfa-recovery', data, { withCredentials: true });
+      return res.data;
+    } catch (err) { toBffError(err); }
   },
 
   async initiateChangeEmail(data: {
@@ -274,8 +309,10 @@ export const authService = {
     firstName: string;
     lastName: string;
   }): Promise<ApiResponse<{ user: User }>> {
-    const res = await axios.patch('/api/auth/me/profile', data, { withCredentials: true });
-    return res.data;
+    try {
+      const res = await axios.patch('/api/auth/me/profile', data, { withCredentials: true });
+      return res.data;
+    } catch (err) { toBffError(err); }
   },
 
   // ─── Social auth URLs (still point to backend for OAuth redirects) ───

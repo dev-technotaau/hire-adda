@@ -68,6 +68,7 @@ export default function ReportsPage() {
               className="mt-6"
               fullWidth
               variant="outline"
+              tooltip="Download user directory as Excel file"
               isLoading={downloading === 'users'}
               disabled={!!downloading}
               leftIcon={<FileDown className="h-4 w-4" />}
@@ -90,6 +91,7 @@ export default function ReportsPage() {
               className="mt-6"
               fullWidth
               variant="outline"
+              tooltip="Download job postings as Excel file"
               isLoading={downloading === 'jobs'}
               disabled={!!downloading}
               leftIcon={<FileDown className="h-4 w-4" />}
@@ -112,6 +114,7 @@ export default function ReportsPage() {
               className="mt-6"
               fullWidth
               variant="outline"
+              tooltip="Download analytics summary as PDF"
               isLoading={downloading === 'analytics'}
               disabled={!!downloading}
               leftIcon={<FileDown className="h-4 w-4" />}

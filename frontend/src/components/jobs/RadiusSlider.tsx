@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Navigation, Loader2, X } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { cn } from '@/lib/utils';
 
@@ -89,6 +90,7 @@ export default function RadiusSlider({
           onClick={handleUseMyLocation}
           isLoading={isLocating}
           className="text-xs"
+          tooltip="Detect your current location"
         >
           {!isLocating && <Navigation className="mr-1.5 h-3.5 w-3.5" />}
           Use my location
@@ -116,15 +118,17 @@ export default function RadiusSlider({
               {radiusKm || '25'} km
             </span>
           </div>
-          <button
-            type="button"
-            onClick={onClear}
-            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-            title="Clear location"
-          >
-            <X className="h-3 w-3" />
-            Clear
-          </button>
+          <Tooltip content="Clear location filter">
+            <button
+              type="button"
+              onClick={onClear}
+              className="flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-[10px] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+              aria-label="Clear location"
+            >
+              <X className="h-3 w-3" />
+              Clear
+            </button>
+          </Tooltip>
         </>
       )}
     </div>

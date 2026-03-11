@@ -21,7 +21,7 @@ async function handler(
 
     // login/options and login/verify are public (no auth needed)
     // register/* routes need auth
-    const needsAuth = subPath.startsWith('register') || subPath === 'credentials';
+    const needsAuth = subPath.startsWith('register') || subPath.startsWith('credentials');
 
     const res = needsAuth
       ? await authenticatedBackendFetch(backendPath, { method: request.method, body, request })

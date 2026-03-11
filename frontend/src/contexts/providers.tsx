@@ -13,6 +13,7 @@ import { onAuthMessage } from '@/lib/auth-channel';
 import { pageView, fbPageView } from '@/lib/analytics';
 import { pushService } from '@/services/push.service';
 import { useFeatureFlags } from '@/hooks/use-feature-flags';
+import { usePresenceTracker } from '@/hooks/use-presence-tracker';
 import { QUERY_KEYS } from '@/constants/config';
 import { onFCMMessage } from '@/lib/firebase';
 import { showToast } from '@/components/ui/Toast';
@@ -146,6 +147,11 @@ function SocketInitializer({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function PresenceTracker({ children }: { children: ReactNode }) {
+  usePresenceTracker();
+  return <>{children}</>;
+}
+
 function AnalyticsTracker({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
@@ -228,7 +234,9 @@ export default function Providers({ children }: { children: ReactNode }) {
               <MaintenanceGate>
                 <AnalyticsTracker>
                   <SocketInitializer>
-                    <PushNotificationRegistrar>{children}</PushNotificationRegistrar>
+                    <PresenceTracker>
+                      <PushNotificationRegistrar>{children}</PushNotificationRegistrar>
+                    </PresenceTracker>
                   </SocketInitializer>
                 </AnalyticsTracker>
               </MaintenanceGate>

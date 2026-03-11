@@ -1,6 +1,7 @@
 'use client';
 
 import { WifiOff, RefreshCw } from 'lucide-react';
+import Tooltip from '@/components/ui/Tooltip';
 
 export default function OfflinePage() {
   return (
@@ -11,13 +12,15 @@ export default function OfflinePage() {
         <p className="mt-2 text-[var(--text-secondary)]">
           Please check your internet connection and try again.
         </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="bg-primary mt-6 inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Retry
-        </button>
+        <Tooltip content="Refresh the page and check your connection">
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-primary mt-6 inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

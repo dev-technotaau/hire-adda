@@ -41,6 +41,7 @@ export default function AdminMfaRequired() {
               className="mt-6"
               onClick={() => logout()}
               leftIcon={<LogOut className="h-4 w-4" />}
+              tooltip="Sign out of your account"
             >
               Sign Out
             </Button>

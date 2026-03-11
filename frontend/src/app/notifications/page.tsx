@@ -6,6 +6,7 @@ import { Bell, CheckCheck, Info, CheckCircle, AlertTriangle, XCircle, Trash2 } f
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import Tabs from '@/components/ui/Tabs';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
@@ -69,7 +70,7 @@ export default function NotificationsPage() {
             <h1 className="text-2xl font-bold text-[var(--text)]">Notifications</h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">Stay updated on your activity</p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => markAll.mutate()}>
+          <Button variant="outline" size="sm" onClick={() => markAll.mutate()} tooltip="Mark all notifications as read">
             <CheckCheck className="mr-1.5 h-4 w-4" /> Mark All Read
           </Button>
         </div>
@@ -165,17 +166,19 @@ function NotificationCard({
               <p className="mt-0.5 text-sm text-[var(--text-muted)]">{notification.message}</p>
             </div>
             {!notification.isRead && (
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onMarkRead();
-                }}
-                className="hover:text-primary shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
-                title="Mark as read"
-              >
-                <CheckCircle className="h-4 w-4" />
-              </button>
+              <Tooltip content="Mark as read">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onMarkRead();
+                  }}
+                  className="hover:text-primary shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  title="Mark as read"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                </button>
+              </Tooltip>
             )}
           </div>
           <div className="mt-2 flex items-center gap-3">

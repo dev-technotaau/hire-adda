@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import DatePicker from '@/components/ui/DatePicker';
@@ -28,7 +29,7 @@ export default function AwardsSection({ form, updateField }: ProfileSectionProps
       header={
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--text)]">Awards & Achievements</h2>
-          <Button size="sm" variant="outline" onClick={addAward}>
+          <Button size="sm" variant="outline" onClick={addAward} tooltip="Add a new award or achievement">
             <Plus className="mr-1 h-4 w-4" /> Add
           </Button>
         </div>
@@ -42,12 +43,14 @@ export default function AwardsSection({ form, updateField }: ProfileSectionProps
             <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-medium text-[var(--text)]">Award {i + 1}</h4>
-                <button
-                  onClick={() => removeAward(i)}
-                  className="text-[var(--error)] hover:text-[var(--error-dark)]"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <Tooltip content="Remove this award">
+                  <button
+                    onClick={() => removeAward(i)}
+                    className="cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)]"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input

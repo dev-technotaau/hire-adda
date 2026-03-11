@@ -6,6 +6,7 @@ import 'react-image-crop/dist/ReactCrop.css';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { Crop as CropIcon, ZoomIn, ZoomOut } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 interface ImageCropperProps {
   isOpen: boolean;
@@ -99,10 +100,10 @@ export default function ImageCropper({
       size="lg"
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} tooltip="Cancel cropping">
             Cancel
           </Button>
-          <Button onClick={handleCrop} disabled={!completedCrop}>
+          <Button onClick={handleCrop} disabled={!completedCrop} tooltip="Apply crop selection">
             <CropIcon className="mr-1.5 h-4 w-4" /> Apply Crop
           </Button>
         </div>
@@ -110,19 +111,23 @@ export default function ImageCropper({
     >
       <div className="space-y-4">
         <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
-            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </button>
+          <Tooltip content="Zoom out">
+            <button
+              onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
+              className="cursor-pointer rounded-lg border border-[var(--border)] p-2 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </button>
+          </Tooltip>
           <span className="text-sm text-[var(--text-muted)]">{Math.round(scale * 100)}%</span>
-          <button
-            onClick={() => setScale((s) => Math.min(3, s + 0.1))}
-            className="rounded-lg border border-[var(--border)] p-2 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]"
-          >
-            <ZoomIn className="h-4 w-4" />
-          </button>
+          <Tooltip content="Zoom in">
+            <button
+              onClick={() => setScale((s) => Math.min(3, s + 0.1))}
+              className="cursor-pointer rounded-lg border border-[var(--border)] p-2 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </button>
+          </Tooltip>
         </div>
         <div className="flex items-center justify-center overflow-hidden rounded-lg bg-[var(--bg-secondary)]">
           <ReactCrop

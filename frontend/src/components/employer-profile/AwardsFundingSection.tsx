@@ -4,6 +4,7 @@ import Input from '@/components/ui/Input';
 import Select, { type SelectOption } from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
+import Tooltip from '@/components/ui/Tooltip';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import { FUNDING_STAGE_LABELS } from '@/constants/enums';
 import type { UpdateCompanyRequest, FundingStage } from '@/types/employer';
@@ -80,14 +81,16 @@ export default function AwardsFundingSection({
           >
             <div className="mb-3 flex items-center justify-between">
               <span className="text-sm font-medium text-[var(--text)]">Award #{index + 1}</span>
-              <button
-                type="button"
-                onClick={() => removeAward(index)}
-                className="hover:text-error rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
-                aria-label="Remove award"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <Tooltip content="Remove award">
+                <button
+                  type="button"
+                  onClick={() => removeAward(index)}
+                  className="hover:text-error cursor-pointer rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-white"
+                  aria-label="Remove award"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <Input
@@ -116,7 +119,7 @@ export default function AwardsFundingSection({
           </div>
         ))}
 
-        <Button variant="outline" onClick={addAward}>
+        <Button variant="outline" onClick={addAward} tooltip="Add a new award or recognition">
           <Plus className="mr-1 h-4 w-4" /> Add Award
         </Button>
       </div>
@@ -174,6 +177,7 @@ export default function AwardsFundingSection({
                 className="shrink-0"
                 onClick={() => addToArray('investors', investorInput, setInvestorInput)}
                 disabled={!investorInput.trim()}
+                tooltip="Add investor"
               >
                 <Plus className="h-4 w-4" />
               </Button>

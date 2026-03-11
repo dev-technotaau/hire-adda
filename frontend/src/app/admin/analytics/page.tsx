@@ -32,6 +32,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import AreaChart from '@/components/charts/AreaChart';
 import BarChart from '@/components/charts/BarChart';
 import PieChart from '@/components/charts/PieChart';
@@ -525,6 +526,7 @@ export default function AdminAnalyticsPage() {
                 key={type}
                 variant="outline"
                 size="sm"
+                tooltip={`Export ${type} report as CSV`}
                 onClick={() => handleExport(type)}
                 isLoading={exportingType === type}
                 disabled={!!exportingType}
@@ -539,18 +541,19 @@ export default function AdminAnalyticsPage() {
         {/* Tabs */}
         <div className="flex gap-1 rounded-lg bg-[var(--bg-secondary)] p-1">
           {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === tab.key
-                  ? 'bg-white text-[var(--text)] shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text)]'
-              }`}
-            >
-              {tab.label}
-            </button>
+            <Tooltip key={tab.key} content={`View ${tab.label.toLowerCase()}`}>
+              <button
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`cursor-pointer flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-white text-[var(--text)] shadow-sm'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            </Tooltip>
           ))}
         </div>
 
@@ -559,29 +562,32 @@ export default function AdminAnalyticsPage() {
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
               {DATE_PRESETS.map((preset) => (
-                <button
-                  key={preset.key}
-                  onClick={() => handlePreset(preset.key)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    activePreset === preset.key
-                      ? 'bg-primary text-white'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
-                  }`}
-                >
-                  {preset.label}
-                </button>
+                <Tooltip key={preset.key} content={`Filter by ${preset.label.toLowerCase()}`}>
+                  <button
+                    onClick={() => handlePreset(preset.key)}
+                    className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                      activePreset === preset.key
+                        ? 'bg-primary text-white'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                </Tooltip>
               ))}
               {(startDate || endDate) && (
-                <button
-                  onClick={() => {
-                    setStartDate('');
-                    setEndDate('');
-                    setActivePreset(null);
-                  }}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
-                >
-                  Clear
-                </button>
+                <Tooltip content="Clear date filters">
+                  <button
+                    onClick={() => {
+                      setStartDate('');
+                      setEndDate('');
+                      setActivePreset(null);
+                    }}
+                    className="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+                  >
+                    Clear
+                  </button>
+                </Tooltip>
               )}
             </div>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">

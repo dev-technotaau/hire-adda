@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Wrench, RefreshCw, Mail, Clock } from 'lucide-react';
 import { APP_CONFIG } from '@/constants/config';
 import { useMaintenanceStore } from '@/store/maintenance.store';
+import Tooltip from '@/components/ui/Tooltip';
 
 const STATUS_MESSAGES = [
   'Upgrading system components...',
@@ -316,20 +317,24 @@ export default function MaintenancePage(props: MaintenancePageProps = {}) {
             transition={{ delay: 0.8 }}
             className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
           >
-            <button
-              onClick={handleRefresh}
-              className="bg-primary hover:bg-primary/90 focus:ring-primary/50 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-colors focus:ring-2 focus:outline-none"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh Page
-            </button>
-            <a
-              href={`mailto:${APP_CONFIG.supportEmail}`}
-              className="focus:ring-primary/50 inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg)] focus:ring-2 focus:outline-none"
-            >
-              <Mail className="h-4 w-4" />
-              Contact Support
-            </a>
+            <Tooltip content="Refresh the page to check status">
+              <button
+                onClick={handleRefresh}
+                className="bg-primary hover:bg-primary/90 focus:ring-primary/50 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-colors focus:ring-2 focus:outline-none"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh Page
+              </button>
+            </Tooltip>
+            <Tooltip content="Send an email to support">
+              <a
+                href={`mailto:${APP_CONFIG.supportEmail}`}
+                className="focus:ring-primary/50 inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg)] focus:ring-2 focus:outline-none"
+              >
+                <Mail className="h-4 w-4" />
+                Contact Support
+              </a>
+            </Tooltip>
           </motion.div>
 
           {/* Keyboard hint */}

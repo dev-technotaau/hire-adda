@@ -5,6 +5,7 @@ import Cookies from 'js-cookie';
 import { Cookie } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Switch from '@/components/ui/Switch';
+import Tooltip from '@/components/ui/Tooltip';
 
 export const CONSENT_COOKIE = 'tb_cookie_consent';
 const OPEN_EVENT = 'tb:open-cookie-settings';
@@ -141,23 +142,25 @@ export default function CookieConsent() {
             )}
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Button size="sm" onClick={acceptAll}>
+              <Button size="sm" onClick={acceptAll} tooltip="Accept all cookie categories">
                 Accept All
               </Button>
-              <Button size="sm" variant="outline" onClick={rejectAll}>
+              <Button size="sm" variant="outline" onClick={rejectAll} tooltip="Reject all optional cookies">
                 Reject All
               </Button>
               {showDetails ? (
-                <Button size="sm" variant="outline" onClick={acceptSelected}>
+                <Button size="sm" variant="outline" onClick={acceptSelected} tooltip="Save your cookie preferences">
                   Save Preferences
                 </Button>
               ) : (
-                <button
-                  onClick={() => setShowDetails(true)}
-                  className="text-primary text-sm hover:underline"
-                >
-                  Customize
-                </button>
+                <Tooltip content="Customize cookie preferences">
+                  <button
+                    onClick={() => setShowDetails(true)}
+                    className="text-primary text-sm hover:underline"
+                  >
+                    Customize
+                  </button>
+                </Tooltip>
               )}
             </div>
           </div>

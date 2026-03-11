@@ -3,6 +3,7 @@
 import { X, MapPin, Building2, Briefcase, GraduationCap, User as UserIcon } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
+import Tooltip from '@/components/ui/Tooltip';
 import { formatRelativeDate } from '@/lib/utils';
 import {
   WORK_STATUS_LABELS,
@@ -117,14 +118,16 @@ export default function CompareModal({ isOpen, onClose, candidates, onRemove }: 
                           )}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => onRemove(candidate.id)}
-                        className="shrink-0 rounded-md p-1 transition-colors hover:bg-[var(--bg-secondary)]"
-                        aria-label={`Remove ${name}`}
-                      >
-                        <X className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                      </button>
+                      <Tooltip content={`Remove ${name}`}>
+                        <button
+                          type="button"
+                          onClick={() => onRemove(candidate.id)}
+                          className="shrink-0 cursor-pointer rounded-md p-1 transition-colors hover:bg-[var(--bg-secondary)]"
+                          aria-label={`Remove ${name}`}
+                        >
+                          <X className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                        </button>
+                      </Tooltip>
                     </div>
                   </th>
                 );

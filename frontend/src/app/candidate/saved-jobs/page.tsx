@@ -11,6 +11,7 @@ import Tag from '@/components/ui/Tag';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { useSavedJobs, useToggleSaveJob, useAppliedJobs } from '@/hooks/use-jobs';
 import { ROUTES } from '@/constants/routes';
@@ -85,12 +86,14 @@ export default function SavedJobsPage() {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <Link
-                        href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-                        className="hover:text-primary font-medium text-[var(--text)] transition-colors"
-                      >
-                        {job.title}
-                      </Link>
+                      <Tooltip content={`View details for ${job.title}`}>
+                        <Link
+                          href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
+                          className="hover:text-primary font-medium text-[var(--text)] transition-colors"
+                        >
+                          {job.title}
+                        </Link>
+                      </Tooltip>
                       <p className="text-sm text-[var(--text-muted)]">
                         {job.isConfidential ? 'Confidential Company' : job.company?.companyName}
                       </p>
@@ -157,15 +160,17 @@ export default function SavedJobsPage() {
 
                   <div className="flex shrink-0 items-center gap-2">
                     {appliedJobIds.has(job.id) && (
-                      <Link
-                        href={ROUTES.CANDIDATE.APPLICATIONS}
-                        className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-2.5 py-1.5 text-xs font-medium text-[var(--success)] transition-colors hover:bg-[var(--success)]/20"
-                      >
-                        <CheckCircle className="h-3 w-3" /> Applied
-                      </Link>
+                      <Tooltip content="View your application">
+                        <Link
+                          href={ROUTES.CANDIDATE.APPLICATIONS}
+                          className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-2.5 py-1.5 text-xs font-medium text-[var(--success)] transition-colors hover:bg-[var(--success)]/20"
+                        >
+                          <CheckCircle className="h-3 w-3" /> Applied
+                        </Link>
+                      </Tooltip>
                     )}
-                    <Link href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}>
-                      <Button size="sm">View</Button>
+                    <Link href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)} title="View job details">
+                      <Button size="sm" tooltip="View job details">View</Button>
                     </Link>
                     <Button
                       variant="ghost"
@@ -173,6 +178,7 @@ export default function SavedJobsPage() {
                       onClick={() => handleUnsave(job.id)}
                       disabled={toggleSave.isPending}
                       className="text-[var(--error)]"
+                      tooltip="Remove from saved jobs"
                     >
                       <BookmarkX className="h-4 w-4" />
                     </Button>
@@ -186,8 +192,8 @@ export default function SavedJobsPage() {
               title="No saved jobs"
               description="Save jobs you're interested in to review them later."
               action={
-                <Link href={ROUTES.CANDIDATE.JOBS}>
-                  <Button size="sm">Browse Jobs</Button>
+                <Link href={ROUTES.CANDIDATE.JOBS} title="Browse available job listings">
+                  <Button size="sm" tooltip="Browse available jobs">Browse Jobs</Button>
                 </Link>
               }
             />

@@ -49,6 +49,7 @@ import DatePicker from '@/components/ui/DatePicker';
 import FileUpload from '@/components/ui/FileUpload';
 import ImageCropper from '@/components/ui/ImageCropper';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
 import ResumeParseReview from '@/components/common/ResumeParseReview';
 import { candidateService } from '@/services/candidate.service';
 import { formatFileSize } from '@/lib/utils';
@@ -1112,7 +1113,7 @@ export default function CandidateOnboardingPage() {
             ))}
           </div>
 
-          <Button className="mt-8" size="lg" onClick={nextStep}>
+          <Button className="mt-8" size="lg" onClick={nextStep} tooltip="Start profile setup">
             Let&apos;s Go!
           </Button>
         </div>
@@ -1195,6 +1196,7 @@ export default function CandidateOnboardingPage() {
                     setAvatarFile(null);
                     setAvatarPreview(null);
                   }}
+                  tooltip="Upload new photo"
                 >
                   <Upload className="mr-1.5 h-4 w-4" />
                   Change Photo
@@ -1206,6 +1208,7 @@ export default function CandidateOnboardingPage() {
                     setAvatarPreview(null);
                   }}
                   className="text-[var(--error)]"
+                  tooltip="Remove photo"
                 >
                   <Trash2 className="mr-1.5 h-4 w-4" />
                   Remove
@@ -1323,6 +1326,7 @@ export default function CandidateOnboardingPage() {
                   onClick={handleUploadOnly}
                   isLoading={resumeMutation.isPending && !resumeParsing}
                   disabled={resumeParsing || resumeMutation.isPending}
+                  tooltip="Upload without parsing"
                 >
                   <Upload className="mr-1.5 h-4 w-4" />
                   Upload Resume
@@ -1332,6 +1336,7 @@ export default function CandidateOnboardingPage() {
                   onClick={handleUploadAndParse}
                   isLoading={resumeMutation.isPending && resumeParsing}
                   disabled={resumeParsing || resumeMutation.isPending}
+                  tooltip="Upload and extract details"
                 >
                   <Sparkles className="mr-1.5 h-4 w-4" />
                   Upload & Parse with AI
@@ -1375,6 +1380,7 @@ export default function CandidateOnboardingPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => setShowOnboardingResumePreview((prev) => !prev)}
+                      tooltip="Toggle resume preview"
                     >
                       <Eye className="mr-1.5 h-4 w-4" />
                       {showOnboardingResumePreview ? 'Hide' : 'Preview'}
@@ -1391,6 +1397,7 @@ export default function CandidateOnboardingPage() {
                       setResumeParsing(false);
                       setShowOnboardingResumePreview(false);
                     }}
+                    tooltip="Replace resume file"
                   >
                     Replace
                   </Button>
@@ -1411,7 +1418,7 @@ export default function CandidateOnboardingPage() {
 
               {/* Parse with AI (only if not already parsing/parsed) */}
               {!resumeParsing && !parsedResumeData && !resumeParseApplied && (
-                <Button variant="secondary" onClick={handleParseOnly}>
+                <Button variant="secondary" onClick={handleParseOnly} tooltip="Extract resume details">
                   <Sparkles className="mr-1.5 h-4 w-4" />
                   Parse with AI
                 </Button>
@@ -1880,13 +1887,15 @@ export default function CandidateOnboardingPage() {
             <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-[var(--text)]">Experience {i + 1}</h3>
-                <button
-                  type="button"
-                  onClick={() => removeExperience(i)}
-                  className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <Tooltip content="Remove entry">
+                  <button
+                    type="button"
+                    onClick={() => removeExperience(i)}
+                    className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -2032,6 +2041,7 @@ export default function CandidateOnboardingPage() {
             variant="outline"
             onClick={() => updateData({ experience: [...data.experience, emptyExperience()] })}
             leftIcon={<Plus className="h-4 w-4" />}
+            tooltip="Add work experience"
           >
             Add Experience
           </Button>
@@ -2084,13 +2094,15 @@ export default function CandidateOnboardingPage() {
             <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-[var(--text)]">Education {i + 1}</h3>
-                <button
-                  type="button"
-                  onClick={() => removeEducation(i)}
-                  className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <Tooltip content="Remove entry">
+                  <button
+                    type="button"
+                    onClick={() => removeEducation(i)}
+                    className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               </div>
 
               <ServerSuggestionInput
@@ -2185,6 +2197,7 @@ export default function CandidateOnboardingPage() {
             variant="outline"
             onClick={() => updateData({ education: [...data.education, emptyEducation()] })}
             leftIcon={<Plus className="h-4 w-4" />}
+            tooltip="Add education entry"
           >
             Add Education
           </Button>
@@ -2228,7 +2241,8 @@ export default function CandidateOnboardingPage() {
                 <button
                   type="button"
                   onClick={() => addSkill(skillInput)}
-                  className="text-primary text-xs hover:underline"
+                  className="cursor-pointer text-primary text-xs hover:underline"
+                  title="Add custom skill"
                 >
                   + Add &ldquo;{skillInput.trim()}&rdquo;
                 </button>
@@ -2262,13 +2276,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Skill {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeSkillWithProf(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removeSkillWithProf(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <ServerSuggestionInput
@@ -2316,6 +2332,7 @@ export default function CandidateOnboardingPage() {
                 })
               }
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add rated skill"
             >
               Add Skill with Proficiency
             </Button>
@@ -2332,13 +2349,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">IT Skill {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeITSkill(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removeITSkill(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <ServerSuggestionInput
@@ -2385,6 +2404,7 @@ export default function CandidateOnboardingPage() {
               size="sm"
               onClick={() => updateData({ itSkills: [...data.itSkills, emptyITSkill()] })}
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add IT skill entry"
             >
               Add IT Skill
             </Button>
@@ -2423,13 +2443,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Certification {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeCertification(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removeCertification(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -2509,6 +2531,7 @@ export default function CandidateOnboardingPage() {
                 updateData({ certifications: [...data.certifications, emptyCertification()] })
               }
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add certification"
             >
               Add Certification
             </Button>
@@ -2528,13 +2551,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Course {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeCourse(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removeCourse(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Input
@@ -2581,6 +2606,7 @@ export default function CandidateOnboardingPage() {
               size="sm"
               onClick={() => updateData({ courses: [...data.courses, emptyCourse()] })}
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add course entry"
             >
               Add Course
             </Button>
@@ -2600,13 +2626,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Test Score {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeTestScore(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removeTestScore(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <ServerSuggestionInput
@@ -2654,6 +2682,7 @@ export default function CandidateOnboardingPage() {
               size="sm"
               onClick={() => updateData({ testScores: [...data.testScores, emptyTestScore()] })}
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add test score"
             >
               Add Test Score
             </Button>
@@ -2673,13 +2702,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Award {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeAward(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removeAward(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -2720,6 +2751,7 @@ export default function CandidateOnboardingPage() {
               size="sm"
               onClick={() => updateData({ awards: [...data.awards, emptyAward()] })}
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add award entry"
             >
               Add Award
             </Button>
@@ -2760,13 +2792,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Language {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeLanguage(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removeLanguage(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -2798,6 +2832,7 @@ export default function CandidateOnboardingPage() {
                 updateData({ languageProficiency: [...data.languageProficiency, emptyLanguage()] })
               }
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add language entry"
             >
               Add Language
             </Button>
@@ -2840,13 +2875,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Publication {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removePublication(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removePublication(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <Input
                   label="Title"
@@ -2902,6 +2939,7 @@ export default function CandidateOnboardingPage() {
                 updateData({ publications: [...data.publications, emptyPublication()] })
               }
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add publication"
             >
               Add Publication
             </Button>
@@ -2921,13 +2959,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Patent {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removePatent(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removePatent(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <Input
                   label="Title"
@@ -3001,6 +3041,7 @@ export default function CandidateOnboardingPage() {
               size="sm"
               onClick={() => updateData({ patents: [...data.patents, emptyPatent()] })}
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add patent entry"
             >
               Add Patent
             </Button>
@@ -3022,13 +3063,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Membership {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeMembership(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removeMembership(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <ServerSuggestionInput
@@ -3085,6 +3128,7 @@ export default function CandidateOnboardingPage() {
                 })
               }
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add membership"
             >
               Add Membership
             </Button>
@@ -3127,13 +3171,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Volunteer {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeVolunteer(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removeVolunteer(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <ServerSuggestionInput
@@ -3205,6 +3251,7 @@ export default function CandidateOnboardingPage() {
                 updateData({ volunteerExperience: [...data.volunteerExperience, emptyVolunteer()] })
               }
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add volunteer entry"
             >
               Add Volunteer Experience
             </Button>
@@ -3224,13 +3271,15 @@ export default function CandidateOnboardingPage() {
               <div key={i} className="mb-3 space-y-3 rounded-lg border border-[var(--border)] p-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-[var(--text)]">Reference {i + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeReference(i)}
-                    className="text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content="Remove entry">
+                    <button
+                      type="button"
+                      onClick={() => removeReference(i)}
+                      className="cursor-pointer text-[var(--error)] transition-colors hover:text-[var(--error-dark)]"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Input
@@ -3287,6 +3336,7 @@ export default function CandidateOnboardingPage() {
               size="sm"
               onClick={() => updateData({ references: [...data.references, emptyReference()] })}
               leftIcon={<Plus className="h-4 w-4" />}
+              tooltip="Add reference"
             >
               Add Reference
             </Button>
@@ -3393,7 +3443,8 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addPreferredLocation(locationInput)}
-                className="text-primary mt-1 text-xs hover:underline"
+                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                title="Add custom location"
               >
                 + Add &ldquo;{locationInput.trim()}&rdquo;
               </button>
@@ -3430,7 +3481,8 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addPreferredIndustry(industryInput)}
-                className="text-primary mt-1 text-xs hover:underline"
+                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                title="Add custom industry"
               >
                 + Add &ldquo;{industryInput.trim()}&rdquo;
               </button>
@@ -3469,7 +3521,8 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addPreferredRoleCategory(roleCatInput)}
-                className="text-primary mt-1 text-xs hover:underline"
+                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                title="Add custom role category"
               >
                 + Add &ldquo;{roleCatInput.trim()}&rdquo;
               </button>
@@ -3691,7 +3744,8 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addBlockedCompany(blockedCompanyInput)}
-                className="text-primary mt-1 text-xs hover:underline"
+                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                title="Add blocked company"
               >
                 + Add &ldquo;{blockedCompanyInput.trim()}&rdquo;
               </button>
@@ -3748,7 +3802,8 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addHobby(hobbyInput)}
-                className="text-primary mt-1 text-xs hover:underline"
+                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                title="Add custom hobby"
               >
                 + Add &ldquo;{hobbyInput.trim()}&rdquo;
               </button>
@@ -3784,7 +3839,8 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addInterest(interestInput)}
-                className="text-primary mt-1 text-xs hover:underline"
+                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                title="Add custom interest"
               >
                 + Add &ldquo;{interestInput.trim()}&rdquo;
               </button>
@@ -3934,7 +3990,7 @@ export default function CandidateOnboardingPage() {
           {/* Profile Photo */}
           {avatarPreview && (
             <div className={sectionClass}>
-              <button type="button" onClick={() => goToStep(1)} className={sectionTitle}>
+              <button type="button" onClick={() => goToStep(1)} className={sectionTitle} title="Edit profile photo">
                 Profile Photo
               </button>
               <div className="mt-2 flex items-center gap-3">
@@ -3956,7 +4012,7 @@ export default function CandidateOnboardingPage() {
               const reviewBadge = reviewFile ? getFileTypeBadge(reviewFile) : null;
               return (
                 <div className={sectionClass}>
-                  <button type="button" onClick={() => goToStep(2)} className={sectionTitle}>
+                  <button type="button" onClick={() => goToStep(2)} className={sectionTitle} title="Edit resume">
                     Resume
                   </button>
                   <div className="mt-2 space-y-3">
@@ -3989,7 +4045,8 @@ export default function CandidateOnboardingPage() {
                         <button
                           type="button"
                           onClick={() => setShowReviewResumePreview((prev) => !prev)}
-                          className="text-primary inline-flex items-center gap-1.5 text-xs hover:underline"
+                          className="cursor-pointer text-primary inline-flex items-center gap-1.5 text-xs hover:underline"
+                          title="Toggle resume preview"
                         >
                           <Eye className="h-3.5 w-3.5" />
                           {showReviewResumePreview ? 'Hide preview' : 'Show preview'}
@@ -4013,7 +4070,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Profile Basics */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(3)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(3)} className={sectionTitle} title="Edit profile basics">
               Profile Basics
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4040,7 +4097,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Personal Details */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(4)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(4)} className={sectionTitle} title="Edit personal details">
               Personal Details
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -4107,7 +4164,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Professional Summary */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(5)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(5)} className={sectionTitle} title="Edit professional summary">
               Professional Summary
             </button>
             <div className="mt-2 space-y-2">
@@ -4162,7 +4219,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Current Employment */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(6)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(6)} className={sectionTitle} title="Edit current employment">
               Current Employment
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4206,7 +4263,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Experience */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(7)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(7)} className={sectionTitle} title="Edit work experience">
               Work Experience
             </button>
             <p className="mt-2 text-sm text-[var(--text)]">
@@ -4228,7 +4285,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Education */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(8)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(8)} className={sectionTitle} title="Edit education">
               Education
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4268,7 +4325,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Skills */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(9)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(9)} className={sectionTitle} title="Edit skills">
               Skills
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -4304,7 +4361,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Certifications */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(10)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(10)} className={sectionTitle} title="Edit certifications">
               Certifications, Courses & Tests
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -4337,7 +4394,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Publications & Memberships */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(11)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(11)} className={sectionTitle} title="Edit publications">
               Publications & Memberships
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -4358,7 +4415,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Volunteering & References */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(12)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(12)} className={sectionTitle} title="Edit volunteering">
               Volunteering & References
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4375,7 +4432,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Preferences */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(13)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(13)} className={sectionTitle} title="Edit job preferences">
               Job Preferences
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4452,7 +4509,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Documents */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(14)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(14)} className={sectionTitle} title="Edit documents">
               Documents & Miscellaneous
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -4513,7 +4570,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Interests */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(15)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(15)} className={sectionTitle} title="Edit interests">
               Interests & Hobbies
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4534,7 +4591,7 @@ export default function CandidateOnboardingPage() {
 
           {/* Social Links */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(16)} className={sectionTitle}>
+            <button type="button" onClick={() => goToStep(16)} className={sectionTitle} title="Edit social links">
               Social Links
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">

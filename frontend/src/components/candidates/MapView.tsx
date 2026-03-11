@@ -6,6 +6,7 @@ import L from 'leaflet';
 import Link from 'next/link';
 import { Bookmark, BookmarkCheck, User as UserIcon } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import Tooltip from '@/components/ui/Tooltip';
 import { ROUTES } from '@/constants/routes';
 import type { CandidateProfile } from '@/types/candidate';
 
@@ -94,6 +95,7 @@ function SearchAreaButton({
           setMoved(false);
         }}
         className="shadow-lg"
+        tooltip="Search for candidates in the visible map area"
       >
         Search this area
       </Button>
@@ -184,12 +186,14 @@ export default function CandidateMapView({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <Link
-                      href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate.id)}
-                      className="hover:text-primary block text-sm leading-tight font-semibold text-[var(--text)] transition-colors"
-                    >
-                      {name}
-                    </Link>
+                    <Tooltip content="View candidate profile">
+                      <Link
+                        href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate.id)}
+                        className="hover:text-primary block cursor-pointer text-sm leading-tight font-semibold text-[var(--text)] transition-colors"
+                      >
+                        {name}
+                      </Link>
+                    </Tooltip>
                     {candidate.headline && (
                       <p className="truncate text-xs text-[var(--text-muted)]">
                         {candidate.headline}
@@ -214,24 +218,26 @@ export default function CandidateMapView({
                       📍 {candidate.currentLocation}
                     </span>
                   )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSaveCandidate(candidate.userId);
-                    }}
-                    className={
-                      isSaved
-                        ? 'text-primary'
-                        : 'hover:text-primary text-[var(--text-muted)] transition-colors'
-                    }
-                    title={isSaved ? 'Unsave' : 'Save'}
-                  >
-                    {isSaved ? (
-                      <BookmarkCheck className="h-4 w-4" />
-                    ) : (
-                      <Bookmark className="h-4 w-4" />
-                    )}
-                  </button>
+                  <Tooltip content={isSaved ? 'Remove from saved candidates' : 'Save this candidate'}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSaveCandidate(candidate.userId);
+                      }}
+                      className={`cursor-pointer ${
+                        isSaved
+                          ? 'text-primary'
+                          : 'hover:text-primary text-[var(--text-muted)] transition-colors'
+                      }`}
+                      aria-label={isSaved ? 'Unsave candidate' : 'Save candidate'}
+                    >
+                      {isSaved ? (
+                        <BookmarkCheck className="h-4 w-4" />
+                      ) : (
+                        <Bookmark className="h-4 w-4" />
+                      )}
+                    </button>
+                  </Tooltip>
                 </div>
                 {candidate.skills?.length > 0 && (
                   <div className="flex flex-wrap gap-1 pt-0.5">

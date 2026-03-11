@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { User, MapPin, Mail, Camera, X, Loader2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
+import Tooltip from '@/components/ui/Tooltip';
 import Input from '@/components/ui/Input';
 import PhoneInput from '@/components/ui/PhoneInput';
 import Textarea from '@/components/ui/Textarea';
@@ -107,29 +108,32 @@ function ProfileImageSection({ profile }: { profile: CandidateProfile | undefine
           )}
         </div>
         <div className="flex flex-col gap-2">
-          <label className="cursor-pointer">
-            <input
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp"
-              onChange={handleFileSelect}
-              className="sr-only"
-              disabled={isUploading}
-            />
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]">
-              <Camera className="h-4 w-4" />
-              {avatarUrl ? 'Change Photo' : 'Upload Photo'}
-            </span>
-          </label>
+          <Tooltip content={avatarUrl ? 'Change your profile photo' : 'Upload a profile photo'}>
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp"
+                onChange={handleFileSelect}
+                className="sr-only"
+                disabled={isUploading}
+              />
+              <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-secondary)]">
+                <Camera className="h-4 w-4" />
+                {avatarUrl ? 'Change Photo' : 'Upload Photo'}
+              </span>
+            </label>
+          </Tooltip>
           {avatarUrl && (
-            <button
-              onClick={() => setShowRemoveConfirm(true)}
-              disabled={isUploading}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-              title="Remove photo"
-            >
-              <X className="h-4 w-4" />
-              Remove Photo
-            </button>
+            <Tooltip content="Remove your profile photo">
+              <button
+                onClick={() => setShowRemoveConfirm(true)}
+                disabled={isUploading}
+                className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium text-[var(--error)] transition-colors hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+                Remove Photo
+              </button>
+            </Tooltip>
           )}
           <p className="text-xs text-[var(--text-muted)]">
             JPG, PNG, or WebP. Max 5MB. Will be cropped to 1:1 aspect ratio (400x400px).

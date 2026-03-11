@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 interface PaginationProps {
   currentPage: number;
@@ -67,19 +68,21 @@ function Pagination({
         </p>
       )}
       <nav className="flex items-center gap-1" aria-label="Pagination">
-        <button
-          type="button"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className={cn(
-            'inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm transition-colors duration-200',
-            'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
-            'disabled:pointer-events-none disabled:opacity-50',
-          )}
-          aria-label="Previous page"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+        <Tooltip content="Previous page">
+          <button
+            type="button"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={cn(
+              'inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm transition-colors duration-200',
+              'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+              'disabled:pointer-events-none disabled:opacity-50',
+            )}
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </Tooltip>
 
         {pages.map((page, index) => {
           if (page === 'ellipsis') {
@@ -95,36 +98,39 @@ function Pagination({
 
           const isActive = page === currentPage;
           return (
-            <button
-              key={page}
-              type="button"
-              onClick={() => onPageChange(page)}
-              className={cn(
-                'inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors duration-200',
-                isActive
-                  ? 'bg-primary text-white'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
-              )}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              {page}
-            </button>
+            <Tooltip key={page} content={`Go to page ${page}`}>
+              <button
+                type="button"
+                onClick={() => onPageChange(page)}
+                className={cn(
+                  'inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors duration-200',
+                  isActive
+                    ? 'bg-primary text-white'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+                )}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {page}
+              </button>
+            </Tooltip>
           );
         })}
 
-        <button
-          type="button"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className={cn(
-            'inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm transition-colors duration-200',
-            'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
-            'disabled:pointer-events-none disabled:opacity-50',
-          )}
-          aria-label="Next page"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        <Tooltip content="Next page">
+          <button
+            type="button"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={cn(
+              'inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm transition-colors duration-200',
+              'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+              'disabled:pointer-events-none disabled:opacity-50',
+            )}
+            aria-label="Next page"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </Tooltip>
       </nav>
     </div>
   );

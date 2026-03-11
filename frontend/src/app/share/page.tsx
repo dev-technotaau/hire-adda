@@ -98,7 +98,7 @@ export default function SharePage() {
               <p className="text-sm text-[var(--text-secondary)]">
                 We encountered an issue processing the shared content.
               </p>
-              <Button onClick={() => router.push('/')} className="mt-4">
+              <Button onClick={() => router.push('/')} className="mt-4" tooltip="Go to the home page">
                 Go to Home
               </Button>
             </>
