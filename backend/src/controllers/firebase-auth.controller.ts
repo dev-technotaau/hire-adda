@@ -4,7 +4,9 @@ import prisma from '../config/prisma';
 import { AppError } from '../middleware/error';
 import { generateTokens } from '../services/auth.service';
 
-import { publishEvent, KafkaTopics } from '../kafka/producer';
+import {  } from '../kafka/producer';
+import { publishEvent } from '../kafka/producer';
+import { KafkaTopics } from '../kafka/topics';
 import { trackEvent, getClientId } from '../services/analytics.service';
 import { setTokenCookies } from '../utils/cookie-helpers';
 import logger from '../config/logger';

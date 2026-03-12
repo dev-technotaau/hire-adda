@@ -4,7 +4,9 @@ import { AppError } from '../middleware/error';
 import type { CompanyProfile } from '@prisma/client';
 import { uploadImage, uploadOptions, deleteImage, extractPublicId } from '../config/cloudinary';
 import { searchService } from './search.service';
-import { publishEvent, KafkaTopics } from '../kafka/producer';
+import {  } from '../kafka/producer';
+import { publishEvent } from '../kafka/producer';
+import { KafkaTopics } from '../kafka/topics';
 
 export class EmployerService {
   /**

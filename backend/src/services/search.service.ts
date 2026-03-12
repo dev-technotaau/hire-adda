@@ -7,7 +7,9 @@ import { prisma } from '../config/prisma';
 import { JobStatus } from '@prisma/client';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { isFeatureEnabled } from '../config/feature-flags';
-import { publishEvent, KafkaTopics } from '../kafka/producer';
+import {  } from '../kafka/producer';
+import { publishEvent } from '../kafka/producer';
+import { KafkaTopics } from '../kafka/topics';
 import { trackSearch } from '../utils/trending';
 
 const tracer = trace.getTracer('search-service');

@@ -1,6 +1,6 @@
 import { consumer, producer } from '../config/kafka';
 import logger from '../config/logger';
-import { ConsolidatedTopics, KafkaTopics } from './producer';
+import { ConsolidatedTopics, KafkaTopics } from './topics';
 import { isFeatureEnabled } from '../config/feature-flags';
 import { isProcessed, markProcessed } from '../utils/idempotency';
 import { validateEvent } from './schemas';

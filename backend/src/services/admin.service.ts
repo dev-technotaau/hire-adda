@@ -1,7 +1,9 @@
 import { prisma } from '../config/prisma';
 import { Role, JobStatus, VerificationStatus } from '@prisma/client';
 import { AppError } from '../middleware/error';
-import { publishEvent, KafkaTopics } from '../kafka/producer';
+import {  } from '../kafka/producer';
+import { publishEvent } from '../kafka/producer';
+import { KafkaTopics } from '../kafka/topics';
 
 const VALID_AUDIT_ACTIONS = new Set([
   'PASSWORD_CHANGE',

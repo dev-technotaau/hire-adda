@@ -20,7 +20,9 @@ import type {
 import { Prisma, JobStatus, ApplicationStatus, Role, ScreeningQuestionType } from '@prisma/client';
 import { searchService } from './search.service';
 import { PAGINATION } from '@/constants';
-import { publishEvent, KafkaTopics } from '../kafka/producer';
+import {  } from '../kafka/producer';
+import { publishEvent } from '../kafka/producer';
+import { KafkaTopics } from '../kafka/topics';
 import { trackEvent, getClientId } from './analytics.service';
 import { notificationService } from './notification.service';
 import { moderationService } from './moderation.service';

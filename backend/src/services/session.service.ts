@@ -2,7 +2,9 @@ import { prisma } from '../config/prisma';
 import redis from '../config/redis';
 import logger from '../config/logger';
 import { AppError } from '../middleware/error';
-import { publishEvent, KafkaTopics } from '../kafka/producer';
+import {  } from '../kafka/producer';
+import { publishEvent } from '../kafka/producer';
+import { KafkaTopics } from '../kafka/topics';
 
 const SESSION_CACHE_TTL = 60; // 1 minute
 const FULL_SESSION_TTL = 86400; // 24 hours

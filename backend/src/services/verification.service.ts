@@ -2,7 +2,9 @@ import { prisma } from '../config/prisma';
 import { AppError } from '../middleware/error';
 import { VerificationStatus, VerificationType, Role } from '@prisma/client';
 import { uploadFileToR2 } from './storage.service';
-import { publishEvent, KafkaTopics } from '../kafka/producer';
+import {  } from '../kafka/producer';
+import { publishEvent } from '../kafka/producer';
+import { KafkaTopics } from '../kafka/topics';
 
 export class VerificationService {
   /**

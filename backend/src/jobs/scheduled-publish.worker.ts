@@ -58,7 +58,8 @@ export async function handleScheduledPublish(job: Job) {
           }
 
           try {
-            const { publishEvent, KafkaTopics } = await import('../kafka/producer');
+            const { publishEvent } = await import('../kafka/producer');
+            const { KafkaTopics } = await import('../kafka/topics');
             publishEvent(KafkaTopics.JOB_POSTED, sj.id, {
               jobId: sj.id,
               companyId: sj.companyId,

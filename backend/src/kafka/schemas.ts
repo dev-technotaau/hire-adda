@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { KafkaTopics } from './producer';
+import { KafkaTopics } from './topics';
 import logger from '../config/logger';
 
 /**

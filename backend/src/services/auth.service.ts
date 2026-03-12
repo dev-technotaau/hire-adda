@@ -39,7 +39,9 @@ import {
   changePasswordOtp as changePasswordOtpTemplate,
 } from '../templates/email/auth';
 import { sessionService } from './session.service';
-import { publishEvent, KafkaTopics } from '../kafka/producer';
+import {  } from '../kafka/producer';
+import { publishEvent } from '../kafka/producer';
+import { KafkaTopics } from '../kafka/topics';
 import { trackEvent, getClientId } from './analytics.service';
 import { checkOtpAttempts, resetOtpAttempts } from '../utils/otp-rate-limit';
 
