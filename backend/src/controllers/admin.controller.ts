@@ -5,6 +5,8 @@ import type { Role } from '@prisma/client';
 import { AppError } from '../middleware/error';
 import { schedulerQueue } from '../jobs/scheduler.queue';
 import prisma from '../config/prisma';
+import { getOnlineCount } from '../utils/online-users';
+import { getTrendingJobs, getTrendingSearches } from '../utils/trending';
 
 /**
  * Get Dashboard Stats
@@ -633,6 +635,56 @@ export const bulkActivateUsers = async (
     const { userIds } = req.body;
     const result = await adminService.bulkActivateUsers(userIds, req.user.id);
     res.status(200).json({ status: 'success', data: result, message: `${result.count} users activated` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get online user stats
+ */
+export const getOnlineStats = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const count = await getOnlineCount();
+    res.status(200).json({ status: 'success', data: { onlineUsers: count } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get trending jobs and searches
+ */
+export const getTrending = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 10, 50);
+    const [trendingJobs, trendingSearches] = await Promise.all([
+      getTrendingJobs(limit),
+      getTrendingSearches(limit),
+    ]);
+
+    // Enrich trending jobs with basic info
+    const jobIds = trendingJobs.map((t) => t.jobId);
+    const jobs = jobIds.length > 0
+      ? await prisma.jobPost.findMany({
+          where: { id: { in: jobIds } },
+          select: { id: true, title: true, location: true, company: { select: { companyName: true, logo: true } } },
+        })
+      : [];
+    const jobMap = new Map(jobs.map((j) => [j.id, j]));
+
+    const enrichedJobs = trendingJobs
+      .map((t) => {
+        const job = jobMap.get(t.jobId);
+        if (!job) return null;
+        return { ...job, viewCount: t.score };
+      })
+      .filter(Boolean);
+
+    res.status(200).json({
+      status: 'success',
+      data: { trendingJobs: enrichedJobs, trendingSearches },
+    });
   } catch (error) {
     next(error);
   }

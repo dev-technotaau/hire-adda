@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import { restrictTo } from '../middleware/rbac';
 import { cache } from '../middleware/cache';
+import { etagCache } from '../middleware/etag';
 import * as jobController from '../controllers/job.controller';
 import { validate } from '../validators/validate';
 import {
@@ -16,8 +17,8 @@ import { audit } from '../middleware/audit';
 
 const router = Router();
 
-// Public: Search jobs (cached 60s — high-volume, query-string based)
-router.get('/', validate(searchJobsSchema), cache({ ttl: 60 }), jobController.searchJobs);
+// Public: Search jobs (cached 60s — high-volume, query-string based, ETag for 304)
+router.get('/', validate(searchJobsSchema), etagCache({ ttl: 60 }), cache({ ttl: 60 }), jobController.searchJobs);
 
 // --- Static paths MUST be registered before /:id to avoid route conflicts ---
 
@@ -46,8 +47,8 @@ router.patch(
   jobController.updateApplicationStatus
 );
 
-// Public: View single job (cached 5min — must come AFTER static paths like /saved, /applications/me)
-router.get('/:id', cache({ ttl: 300 }), jobController.getJob);
+// Public: View single job (cached 5min, ETag — must come AFTER static paths like /saved, /applications/me)
+router.get('/:id', etagCache({ ttl: 300 }), cache({ ttl: 300 }), jobController.getJob);
 
 // --- Dynamic /:id routes (all protected) ---
 

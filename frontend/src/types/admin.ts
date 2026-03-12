@@ -269,3 +269,63 @@ export interface VerificationRequest {
   reviewedAt: string | null;
   adminComments: string | null;
 }
+
+export interface ImageVariants {
+  thumbnail: string;
+  small: string;
+  medium: string;
+  original: string;
+}
+
+export interface TrendingJob {
+  id: string;
+  title: string;
+  location: string;
+  company: { companyName: string; logo: string | null };
+  viewCount: number;
+}
+
+export interface TrendingSearch {
+  query: string;
+  score: number;
+}
+
+export interface TrendingData {
+  trendingJobs: TrendingJob[];
+  trendingSearches: TrendingSearch[];
+}
+
+export interface OnlineStats {
+  onlineUsers: number;
+}
+
+export interface KafkaDlqMessage {
+  id: string;
+  originalTopic: string;
+  partition: number;
+  offset: string;
+  originalValue: string | null;
+  error: string | null;
+  stack: string | null;
+  timestamp: string;
+  replayed: boolean;
+  replayedAt: string | null;
+  createdAt: string;
+}
+
+export interface KafkaLagInfo {
+  connected: boolean;
+  lag: Record<string, number> | null;
+  totalLag: number;
+  healthy: boolean;
+}
+
+export interface HealthReadyResponse {
+  status: string;
+  checks: {
+    database: string;
+    redis: string;
+    kafka: KafkaLagInfo;
+  };
+  timestamp: string;
+}

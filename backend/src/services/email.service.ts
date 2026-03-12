@@ -8,6 +8,7 @@ interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  replyTo?: string;
 }
 
 // Create reusable transporter object using the default SMTP transport
@@ -41,6 +42,7 @@ export const sendEmail = async (options: EmailOptions): Promise<any> => {
     const info = await transporter.sendMail({
       from: `"${env.SMTP_FROM_NAME}" <${env.EMAIL_FROM}>`, // sender address
       to: options.to, // list of receivers
+      replyTo: options.replyTo || env.EMAIL_REPLY_TO || env.EMAIL_FROM, // reply-to address
       subject: options.subject, // Subject line
       text: options.text, // plain text body
       html: options.html, // html body

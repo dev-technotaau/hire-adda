@@ -133,7 +133,12 @@ export const API = {
     EMAIL_TEMPLATES_PREVIEW: '/admin/email-templates/preview',
     EMAIL_TEMPLATES_TEST: '/admin/email-templates/test',
     KAFKA_EVENTS: '/admin/kafka-events',
+    KAFKA_DLQ: '/admin/kafka-dlq',
+    KAFKA_DLQ_REPLAY: (id: string) => `/admin/kafka-dlq/${id}/replay`,
+    KAFKA_REPLAY: '/admin/kafka-replay',
     LIVE_COUNTERS: '/admin/live-counters',
+    ONLINE_STATS: '/admin/online-stats',
+    TRENDING: '/admin/trending',
     DAILY_ACTIVE_USERS: '/admin/stats/daily-active-users',
     MODERATION_KEYWORDS: '/admin/moderation/keywords',
     MODERATION_KEYWORD_DELETE: (keyword: string) =>

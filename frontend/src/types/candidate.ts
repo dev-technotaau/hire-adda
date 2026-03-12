@@ -7,6 +7,7 @@ import type {
   SpecificDegree,
   DrivingLicenseType,
 } from './job';
+import type { ImageVariants } from './admin';
 
 export type Gender = 'MALE' | 'FEMALE' | 'NON_BINARY' | 'PREFER_NOT_TO_SAY' | 'OTHER';
 export type WorkStatus = 'EMPLOYED' | 'UNEMPLOYED' | 'STUDENT' | 'FREELANCER' | 'ACTIVELY_LOOKING';
@@ -64,6 +65,7 @@ export interface CandidateProfile {
   generatedResumeAt: string | null;
   videoResumeUrl: string | null;
   profileImage: string | null;
+  imageVariants?: ImageVariants | null;
   addressLine1: string | null;
   addressLine2: string | null;
   city: string | null;

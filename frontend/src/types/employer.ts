@@ -1,4 +1,5 @@
 import type { CompanyType } from './job';
+import type { ImageVariants } from './admin';
 
 export type FundingStage =
   | 'BOOTSTRAPPED'
@@ -46,7 +47,9 @@ export interface CompanyProfile {
   companyType: CompanyType | null;
   tagline: string | null;
   logo: string | null;
+  logoVariants?: ImageVariants | null;
   coverImage: string | null;
+  coverVariants?: ImageVariants | null;
   companyVideoUrl: string | null;
   industry: string | null;
   subIndustry: string | null;

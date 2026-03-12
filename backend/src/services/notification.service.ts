@@ -128,30 +128,32 @@ class NotificationService {
       );
 
       // 3. Dispatch to each allowed channel
+      // Priority 1 = highest (security/essential), undefined = normal
+      const priority = params.isEssential ? 1 : undefined;
       const dispatches: Promise<void>[] = [];
 
       for (const channel of allowedChannels) {
         switch (channel) {
           case 'email':
             if (params.emailOptions) {
-              dispatches.push(this.dispatchEmail(params.emailOptions));
+              dispatches.push(this.dispatchEmail(params.emailOptions, priority));
             }
             break;
           case 'sms':
             if (params.smsOptions) {
-              dispatches.push(this.dispatchSms(params.smsOptions, params.isEssential));
+              dispatches.push(this.dispatchSms(params.smsOptions, params.isEssential, priority));
             }
             break;
           case 'whatsapp':
             if (params.whatsappOptions) {
-              dispatches.push(this.dispatchWhatsApp(params.whatsappOptions));
+              dispatches.push(this.dispatchWhatsApp(params.whatsappOptions, priority));
             }
             break;
           case 'fcm':
-            dispatches.push(this.dispatchFcm(userId, title, message, link, metadata));
+            dispatches.push(this.dispatchFcm(userId, title, message, link, metadata, priority));
             break;
           case 'web_push':
-            dispatches.push(this.dispatchWebPush(userId, title, message, link));
+            dispatches.push(this.dispatchWebPush(userId, title, message, link, priority));
             break;
           case 'in_app':
             dispatches.push(this.dispatchInApp(userId, title, message, type, link));
@@ -1436,14 +1438,17 @@ class NotificationService {
   // Private dispatch methods
   // ===========================
 
-  private async dispatchEmail(options: {
-    to: string;
-    subject: string;
-    html: string;
-    text?: string;
-  }): Promise<void> {
+  private async dispatchEmail(
+    options: {
+      to: string;
+      subject: string;
+      html: string;
+      text?: string;
+    },
+    priority?: number
+  ): Promise<void> {
     try {
-      await emailQueue.add('send-email', options);
+      await emailQueue.add('send-email', options, priority ? { priority } : {});
     } catch (error) {
       logger.error('Failed to enqueue email notification:', error);
     }
@@ -1451,7 +1456,8 @@ class NotificationService {
 
   private async dispatchSms(
     options: { to: string; body: string },
-    isEssential = false
+    isEssential = false,
+    priority?: number
   ): Promise<void> {
     // Essential SMS (security/account alerts) always sent
     // Transactional SMS (job matches, application updates) only sent if enabled
@@ -1463,20 +1469,23 @@ class NotificationService {
     }
 
     try {
-      await smsQueue.add('send-sms', options);
+      await smsQueue.add('send-sms', options, priority ? { priority } : {});
     } catch (error) {
       logger.error('Failed to enqueue SMS notification:', error);
     }
   }
 
-  private async dispatchWhatsApp(options: {
-    to: string;
-    templateName: string;
-    languageCode?: string;
-    components?: any[];
-  }): Promise<void> {
+  private async dispatchWhatsApp(
+    options: {
+      to: string;
+      templateName: string;
+      languageCode?: string;
+      components?: any[];
+    },
+    priority?: number
+  ): Promise<void> {
     try {
-      await whatsappQueue.add('send-whatsapp', options);
+      await whatsappQueue.add('send-whatsapp', options, priority ? { priority } : {});
     } catch (error) {
       logger.error('Failed to enqueue WhatsApp notification:', error);
     }
@@ -1487,7 +1496,8 @@ class NotificationService {
     title: string,
     body: string,
     link?: string,
-    data?: Record<string, any>
+    data?: Record<string, any>,
+    priority?: number
   ): Promise<void> {
     try {
       const deviceTokens = await prisma.deviceToken.findMany({
@@ -1497,15 +1507,19 @@ class NotificationService {
 
       if (deviceTokens.length === 0) return;
 
-      await fcmQueue.add('send-fcm', {
-        tokens: deviceTokens.map((d) => d.token),
-        title,
-        body,
-        data: {
-          ...(data ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])) : {}),
-          ...(link ? { link } : {}),
+      await fcmQueue.add(
+        'send-fcm',
+        {
+          tokens: deviceTokens.map((d) => d.token),
+          title,
+          body,
+          data: {
+            ...(data ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])) : {}),
+            ...(link ? { link } : {}),
+          },
         },
-      });
+        priority ? { priority } : {}
+      );
     } catch (error) {
       logger.error('Failed to enqueue FCM notification:', error);
     }
@@ -1515,7 +1529,8 @@ class NotificationService {
     userId: string,
     title: string,
     body: string,
-    link?: string
+    link?: string,
+    priority?: number
   ): Promise<void> {
     try {
       const subscriptions = await prisma.pushSubscription.findMany({
@@ -1523,13 +1538,17 @@ class NotificationService {
       });
 
       for (const sub of subscriptions) {
-        await webPushQueue.add('send-web-push', {
-          subscription: {
-            endpoint: sub.endpoint,
-            keys: { p256dh: sub.p256dh, auth: sub.auth },
+        await webPushQueue.add(
+          'send-web-push',
+          {
+            subscription: {
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            },
+            payload: JSON.stringify({ title, body, url: link }),
           },
-          payload: JSON.stringify({ title, body, url: link }),
-        });
+          priority ? { priority } : {}
+        );
       }
     } catch (error) {
       logger.error('Failed to enqueue Web Push notification:', error);
@@ -1543,20 +1562,38 @@ class NotificationService {
     type: NotificationType,
     link?: string
   ): Promise<void> {
-    // Emit via Socket.IO directly (runs in main app process where io is initialized)
+    // Try direct Socket.IO emit first (runs in main app process where io is initialized)
     try {
       const { getIO } = await import('../socket');
       const io = getIO();
-      io.to(`user:${userId}`).emit('notification', {
+      const room = io.sockets.adapter.rooms.get(`user:${userId}`);
+      if (room && room.size > 0) {
+        // User is connected — emit directly
+        io.to(`user:${userId}`).emit('notification', {
+          title,
+          message,
+          type: type.toLowerCase(),
+          link,
+          createdAt: new Date().toISOString(),
+        });
+        return;
+      }
+    } catch {
+      // Socket.IO not available
+    }
+
+    // Fallback: queue via BullMQ in-app worker (handles retry + user will see on next page load)
+    try {
+      const { inAppQueue } = await import('../jobs/in-app.queue');
+      await inAppQueue.add('send-in-app', {
+        userId,
         title,
         message,
-        type: type.toLowerCase(),
+        type: type.toLowerCase() as 'info' | 'success' | 'warning' | 'error',
         link,
-        createdAt: new Date().toISOString(),
       });
-    } catch {
-      // Socket.IO not available — client will pick up via polling
-      logger.debug(`Socket.IO emit skipped for user ${userId} — not initialized`);
+    } catch (error) {
+      logger.debug(`In-app queue fallback failed for user ${userId}:`, error);
     }
   }
   /**

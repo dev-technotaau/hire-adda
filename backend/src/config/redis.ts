@@ -63,7 +63,13 @@ const createMockRedis = (): Redis => {
     lrange: () => Promise.resolve([]),
     ltrim: noop,
     lrem: () => Promise.resolve(0),
-    // Sorted set operations (popular searches, search history)
+    // Set operations (online users)
+    sadd: () => Promise.resolve(0),
+    srem: () => Promise.resolve(0),
+    scard: () => Promise.resolve(0),
+    smembers: () => Promise.resolve([]),
+    exists: () => Promise.resolve(0),
+    // Sorted set operations (popular searches, search history, trending)
     zadd: () => Promise.resolve(0),
     zincrby: () => Promise.resolve('0'),
     zrevrange: () => Promise.resolve([]),

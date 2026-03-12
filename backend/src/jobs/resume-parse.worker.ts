@@ -1,6 +1,7 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
 import { redis } from '../config/redis';
+import { env } from '../config/env';
 import logger from '../config/logger';
 import prisma from '../config/prisma';
 import { RESUME_PARSE_QUEUE_NAME } from './resume-parse.queue';
@@ -99,7 +100,7 @@ export const resumeParseWorker = new Worker<ResumeParseJobData>(
   },
   {
     connection: redis,
-    concurrency: 2,
+    concurrency: parseInt(env.BULLMQ_RESUME_PARSE_CONCURRENCY, 10),
     lockDuration: 300000, // 5 min — fetches file + calls Document AI
     stalledInterval: 120000,
   }

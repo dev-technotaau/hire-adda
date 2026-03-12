@@ -8,6 +8,7 @@ import { env } from '../config/env';
 import redis from '../config/redis';
 import { COOKIE_NAMES } from '../utils/cookie-helpers';
 import { sessionService } from '../services/session.service';
+import { extendOnlineTTL } from '../utils/online-users';
 
 /**
  * Extract access token from Authorization header or httpOnly cookie.
@@ -115,6 +116,8 @@ export const protect = async (req: Request, _res: Response, next: NextFunction):
           })
           .catch(() => {});
       }
+      // Extend online presence TTL (reuse debounce — only on fresh updates)
+      extendOnlineTTL(user.id).catch(() => {});
     } catch (error) {
       logger.debug('Last-active update failed:', (error as Error).message);
     }

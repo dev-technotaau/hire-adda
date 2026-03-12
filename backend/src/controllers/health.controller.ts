@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { redis } from '../config/redis';
 import elasticClient from '../config/elasticsearch';
+import { getConsumerLag } from '../utils/kafka-lag-monitor';
 
 const startedAt = new Date().toISOString();
 
@@ -93,11 +94,37 @@ export const checkReadiness = async (_req: Request, res: Response) => {
     // Redis not ready
   }
 
+  // Check Kafka consumer lag (non-blocking, informational)
+  let kafkaInfo: { connected: boolean; lag: Record<string, number> | null; totalLag: number; healthy: boolean } = {
+    connected: false,
+    lag: null,
+    totalLag: -1,
+    healthy: false,
+  };
+  try {
+    const lag = await getConsumerLag();
+    if (lag) {
+      const totalLag = Object.values(lag).reduce((sum, val) => sum + val, 0);
+      kafkaInfo = {
+        connected: true,
+        lag,
+        totalLag,
+        healthy: totalLag < 10000, // Healthy if lag < 10k messages
+      };
+    }
+  } catch {
+    // Kafka lag check is non-critical
+  }
+
   const ready = dbReady && redisReady;
 
   res.status(ready ? 200 : 503).json({
     status: ready ? 'ready' : 'not_ready',
-    checks: { database: dbReady ? 'up' : 'down', redis: redisReady ? 'up' : 'down' },
+    checks: {
+      database: dbReady ? 'up' : 'down',
+      redis: redisReady ? 'up' : 'down',
+      kafka: kafkaInfo,
+    },
     timestamp: new Date().toISOString(),
   });
 };

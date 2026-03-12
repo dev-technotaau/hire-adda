@@ -533,6 +533,7 @@ model CandidateProfile {
   generatedResumeAt  DateTime? // When the resume was last generated
   videoResumeUrl     String? // URL to video resume
   profileImage       String? // Cloudinary URL
+  imageVariants      Json? // { thumbnail, small, medium, original } URLs
 
   // Structured Address
   addressLine1 String?
@@ -682,7 +683,9 @@ model CompanyProfile {
   companyType     CompanyType? // PRIVATE, PUBLIC, STARTUP, MNC, GOVERNMENT, etc.
   tagline         String?
   logo            String? // Cloudinary URL
+  logoVariants    Json? // { thumbnail, small, medium, original } URLs
   coverImage      String? // Banner image (Cloudinary URL)
+  coverVariants   Json? // { thumbnail, small, medium, original } URLs
   companyVideoUrl String? // Company intro/culture video URL
   industry        String?
   subIndustry     String? // e.g., "SaaS", "Payments", "Cloud Infrastructure"
@@ -892,9 +895,10 @@ model JobPost {
 
   // Lifecycle
   closedReason String? // "EXPIRED", "FILLED", "CANCELLED"
-  closedAt     DateTime?
-  expiresAt    DateTime?
-  createdAt    DateTime  @default(now())
+  closedAt               DateTime?
+  expiresAt              DateTime?
+  lastExpirationWarning  DateTime? // Last time an expiration warning was sent
+  createdAt              DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   company      CompanyProfile            @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -959,8 +963,9 @@ model JobApplication {
   offeredAt    DateTime?
   hiredAt      DateTime?
 
-  appliedAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  appliedAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  reviewReminderSentAt  DateTime? // Prevents duplicate review reminders
 
   job              JobPost           @relation(fields: [jobId], references: [id], onDelete: Cascade)
   candidate        CandidateProfile  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
@@ -1566,4 +1571,37 @@ model DismissedRecommendation {
 
   @@unique([userId, jobId])
   @@index([userId])
+}
+
+// --- Kafka DLQ Messages ---
+
+model KafkaDlqMessage {
+  id            String    @id @default(uuid())
+  originalTopic String
+  partition     Int
+  offset        String
+  originalValue String?   @db.Text
+  error         String?   @db.Text
+  stack         String?   @db.Text
+  timestamp     DateTime
+  replayed      Boolean   @default(false)
+  replayedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([originalTopic])
+  @@index([replayed])
+}
+
+// --- Kafka Event Store (for replay) ---
+
+model KafkaEvent {
+  id          String   @id @default(uuid())
+  eventType   String
+  key         String
+  data        String   @db.Text
+  publishedAt DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([eventType])
+  @@index([publishedAt])
 }

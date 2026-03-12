@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma';
 import { Role, JobStatus, VerificationStatus } from '@prisma/client';
 import { AppError } from '../middleware/error';
+import { publishEvent, KafkaTopics } from '../kafka/producer';
 
 const VALID_AUDIT_ACTIONS = new Set([
   'PASSWORD_CHANGE',
@@ -226,10 +227,20 @@ export class AdminService {
    * Moderate Job (Admin)
    */
   async updateJobStatus(jobId: string, status: JobStatus) {
-    return await prisma.jobPost.update({
+    const result = await prisma.jobPost.update({
       where: { id: jobId },
       data: { status },
     });
+
+    // Publish Kafka event for admin-moderated jobs (closed/draft)
+    if (status === JobStatus.CLOSED || status === JobStatus.DRAFT) {
+      publishEvent(KafkaTopics.ADMIN_JOB_REJECTED, jobId, {
+        jobId,
+        status,
+      }).catch(() => {});
+    }
+
+    return result;
   }
 
   /**
@@ -257,6 +268,13 @@ export class AdminService {
         return notificationService.notifyUserSuspended(userId);
       })
       .catch(() => {});
+
+    // Publish Kafka event
+    publishEvent(KafkaTopics.ADMIN_USER_SUSPENDED, userId, {
+      userId,
+      suspendedBy: adminId,
+      reason,
+    }).catch(() => {});
   }
 
   /**
@@ -309,6 +327,14 @@ export class AdminService {
         },
       }),
     ]);
+
+    // Publish Kafka event
+    publishEvent(KafkaTopics.ADMIN_ROLE_CHANGED, userId, {
+      userId,
+      oldRole: user.role,
+      newRole,
+      changedBy: adminId,
+    }).catch(() => {});
   }
 
   /**

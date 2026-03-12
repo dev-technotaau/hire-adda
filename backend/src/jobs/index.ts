@@ -12,6 +12,9 @@ import { webhookWorker } from './webhook.worker';
 import { matchingWorker } from './matching.worker';
 import { geocodingWorker } from './geocoding.worker';
 import { resumeParseWorker } from './resume-parse.worker';
+import { esReindexWorker } from './es-reindex.worker';
+import { onboardingDripWorker } from './onboarding-drip.worker';
+import { imageProcessingWorker } from './image-processing.worker';
 
 // Combined scheduler worker — handles ALL periodic/cron jobs through
 // a single Worker (1 blocking connection) instead of 8 separate workers.
@@ -28,13 +31,17 @@ import './scheduled-publish.queue';
 import './weekly-digest.queue';
 import './backup.queue';
 import './data-export.queue';
+import './expiration-warning.queue';
+import './review-reminder.queue';
+import './stale-profile.queue';
+import './view-counter-flush.queue';
 
 // Scheduler queue for stale job cleanup
 import { schedulerQueue } from './scheduler.queue';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const workers: Worker<any>[] = [
-  // On-demand workers (10)
+  // On-demand workers (12)
   emailWorker,
   smsWorker,
   fcmWorker,
@@ -45,7 +52,10 @@ const workers: Worker<any>[] = [
   matchingWorker,
   geocodingWorker,
   resumeParseWorker,
-  // Combined scheduler (1 — replaces 8 individual periodic workers)
+  esReindexWorker,
+  onboardingDripWorker,
+  imageProcessingWorker,
+  // Combined scheduler (1 — replaces individual periodic workers)
   schedulerWorker,
 ];
 

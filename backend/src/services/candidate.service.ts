@@ -8,6 +8,7 @@ import { PAGINATION } from '@/constants';
 import { publishEvent, KafkaTopics } from '../kafka/producer';
 import { trackEvent, getClientId } from './analytics.service';
 import { moderationService } from './moderation.service';
+import { addReindexJob } from '../jobs/es-reindex.queue';
 
 export class CandidateService {
   /**
@@ -69,11 +70,11 @@ export class CandidateService {
       include: { user: true },
     });
 
-    // INDEXING
+    // INDEXING (async via BullMQ)
     if (profile) {
-      searchService
-        .indexCandidate(profile)
-        .catch((err: unknown) => logger.error('Failed to index candidate', err));
+      addReindexJob({ indexType: 'candidate', documentId: profile.id, action: 'index' }).catch(
+        (err: unknown) => logger.error('Failed to queue ES reindex for candidate', err)
+      );
     }
 
     // Update cached completeness score
@@ -158,15 +159,18 @@ export class CandidateService {
       include: { user: true },
     });
 
-    // Sync with Search
+    // Sync with Search (async via BullMQ)
     if (profile) {
-      searchService
-        .indexCandidate(profile)
-        .catch((err: unknown) => logger.error('Failed to index candidate (resume upload)', err));
+      addReindexJob({ indexType: 'candidate', documentId: profile.id, action: 'index' }).catch(
+        (err: unknown) => logger.error('Failed to queue ES reindex for candidate (resume upload)', err)
+      );
     }
 
     // GA4: track resume_uploaded
     trackEvent(getClientId(userId), { name: 'resume_uploaded' }).catch(() => {});
+
+    // Publish Kafka event
+    publishEvent(KafkaTopics.RESUME_UPLOADED, userId, { userId }).catch(() => {});
 
     return profile;
   }
@@ -211,12 +215,28 @@ export class CandidateService {
       }),
     ]);
 
-    // Sync with Search
+    // Sync with Search (async via BullMQ)
     if (candidateProfile) {
-      searchService
-        .indexCandidate(candidateProfile)
-        .catch((err: unknown) => logger.error('Failed to index candidate (image upload)', err));
+      addReindexJob({ indexType: 'candidate', documentId: candidateProfile.id, action: 'index' }).catch(
+        (err: unknown) => logger.error('Failed to queue ES reindex for candidate (image upload)', err)
+      );
     }
+
+    // Publish Kafka event
+    publishEvent(KafkaTopics.AVATAR_CHANGED, userId, { userId }).catch(() => {});
+
+    // Queue image variant generation (fire-and-forget)
+    import('../jobs/image-processing.queue')
+      .then(({ addImageJob }) =>
+        addImageJob({
+          entityType: 'candidate',
+          entityId: candidateProfile.id,
+          userId,
+          imageUrl: candidateProfile.profileImage || uploadResult.secure_url,
+          field: 'avatar',
+        })
+      )
+      .catch(() => {});
 
     return candidateProfile;
   }
@@ -317,11 +337,11 @@ export class CandidateService {
       include: { user: true },
     });
 
-    // Sync with Elasticsearch
+    // Sync with Elasticsearch (async via BullMQ)
     if (profile) {
-      searchService
-        .indexCandidate(profile)
-        .catch((err: unknown) => logger.error('Failed to index candidate (resume deletion)', err));
+      addReindexJob({ indexType: 'candidate', documentId: profile.id, action: 'index' }).catch(
+        (err: unknown) => logger.error('Failed to queue ES reindex for candidate (resume deletion)', err)
+      );
     }
 
     // GA4: track resume_deleted

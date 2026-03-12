@@ -3,7 +3,10 @@
        db-push db-migrate db-studio db-seed db-seed-dev \
        docker-up docker-down docker-build clean install help \
        backup-db backup-db-restore backup-db-local \
-       backup-cleanup backup-status
+       backup-cleanup backup-status \
+       ssl-init ssl-renew ssl-status ssl-dev \
+       mail-setup mail-up mail-down mail-logs mail-test \
+       mail-accounts mail-dkim mail-restart mail-add-account
 
 # ─── Development ─────────────────────────────────────────
 dev:                    ## Start both backend and frontend
@@ -118,6 +121,52 @@ backup-status:          ## Show last automated backup timestamps from Redis
 			r.quit(); \
 		}).catch(e => { console.error(e.message); r.quit(); }); \
 	"
+
+# ─── SSL / Let's Encrypt ───────────────────────────────
+ssl-init:               ## Request initial Let's Encrypt certs for hireadda.in
+	cd backend && docker compose exec certbot certbot certonly --webroot \
+		-w /var/www/certbot \
+		-d hireadda.in -d www.hireadda.in -d api.hireadda.in \
+		--agree-tos --non-interactive --email $(EMAIL)
+
+ssl-renew:              ## Force certificate renewal
+	cd backend && docker compose exec certbot certbot renew --webroot -w /var/www/certbot
+	cd backend && docker compose exec nginx nginx -s reload
+
+ssl-status:             ## Show certificate expiry dates
+	cd backend && docker compose exec certbot certbot certificates
+
+ssl-dev:                ## Generate self-signed certs for local development
+	cd backend/nginx/ssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+		-keyout privkey.pem -out fullchain.pem -subj "/CN=localhost"
+
+# ─── Mail Server (Docker Mailserver) ──────────────────────
+mail-setup:             ## Initial mail server setup (accounts, DKIM, aliases)
+	cd infra/mail && bash setup.sh
+
+mail-up:                ## Start mail server
+	cd infra/mail && docker compose up -d
+
+mail-down:              ## Stop mail server
+	cd infra/mail && docker compose down
+
+mail-restart:           ## Restart mail server
+	cd infra/mail && docker compose restart mailserver
+
+mail-logs:              ## View mail server logs
+	cd infra/mail && docker compose logs -f mailserver
+
+mail-test:              ## Test mail server connectivity and configuration
+	cd infra/mail && bash test.sh
+
+mail-accounts:          ## List all email accounts
+	cd infra/mail && docker compose exec mailserver setup email list
+
+mail-dkim:              ## Show DKIM DNS record
+	cd infra/mail && docker compose exec mailserver cat /tmp/docker-mailserver/opendkim/keys/hireadda.in/mail.txt
+
+mail-add-account:       ## Add new email account (EMAIL=user@hireadda.in PASS=password)
+	cd infra/mail && docker compose exec -T mailserver setup email add $(EMAIL) $(PASS)
 
 # ─── Maintenance ─────────────────────────────────────────
 install:                ## Install all dependencies

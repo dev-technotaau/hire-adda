@@ -8,6 +8,7 @@ import {
 } from './service-status';
 
 import { startKafkaConsumer, stopKafkaConsumer } from '../kafka/consumer';
+import { startDlqConsumer, stopDlqConsumer } from '../kafka/dlq-consumer';
 import { searchService } from '../services/search.service';
 
 /**
@@ -169,8 +170,9 @@ export const initializeServices = async (): Promise<void> => {
         await admin.disconnect();
         registerService('Kafka', 'connected', '4 consolidated topics');
 
-        // Start Kafka consumer
+        // Start Kafka consumer + DLQ consumer
         await startKafkaConsumer();
+        await startDlqConsumer();
       } else {
         registerService('Kafka', 'not_configured');
       }
@@ -978,6 +980,7 @@ export const shutdownServices = async (): Promise<void> => {
 
   // Kafka Consumer & Producer
   try {
+    await stopDlqConsumer();
     await stopKafkaConsumer();
     const { producer } = await import('./kafka');
     if (producer) {

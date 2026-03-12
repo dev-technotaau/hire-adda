@@ -15,20 +15,40 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 ## For Production (Let's Encrypt)
 
-Use Certbot to generate certificates:
+Certificates are managed automatically by the certbot container in docker-compose.
+
+### Initial Setup
+
+Start nginx + certbot to obtain the first certificate:
 
 ```bash
-docker run -it --rm -v "./nginx/ssl:/etc/letsencrypt" \
-  -v "./nginx/certbot:/var/www/certbot" \
-  certbot/certbot certonly --webroot \
+# 1. Start services (certbot will auto-request certs)
+make docker-up
+
+# 2. Or manually request via certbot container
+docker compose exec certbot certbot certonly --webroot \
   -w /var/www/certbot \
-  -d api.talentbridge.com \
-  -d talentbridge.com
+  -d hireadda.in \
+  -d www.hireadda.in \
+  -d api.hireadda.in \
+  --email your-email@hireadda.in \
+  --agree-tos \
+  --non-interactive
 ```
 
-Then copy certificates:
+### Renewal
+
+Certbot container automatically attempts renewal every 12 hours.
+After renewal, nginx reloads via the entrypoint command.
+
+### Manual Renewal
 
 ```bash
-cp /etc/letsencrypt/live/talentbridge.com/fullchain.pem ./nginx/ssl/
-cp /etc/letsencrypt/live/talentbridge.com/privkey.pem ./nginx/ssl/
+make ssl-renew
 ```
+
+### Certificate Location
+
+Certificates are stored in the `certbot/conf/` volume and symlinked to:
+- `/etc/nginx/ssl/fullchain.pem`
+- `/etc/nginx/ssl/privkey.pem`

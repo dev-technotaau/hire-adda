@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma';
 import { AppError } from '../middleware/error';
 import { VerificationStatus, VerificationType, Role } from '@prisma/client';
 import { uploadFileToR2 } from './storage.service';
+import { publishEvent, KafkaTopics } from '../kafka/producer';
 
 export class VerificationService {
   /**
@@ -63,6 +64,13 @@ export class VerificationService {
         return notificationService.notifyAdminsNewVerification(userId, type, request.id);
       })
       .catch(() => {});
+
+    // Publish Kafka event
+    publishEvent(KafkaTopics.VERIFICATION_SUBMITTED, userId, {
+      userId,
+      requestId: request.id,
+      type,
+    }).catch(() => {});
 
     return request;
   }
@@ -140,6 +148,12 @@ export class VerificationService {
           where: { userId: request.userId },
           data: { isVerified: true },
         });
+        // Publish company verified event
+        publishEvent(KafkaTopics.COMPANY_VERIFIED, request.userId, {
+          userId: request.userId,
+          requestId,
+          type: request.type,
+        }).catch(() => {});
       }
       // Add other logic for Candidate Identity etc.
     }
@@ -157,6 +171,17 @@ export class VerificationService {
     } catch {
       /* non-critical */
     }
+
+    // Publish Kafka event
+    const kafkaEvent = status === VerificationStatus.APPROVED
+      ? KafkaTopics.VERIFICATION_APPROVED
+      : KafkaTopics.VERIFICATION_REJECTED;
+    publishEvent(kafkaEvent, request.userId, {
+      userId: request.userId,
+      requestId,
+      status,
+      type: request.type,
+    }).catch(() => {});
 
     return updatedRequest;
   }

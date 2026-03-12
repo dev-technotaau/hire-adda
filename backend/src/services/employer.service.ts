@@ -124,8 +124,11 @@ export class EmployerService {
       employeeTestimonials,
       officePhotos,
       notificationPreferences,
+      logoVariants: _lv,
+      coverVariants: _cv,
+      imageVariants: _iv,
       ...rest
-    } = data;
+    } = data as any;
     const safeData = {
       ...rest,
       ...(socialLinks !== undefined ? { socialLinks: socialLinks ?? undefined } : {}),
@@ -161,8 +164,9 @@ export class EmployerService {
       .indexEmployer(profile)
       .catch((err) => logger.error('Failed to index employer', err));
 
-    // Publish Kafka event for analytics/webhooks
+    // Publish Kafka events for analytics/webhooks
     publishEvent(KafkaTopics.PROFILE_UPDATED, userId, { userId, profileId: profile.id }).catch(() => {});
+    publishEvent(KafkaTopics.COMPANY_PROFILE_UPDATED, userId, { userId, profileId: profile.id }).catch(() => {});
 
     // Trigger geocoding if address fields changed
     const geoAddress = [data.city, data.state, data.country, data.headquarters]
@@ -371,6 +375,19 @@ export class EmployerService {
         logo: uploadResult.secure_url,
       },
     });
+
+    // Queue image variant generation (fire-and-forget)
+    import('../jobs/image-processing.queue')
+      .then(({ addImageJob }) =>
+        addImageJob({
+          entityType: 'company',
+          entityId: profile.id,
+          userId,
+          imageUrl: uploadResult.secure_url,
+          field: 'logo',
+        })
+      )
+      .catch(() => {});
 
     return profile;
   }

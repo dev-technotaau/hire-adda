@@ -2,16 +2,41 @@ import { prisma } from '../config/prisma';
 import redis from '../config/redis';
 import logger from '../config/logger';
 import { AppError } from '../middleware/error';
+import { publishEvent, KafkaTopics } from '../kafka/producer';
 
 const SESSION_CACHE_TTL = 60; // 1 minute
+const FULL_SESSION_TTL = 86400; // 24 hours
 const sessionCacheKey = (id: string) => `session:active:${id}`;
+const fullSessionKey = (id: string) => `session:full:${id}`;
 const tokenCacheKey = (hashedToken: string) => `token:valid:${hashedToken}`;
+
+interface CachedSessionData {
+  userId: string;
+  userAgent?: string;
+  ipAddress?: string;
+  isActive: boolean;
+  createdAt: string;
+  lastSeenAt: string;
+}
 
 class SessionService {
   async createSession(userId: string, userAgent?: string, ipAddress?: string) {
-    return prisma.session.create({
+    const session = await prisma.session.create({
       data: { userId, userAgent, ipAddress },
     });
+
+    // Cache full session in Redis (fire-and-forget)
+    const sessionData: CachedSessionData = {
+      userId,
+      userAgent,
+      ipAddress,
+      isActive: true,
+      createdAt: session.createdAt.toISOString(),
+      lastSeenAt: session.lastSeenAt.toISOString(),
+    };
+    redis.set(fullSessionKey(session.id), JSON.stringify(sessionData), 'EX', FULL_SESSION_TTL).catch(() => {});
+
+    return session;
   }
 
   async listActiveSessions(userId: string) {
@@ -23,9 +48,21 @@ class SessionService {
 
   /**
    * Check if a session is still active (Redis-cached for performance).
+   * Uses full session cache first, then falls back to simple active cache, then DB.
    */
   async isSessionActive(sessionId: string): Promise<boolean> {
-    // Redis cache check first
+    // Try full session cache first (richer data, longer TTL)
+    try {
+      const fullCached = await redis.get(fullSessionKey(sessionId));
+      if (fullCached) {
+        const data = JSON.parse(fullCached) as CachedSessionData;
+        return data.isActive;
+      }
+    } catch {
+      // Redis down — fall through
+    }
+
+    // Try simple active cache
     try {
       const cached = await redis.get(sessionCacheKey(sessionId));
       if (cached === '1') return true;
@@ -36,12 +73,23 @@ class SessionService {
 
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
-      select: { isActive: true },
+      select: { isActive: true, userId: true, userAgent: true, ipAddress: true, createdAt: true, lastSeenAt: true },
     });
     const active = !!session?.isActive;
 
-    // Cache the result (fire-and-forget)
+    // Cache the results (fire-and-forget)
     redis.set(sessionCacheKey(sessionId), active ? '1' : '0', 'EX', SESSION_CACHE_TTL).catch(() => {});
+    if (session) {
+      const sessionData: CachedSessionData = {
+        userId: session.userId,
+        userAgent: session.userAgent || undefined,
+        ipAddress: session.ipAddress || undefined,
+        isActive: session.isActive,
+        createdAt: session.createdAt.toISOString(),
+        lastSeenAt: session.lastSeenAt.toISOString(),
+      };
+      redis.set(fullSessionKey(sessionId), JSON.stringify(sessionData), 'EX', FULL_SESSION_TTL).catch(() => {});
+    }
 
     return active;
   }
@@ -62,11 +110,15 @@ class SessionService {
       data: { isActive: false },
     });
 
-    // Invalidate session Redis cache
+    // Invalidate all session Redis caches
     redis.del(sessionCacheKey(sessionId)).catch(() => {});
+    redis.del(fullSessionKey(sessionId)).catch(() => {});
 
     // Revoke linked refresh tokens and invalidate their caches
     await this.revokeLinkedTokens(sessionId);
+
+    // Publish Kafka event
+    publishEvent(KafkaTopics.SESSION_REVOKED, userId, { userId, sessionId }).catch(() => {});
   }
 
   /**
@@ -84,6 +136,7 @@ class SessionService {
     });
 
     redis.del(sessionCacheKey(sessionId)).catch(() => {});
+    redis.del(fullSessionKey(sessionId)).catch(() => {});
     await this.revokeLinkedTokens(sessionId);
   }
 
@@ -116,6 +169,7 @@ class SessionService {
     // Invalidate Redis cache for each session + revoke linked tokens
     for (const session of sessions) {
       redis.del(sessionCacheKey(session.id)).catch(() => {});
+      redis.del(fullSessionKey(session.id)).catch(() => {});
       await this.revokeLinkedTokens(session.id);
     }
   }

@@ -1,6 +1,7 @@
 import type { Job } from 'bullmq';
 import { Worker, UnrecoverableError } from 'bullmq';
 import { redis } from '../config/redis';
+import { env } from '../config/env';
 import logger from '../config/logger';
 import { WHATSAPP_QUEUE_NAME } from './whatsapp.queue';
 import { sendWhatsAppMessage } from '../services/whatsapp.service';
@@ -70,7 +71,7 @@ export const whatsappWorker = new Worker<WhatsAppJobData>(
   },
   {
     connection: redis,
-    concurrency: 10, // WhatsApp Cloud API has high throughput
+    concurrency: parseInt(env.BULLMQ_WHATSAPP_CONCURRENCY, 10),
     lockDuration: 60000,
     limiter: {
       max: 20,

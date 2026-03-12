@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import logger from './logger';
+import { redis } from './redis';
 
 interface FeatureFlagsConfig {
   [key: string]: boolean | string | number;
@@ -40,26 +41,48 @@ const defaultFlags: FeatureFlagsConfig = {
 let cachedFlags: FeatureFlagsConfig = { ...defaultFlags };
 let lastFetchTime = 0;
 const CACHE_TTL_MS = 60 * 1000; // 1 minute — short TTL so maintenance toggle takes effect quickly
+const REDIS_FF_KEY = 'ff:all';
+const REDIS_FF_TTL = 60; // 60s — matches in-memory TTL
 
 /**
  * Invalidate the feature flags cache so the next fetch hits Firebase directly.
  */
 export const invalidateCache = (): void => {
   lastFetchTime = 0;
+  redis.del(REDIS_FF_KEY).catch(() => {});
 };
 
 /**
- * Fetch feature flags from Firebase Remote Config
- * @param force - bypass cache and fetch fresh from Firebase
+ * Fetch feature flags from Firebase Remote Config.
+ * Layer 1: in-memory cache (fastest)
+ * Layer 2: Redis cache (survives restarts, shared across instances)
+ * Layer 3: Firebase Remote Config (source of truth)
+ * @param force - bypass both caches and fetch fresh from Firebase
  */
 export const fetchFeatureFlags = async (force = false): Promise<FeatureFlagsConfig> => {
   const now = Date.now();
 
-  // Return cached flags if still valid (unless force refresh)
+  // Layer 1: Return in-memory cached flags if still valid (unless force refresh)
   if (!force && now - lastFetchTime < CACHE_TTL_MS) {
     return cachedFlags;
   }
 
+  // Layer 2: Try Redis cache before hitting Firebase
+  if (!force) {
+    try {
+      const redisAll = await redis.get(REDIS_FF_KEY);
+      if (redisAll) {
+        const flags = JSON.parse(redisAll) as FeatureFlagsConfig;
+        cachedFlags = flags;
+        lastFetchTime = now;
+        return flags;
+      }
+    } catch {
+      // Redis unavailable — fall through to Firebase
+    }
+  }
+
+  // Layer 3: Fetch from Firebase Remote Config
   try {
     const remoteConfig = admin.remoteConfig();
     const template = await remoteConfig.getTemplate();
@@ -87,6 +110,9 @@ export const fetchFeatureFlags = async (force = false): Promise<FeatureFlagsConf
     cachedFlags = flags;
     lastFetchTime = now;
     logger.info('Feature flags refreshed from Firebase Remote Config');
+
+    // Cache entire flags object in Redis (fire-and-forget)
+    redis.set(REDIS_FF_KEY, JSON.stringify(flags), 'EX', REDIS_FF_TTL).catch(() => {});
 
     return flags;
   } catch (error) {

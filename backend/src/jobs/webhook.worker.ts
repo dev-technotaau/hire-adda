@@ -1,6 +1,7 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
 import { redis } from '../config/redis';
+import { env } from '../config/env';
 import logger from '../config/logger';
 import prisma from '../config/prisma';
 import { WEBHOOK_QUEUE_NAME } from './webhook.queue';
@@ -122,7 +123,7 @@ export const webhookWorker = new Worker<WebhookJobData>(
   },
   {
     connection: redis,
-    concurrency: 5,
+    concurrency: parseInt(env.BULLMQ_WEBHOOK_CONCURRENCY, 10),
     lockDuration: 30000,
     limiter: {
       max: 20,

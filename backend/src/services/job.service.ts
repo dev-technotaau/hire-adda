@@ -25,6 +25,10 @@ import { trackEvent, getClientId } from './analytics.service';
 import { notificationService } from './notification.service';
 import { moderationService } from './moderation.service';
 import { talentMatchingService } from './talent-matching.service';
+import { withLock } from '../utils/distributed-lock';
+import { addReindexJob } from '../jobs/es-reindex.queue';
+import redis from '../config/redis';
+import { trackJobView } from '../utils/trending';
 
 interface ScreeningQuestionInput {
   question: string;
@@ -233,29 +237,20 @@ export class JobService {
       });
     }
 
-    // INDEXING: Sync with Elasticsearch
+    // INDEXING: Queue ES reindex (async via BullMQ)
+    addReindexJob({ indexType: 'job', documentId: job.id, action: 'index' }).catch((err: any) =>
+      logger.error('Failed to queue ES reindex for job', err)
+    );
+
+    // Fetch full job for Cloud Talent sync + Kafka enrichment
     const jobForIndex = await prisma.jobPost.findUnique({
       where: { id: job.id },
       include: {
         company: {
-          select: {
-            id: true,
-            companyName: true,
-            logo: true,
-            industry: true,
-            companyType: true,
-            companySize: true,
-            isVerified: true,
-          },
+          select: { id: true, companyName: true },
         },
       },
     });
-
-    if (jobForIndex) {
-      searchService
-        .indexJob(jobForIndex)
-        .catch((err: any) => logger.error('Failed to index job', err));
-    }
 
     // Trigger geocoding if location provided
     if (data.location) {
@@ -377,10 +372,11 @@ export class JobService {
       throw new AppError('Job not found', 404);
     }
 
-    await prisma.jobPost.update({
-      where: { id },
-      data: { views: { increment: 1 } },
-    });
+    // Increment view counter in Redis (batch-flushed to DB every 5 min)
+    redis.incr(`job:views:${id}`).catch(() => {});
+
+    // Track in trending sorted set (fire-and-forget)
+    trackJobView(id).catch(() => {});
 
     const _hiredCount = await prisma.jobApplication.count({
       where: { jobId: id, status: 'HIRED' },
@@ -814,78 +810,87 @@ export class JobService {
    * Update Application Status (Employer)
    */
   async updateApplicationStatus(userId: string, applicationId: string, status: ApplicationStatus, rejectionReason?: string) {
-    const application = await prisma.jobApplication.findUnique({
-      where: { id: applicationId },
-      include: { job: { include: { company: true } } },
-    });
-
-    if (!application) {
-      throw new AppError('Application not found', 404);
-    }
-
-    if (application.job.company.userId !== userId) {
-      throw new AppError('Not authorized to update this application', 403);
-    }
-
-    const updated = await prisma.jobApplication.update({
-      where: { id: applicationId },
-      data: {
-        status,
-        ...(status === 'REJECTED' && rejectionReason ? { rejectionReason } : {}),
-        ...(status === 'VIEWED' && !application.viewedAt ? { viewedAt: new Date() } : {}),
-        ...(status === 'SELECTED' ? { selectedAt: new Date() } : {}),
-        ...(status === 'OFFERED' ? { offeredAt: new Date() } : {}),
-        ...(status === 'HIRED' ? { hiredAt: new Date() } : {}),
-      },
-    });
-
-    // Publish Kafka event
-    publishEvent(KafkaTopics.APPLICATION_STATUS_CHANGED, applicationId, {
-      applicationId,
-      status,
-      jobId: application.job.id,
-      candidateId: application.candidateId,
-    });
-
-    // Notify Candidate (multi-channel: in_app, fcm, web_push, email, whatsapp)
-    const appWithCandidate = await prisma.jobApplication.findUnique({
-      where: { id: applicationId },
-      include: { candidate: true, job: { include: { company: true } } },
-    });
-
-    if (appWithCandidate) {
-      void import('./notification.service')
-        .then(({ notificationService }) => {
-          return notificationService.notifyApplicationStatusChange(
-            appWithCandidate.candidate.userId,
-            appWithCandidate.job.title,
-            appWithCandidate.job.company.companyName,
-            status,
-            appWithCandidate.job.id
-          );
-        })
-        .catch((err: any) => logger.error('Failed to send status notification', err));
-    }
-
-    // Check if all openings are now filled and notify employer
-    if (status === 'HIRED' && application.job.numberOfOpenings) {
-      const hiredCount = await prisma.jobApplication.count({
-        where: { jobId: application.job.id, status: 'HIRED' },
+    // Distributed lock prevents concurrent status updates on the same application
+    const result = await withLock(`lock:app:${applicationId}`, 30, async () => {
+      const application = await prisma.jobApplication.findUnique({
+        where: { id: applicationId },
+        include: { job: { include: { company: true } } },
       });
-      if (hiredCount >= application.job.numberOfOpenings) {
-        notificationService
-          .notifyAllOpeningsFilled(
-            application.job.company.userId,
-            application.job.title,
-            application.job.id,
-            hiredCount,
-            application.job.numberOfOpenings
-          )
-          .catch(() => {});
+
+      if (!application) {
+        throw new AppError('Application not found', 404);
       }
+
+      if (application.job.company.userId !== userId) {
+        throw new AppError('Not authorized to update this application', 403);
+      }
+
+      const updated = await prisma.jobApplication.update({
+        where: { id: applicationId },
+        data: {
+          status,
+          ...(status === 'REJECTED' && rejectionReason ? { rejectionReason } : {}),
+          ...(status === 'VIEWED' && !application.viewedAt ? { viewedAt: new Date() } : {}),
+          ...(status === 'SELECTED' ? { selectedAt: new Date() } : {}),
+          ...(status === 'OFFERED' ? { offeredAt: new Date() } : {}),
+          ...(status === 'HIRED' ? { hiredAt: new Date() } : {}),
+        },
+      });
+
+      // Publish Kafka event
+      publishEvent(KafkaTopics.APPLICATION_STATUS_CHANGED, applicationId, {
+        applicationId,
+        status,
+        jobId: application.job.id,
+        candidateId: application.candidateId,
+      });
+
+      // Notify Candidate (multi-channel: in_app, fcm, web_push, email, whatsapp)
+      const appWithCandidate = await prisma.jobApplication.findUnique({
+        where: { id: applicationId },
+        include: { candidate: true, job: { include: { company: true } } },
+      });
+
+      if (appWithCandidate) {
+        void import('./notification.service')
+          .then(({ notificationService: ns }) => {
+            return ns.notifyApplicationStatusChange(
+              appWithCandidate.candidate.userId,
+              appWithCandidate.job.title,
+              appWithCandidate.job.company.companyName,
+              status,
+              appWithCandidate.job.id
+            );
+          })
+          .catch((err: any) => logger.error('Failed to send status notification', err));
+      }
+
+      // Check if all openings are now filled and notify employer
+      if (status === 'HIRED' && application.job.numberOfOpenings) {
+        const hiredCount = await prisma.jobApplication.count({
+          where: { jobId: application.job.id, status: 'HIRED' },
+        });
+        if (hiredCount >= application.job.numberOfOpenings) {
+          notificationService
+            .notifyAllOpeningsFilled(
+              application.job.company.userId,
+              application.job.title,
+              application.job.id,
+              hiredCount,
+              application.job.numberOfOpenings
+            )
+            .catch(() => {});
+        }
+      }
+
+      return updated;
+    });
+
+    if (result === null) {
+      throw new AppError('Application is currently being updated by another request', 409, 'RESOURCE_LOCKED');
     }
 
-    return updated;
+    return result;
   }
 
   /**
@@ -1124,28 +1129,20 @@ export class JobService {
       }
     }
 
-    // Re-index in ES
+    // Re-index in ES (async via BullMQ)
+    addReindexJob({ indexType: 'job', documentId: jobId, action: 'index' }).catch((err) =>
+      logger.error('Failed to queue ES reindex for job update', err)
+    );
+
+    // Fetch full job for Cloud Talent sync + Kafka enrichment
     const jobForIndex = await prisma.jobPost.findUnique({
       where: { id: jobId },
       include: {
         company: {
-          select: {
-            id: true,
-            companyName: true,
-            logo: true,
-            industry: true,
-            companyType: true,
-            companySize: true,
-            isVerified: true,
-          },
+          select: { id: true, companyName: true },
         },
       },
     });
-    if (jobForIndex) {
-      searchService
-        .indexJob(jobForIndex)
-        .catch((err) => logger.error('Failed to re-index job', err));
-    }
 
     // Trigger geocoding if location changed
     if (data.location) {
@@ -1208,10 +1205,10 @@ export class JobService {
       data: { status: JobStatus.CLOSED },
     });
 
-    // Remove from ES
-    searchService
-      .deleteJob(jobId)
-      .catch((err) => logger.error('Failed to delete job from ES', err));
+    // Remove from ES (async via BullMQ)
+    addReindexJob({ indexType: 'job', documentId: jobId, action: 'delete' }).catch((err) =>
+      logger.error('Failed to queue ES delete for job', err)
+    );
 
     publishEvent(KafkaTopics.JOB_CLOSED, jobId, {
       jobId,
@@ -1368,55 +1365,65 @@ export class JobService {
     });
     if (!candidate) throw new AppError('Candidate not found', 404);
 
-    const existing = await prisma.jobApplication.findUnique({
-      where: { jobId_candidateId: { jobId, candidateId: candidateProfileId } },
+    // Lock the application to prevent concurrent shortlist/select race conditions
+    const lockKey = `lock:app:${jobId}:${candidateProfileId}`;
+    const result = await withLock(lockKey, 30, async () => {
+      const existing = await prisma.jobApplication.findUnique({
+        where: { jobId_candidateId: { jobId, candidateId: candidateProfileId } },
+      });
+
+      let application;
+      if (existing) {
+        if (
+          ['SHORTLISTED', 'SELECTED', 'INTERVIEW_SCHEDULED', 'OFFERED', 'HIRED'].includes(
+            existing.status
+          )
+        ) {
+          throw new AppError(
+            `Candidate is already ${existing.status.toLowerCase().replace('_', ' ')} for this job`,
+            400
+          );
+        }
+        application = await prisma.jobApplication.update({
+          where: { id: existing.id },
+          data: { status: ApplicationStatus.SHORTLISTED },
+        });
+      } else {
+        application = await prisma.jobApplication.create({
+          data: {
+            jobId,
+            candidateId: candidateProfileId,
+            status: ApplicationStatus.SHORTLISTED,
+            source: 'EMPLOYER_SHORTLISTED',
+          },
+        });
+      }
+
+      publishEvent(KafkaTopics.APPLICATION_STATUS_CHANGED, application.id, {
+        applicationId: application.id,
+        status: 'SHORTLISTED',
+        jobId,
+        candidateId: candidateProfileId,
+      });
+
+      notificationService
+        .notifyApplicationStatusChange(
+          candidate.userId,
+          job.title,
+          job.company.companyName,
+          'SHORTLISTED',
+          jobId
+        )
+        .catch((err: any) => logger.error('Failed to send shortlist notification', err));
+
+      return application;
     });
 
-    let application;
-    if (existing) {
-      if (
-        ['SHORTLISTED', 'SELECTED', 'INTERVIEW_SCHEDULED', 'OFFERED', 'HIRED'].includes(
-          existing.status
-        )
-      ) {
-        throw new AppError(
-          `Candidate is already ${existing.status.toLowerCase().replace('_', ' ')} for this job`,
-          400
-        );
-      }
-      application = await prisma.jobApplication.update({
-        where: { id: existing.id },
-        data: { status: ApplicationStatus.SHORTLISTED },
-      });
-    } else {
-      application = await prisma.jobApplication.create({
-        data: {
-          jobId,
-          candidateId: candidateProfileId,
-          status: ApplicationStatus.SHORTLISTED,
-          source: 'EMPLOYER_SHORTLISTED',
-        },
-      });
+    if (result === null) {
+      throw new AppError('Application is currently being updated by another request', 409, 'RESOURCE_LOCKED');
     }
 
-    publishEvent(KafkaTopics.APPLICATION_STATUS_CHANGED, application.id, {
-      applicationId: application.id,
-      status: 'SHORTLISTED',
-      jobId,
-      candidateId: candidateProfileId,
-    });
-
-    notificationService
-      .notifyApplicationStatusChange(
-        candidate.userId,
-        job.title,
-        job.company.companyName,
-        'SHORTLISTED',
-        jobId
-      )
-      .catch((err: any) => logger.error('Failed to send shortlist notification', err));
-
-    return application;
+    return result;
   }
 
   /**
@@ -1435,52 +1442,62 @@ export class JobService {
     });
     if (!candidate) throw new AppError('Candidate not found', 404);
 
-    const existing = await prisma.jobApplication.findUnique({
-      where: { jobId_candidateId: { jobId, candidateId: candidateProfileId } },
+    // Lock the application to prevent concurrent select/shortlist race conditions
+    const lockKey = `lock:app:${jobId}:${candidateProfileId}`;
+    const result = await withLock(lockKey, 30, async () => {
+      const existing = await prisma.jobApplication.findUnique({
+        where: { jobId_candidateId: { jobId, candidateId: candidateProfileId } },
+      });
+
+      let application;
+      if (existing) {
+        if (['SELECTED', 'INTERVIEW_SCHEDULED', 'OFFERED', 'HIRED'].includes(existing.status)) {
+          throw new AppError(
+            `Candidate is already ${existing.status.toLowerCase().replace('_', ' ')} for this job`,
+            400
+          );
+        }
+        application = await prisma.jobApplication.update({
+          where: { id: existing.id },
+          data: { status: ApplicationStatus.SELECTED, selectedAt: new Date() },
+        });
+      } else {
+        application = await prisma.jobApplication.create({
+          data: {
+            jobId,
+            candidateId: candidateProfileId,
+            status: ApplicationStatus.SELECTED,
+            selectedAt: new Date(),
+            source: 'EMPLOYER_SELECTED',
+          },
+        });
+      }
+
+      publishEvent(KafkaTopics.APPLICATION_STATUS_CHANGED, application.id, {
+        applicationId: application.id,
+        status: 'SELECTED',
+        jobId,
+        candidateId: candidateProfileId,
+      });
+
+      notificationService
+        .notifyApplicationStatusChange(
+          candidate.userId,
+          job.title,
+          job.company.companyName,
+          'SELECTED',
+          jobId
+        )
+        .catch((err: any) => logger.error('Failed to send select notification', err));
+
+      return application;
     });
 
-    let application;
-    if (existing) {
-      if (['SELECTED', 'INTERVIEW_SCHEDULED', 'OFFERED', 'HIRED'].includes(existing.status)) {
-        throw new AppError(
-          `Candidate is already ${existing.status.toLowerCase().replace('_', ' ')} for this job`,
-          400
-        );
-      }
-      application = await prisma.jobApplication.update({
-        where: { id: existing.id },
-        data: { status: ApplicationStatus.SELECTED, selectedAt: new Date() },
-      });
-    } else {
-      application = await prisma.jobApplication.create({
-        data: {
-          jobId,
-          candidateId: candidateProfileId,
-          status: ApplicationStatus.SELECTED,
-          selectedAt: new Date(),
-          source: 'EMPLOYER_SELECTED',
-        },
-      });
+    if (result === null) {
+      throw new AppError('Application is currently being updated by another request', 409, 'RESOURCE_LOCKED');
     }
 
-    publishEvent(KafkaTopics.APPLICATION_STATUS_CHANGED, application.id, {
-      applicationId: application.id,
-      status: 'SELECTED',
-      jobId,
-      candidateId: candidateProfileId,
-    });
-
-    notificationService
-      .notifyApplicationStatusChange(
-        candidate.userId,
-        job.title,
-        job.company.companyName,
-        'SELECTED',
-        jobId
-      )
-      .catch((err: any) => logger.error('Failed to send select notification', err));
-
-    return application;
+    return result;
   }
 
   /**

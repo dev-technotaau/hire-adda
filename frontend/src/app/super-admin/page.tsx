@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import {
   Shield,
@@ -26,6 +26,15 @@ import {
   Zap,
   MapPin,
   Code,
+  RefreshCw,
+  Play,
+  Database,
+  Wifi,
+  Search,
+  Eye,
+  RotateCcw,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -42,7 +51,7 @@ import { useAuth } from '@/hooks/use-auth';
 import Tooltip from '@/components/ui/Tooltip';
 import api from '@/lib/api';
 import { API } from '@/constants/api';
-import type { RecentActivity } from '@/types/admin';
+import type { RecentActivity, KafkaDlqMessage, TrendingData, OnlineStats, HealthReadyResponse, KafkaLagInfo } from '@/types/admin';
 
 interface KafkaEvent {
   eventType: string;
@@ -97,6 +106,14 @@ function formatTimestamp(ts: string): string {
 
 export default function SuperAdminDashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // ── DLQ & Replay State ──
+  const [dlqPage, setDlqPage] = useState(1);
+  const [dlqFilter, setDlqFilter] = useState<'all' | 'pending' | 'replayed'>('all');
+  const [replayStart, setReplayStart] = useState('');
+  const [replayEnd, setReplayEnd] = useState('');
+  const [replayEventTypes, setReplayEventTypes] = useState('');
 
   // ── Core Stats (comprehensive) ──
   const { data: statsData, isLoading } = useQuery({
@@ -164,6 +181,56 @@ export default function SuperAdminDashboard() {
     refetchInterval: 60000,
   });
 
+  // ── Online Stats ──
+  const { data: onlineStatsData } = useQuery({
+    queryKey: ['admin', 'online-stats'],
+    queryFn: () => adminService.getOnlineStats(),
+    refetchInterval: 30000,
+  });
+
+  // ── Trending ──
+  const { data: trendingData } = useQuery({
+    queryKey: ['admin', 'trending'],
+    queryFn: () => adminService.getTrending(),
+    refetchInterval: 60000,
+  });
+
+  // ── Kafka DLQ ──
+  const { data: dlqData, isLoading: dlqLoading } = useQuery({
+    queryKey: ['admin', 'kafka-dlq', dlqPage, dlqFilter],
+    queryFn: () =>
+      adminService.getDlqMessages(
+        dlqPage,
+        10,
+        dlqFilter === 'all' ? undefined : dlqFilter === 'replayed',
+      ),
+  });
+
+  // ── Health Ready (Kafka Lag) ──
+  const { data: healthReadyData } = useQuery({
+    queryKey: ['admin', 'health-ready'],
+    queryFn: () => adminService.getHealthReady(),
+    refetchInterval: 60000,
+  });
+
+  // ── DLQ Replay Mutation ──
+  const replayDlqMutation = useMutation({
+    mutationFn: (id: string) => adminService.replayDlqMessage(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'kafka-dlq'] });
+    },
+  });
+
+  // ── Event Replay Mutation ──
+  const replayEventsMutation = useMutation({
+    mutationFn: () =>
+      adminService.replayEvents(
+        replayStart,
+        replayEnd,
+        replayEventTypes ? replayEventTypes.split(',').map((s) => s.trim()) : undefined,
+      ),
+  });
+
   const stats = statsData?.data;
   const appStats = appStatsData?.data;
   const liveCounters = liveCountersData?.data;
@@ -172,6 +239,12 @@ export default function SuperAdminDashboard() {
   const trendData = analyticsData?.data ?? [];
   const activity = activityData?.data as RecentActivity | undefined;
   const healthStatus = healthData?.data ?? healthData;
+  const onlineStats = onlineStatsData?.data as OnlineStats | undefined;
+  const trending = trendingData?.data as TrendingData | undefined;
+  const dlqMessages = (dlqData as unknown as { data?: { items?: KafkaDlqMessage[] } })?.data?.items ?? [];
+  const dlqTotal = (dlqData as unknown as { data?: { total?: number } })?.data?.total ?? 0;
+  const healthReady = healthReadyData as HealthReadyResponse | undefined;
+  const kafkaLag = healthReady?.checks?.kafka as KafkaLagInfo | undefined;
 
   // ── Pipeline Bottleneck Detection ──
   const bottleneck = useMemo(() => {
@@ -466,6 +539,13 @@ export default function SuperAdminDashboard() {
       href: ROUTES.ADMIN.REPORTS,
       color: 'text-[var(--success)] bg-[var(--success-light)]',
     },
+    {
+      label: 'Queue Monitor',
+      desc: 'BullMQ job queues dashboard',
+      icon: Server,
+      href: `${process.env.NEXT_PUBLIC_API_URL}/admin/queues`,
+      color: 'text-[var(--text-muted)] bg-[var(--bg-tertiary)]',
+    },
   ];
 
   if (isLoading) {
@@ -501,6 +581,14 @@ export default function SuperAdminDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {onlineStats && (
+              <div className="flex items-center gap-1.5 rounded-lg bg-[var(--success-light)] px-3 py-1.5">
+                <Wifi className="h-4 w-4 text-[var(--success)]" />
+                <span className="text-sm font-medium text-[var(--success)]">
+                  {onlineStats.onlineUsers} online
+                </span>
+              </div>
+            )}
             {(stats?.pendingVerifications ?? 0) > 0 && (
               <Tooltip content="View pending verifications">
                 <Link
@@ -768,6 +856,76 @@ export default function SuperAdminDashboard() {
               ))}
             </div>
           </Card>
+        )}
+
+        {/* ── Trending Jobs & Searches ── */}
+        {trending && (trending.trendingJobs?.length > 0 || trending.trendingSearches?.length > 0) && (
+          <div className="grid gap-6 lg:grid-cols-2">
+            {trending.trendingJobs?.length > 0 && (
+              <Card
+                header={
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-[var(--warning)]" />
+                    <h2 className="text-lg font-semibold text-[var(--text)]">Trending Jobs</h2>
+                    <span className="ml-auto text-xs text-[var(--text-muted)]">Last 24h</span>
+                  </div>
+                }
+              >
+                <div className="space-y-2">
+                  {trending.trendingJobs.slice(0, 8).map((job, i) => (
+                    <div
+                      key={job.id}
+                      className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] px-3 py-2"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs font-bold text-[var(--text-muted)]">#{i + 1}</span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-[var(--text)]">
+                            {job.title}
+                          </p>
+                          <p className="text-xs text-[var(--text-muted)]">
+                            {job.company.companyName} · {job.location}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                        <Eye className="h-3.5 w-3.5" />
+                        {job.viewCount}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+            {trending.trendingSearches?.length > 0 && (
+              <Card
+                header={
+                  <div className="flex items-center gap-2">
+                    <Search className="h-5 w-5 text-[var(--info)]" />
+                    <h2 className="text-lg font-semibold text-[var(--text)]">Trending Searches</h2>
+                    <span className="ml-auto text-xs text-[var(--text-muted)]">Last 24h</span>
+                  </div>
+                }
+              >
+                <div className="space-y-2">
+                  {trending.trendingSearches.slice(0, 10).map((s, i) => (
+                    <div
+                      key={s.query}
+                      className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] px-3 py-2"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-[var(--text-muted)]">#{i + 1}</span>
+                        <span className="text-sm font-medium text-[var(--text)]">{s.query}</span>
+                      </div>
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {Math.round(s.score)} searches
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
         )}
 
         {/* ── Charts Row: Platform Trend + Application Volume ── */}
@@ -1178,7 +1336,7 @@ export default function SuperAdminDashboard() {
           </Card>
         </div>
 
-        {/* ── System Health ── */}
+        {/* ── System Health (Enhanced with Kafka Lag) ── */}
         <Card
           header={
             <div className="flex items-center gap-2">
@@ -1221,6 +1379,258 @@ export default function SuperAdminDashboard() {
               </div>
             ))}
           </div>
+
+          {/* Kafka Lag Details */}
+          {kafkaLag && (
+            <div className="mt-4 border-t border-[var(--border)] pt-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Database className="h-4 w-4 text-[var(--text-muted)]" />
+                <h3 className="text-sm font-semibold text-[var(--text)]">Kafka Consumer Lag</h3>
+                <span
+                  className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    kafkaLag.healthy
+                      ? 'bg-[var(--success-light)] text-[var(--success)]'
+                      : 'bg-[var(--error-light)] text-[var(--error)]'
+                  }`}
+                >
+                  {kafkaLag.healthy ? 'Healthy' : 'Unhealthy'}
+                </span>
+                {!kafkaLag.connected && (
+                  <span className="rounded-full bg-[var(--error-light)] px-2 py-0.5 text-xs font-medium text-[var(--error)]">
+                    Disconnected
+                  </span>
+                )}
+              </div>
+              {kafkaLag.lag && Object.keys(kafkaLag.lag).length > 0 ? (
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {Object.entries(kafkaLag.lag).map(([topic, lag]) => (
+                    <div
+                      key={topic}
+                      className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] px-3 py-2"
+                    >
+                      <span className="truncate text-xs text-[var(--text-muted)]">{topic}</span>
+                      <span
+                        className={`ml-2 text-sm font-bold ${
+                          lag > 100
+                            ? 'text-[var(--error)]'
+                            : lag > 10
+                              ? 'text-[var(--warning)]'
+                              : 'text-[var(--success)]'
+                        }`}
+                      >
+                        {lag}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between rounded-lg bg-[var(--bg-tertiary)] px-3 py-2">
+                    <span className="text-xs font-medium text-[var(--text)]">Total Lag</span>
+                    <span
+                      className={`text-sm font-bold ${
+                        kafkaLag.totalLag > 500
+                          ? 'text-[var(--error)]'
+                          : kafkaLag.totalLag > 50
+                            ? 'text-[var(--warning)]'
+                            : 'text-[var(--success)]'
+                      }`}
+                    >
+                      {kafkaLag.totalLag}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--text-muted)]">
+                  {kafkaLag.connected ? 'No lag data available' : 'Kafka not connected'}
+                </p>
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* ── Kafka DLQ Viewer ── */}
+        <Card
+          header={
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-[var(--error)]" />
+              <h2 className="text-lg font-semibold text-[var(--text)]">
+                Dead Letter Queue
+              </h2>
+              {dlqTotal > 0 && (
+                <span className="ml-2 rounded-full bg-[var(--error-light)] px-2 py-0.5 text-xs font-medium text-[var(--error)]">
+                  {dlqTotal} messages
+                </span>
+              )}
+              <div className="ml-auto flex items-center gap-2">
+                {(['all', 'pending', 'replayed'] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => { setDlqFilter(f); setDlqPage(1); }}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                      dlqFilter === f
+                        ? 'bg-primary text-white'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]'
+                    }`}
+                  >
+                    {f === 'all' ? 'All' : f === 'pending' ? 'Pending' : 'Replayed'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          }
+        >
+          {dlqLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} variant="rect" height={48} />
+              ))}
+            </div>
+          ) : dlqMessages.length > 0 ? (
+            <div className="space-y-2">
+              {dlqMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="rounded-md bg-[var(--error-light)] px-2 py-0.5 text-xs font-medium text-[var(--error)]">
+                        {msg.originalTopic}
+                      </span>
+                      <span className="text-xs text-[var(--text-muted)]">
+                        P{msg.partition}:O{msg.offset}
+                      </span>
+                      {msg.replayed ? (
+                        <span className="flex items-center gap-1 text-xs text-[var(--success)]">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Replayed
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-xs text-[var(--warning)]">
+                          <XCircle className="h-3.5 w-3.5" />
+                          Pending
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {formatTimestamp(msg.timestamp)}
+                      </span>
+                      {!msg.replayed && (
+                        <button
+                          onClick={() => replayDlqMutation.mutate(msg.id)}
+                          disabled={replayDlqMutation.isPending}
+                          className="flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Replay
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {msg.error && (
+                    <p className="mt-2 truncate text-xs text-[var(--error)]">{msg.error}</p>
+                  )}
+                </div>
+              ))}
+              {/* DLQ Pagination */}
+              {dlqTotal > 10 && (
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs text-[var(--text-muted)]">
+                    Page {dlqPage} of {Math.ceil(dlqTotal / 10)}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setDlqPage((p) => Math.max(1, p - 1))}
+                      disabled={dlqPage <= 1}
+                      className="rounded-lg bg-[var(--bg-secondary)] px-3 py-1 text-xs text-[var(--text)] disabled:opacity-50"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      onClick={() => setDlqPage((p) => p + 1)}
+                      disabled={dlqPage >= Math.ceil(dlqTotal / 10)}
+                      className="rounded-lg bg-[var(--bg-secondary)] px-3 py-1 text-xs text-[var(--text)] disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex h-32 items-center justify-center text-sm text-[var(--text-muted)]">
+              No dead letter messages
+            </div>
+          )}
+        </Card>
+
+        {/* ── Event Replay ── */}
+        <Card
+          header={
+            <div className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-[var(--info)]" />
+              <h2 className="text-lg font-semibold text-[var(--text)]">Event Replay</h2>
+              <span className="ml-auto text-xs text-[var(--text-muted)]">
+                Re-publish stored Kafka events by time range
+              </span>
+            </div>
+          }
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                Start Time
+              </label>
+              <input
+                type="datetime-local"
+                value={replayStart}
+                onChange={(e) => setReplayStart(e.target.value)}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)]"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                End Time
+              </label>
+              <input
+                type="datetime-local"
+                value={replayEnd}
+                onChange={(e) => setReplayEnd(e.target.value)}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)]"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
+                Event Types (comma-separated, optional)
+              </label>
+              <input
+                type="text"
+                value={replayEventTypes}
+                onChange={(e) => setReplayEventTypes(e.target.value)}
+                placeholder="e.g. JOB_CREATED, USER_REGISTERED"
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)]"
+              />
+            </div>
+            <button
+              onClick={() => replayEventsMutation.mutate()}
+              disabled={!replayStart || !replayEnd || replayEventsMutation.isPending}
+              className="flex items-center gap-2 rounded-lg bg-[var(--info)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--info)]/90 disabled:opacity-50"
+            >
+              <Play className="h-4 w-4" />
+              {replayEventsMutation.isPending ? 'Replaying...' : 'Replay Events'}
+            </button>
+          </div>
+          {replayEventsMutation.isSuccess && (
+            <div className="mt-3 rounded-lg bg-[var(--success-light)] p-3 text-sm text-[var(--success)]">
+              Successfully replayed{' '}
+              {(replayEventsMutation.data as { data?: { replayed?: number } })?.data?.replayed ?? 0}{' '}
+              events
+            </div>
+          )}
+          {replayEventsMutation.isError && (
+            <div className="mt-3 rounded-lg bg-[var(--error-light)] p-3 text-sm text-[var(--error)]">
+              Replay failed. Please check the time range and try again.
+            </div>
+          )}
         </Card>
 
         {/* ── Quick Actions ── */}

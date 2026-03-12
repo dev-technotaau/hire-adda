@@ -1,5 +1,8 @@
 import { Role } from '@prisma/client';
 import { Router } from 'express';
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
 import * as adminController from '../controllers/admin.controller';
 import * as emailPreviewController from '../controllers/email-preview.controller';
 import { audit } from '../middleware/audit';
@@ -17,12 +20,55 @@ import { firestoreCountersService } from '../services/firestore-counters.service
 import { kafkaEventsService } from '../services/kafka-events.service';
 import { validate } from '../validators/validate';
 
+// Import all BullMQ queues for Bull Board monitoring
+import { emailQueue } from '../jobs/email.queue';
+import { smsQueue } from '../jobs/sms.queue';
+import { fcmQueue } from '../jobs/fcm.queue';
+import { webPushQueue } from '../jobs/web-push.queue';
+import { inAppQueue } from '../jobs/in-app.queue';
+import { whatsappQueue } from '../jobs/whatsapp.queue';
+import { webhookQueue } from '../jobs/webhook.queue';
+import { matchingQueue } from '../jobs/matching.queue';
+import { geocodingQueue } from '../jobs/geocoding.queue';
+import { resumeParseQueue } from '../jobs/resume-parse.queue';
+import { esReindexQueue } from '../jobs/es-reindex.queue';
+import { schedulerQueue } from '../jobs/scheduler.queue';
+import { onboardingDripQueue } from '../jobs/onboarding-drip.queue';
+import { imageProcessingQueue } from '../jobs/image-processing.queue';
+
+// Bull Board setup
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath('/api/v1/admin/queues');
+
+createBullBoard({
+  queues: [
+    new BullMQAdapter(emailQueue),
+    new BullMQAdapter(smsQueue),
+    new BullMQAdapter(fcmQueue),
+    new BullMQAdapter(webPushQueue),
+    new BullMQAdapter(inAppQueue),
+    new BullMQAdapter(whatsappQueue),
+    new BullMQAdapter(webhookQueue),
+    new BullMQAdapter(matchingQueue),
+    new BullMQAdapter(geocodingQueue),
+    new BullMQAdapter(resumeParseQueue),
+    new BullMQAdapter(esReindexQueue),
+    new BullMQAdapter(schedulerQueue),
+    new BullMQAdapter(onboardingDripQueue),
+    new BullMQAdapter(imageProcessingQueue),
+  ],
+  serverAdapter,
+});
+
 const router = Router();
 
 // Protect all admin routes
 router.use(protect);
 router.use(restrictTo(Role.ADMIN, Role.SUPER_ADMIN));
 router.use(requireMfaEnabled);
+
+// Bull Board queue monitor dashboard (SUPER_ADMIN only)
+router.use('/queues', restrictTo(Role.SUPER_ADMIN), serverAdapter.getRouter());
 
 router.get('/stats', adminController.getDashboardStats);
 router.get('/activity', adminController.getRecentActivity);
@@ -65,10 +111,55 @@ router.post('/email-templates/preview', emailPreviewController.previewTemplate);
 router.post('/email-templates/test', emailPreviewController.sendTestEmail);
 
 // Kafka event viewer
-router.get('/kafka-events', (_req, res) => {
+router.get('/kafka-events', async (_req, res) => {
   const limit = Number(_req.query.limit) || 20;
-  const events = kafkaEventsService.getRecentEvents(limit);
+  const events = await kafkaEventsService.getRecentEvents(limit);
   res.status(200).json({ status: 'success', data: events });
+});
+
+// Kafka DLQ messages (SUPER_ADMIN only)
+router.get('/kafka-dlq', async (req, res, next) => {
+  try {
+    const { kafkaReplayService } = await import('../services/kafka-replay.service');
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const replayed = req.query.replayed === 'true' ? true : req.query.replayed === 'false' ? false : undefined;
+    const data = await kafkaReplayService.getDlqMessages(page, limit, replayed);
+    res.status(200).json({ status: 'success', data });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Replay a specific DLQ message (SUPER_ADMIN only)
+router.post('/kafka-dlq/:id/replay', async (req, res, next) => {
+  try {
+    const { kafkaReplayService } = await import('../services/kafka-replay.service');
+    await kafkaReplayService.replayDlqMessage(req.params.id);
+    res.status(200).json({ status: 'success', message: 'DLQ message replayed' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Replay events by time range (SUPER_ADMIN only)
+router.post('/kafka-replay', async (req, res, next) => {
+  try {
+    const { kafkaReplayService } = await import('../services/kafka-replay.service');
+    const { startTime, endTime, eventTypes } = req.body;
+    if (!startTime || !endTime) {
+      res.status(400).json({ status: 'error', error: { message: 'startTime and endTime required' } });
+      return;
+    }
+    const result = await kafkaReplayService.replayEvents(
+      new Date(startTime),
+      new Date(endTime),
+      eventTypes
+    );
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Firestore live counters
@@ -97,6 +188,10 @@ router.delete(
   audit('CANCEL_EXPORT_JOB', 'ExportJob'),
   adminController.cancelExportJob
 );
+
+// Online users & trending
+router.get('/online-stats', adminController.getOnlineStats);
+router.get('/trending', adminController.getTrending);
 
 // Note: Verification routes are under /verifications/pending and /verifications/:id/review
 // which are also admin restricted.

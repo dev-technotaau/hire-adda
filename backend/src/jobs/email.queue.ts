@@ -23,13 +23,16 @@ emailQueue.on('error', (err) => {
 
 logger.info(`Email Queue initialized: ${EMAIL_QUEUE_NAME}`);
 
-export async function addEmailJob(data: {
-  to: string;
-  subject: string;
-  template?: string;
-  html?: string;
-  text?: string;
-  data?: Record<string, any>;
-}) {
-  return emailQueue.add('send-email', data);
+export async function addEmailJob(
+  data: {
+    to: string;
+    subject: string;
+    template?: string;
+    html?: string;
+    text?: string;
+    data?: Record<string, any>;
+  },
+  priority?: number
+) {
+  return emailQueue.add('send-email', data, priority ? { priority } : {});
 }

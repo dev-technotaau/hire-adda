@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import elasticClient from '../config/elasticsearch';
 import logger from '../config/logger';
 import { ELASTIC_INDICES, JOB_STATUS, SUGGESTION_CATEGORIES } from '../constants';
@@ -6,8 +7,12 @@ import { prisma } from '../config/prisma';
 import { JobStatus } from '@prisma/client';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { isFeatureEnabled } from '../config/feature-flags';
+import { publishEvent, KafkaTopics } from '../kafka/producer';
+import { trackSearch } from '../utils/trending';
 
 const tracer = trace.getTracer('search-service');
+const ES_CACHE_TTL = 30; // 30 seconds
+const ES_CACHE_PREFIX = 'es:search:';
 
 // ─── Static Suggestion Data (used when ES has few or no matches) ────────────
 
@@ -1790,6 +1795,21 @@ class SearchService {
       return { hits: [], total: 0, facets: {} };
     }
 
+    // Check Redis cache before hitting ES
+    const cacheHash = createHash('md5')
+      .update(JSON.stringify({ query, filters }))
+      .digest('hex');
+    const cacheKey = `${ES_CACHE_PREFIX}jobs:${cacheHash}`;
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        logger.debug('ES search cache hit for jobs query');
+        return JSON.parse(cached);
+      }
+    } catch {
+      // Redis unavailable — proceed to ES
+    }
+
     const must: any[] = [];
     const filter: any[] = [];
 
@@ -2103,7 +2123,7 @@ class SearchService {
       }
     }
 
-    return {
+    const searchResult = {
       hits: result.hits.hits.map((hit: any) => {
         const s = hit._source;
         return {
@@ -2130,6 +2150,23 @@ class SearchService {
       total: result.hits.total.value,
       facets,
     };
+
+    // Cache result in Redis (fire-and-forget)
+    redis.set(cacheKey, JSON.stringify(searchResult), 'EX', ES_CACHE_TTL).catch(() => {});
+
+    // Track search event (fire-and-forget)
+    publishEvent(KafkaTopics.SEARCH_PERFORMED, query || 'browse', {
+      searchType: 'jobs' as const,
+      query: query || null,
+      resultCount: searchResult.total,
+    }).catch(() => {});
+
+    // Track trending search query (fire-and-forget)
+    if (query) {
+      trackSearch(query).catch(() => {});
+    }
+
+    return searchResult;
   }
 
   // ─── Search Candidates (with aggregations + highlighting) ───────────
@@ -2138,6 +2175,21 @@ class SearchService {
     if (!(await isFeatureEnabled('enableElasticsearch'))) {
       logger.debug('Elasticsearch disabled via feature flag — returning empty search results');
       return { hits: [], total: 0, facets: {} };
+    }
+
+    // Check Redis cache before hitting ES
+    const candidateCacheHash = createHash('md5')
+      .update(JSON.stringify({ type: 'candidates', query, filters }))
+      .digest('hex');
+    const candidateCacheKey = `${ES_CACHE_PREFIX}candidates:${candidateCacheHash}`;
+    try {
+      const cached = await redis.get(candidateCacheKey);
+      if (cached) {
+        logger.debug('ES search cache hit for candidates query');
+        return JSON.parse(cached);
+      }
+    } catch {
+      // Redis unavailable — proceed to ES
     }
 
     const must: any[] = [];
@@ -2636,7 +2688,7 @@ class SearchService {
       }
     }
 
-    return {
+    const candidateResult = {
       hits: result.hits.hits.map((hit: any) => {
         const s = hit._source;
         const nameParts = (s.fullName || '').split(' ');
@@ -2674,6 +2726,18 @@ class SearchService {
       total: result.hits.total.value,
       facets,
     };
+
+    // Cache result in Redis (fire-and-forget)
+    redis.set(candidateCacheKey, JSON.stringify(candidateResult), 'EX', ES_CACHE_TTL).catch(() => {});
+
+    // Track search event (fire-and-forget)
+    publishEvent(KafkaTopics.SEARCH_PERFORMED, query || 'browse', {
+      searchType: 'candidates' as const,
+      query: query || null,
+      resultCount: candidateResult.total,
+    }).catch(() => {});
+
+    return candidateResult;
   }
 
   // ─── Search Employers ───────────────────────────────────────────────

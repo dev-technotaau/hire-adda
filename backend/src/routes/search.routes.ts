@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import { searchLimiter } from '../middleware/rate-limit';
 import { cache } from '../middleware/cache';
+import { etagCache } from '../middleware/etag';
 import { validate } from '../validators/validate';
 import {
   autocompleteQuery,
@@ -21,7 +22,7 @@ const router = Router();
 router.use(searchLimiter);
 
 // Public routes (no auth required) — with query param validation
-router.get('/autocomplete', validate({ query: autocompleteQuery }), cache({ ttl: 300 }), searchController.autocomplete);
+router.get('/autocomplete', validate({ query: autocompleteQuery }), etagCache({ ttl: 300 }), cache({ ttl: 300 }), searchController.autocomplete);
 router.get('/suggest', validate({ query: unifiedSuggestQuery }), cache({ ttl: 600 }), searchController.suggest);
 router.get('/suggest/skills', validate({ query: suggestQuery }), cache({ ttl: 600 }), searchController.suggestSkills);
 router.get(
@@ -38,7 +39,7 @@ router.get(
 );
 router.get('/suggest/titles', validate({ query: suggestQuery }), cache({ ttl: 600 }), searchController.suggestJobTitles);
 router.get('/did-you-mean', validate({ query: didYouMeanQuery }), cache({ ttl: 300 }), searchController.didYouMean);
-router.get('/popular', validate({ query: popularQuery }), cache({ ttl: 600 }), searchController.getPopularSearches);
+router.get('/popular', validate({ query: popularQuery }), etagCache({ ttl: 600 }), cache({ ttl: 600 }), searchController.getPopularSearches);
 
 // Protected routes (auth required)
 router.get('/history', protect, searchController.getSearchHistory);

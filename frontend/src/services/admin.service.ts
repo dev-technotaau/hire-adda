@@ -26,6 +26,10 @@ import type {
   JobApplication,
   JobPost,
   VerificationRequest,
+  OnlineStats,
+  TrendingData,
+  KafkaDlqMessage,
+  HealthReadyResponse,
 } from '@/types/admin';
 import type { Job } from '@/types/job';
 import type { FeatureFlags } from '@/types/feature-flag';
@@ -670,6 +674,59 @@ export const adminService = {
 
   async bulkActivateUsers(userIds: string[]): Promise<ApiResponse<{ count: number }>> {
     const res = await api.post('/super-admin/users/bulk/activate', { userIds });
+    return res.data;
+  },
+
+  // ── Online Stats ──
+
+  async getOnlineStats(): Promise<ApiResponse<OnlineStats>> {
+    const res = await api.get(API.ADMIN.ONLINE_STATS);
+    return res.data;
+  },
+
+  // ── Trending ──
+
+  async getTrending(): Promise<ApiResponse<TrendingData>> {
+    const res = await api.get(API.ADMIN.TRENDING);
+    return res.data;
+  },
+
+  // ── Kafka DLQ ──
+
+  async getDlqMessages(
+    page?: number,
+    limit?: number,
+    replayed?: boolean,
+  ): Promise<PaginatedResponse<KafkaDlqMessage>> {
+    const params: Record<string, string | number> = {};
+    if (page) params.page = page;
+    if (limit) params.limit = limit;
+    if (replayed !== undefined) params.replayed = String(replayed);
+    const qs = buildQueryString(params);
+    const res = await api.get(`${API.ADMIN.KAFKA_DLQ}${qs}`);
+    return res.data;
+  },
+
+  async replayDlqMessage(id: string): Promise<ApiResponse<null>> {
+    const res = await api.post(API.ADMIN.KAFKA_DLQ_REPLAY(id));
+    return res.data;
+  },
+
+  // ── Kafka Event Replay ──
+
+  async replayEvents(
+    startTime: string,
+    endTime: string,
+    eventTypes?: string[],
+  ): Promise<ApiResponse<{ replayed: number }>> {
+    const res = await api.post(API.ADMIN.KAFKA_REPLAY, { startTime, endTime, eventTypes });
+    return res.data;
+  },
+
+  // ── Health Ready (with Kafka lag) ──
+
+  async getHealthReady(): Promise<HealthReadyResponse> {
+    const res = await api.get(`${API.HEALTH}/ready`);
     return res.data;
   },
 };

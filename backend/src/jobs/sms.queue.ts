@@ -23,6 +23,6 @@ smsQueue.on('error', (err) => {
 
 logger.info(`SMS Queue initialized: ${SMS_QUEUE_NAME}`);
 
-export async function addSMSJob(data: { to: string; message: string }) {
-  return smsQueue.add('send-sms', data);
+export async function addSMSJob(data: { to: string; message: string }, priority?: number) {
+  return smsQueue.add('send-sms', data, priority ? { priority } : {});
 }

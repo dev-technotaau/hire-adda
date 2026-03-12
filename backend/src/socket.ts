@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { env } from './config/env';
 import logger from './config/logger';
+import { markUserOnline, markUserOffline } from './utils/online-users';
 
 let io: Server;
 
@@ -43,10 +44,14 @@ export const initSocket = (httpServer: HttpServer) => {
     // Auto-join user-specific room
     if (userId) {
       socket.join(`user:${userId}`);
+      markUserOnline(userId).catch(() => {});
     }
 
     socket.on('disconnect', () => {
       logger.info(`Client disconnected: ${socket.id}`);
+      if (userId) {
+        markUserOffline(userId).catch(() => {});
+      }
     });
 
     // Keep backward compat for manual room joining

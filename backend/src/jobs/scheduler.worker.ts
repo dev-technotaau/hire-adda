@@ -1,6 +1,7 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
 import { redis } from '../config/redis';
+import { env } from '../config/env';
 import logger from '../config/logger';
 import { SCHEDULER_QUEUE_NAME } from './scheduler.queue';
 import { handleJobExpiration } from './job-expiration.worker';
@@ -12,11 +13,15 @@ import { handleScheduledPublish } from './scheduled-publish.worker';
 import { handleWeeklyDigest } from './weekly-digest.worker';
 import { handleDataExport, handleExportCleanup } from './data-export.worker';
 import { handleDbBackup, handleBackupCleanup } from './backup.worker';
+import { handleExpirationWarning } from './expiration-warning.worker';
+import { handleReviewReminder } from './review-reminder.worker';
+import { handleStaleProfileCheck } from './stale-profile.worker';
+import { handleViewCounterFlush } from './view-counter-flush.worker';
 
 /**
  * Combined scheduler worker — processes ALL periodic/cron jobs through
- * a single BullMQ Worker (1 blocking Redis connection) instead of 8
- * separate Workers (8 blocking connections).
+ * a single BullMQ Worker (1 blocking Redis connection) instead of many
+ * separate Workers.
  */
 export const schedulerWorker = new Worker(
   SCHEDULER_QUEUE_NAME,
@@ -44,6 +49,14 @@ export const schedulerWorker = new Worker(
         return handleBackupCleanup(job);
       case 'export-cleanup':
         return handleExportCleanup(job);
+      case 'send-expiration-warnings':
+        return handleExpirationWarning(job);
+      case 'send-review-reminders':
+        return handleReviewReminder(job);
+      case 'check-stale-profiles':
+        return handleStaleProfileCheck(job);
+      case 'flush-view-counters':
+        return handleViewCounterFlush(job);
       default:
         logger.warn(`Unknown scheduler job name: ${job.name}`);
         return null;
@@ -51,7 +64,7 @@ export const schedulerWorker = new Worker(
   },
   {
     connection: redis,
-    concurrency: 2,
+    concurrency: parseInt(env.BULLMQ_SCHEDULER_CONCURRENCY, 10),
     lockDuration: 300000, // 5 min — some periodic tasks are heavy
     stalledInterval: 120000,
   }

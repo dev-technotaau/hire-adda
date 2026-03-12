@@ -2,6 +2,7 @@ import type { Job } from 'bullmq';
 import logger from '../config/logger';
 import { prisma } from '../config/prisma';
 import { JobStatus } from '@prisma/client';
+import { withLock } from '../utils/distributed-lock';
 
 export async function handleScheduledPublish(job: Job) {
   const TIMEOUT_MS = 60_000;
@@ -27,35 +28,18 @@ export async function handleScheduledPublish(job: Job) {
 
       let published = 0;
       for (const sj of scheduledJobs) {
-        try {
+        // Distributed lock prevents double-publish if multiple instances run this cron
+        const result = await withLock(`lock:job-publish:${sj.id}`, 300, async () => {
           await prisma.jobPost.update({
             where: { id: sj.id },
             data: { status: JobStatus.OPEN },
           });
 
           try {
-            const { searchService } = await import('../services/search.service');
-            const jobForIndex = await prisma.jobPost.findUnique({
-              where: { id: sj.id },
-              include: {
-                company: {
-                  select: {
-                    id: true,
-                    companyName: true,
-                    logo: true,
-                    industry: true,
-                    companyType: true,
-                    companySize: true,
-                    isVerified: true,
-                  },
-                },
-              },
-            });
-            if (jobForIndex) {
-              await searchService.indexJob(jobForIndex);
-            }
+            const { addReindexJob } = await import('./es-reindex.queue');
+            await addReindexJob({ indexType: 'job', documentId: sj.id, action: 'index' });
           } catch (e) {
-            logger.error(`Failed to index scheduled job ${sj.id} in ES`, e);
+            logger.error(`Failed to queue ES reindex for scheduled job ${sj.id}`, e);
           }
 
           if (sj.location) {
@@ -98,9 +82,13 @@ export async function handleScheduledPublish(job: Job) {
             /* non-critical */
           }
 
+          return true;
+        });
+
+        if (result !== null) {
           published++;
-        } catch (error) {
-          logger.error(`Failed to publish scheduled job ${sj.id}:`, error);
+        } else {
+          logger.debug(`Skipping scheduled publish for job ${sj.id} — already locked`);
         }
       }
 

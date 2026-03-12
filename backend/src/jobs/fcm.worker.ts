@@ -1,6 +1,7 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
 import { redis } from '../config/redis';
+import { env } from '../config/env';
 import logger from '../config/logger';
 import { FCM_QUEUE_NAME } from './fcm.queue';
 import { sendFcmNotification } from '../services/fcm.service';
@@ -67,7 +68,7 @@ export const fcmWorker = new Worker<FcmJobData>(
   },
   {
     connection: redis,
-    concurrency: 5,
+    concurrency: parseInt(env.BULLMQ_FCM_CONCURRENCY, 10),
     lockDuration: 60000,
     limiter: {
       max: 50, // FCM allows high volume

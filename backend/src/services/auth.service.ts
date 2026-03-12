@@ -41,6 +41,7 @@ import {
 import { sessionService } from './session.service';
 import { publishEvent, KafkaTopics } from '../kafka/producer';
 import { trackEvent, getClientId } from './analytics.service';
+import { checkOtpAttempts, resetOtpAttempts } from '../utils/otp-rate-limit';
 
 const SALT_ROUNDS = 12;
 
@@ -400,8 +401,9 @@ export const login = async (
   const accessToken = signAccessToken(tokenPayload);
   const refreshToken = await createRefreshToken(user.id, userAgent, ipAddress, session.id);
 
-  // Publish Kafka event
+  // Publish Kafka events
   publishEvent(KafkaTopics.USER_LOGIN, user.id, { userId: user.id, email: user.email });
+  publishEvent(KafkaTopics.SESSION_CREATED, user.id, { userId: user.id, sessionId: session.id });
 
   // GA4: track login
   trackEvent(getClientId(user.id), { name: 'login', params: { method: 'email' } }).catch(() => {});
@@ -607,6 +609,9 @@ export const verifyEmail = async (
     },
   });
 
+  // Reset OTP attempt counter after successful verification
+  resetOtpAttempts(user.id).catch(() => {});
+
   logger.info(`Email verified: ${user.email}`);
   reindexCandidateIfExists(user.id).catch(() => {});
 
@@ -656,6 +661,9 @@ export const forgotPassword = async (data: ForgotPasswordInput): Promise<void> =
     // Return success to prevent enumeration
     return;
   }
+
+  // Rate-limit OTP sends per user
+  await checkOtpAttempts(user.id);
 
   const otp = generateOtp(getOtpLength());
   const hashedOtp = hashToken(otp);
@@ -728,6 +736,9 @@ export const resetPassword = async (data: ResetPasswordInput): Promise<void> => 
     throw new AppError('Invalid or expired reset token', 400);
   }
 
+  // Rate-limit OTP verification attempts
+  await checkOtpAttempts(user.id);
+
   // Validate password strength
   const strengthCheck = validatePasswordStrength(password);
   if (!strengthCheck.isValid) {
@@ -755,6 +766,9 @@ export const resetPassword = async (data: ResetPasswordInput): Promise<void> => 
 
   // Revoke all refresh tokens for security
   await revokeAllUserTokens(user.id);
+
+  // Reset OTP attempt counter after successful reset
+  resetOtpAttempts(user.id).catch(() => {});
 
   // GA4: track password_reset
   trackEvent(getClientId(user.id), { name: 'password_reset' }).catch(() => {});
@@ -911,6 +925,9 @@ export const resendEmailVerification = async (rawEmail: string): Promise<void> =
   // Silent return to prevent email enumeration
   if (!user || user.isEmailVerified) return;
 
+  // Rate-limit OTP sends per user
+  await checkOtpAttempts(user.id);
+
   enforceResendLimits(user.emailOtpLastSentAt, user.emailOtpResendCount);
 
   const verificationOtp = generateOtp(getOtpLength());
@@ -963,6 +980,9 @@ export const verifyMobile = async (mobileNumber: string, otp: string): Promise<v
     throw new AppError('Invalid or expired OTP', 400);
   }
 
+  // Rate-limit OTP verification attempts
+  await checkOtpAttempts(user.id);
+
   await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -973,6 +993,9 @@ export const verifyMobile = async (mobileNumber: string, otp: string): Promise<v
       mobileOtpLastSentAt: null,
     },
   });
+
+  // Reset OTP attempt counter after successful verification
+  resetOtpAttempts(user.id).catch(() => {});
 
   logger.info(`Mobile verified: ${mobileNumber}`);
   reindexCandidateIfExists(user.id).catch(() => {});
@@ -986,6 +1009,9 @@ export const resendMobileOtp = async (mobileNumber: string): Promise<void> => {
   if (!user) return; // Silent return to prevent mobile number enumeration
 
   if (user.isMobileVerified) throw new AppError('Mobile already verified', 400);
+
+  // Rate-limit OTP sends per user
+  await checkOtpAttempts(user.id);
 
   enforceResendLimits(user.mobileOtpLastSentAt, user.mobileOtpResendCount);
 

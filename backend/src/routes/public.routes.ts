@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { prisma } from '../config/prisma';
 import { JobStatus } from '@prisma/client';
 import { cache } from '../middleware/cache';
+import { getTrendingJobs, getTrendingSearches } from '../utils/trending';
 
 const router = Router();
 
@@ -49,6 +50,52 @@ router.get(
       }
 
       res.status(200).json({ status: 'success', data });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Trending jobs & searches — cached for 60s
+router.get(
+  '/trending',
+  cache({ ttl: 60 }),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const limit = Math.min(Number(req.query.limit) || 10, 20);
+      const [trendingJobs, trendingSearches] = await Promise.all([
+        getTrendingJobs(limit),
+        getTrendingSearches(limit),
+      ]);
+
+      // Enrich trending jobs with basic info
+      const jobIds = trendingJobs.map((t) => t.jobId);
+      const jobs = jobIds.length > 0
+        ? await prisma.jobPost.findMany({
+            where: { id: { in: jobIds }, status: JobStatus.OPEN },
+            select: {
+              id: true,
+              title: true,
+              location: true,
+              type: true,
+              company: { select: { companyName: true, logo: true } },
+            },
+          })
+        : [];
+      const jobMap = new Map(jobs.map((j) => [j.id, j]));
+
+      const enrichedJobs = trendingJobs
+        .map((t) => {
+          const job = jobMap.get(t.jobId);
+          if (!job) return null;
+          return { ...job, viewCount: t.score };
+        })
+        .filter(Boolean);
+
+      res.status(200).json({
+        status: 'success',
+        data: { trendingJobs: enrichedJobs, trendingSearches },
+      });
     } catch (error) {
       next(error);
     }

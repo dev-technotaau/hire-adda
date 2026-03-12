@@ -1,6 +1,7 @@
 import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
 import { redis } from '../config/redis';
+import { env } from '../config/env';
 import logger from '../config/logger';
 import { WEB_PUSH_QUEUE_NAME } from './web-push.queue';
 import { sendWebPushNotification } from '../services/web-push.service';
@@ -47,7 +48,7 @@ export const webPushWorker = new Worker<WebPushJobData>(
   },
   {
     connection: redis,
-    concurrency: 5,
+    concurrency: parseInt(env.BULLMQ_WEBPUSH_CONCURRENCY, 10),
     lockDuration: 60000,
     limiter: {
       max: 20,

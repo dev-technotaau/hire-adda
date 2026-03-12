@@ -2,6 +2,8 @@ import { consumer, producer } from '../config/kafka';
 import logger from '../config/logger';
 import { ConsolidatedTopics, KafkaTopics } from './producer';
 import { isFeatureEnabled } from '../config/feature-flags';
+import { isProcessed, markProcessed } from '../utils/idempotency';
+import { validateEvent } from './schemas';
 
 const DLQ_TOPIC = 'talent-bridge.dlq';
 
@@ -112,6 +114,14 @@ async function handleUserRegistered(data: any): Promise<void> {
     whatsappOptions,
   });
   logger.info(`Welcome notification sent for user ${data.userId}`);
+
+  // Schedule onboarding drip emails (+1d, +3d, +7d)
+  if (user) {
+    const { scheduleOnboardingDrip } = await import('../jobs/onboarding-drip.queue');
+    await scheduleOnboardingDrip(data.userId, user.role).catch((err: unknown) =>
+      logger.error(`Failed to schedule onboarding drip for ${data.userId}:`, err)
+    );
+  }
 }
 
 async function handleUserLogin(data: any): Promise<void> {
@@ -132,22 +142,15 @@ async function handleJobPosted(data: any): Promise<void> {
 }
 
 async function handleJobUpdated(data: any): Promise<void> {
-  const { searchService } = await import('../services/search.service');
-  const prisma = (await import('../config/prisma')).default;
-  const job = await prisma.jobPost.findUnique({
-    where: { id: data.jobId },
-    include: { company: true },
-  });
-  if (job) {
-    await searchService.indexJob(job);
-    logger.info(`Reindexed updated job ${data.jobId} in Elasticsearch`);
-  }
+  const { addReindexJob } = await import('../jobs/es-reindex.queue');
+  await addReindexJob({ indexType: 'job', documentId: data.jobId, action: 'index' });
+  logger.info(`Queued ES reindex for updated job ${data.jobId}`);
 }
 
 async function handleJobClosed(data: any): Promise<void> {
-  const { searchService } = await import('../services/search.service');
-  await searchService.deleteJob(data.jobId);
-  logger.info(`Removed closed job ${data.jobId} from Elasticsearch`);
+  const { addReindexJob } = await import('../jobs/es-reindex.queue');
+  await addReindexJob({ indexType: 'job', documentId: data.jobId, action: 'delete' });
+  logger.info(`Queued ES delete for closed job ${data.jobId}`);
 }
 
 async function handleApplicationSubmitted(data: any): Promise<void> {
@@ -181,6 +184,10 @@ async function dispatchWebhook(eventType: string, data: any): Promise<void> {
     [KafkaTopics.APPLICATION_SUBMITTED]: 'application.submitted',
     [KafkaTopics.APPLICATION_STATUS_CHANGED]: 'application.status_changed',
     [KafkaTopics.PROFILE_UPDATED]: 'candidate.profile_updated',
+    [KafkaTopics.COMPANY_PROFILE_UPDATED]: 'company.profile_updated',
+    [KafkaTopics.COMPANY_VERIFIED]: 'company.verified',
+    [KafkaTopics.VERIFICATION_APPROVED]: 'verification.approved',
+    [KafkaTopics.VERIFICATION_REJECTED]: 'verification.rejected',
   };
 
   const webhookEvent = eventMap[eventType];
@@ -205,6 +212,15 @@ async function streamToBigQuery(eventType: string, data: any): Promise<void> {
     [KafkaTopics.JOB_CLOSED]: 'job_events',
     [KafkaTopics.APPLICATION_SUBMITTED]: 'application_events',
     [KafkaTopics.APPLICATION_STATUS_CHANGED]: 'application_events',
+    [KafkaTopics.SEARCH_PERFORMED]: 'search_events',
+    [KafkaTopics.COMPANY_VERIFIED]: 'user_events',
+    [KafkaTopics.VERIFICATION_SUBMITTED]: 'user_events',
+    [KafkaTopics.VERIFICATION_APPROVED]: 'user_events',
+    [KafkaTopics.VERIFICATION_REJECTED]: 'user_events',
+    [KafkaTopics.ADMIN_USER_SUSPENDED]: 'user_events',
+    [KafkaTopics.ADMIN_ROLE_CHANGED]: 'user_events',
+    [KafkaTopics.SESSION_CREATED]: 'user_events',
+    [KafkaTopics.SESSION_REVOKED]: 'user_events',
   };
 
   const table = tableMap[eventType];
@@ -223,6 +239,8 @@ async function incrementFirestoreCounters(eventType: string): Promise<void> {
     [KafkaTopics.USER_LOGIN]: 'activeUsers',
     [KafkaTopics.JOB_POSTED]: 'jobsPostedToday',
     [KafkaTopics.APPLICATION_SUBMITTED]: 'applicationsToday',
+    [KafkaTopics.SEARCH_PERFORMED]: 'searchesToday',
+    [KafkaTopics.COMPANY_VERIFIED]: 'verificationsToday',
   };
 
   const metric = counterMap[eventType];
@@ -283,6 +301,23 @@ async function routeByEventType(eventType: string, data: any): Promise<void> {
       break;
     case KafkaTopics.NOTIFICATION_SENT:
       logger.debug(`Notification delivered: ${data.notificationId || data.userId}`);
+      break;
+    // New event types — handled by webhook/BigQuery/Firestore dispatchers above;
+    // no additional handler logic needed for these.
+    case KafkaTopics.COMPANY_VERIFIED:
+    case KafkaTopics.COMPANY_PROFILE_UPDATED:
+    case KafkaTopics.SEARCH_PERFORMED:
+    case KafkaTopics.VERIFICATION_SUBMITTED:
+    case KafkaTopics.VERIFICATION_APPROVED:
+    case KafkaTopics.VERIFICATION_REJECTED:
+    case KafkaTopics.ADMIN_USER_SUSPENDED:
+    case KafkaTopics.ADMIN_JOB_REJECTED:
+    case KafkaTopics.ADMIN_ROLE_CHANGED:
+    case KafkaTopics.SESSION_CREATED:
+    case KafkaTopics.SESSION_REVOKED:
+    case KafkaTopics.RESUME_UPLOADED:
+    case KafkaTopics.AVATAR_CHANGED:
+      logger.debug(`Kafka event processed: ${eventType}`);
       break;
     default:
       logger.debug(`Unhandled Kafka event type: ${eventType}`);
@@ -351,10 +386,45 @@ export const startKafkaConsumer = async (): Promise<void> => {
             return;
           }
 
+          // Schema validation — invalid messages go to DLQ
+          const validation = validateEvent(eventType, data);
+          if (!validation.valid) {
+            logger.warn(`Kafka consumer schema validation failed for ${eventType}: ${validation.errors.join(', ')}`);
+            await publishToDlq(
+              topic,
+              partition,
+              message.offset,
+              rawKey,
+              rawValue,
+              new Error(`Schema validation failed: ${validation.errors.join(', ')}`)
+            );
+            await consumer!.commitOffsets([
+              { topic, partition, offset: (Number(message.offset) + 1).toString() },
+            ]);
+            return;
+          }
+
+          // Idempotency check — skip if already processed
+          const idempotencyKey = `${topic}:${partition}:${message.offset}`;
+          if (await isProcessed(idempotencyKey)) {
+            logger.debug(`Skipping already-processed message: ${idempotencyKey}`);
+            await consumer!.commitOffsets([
+              {
+                topic,
+                partition,
+                offset: (Number(message.offset) + 1).toString(),
+              },
+            ]);
+            return;
+          }
+
           // Push to event buffer for admin viewer
           pushToEventBuffer(eventType, topic, rawKey);
 
           await routeByEventType(eventType, data);
+
+          // Mark as processed for idempotency
+          await markProcessed(idempotencyKey);
 
           // Commit offset after successful processing
           await consumer!.commitOffsets([

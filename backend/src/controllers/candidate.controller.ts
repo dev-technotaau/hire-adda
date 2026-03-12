@@ -3,7 +3,7 @@ import { Role } from '@prisma/client';
 import { candidateService } from '../services/candidate.service';
 import { candidateAnalyticsService } from '../services/candidate-analytics.service';
 import { AppError } from '../middleware/error';
-import { resumeParseQueue } from '../jobs/resume-parse.queue';
+import { startResumeFlow } from '../jobs/resume-flow';
 import prisma from '../config/prisma';
 
 /**
@@ -564,16 +564,17 @@ export const triggerResumeParse = async (
         ? 'application/msword'
         : 'application/pdf';
 
-    await resumeParseQueue.add('parse-resume', {
-      userId: req.user.id,
-      candidateProfileId: profile.id,
-      resumeUrl: profile.resume,
-      mimeType,
-    });
+    const flowJobId = await startResumeFlow(
+      req.user.id,
+      profile.id,
+      profile.resume,
+      mimeType
+    );
 
     res.status(202).json({
       status: 'success',
       message: 'Resume parsing started. You will be notified when complete.',
+      data: { flowJobId },
     });
   } catch (error) {
     next(error);
