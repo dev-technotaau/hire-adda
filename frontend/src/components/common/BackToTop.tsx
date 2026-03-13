@@ -66,7 +66,7 @@ export default function BackToTop() {
             strokeLinecap="round"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={dashOffset}
-            className="transition-[stroke-dashoffset] duration-150"
+            className="transition-none"
           />
         </svg>
         {/* Arrow icon */}
