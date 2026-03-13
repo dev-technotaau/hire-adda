@@ -7,10 +7,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies for the workspace
-# We use npm install instead of npm ci with --only=production because npm workspaces 
-# behave unpredictably with production-only installs, sometimes pruning required packages like bullmq
-RUN npm install
+# Install all dependencies (including dev for build step)
+RUN npm ci
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -20,6 +18,9 @@ COPY . .
 
 # Build TypeScript
 RUN npm run build
+
+# Remove dev dependencies after build
+RUN npm prune --omit=dev
 
 # Production stage
 FROM node:20.18-alpine AS production
