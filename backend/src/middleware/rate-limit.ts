@@ -10,7 +10,6 @@ import { redis } from '../config/redis';
 function createRedisStore(prefix: string): RedisStore {
   return new RedisStore({
     prefix: `rl:${prefix}:`,
-    // @ts-expect-error - Known issue with rate-limit-redis types
     sendCommand: (...args: string[]) => redis.call(...args),
   });
 }

@@ -63,7 +63,7 @@ export const cache = (options: CacheOptions = {}) => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         redis
           .set(cacheKey, JSON.stringify(body), 'EX', ttl)
-          .catch((err) => logger.warn(`Cache write error for ${cacheKey}:`, err.message));
+          .catch((err: Error) => logger.warn(`Cache write error for ${cacheKey}:`, err.message));
       }
       res.setHeader('X-Cache', 'MISS');
       return originalJson(body);

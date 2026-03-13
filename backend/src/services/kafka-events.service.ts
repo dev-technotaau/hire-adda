@@ -31,7 +31,7 @@ export const kafkaEventsService = {
   async getRecentEvents(limit: number = 20): Promise<KafkaEventEntry[]> {
     try {
       const raw = await redis.lrange(REDIS_KEY, 0, limit - 1);
-      return raw.map((item) => JSON.parse(item) as KafkaEventEntry);
+      return raw.map((item: string) => JSON.parse(item) as KafkaEventEntry);
     } catch {
       // Fallback to in-memory
       return fallbackBuffer.slice(-limit).reverse();
