@@ -40,11 +40,25 @@ export const initializeServices = async (): Promise<void> => {
   // DATABASE
   // ═══════════════════════════════════════════════════════════════
 
-  // PostgreSQL (Prisma)
+  // PostgreSQL (Prisma) — retry for managed DB cold starts
   try {
     const { prisma } = await import('./prisma');
-    await prisma.$queryRawUnsafe('SELECT 1');
-    registerService('PostgreSQL (Prisma)', 'connected');
+    let connected = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await prisma.$queryRawUnsafe('SELECT 1');
+        connected = true;
+        break;
+      } catch {
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+    if (connected) {
+      registerService('PostgreSQL (Prisma)', 'connected');
+    } else {
+      await prisma.$queryRawUnsafe('SELECT 1');
+      registerService('PostgreSQL (Prisma)', 'connected');
+    }
   } catch (error) {
     registerService('PostgreSQL (Prisma)', 'error', (error as Error).message?.slice(0, 50));
   }
