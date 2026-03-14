@@ -31,9 +31,7 @@ const createPool = () => {
   connectionString = connectionString.replace(/^["']+|["']+$/g, '');
 
   // Strip ?pgbouncer=true — Prisma-only param that pg Pool doesn't understand
-  connectionString = connectionString
-    .replace(/[?&]pgbouncer=true/gi, '')
-    .replace(/\?$/, '');
+  connectionString = connectionString.replace(/[?&]pgbouncer=true/gi, '').replace(/\?$/, '');
 
   // Detect if connecting to a remote/managed DB (Neon, Supabase, Railway, etc.)
   const isLocalhost =
@@ -133,7 +131,7 @@ async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
       lastError = error;
       if (attempt < MAX_RETRIES && isTransientError(error)) {
         const delay = BASE_DELAY_MS * 2 ** attempt; // 150, 300
-        await new Promise((r) => setTimeout(r, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
       throw error;

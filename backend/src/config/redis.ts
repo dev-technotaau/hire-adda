@@ -47,7 +47,7 @@ const buildRedisConfig = (): RedisOptions => {
 // Create a mock Redis for when Redis is disabled.
 // Covers all Redis commands used across the codebase so services
 // degrade gracefully instead of throwing when REDIS_ENABLED=false.
-// @ts-ignore TS2709 - ioredis namespace/class type conflict
+// @ts-expect-error TS2709 - ioredis namespace/class type conflict
 const createMockRedis = (): Redis => {
   const noop = () => Promise.resolve(null);
   const mock = {
@@ -85,7 +85,7 @@ const createMockRedis = (): Redis => {
     duplicate: () => createMockRedis(),
     call: (..._args: unknown[]) => Promise.resolve(null),
     status: 'disabled',
-    // @ts-ignore TS2709
+    // @ts-expect-error TS2709
   } as unknown as Redis;
   return mock;
 };
@@ -93,7 +93,7 @@ const createMockRedis = (): Redis => {
 const redisConfig = buildRedisConfig();
 
 // Create Redis connection
-// @ts-ignore TS2709 - ioredis namespace/class type conflict
+// @ts-expect-error TS2709 - ioredis namespace/class type conflict
 const createConnection = (): Redis => {
   if (!isRedisEnabled) {
     logger.warn('Redis is disabled (REDIS_ENABLED=false)');

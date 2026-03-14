@@ -25,6 +25,7 @@ export const imageProcessingWorker = new Worker<ImageJobData>(
 
       // Download the original image
       const response = await Promise.race([
+        // eslint-disable-next-line n/no-unsupported-features/node-builtins -- fetch is stable in Node 20.18
         fetch(imageUrl),
         new Promise<never>((_resolve, reject) =>
           setTimeout(() => reject(new Error('Image download timeout after 30s')), 30_000)
@@ -48,10 +49,11 @@ export const imageProcessingWorker = new Worker<ImageJobData>(
           .toBuffer();
 
         const folder = `${entityType}s/${field}/${variant.name}`;
-        const result = await uploadImage(
-          `data:image/webp;base64,${resized.toString('base64')}`,
-          { ...uploadOptions, folder, public_id: entityId }
-        );
+        const result = await uploadImage(`data:image/webp;base64,${resized.toString('base64')}`, {
+          ...uploadOptions,
+          folder,
+          public_id: entityId,
+        });
         variants[variant.name] = result.secure_url;
       }
 
@@ -83,7 +85,9 @@ export const imageProcessingWorker = new Worker<ImageJobData>(
         }
       }
 
-      logger.info(`Image variants generated for ${entityType}/${entityId}: ${Object.keys(variants).join(', ')}`);
+      logger.info(
+        `Image variants generated for ${entityType}/${entityId}: ${Object.keys(variants).join(', ')}`
+      );
       return { variants };
     } catch (error) {
       logger.error(`Failed to process image:`, error);

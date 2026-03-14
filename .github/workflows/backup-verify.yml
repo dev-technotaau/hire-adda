@@ -5,11 +5,11 @@ on:
     - cron: '0 6 * * 1' # Weekly on Monday at 6 AM UTC
   push:
     paths:
-      - 'backend/scripts/**'
+      - 'infra/scripts/**'
       - '.github/workflows/backup-verify.yml'
   pull_request:
     paths:
-      - 'backend/scripts/**'
+      - 'infra/scripts/**'
 
 jobs:
   verify-scripts:
@@ -21,7 +21,7 @@ jobs:
       - name: Check script syntax (bash -n)
         run: |
           echo "Checking shell script syntax..."
-          for script in backend/scripts/*.sh; do
+          for script in infra/scripts/*.sh; do
             echo "  Checking: $script"
             bash -n "$script"
           done
@@ -30,7 +30,7 @@ jobs:
       - name: Verify scripts are executable-ready
         run: |
           echo "Verifying script headers..."
-          for script in backend/scripts/*.sh; do
+          for script in infra/scripts/*.sh; do
             if ! head -1 "$script" | grep -q '#!/usr/bin/env bash\|#!/bin/bash'; then
               echo "ERROR: $script missing bash shebang"
               exit 1
