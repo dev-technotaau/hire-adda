@@ -36,7 +36,10 @@ function Modal({ isOpen, onClose, title, children, footer, size = 'md', classNam
   // current version without needing to re-attach (which would re-focus the
   // dialog container and steal focus from inputs inside the modal).
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!isOpen) return;

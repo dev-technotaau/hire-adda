@@ -70,14 +70,10 @@ export default function CandidateSettingsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState('account');
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && TABS.some((t) => t.key === tab)) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(() =>
+    tabParam && TABS.some((t) => t.key === tabParam) ? tabParam : 'account',
+  );
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -781,13 +777,21 @@ function WhatsAppVerificationSection() {
             </span>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Tooltip content={hasSeparateNumber ? 'Change your WhatsApp number' : 'Use a different number for WhatsApp'}>
+            <Tooltip
+              content={
+                hasSeparateNumber
+                  ? 'Change your WhatsApp number'
+                  : 'Use a different number for WhatsApp'
+              }
+            >
               <button
                 type="button"
                 onClick={() => setStep('change')}
                 className="text-primary cursor-pointer text-sm font-medium hover:underline"
               >
-                {hasSeparateNumber ? 'Change WhatsApp number' : 'Use a different number for WhatsApp'}
+                {hasSeparateNumber
+                  ? 'Change WhatsApp number'
+                  : 'Use a different number for WhatsApp'}
               </button>
             </Tooltip>
             {hasSeparateNumber && (
@@ -837,7 +841,12 @@ function WhatsAppVerificationSection() {
             required
           />
           <div className="flex gap-3 pt-1">
-            <Button type="submit" isLoading={isLoading} disabled={!newWhatsappNumber || !password} tooltip="Continue with WhatsApp number change">
+            <Button
+              type="submit"
+              isLoading={isLoading}
+              disabled={!newWhatsappNumber || !password}
+              tooltip="Continue with WhatsApp number change"
+            >
               Continue
             </Button>
             <Button variant="outline" onClick={resetToIdle} tooltip="Cancel WhatsApp number change">
@@ -915,11 +924,17 @@ function WhatsAppVerificationSection() {
           )}
           <div className="flex flex-wrap items-center gap-3 pt-1">
             {hasMobile && (
-              <Button isLoading={isLoading} onClick={handleSendOtp} tooltip="Send verification code to your WhatsApp">
+              <Button
+                isLoading={isLoading}
+                onClick={handleSendOtp}
+                tooltip="Send verification code to your WhatsApp"
+              >
                 Verify WhatsApp
               </Button>
             )}
-            <Tooltip content={displayNumber ? 'Change your WhatsApp number' : 'Add a WhatsApp number'}>
+            <Tooltip
+              content={displayNumber ? 'Change your WhatsApp number' : 'Add a WhatsApp number'}
+            >
               <button
                 type="button"
                 onClick={() => setStep('change')}
@@ -1419,11 +1434,22 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             </div>
           </div>
           {mfaEnabled ? (
-            <Button variant="destructive" size="sm" onClick={() => setShowDisableModal(true)} tooltip="Disable two-factor authentication">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDisableModal(true)}
+              tooltip="Disable two-factor authentication"
+            >
               Disable MFA
             </Button>
           ) : (
-            <Button variant="primary" size="sm" isLoading={setupLoading} onClick={handleSetupMfa} tooltip="Enable two-factor authentication">
+            <Button
+              variant="primary"
+              size="sm"
+              isLoading={setupLoading}
+              onClick={handleSetupMfa}
+              tooltip="Enable two-factor authentication"
+            >
               Enable MFA
             </Button>
           )}
@@ -1488,7 +1514,12 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             >
               Cancel
             </Button>
-            <Button variant="primary" isLoading={enableLoading} onClick={handleEnableMfa} tooltip="Verify code and enable MFA">
+            <Button
+              variant="primary"
+              isLoading={enableLoading}
+              onClick={handleEnableMfa}
+              tooltip="Verify code and enable MFA"
+            >
               Verify &amp; Enable
             </Button>
           </div>
@@ -1577,7 +1608,12 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             >
               Cancel
             </Button>
-            <Button variant="destructive" isLoading={disableLoading} onClick={handleDisableMfa} tooltip="Confirm disabling MFA">
+            <Button
+              variant="destructive"
+              isLoading={disableLoading}
+              onClick={handleDisableMfa}
+              tooltip="Confirm disabling MFA"
+            >
               Disable MFA
             </Button>
           </div>
@@ -1632,7 +1668,11 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             </div>
           ) : (
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowRegenModal(false)} tooltip="Cancel backup code regeneration">
+              <Button
+                variant="outline"
+                onClick={() => setShowRegenModal(false)}
+                tooltip="Cancel backup code regeneration"
+              >
                 Cancel
               </Button>
               <Button
@@ -1768,7 +1808,13 @@ function PasskeysSection() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRegister} isLoading={registering} tooltip="Register a new passkey">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRegister}
+            isLoading={registering}
+            tooltip="Register a new passkey"
+          >
             <Plus className="mr-1 h-4 w-4" />
             Add Passkey
           </Button>
@@ -1847,7 +1893,9 @@ function PasskeysSection() {
             >
               Cancel
             </Button>
-            <Button onClick={handleConfirmRegister} tooltip="Save and register this passkey">Save Passkey</Button>
+            <Button onClick={handleConfirmRegister} tooltip="Save and register this passkey">
+              Save Passkey
+            </Button>
           </div>
         }
       >
@@ -2158,7 +2206,12 @@ function NotificationsTab() {
       </div>
 
       <div className="mt-4 flex justify-end">
-        <Button variant="primary" isLoading={isSaving} onClick={handleSave} tooltip="Save notification preferences">
+        <Button
+          variant="primary"
+          isLoading={isSaving}
+          onClick={handleSave}
+          tooltip="Save notification preferences"
+        >
           Save Preferences
         </Button>
       </div>
@@ -2327,9 +2380,8 @@ function PrivacyTab() {
           </div>
         </div>
         <p className="mb-4 text-sm text-[var(--text-muted)]">
-          You&apos;ll receive a JSON file via email containing your profile, applications,
-          saved jobs, notifications, and other account data. This may take a few minutes to
-          prepare.
+          You&apos;ll receive a JSON file via email containing your profile, applications, saved
+          jobs, notifications, and other account data. This may take a few minutes to prepare.
         </p>
         <Button
           variant="outline"
@@ -2355,7 +2407,12 @@ function PrivacyTab() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button variant="primary" isLoading={isSaving} onClick={handleSave} tooltip="Save privacy settings">
+        <Button
+          variant="primary"
+          isLoading={isSaving}
+          onClick={handleSave}
+          tooltip="Save privacy settings"
+        >
           Save Privacy Settings
         </Button>
       </div>

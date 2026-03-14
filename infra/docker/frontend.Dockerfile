@@ -1,5 +1,5 @@
 # Build Stage
-FROM node:20.18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -40,7 +40,7 @@ ARG SENTRY_AUTH_TOKEN
 RUN npm run build
 
 # Production Stage
-FROM node:20.18-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 

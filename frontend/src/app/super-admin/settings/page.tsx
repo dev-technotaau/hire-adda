@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -52,14 +52,10 @@ const SETTINGS_TABS = [
 export default function SuperAdminSettingsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState('security');
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && SETTINGS_TABS.some((t) => t.key === tab)) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(() =>
+    tabParam && SETTINGS_TABS.some((t) => t.key === tabParam) ? tabParam : 'security',
+  );
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -252,11 +248,22 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             </div>
           </div>
           {mfaEnabled ? (
-            <Button variant="destructive" size="sm" onClick={() => setShowDisableModal(true)} tooltip="Disable two-factor authentication">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDisableModal(true)}
+              tooltip="Disable two-factor authentication"
+            >
               Disable MFA
             </Button>
           ) : (
-            <Button variant="primary" size="sm" isLoading={setupLoading} onClick={handleSetupMfa} tooltip="Enable two-factor authentication">
+            <Button
+              variant="primary"
+              size="sm"
+              isLoading={setupLoading}
+              onClick={handleSetupMfa}
+              tooltip="Enable two-factor authentication"
+            >
               Enable MFA
             </Button>
           )}
@@ -321,7 +328,12 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             >
               Cancel
             </Button>
-            <Button variant="primary" isLoading={enableLoading} onClick={handleEnableMfa} tooltip="Verify code and enable MFA">
+            <Button
+              variant="primary"
+              isLoading={enableLoading}
+              onClick={handleEnableMfa}
+              tooltip="Verify code and enable MFA"
+            >
               Verify &amp; Enable
             </Button>
           </div>
@@ -404,7 +416,12 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             >
               Cancel
             </Button>
-            <Button variant="destructive" isLoading={disableLoading} onClick={handleDisableMfa} tooltip="Confirm disabling MFA">
+            <Button
+              variant="destructive"
+              isLoading={disableLoading}
+              onClick={handleDisableMfa}
+              tooltip="Confirm disabling MFA"
+            >
               Disable MFA
             </Button>
           </div>
@@ -459,7 +476,11 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             </div>
           ) : (
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowRegenModal(false)} tooltip="Cancel backup code regeneration">
+              <Button
+                variant="outline"
+                onClick={() => setShowRegenModal(false)}
+                tooltip="Cancel backup code regeneration"
+              >
                 Cancel
               </Button>
               <Button
@@ -599,7 +620,13 @@ function PasskeysSection() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRegister} isLoading={registering} tooltip="Register a new passkey for passwordless login">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRegister}
+            isLoading={registering}
+            tooltip="Register a new passkey for passwordless login"
+          >
             <Plus className="mr-1 h-4 w-4" />
             Add Passkey
           </Button>
@@ -678,7 +705,9 @@ function PasskeysSection() {
             >
               Cancel
             </Button>
-            <Button onClick={handleConfirmRegister} tooltip="Save and register this passkey">Save Passkey</Button>
+            <Button onClick={handleConfirmRegister} tooltip="Save and register this passkey">
+              Save Passkey
+            </Button>
           </div>
         }
       >
@@ -1022,7 +1051,9 @@ function AdminMfaManagement() {
                           onClick={() =>
                             setExpandedAdminId(expandedAdminId === admin.id ? null : admin.id)
                           }
-                          tooltip={expandedAdminId === admin.id ? 'Collapse details' : 'Expand details'}
+                          tooltip={
+                            expandedAdminId === admin.id ? 'Collapse details' : 'Expand details'
+                          }
                         >
                           {expandedAdminId === admin.id ? (
                             <ChevronUp className="h-4 w-4" />
@@ -1101,7 +1132,11 @@ function AdminMfaManagement() {
             </div>
           ) : setupData ? (
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setSetupTarget(null)} tooltip="Cancel admin MFA setup">
+              <Button
+                variant="outline"
+                onClick={() => setSetupTarget(null)}
+                tooltip="Cancel admin MFA setup"
+              >
                 Cancel
               </Button>
               <Button
@@ -1192,10 +1227,19 @@ function AdminMfaManagement() {
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setDisableTarget(null)} tooltip="Cancel and keep MFA enabled">
+            <Button
+              variant="outline"
+              onClick={() => setDisableTarget(null)}
+              tooltip="Cancel and keep MFA enabled"
+            >
               Cancel
             </Button>
-            <Button variant="destructive" isLoading={disableLoading} onClick={handleDisableMfa} tooltip="Confirm disabling MFA for this admin">
+            <Button
+              variant="destructive"
+              isLoading={disableLoading}
+              onClick={handleDisableMfa}
+              tooltip="Confirm disabling MFA for this admin"
+            >
               Disable MFA
             </Button>
           </div>
@@ -1240,10 +1284,19 @@ function AdminMfaManagement() {
             </div>
           ) : (
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setRegenTarget(null)} tooltip="Cancel backup code regeneration">
+              <Button
+                variant="outline"
+                onClick={() => setRegenTarget(null)}
+                tooltip="Cancel backup code regeneration"
+              >
                 Cancel
               </Button>
-              <Button variant="primary" isLoading={regenLoading} onClick={handleRegenBackupCodes} tooltip="Generate new backup codes for this admin">
+              <Button
+                variant="primary"
+                isLoading={regenLoading}
+                onClick={handleRegenBackupCodes}
+                tooltip="Generate new backup codes for this admin"
+              >
                 Regenerate
               </Button>
             </div>

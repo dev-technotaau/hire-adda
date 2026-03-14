@@ -48,12 +48,15 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
   const clearMaintenance = useMaintenanceStore((s) => s.clearMaintenanceMode);
   const user = useAuthStore((s) => s.user);
 
-  // One-shot ref: once feature flags resolve, never show the spinner again
-  const resolved = useRef(false);
-  if (!isPending) resolved.current = true;
+  // One-shot state: once feature flags resolve, never show the spinner again
+  // (setState during render — React's getDerivedStateFromProps pattern)
+  const [resolved, setResolved] = useState(false);
+  if (!isPending && !resolved) {
+    setResolved(true);
+  }
 
   // Track when the 503 trigger happened so we only trust flags fetched AFTER it
-  const triggerTimestamp = useRef(0);
+  const triggerTimestamp = useRef<number>(0);
 
   // When a 503 triggers maintenance, invalidate feature flags to force a fresh fetch
   useEffect(() => {
@@ -65,7 +68,12 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
 
   // Only clear apiTriggered if flags were fetched AFTER the 503 trigger and confirm maintenance is OFF
   useEffect(() => {
-    if (!isPending && !maintenanceFlag && apiTriggered && dataUpdatedAt > triggerTimestamp.current) {
+    if (
+      !isPending &&
+      !maintenanceFlag &&
+      apiTriggered &&
+      dataUpdatedAt > triggerTimestamp.current
+    ) {
       clearMaintenance();
     }
   }, [isPending, maintenanceFlag, apiTriggered, clearMaintenance, dataUpdatedAt]);
@@ -92,7 +100,7 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
 
   // If API triggered maintenance AND flags haven't resolved yet, show immediately
   // Once flags resolve, they become the source of truth (useEffect above clears stale state)
-  if (apiTriggered && !resolved.current && !isBypassed) {
+  if (apiTriggered && !resolved && !isBypassed) {
     return (
       <MaintenancePage
         message={flags?.maintenanceMessage as string}
@@ -101,8 +109,8 @@ function MaintenanceGate({ children }: { children: ReactNode }) {
     );
   }
 
-  // Block rendering ONLY on initial load (ref ensures this never re-triggers)
-  if (!resolved.current) {
+  // Block rendering ONLY on initial load (state ensures this never re-triggers)
+  if (!resolved) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--border)] border-t-[var(--primary)]" />
@@ -231,15 +239,15 @@ export default function Providers({ children }: { children: ReactNode }) {
           <FeatureFlagPrefetcher>
             <AuthHydrator>
               <AuthSyncListener>
-              <MaintenanceGate>
-                <AnalyticsTracker>
-                  <SocketInitializer>
-                    <PresenceTracker>
-                      <PushNotificationRegistrar>{children}</PushNotificationRegistrar>
-                    </PresenceTracker>
-                  </SocketInitializer>
-                </AnalyticsTracker>
-              </MaintenanceGate>
+                <MaintenanceGate>
+                  <AnalyticsTracker>
+                    <SocketInitializer>
+                      <PresenceTracker>
+                        <PushNotificationRegistrar>{children}</PushNotificationRegistrar>
+                      </PresenceTracker>
+                    </SocketInitializer>
+                  </AnalyticsTracker>
+                </MaintenanceGate>
               </AuthSyncListener>
             </AuthHydrator>
           </FeatureFlagPrefetcher>

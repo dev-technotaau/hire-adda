@@ -80,14 +80,10 @@ const TABS = [
 export default function EmployerSettingsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState('account');
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && TABS.some((t) => t.key === tab)) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(() =>
+    tabParam && TABS.some((t) => t.key === tabParam) ? tabParam : 'account',
+  );
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -333,7 +329,7 @@ function ChangeEmailSection() {
                     type="button"
                     onClick={handleResend}
                     disabled={isResending}
-                    className="cursor-pointer text-primary font-medium hover:underline disabled:opacity-50"
+                    className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
                   >
                     {isResending ? 'Sending...' : 'Resend Code'}
                   </button>
@@ -533,7 +529,11 @@ function MobileVerificationSection() {
                 isLoading={isLoading}
                 onClick={handleSendOtp}
                 disabled={!hasMobile && !mobileNumber}
-                tooltip={hasMobile ? 'Send OTP to verify your phone number' : 'Add and verify your phone number'}
+                tooltip={
+                  hasMobile
+                    ? 'Send OTP to verify your phone number'
+                    : 'Add and verify your phone number'
+                }
               >
                 {hasMobile ? 'Verify Phone Number' : 'Add & Verify'}
               </Button>
@@ -624,7 +624,7 @@ function MobileVerificationSection() {
                     type="button"
                     onClick={handleResend}
                     disabled={isResending}
-                    className="cursor-pointer text-primary font-medium hover:underline disabled:opacity-50"
+                    className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
                   >
                     {isResending ? 'Sending...' : 'Resend Code'}
                   </button>
@@ -822,13 +822,21 @@ function WhatsAppVerificationSection() {
             </span>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Tooltip content={hasSeparateNumber ? 'Change your WhatsApp number' : 'Use a different number for WhatsApp'}>
+            <Tooltip
+              content={
+                hasSeparateNumber
+                  ? 'Change your WhatsApp number'
+                  : 'Use a different number for WhatsApp'
+              }
+            >
               <button
                 type="button"
                 onClick={() => setStep('change')}
-                className="cursor-pointer text-primary text-sm font-medium hover:underline"
+                className="text-primary cursor-pointer text-sm font-medium hover:underline"
               >
-                {hasSeparateNumber ? 'Change WhatsApp number' : 'Use a different number for WhatsApp'}
+                {hasSeparateNumber
+                  ? 'Change WhatsApp number'
+                  : 'Use a different number for WhatsApp'}
               </button>
             </Tooltip>
             {hasSeparateNumber && (
@@ -878,7 +886,12 @@ function WhatsAppVerificationSection() {
             required
           />
           <div className="flex gap-3 pt-1">
-            <Button type="submit" isLoading={isLoading} disabled={!newWhatsappNumber || !password} tooltip="Send OTP to new WhatsApp number">
+            <Button
+              type="submit"
+              isLoading={isLoading}
+              disabled={!newWhatsappNumber || !password}
+              tooltip="Send OTP to new WhatsApp number"
+            >
               Continue
             </Button>
             <Button variant="outline" onClick={resetToIdle} tooltip="Cancel WhatsApp number change">
@@ -914,7 +927,7 @@ function WhatsAppVerificationSection() {
                     type="button"
                     onClick={handleResend}
                     disabled={isResending}
-                    className="cursor-pointer text-primary font-medium hover:underline disabled:opacity-50"
+                    className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
                   >
                     {isResending ? 'Sending...' : 'Resend Code'}
                   </button>
@@ -956,15 +969,21 @@ function WhatsAppVerificationSection() {
           )}
           <div className="flex flex-wrap items-center gap-3 pt-1">
             {hasMobile && (
-              <Button isLoading={isLoading} onClick={handleSendOtp} tooltip="Send OTP to verify WhatsApp">
+              <Button
+                isLoading={isLoading}
+                onClick={handleSendOtp}
+                tooltip="Send OTP to verify WhatsApp"
+              >
                 Verify WhatsApp
               </Button>
             )}
-            <Tooltip content={displayNumber ? 'Change your WhatsApp number' : 'Add a WhatsApp number'}>
+            <Tooltip
+              content={displayNumber ? 'Change your WhatsApp number' : 'Add a WhatsApp number'}
+            >
               <button
                 type="button"
                 onClick={() => setStep('change')}
-                className="cursor-pointer text-primary text-sm font-medium hover:underline"
+                className="text-primary cursor-pointer text-sm font-medium hover:underline"
               >
                 {displayNumber ? 'Change WhatsApp number' : 'Add WhatsApp number'}
               </button>
@@ -1145,7 +1164,7 @@ function ChangePasswordSection() {
                     type="button"
                     onClick={handleResend}
                     disabled={isResending}
-                    className="cursor-pointer text-primary font-medium hover:underline disabled:opacity-50"
+                    className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
                   >
                     {isResending ? 'Sending...' : 'Resend Code'}
                   </button>
@@ -1441,11 +1460,22 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             </div>
           </div>
           {mfaEnabled ? (
-            <Button variant="destructive" size="sm" onClick={() => setShowDisableModal(true)} tooltip="Disable two-factor authentication">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDisableModal(true)}
+              tooltip="Disable two-factor authentication"
+            >
               Disable MFA
             </Button>
           ) : (
-            <Button variant="primary" size="sm" isLoading={setupLoading} onClick={handleSetupMfa} tooltip="Set up two-factor authentication">
+            <Button
+              variant="primary"
+              size="sm"
+              isLoading={setupLoading}
+              onClick={handleSetupMfa}
+              tooltip="Set up two-factor authentication"
+            >
               Enable MFA
             </Button>
           )}
@@ -1510,7 +1540,12 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             >
               Cancel
             </Button>
-            <Button variant="primary" isLoading={enableLoading} onClick={handleEnableMfa} tooltip="Verify code and enable MFA">
+            <Button
+              variant="primary"
+              isLoading={enableLoading}
+              onClick={handleEnableMfa}
+              tooltip="Verify code and enable MFA"
+            >
               Verify &amp; Enable
             </Button>
           </div>
@@ -1593,7 +1628,12 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             >
               Cancel
             </Button>
-            <Button variant="destructive" isLoading={disableLoading} onClick={handleDisableMfa} tooltip="Confirm disabling two-factor authentication">
+            <Button
+              variant="destructive"
+              isLoading={disableLoading}
+              onClick={handleDisableMfa}
+              tooltip="Confirm disabling two-factor authentication"
+            >
               Disable MFA
             </Button>
           </div>
@@ -1648,7 +1688,11 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
             </div>
           ) : (
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowRegenModal(false)} tooltip="Cancel regenerating backup codes">
+              <Button
+                variant="outline"
+                onClick={() => setShowRegenModal(false)}
+                tooltip="Cancel regenerating backup codes"
+              >
                 Cancel
               </Button>
               <Button
@@ -1784,7 +1828,13 @@ function PasskeysSection() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRegister} isLoading={registering} tooltip="Register a new passkey for passwordless sign-in">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRegister}
+            isLoading={registering}
+            tooltip="Register a new passkey for passwordless sign-in"
+          >
             <Plus className="mr-1 h-4 w-4" />
             Add Passkey
           </Button>
@@ -1863,7 +1913,9 @@ function PasskeysSection() {
             >
               Cancel
             </Button>
-            <Button onClick={handleConfirmRegister} tooltip="Save and register this passkey">Save Passkey</Button>
+            <Button onClick={handleConfirmRegister} tooltip="Save and register this passkey">
+              Save Passkey
+            </Button>
           </div>
         }
       >
@@ -1934,105 +1986,105 @@ function ActiveSessionsSection() {
 
   return (
     <>
-    <Card variant="bordered">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-lg">
-            <Monitor className="text-primary h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--text)]">Active Sessions</h2>
-            <p className="text-sm text-[var(--text-secondary)]">
-              Manage your active sessions across devices
-            </p>
-          </div>
-        </div>
-        {sessions.length > 1 && (
-          <Button
-            variant="outline"
-            size="sm"
-            isLoading={revokingAll}
-            leftIcon={<LogOut className="h-4 w-4" />}
-            onClick={() => setShowConfirmRevokeAll(true)}
-            tooltip="Sign out all other devices"
-          >
-            Revoke All Other Sessions
-          </Button>
-        )}
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-[var(--bg-secondary)]" />
-          ))}
-        </div>
-      ) : sessions.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[var(--text-muted)]">
-          No active sessions found
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className="flex items-center justify-between rounded-lg border border-[var(--border)] p-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="text-[var(--text-muted)]">
-                  {getDeviceIcon(session.deviceInfo ?? null)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-[var(--text)]">
-                      {session.deviceInfo || 'Unknown Device'}
-                    </p>
-                    {session.isCurrent && (
-                      <span className="rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-xs font-medium text-[var(--success)]">
-                        Current
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    IP: {session.ipAddress || 'Unknown'} &middot; Last active{' '}
-                    {formatRelativeDate(session.lastActive || session.createdAt)}
-                  </p>
-                </div>
-              </div>
-              {!session.isCurrent && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  isLoading={revokingId === session.id}
-                  onClick={() => setConfirmRevokeId(session.id)}
-                  className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
-                  tooltip="Revoke this session"
-                >
-                  Revoke
-                </Button>
-              )}
+      <Card variant="bordered">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-lg">
+              <Monitor className="text-primary h-5 w-5" />
             </div>
-          ))}
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--text)]">Active Sessions</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Manage your active sessions across devices
+              </p>
+            </div>
+          </div>
+          {sessions.length > 1 && (
+            <Button
+              variant="outline"
+              size="sm"
+              isLoading={revokingAll}
+              leftIcon={<LogOut className="h-4 w-4" />}
+              onClick={() => setShowConfirmRevokeAll(true)}
+              tooltip="Sign out all other devices"
+            >
+              Revoke All Other Sessions
+            </Button>
+          )}
         </div>
-      )}
-    </Card>
 
-    <ConfirmDialog
-      isOpen={!!confirmRevokeId}
-      onClose={() => setConfirmRevokeId(null)}
-      onConfirm={() => confirmRevokeId && handleRevoke(confirmRevokeId)}
-      title="Revoke Session"
-      message="Are you sure you want to revoke this session? The device will be signed out immediately."
-      confirmLabel="Revoke"
-    />
-    <ConfirmDialog
-      isOpen={showConfirmRevokeAll}
-      onClose={() => setShowConfirmRevokeAll(false)}
-      onConfirm={handleRevokeAll}
-      title="Revoke All Other Sessions"
-      message="Are you sure you want to revoke all other sessions? All other devices will be signed out immediately."
-      confirmLabel="Revoke All"
-    />
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 animate-pulse rounded-lg bg-[var(--bg-secondary)]" />
+            ))}
+          </div>
+        ) : sessions.length === 0 ? (
+          <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+            No active sessions found
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {sessions.map((session) => (
+              <div
+                key={session.id}
+                className="flex items-center justify-between rounded-lg border border-[var(--border)] p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="text-[var(--text-muted)]">
+                    {getDeviceIcon(session.deviceInfo ?? null)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-[var(--text)]">
+                        {session.deviceInfo || 'Unknown Device'}
+                      </p>
+                      {session.isCurrent && (
+                        <span className="rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-xs font-medium text-[var(--success)]">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      IP: {session.ipAddress || 'Unknown'} &middot; Last active{' '}
+                      {formatRelativeDate(session.lastActive || session.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                {!session.isCurrent && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    isLoading={revokingId === session.id}
+                    onClick={() => setConfirmRevokeId(session.id)}
+                    className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
+                    tooltip="Revoke this session"
+                  >
+                    Revoke
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <ConfirmDialog
+        isOpen={!!confirmRevokeId}
+        onClose={() => setConfirmRevokeId(null)}
+        onConfirm={() => confirmRevokeId && handleRevoke(confirmRevokeId)}
+        title="Revoke Session"
+        message="Are you sure you want to revoke this session? The device will be signed out immediately."
+        confirmLabel="Revoke"
+      />
+      <ConfirmDialog
+        isOpen={showConfirmRevokeAll}
+        onClose={() => setShowConfirmRevokeAll(false)}
+        onConfirm={handleRevokeAll}
+        title="Revoke All Other Sessions"
+        message="Are you sure you want to revoke all other sessions? All other devices will be signed out immediately."
+        confirmLabel="Revoke All"
+      />
     </>
   );
 }
@@ -2146,7 +2198,12 @@ function WebhooksTab() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowCreateModal(true)} tooltip="Create a new webhook endpoint">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCreateModal(true)}
+            tooltip="Create a new webhook endpoint"
+          >
             <Plus className="mr-1 h-4 w-4" />
             Add Webhook
           </Button>
@@ -2239,7 +2296,11 @@ function WebhooksTab() {
           isOpen={!!copiedSecret}
           onClose={() => setCopiedSecret(null)}
           title="Webhook Secret"
-          footer={<Button onClick={() => setCopiedSecret(null)} tooltip="Close secret dialog">Done</Button>}
+          footer={
+            <Button onClick={() => setCopiedSecret(null)} tooltip="Close secret dialog">
+              Done
+            </Button>
+          }
         >
           <p className="mb-3 text-sm text-[var(--text-muted)]">
             Copy this secret now. It will not be shown again.
@@ -2270,7 +2331,11 @@ function WebhooksTab() {
         title="Add Webhook"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowCreateModal(false)} tooltip="Cancel webhook creation">
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateModal(false)}
+              tooltip="Cancel webhook creation"
+            >
               Cancel
             </Button>
             <Button
@@ -2549,7 +2614,12 @@ function NotificationsTab() {
       </div>
 
       <div className="mt-4 flex justify-end">
-        <Button variant="primary" isLoading={isSaving} onClick={handleSave} tooltip="Save notification preferences">
+        <Button
+          variant="primary"
+          isLoading={isSaving}
+          onClick={handleSave}
+          tooltip="Save notification preferences"
+        >
           Save Preferences
         </Button>
       </div>
@@ -2673,9 +2743,8 @@ function PrivacyTab() {
           </div>
         </div>
         <p className="mb-4 text-sm text-[var(--text-muted)]">
-          You&apos;ll receive a JSON file via email containing your profile, company details,
-          job postings, notifications, and other account data. This may take a few minutes to
-          prepare.
+          You&apos;ll receive a JSON file via email containing your profile, company details, job
+          postings, notifications, and other account data. This may take a few minutes to prepare.
         </p>
         <Button
           variant="outline"
@@ -2700,7 +2769,12 @@ function PrivacyTab() {
       </Card>
 
       <div className="flex justify-end">
-        <Button variant="primary" isLoading={isSaving} onClick={handleSave} tooltip="Save privacy settings">
+        <Button
+          variant="primary"
+          isLoading={isSaving}
+          onClick={handleSave}
+          tooltip="Save privacy settings"
+        >
           Save Privacy Settings
         </Button>
       </div>
@@ -2766,7 +2840,7 @@ function LegalTab() {
               target="_blank"
               rel="noopener noreferrer"
               title={`View ${link.label}`}
-              className="cursor-pointer flex items-center gap-3 rounded-lg border border-[var(--border)] p-3 transition-colors hover:bg-[var(--bg-secondary)]"
+              className="flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--border)] p-3 transition-colors hover:bg-[var(--bg-secondary)]"
             >
               <div className="bg-primary-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
                 <link.icon className="text-primary h-4.5 w-4.5" />
