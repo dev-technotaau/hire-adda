@@ -1,0 +1,33 @@
+# ============================================================
+# OpenSearch Dashboards — Ingress
+# dashboards.hireadda.in with basic auth
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opensearch-dashboards-ingress
+  namespace: logging
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    # Basic auth for access control
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: dashboards-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: 'OpenSearch Dashboards'
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - dashboards.hireadda.in
+      secretName: dashboards-tls
+  rules:
+    - host: dashboards.hireadda.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: opensearch-dashboards
+                port:
+                  number: 5601

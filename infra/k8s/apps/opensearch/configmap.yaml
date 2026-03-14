@@ -1,0 +1,91 @@
+# ============================================================
+# OpenSearch ConfigMap — Single-node configuration
+# Dual-purpose: application search + log storage
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-config
+  namespace: talent-bridge
+  labels:
+    app: opensearch
+    tier: search
+    app.kubernetes.io/name: opensearch
+    app.kubernetes.io/component: search
+    app.kubernetes.io/part-of: talent-bridge
+data:
+  # Cluster settings
+  CLUSTER_NAME: 'talentbridge'
+  NODE_NAME: 'opensearch-node1'
+  DISCOVERY_TYPE: 'single-node'
+  OPENSEARCH_JAVA_OPTS: '-Xms1g -Xmx1g'
+  DISABLE_SECURITY_PLUGIN: 'true'
+  DISABLE_INSTALL_DEMO_CONFIG: 'true'
+  SNAPSHOT_REPO_PATH: '/usr/share/opensearch/snapshots'
+
+  # Custom opensearch.yml (can be mounted at /usr/share/opensearch/config/opensearch.yml)
+  opensearch.yml: |
+    cluster.name: talentbridge
+    node.name: opensearch-node1
+    discovery.type: single-node
+
+    # Paths
+    path.data: /usr/share/opensearch/data
+    path.repo: ["/usr/share/opensearch/snapshots"]
+
+    # Network
+    network.host: 0.0.0.0
+    http.port: 9200
+    transport.port: 9300
+
+    # Security (disabled — internal network only, protected by NetworkPolicy)
+    plugins.security.disabled: true
+
+    # Performance
+    indices.memory.index_buffer_size: 20%
+    indices.queries.cache.size: 15%
+
+    # Circuit breakers
+    indices.breaker.total.limit: 70%
+    indices.breaker.fielddata.limit: 40%
+    indices.breaker.request.limit: 60%
+
+    # Thread pools
+    thread_pool.write.queue_size: 1000
+    thread_pool.search.queue_size: 1000
+
+  # Index lifecycle policy for log indices (auto-delete after 14 days)
+  log-index-policy.json: |
+    {
+      "policy": {
+        "description": "Auto-delete log indices after 14 days",
+        "default_state": "hot",
+        "states": [
+          {
+            "name": "hot",
+            "actions": [],
+            "transitions": [
+              {
+                "state_name": "delete",
+                "conditions": {
+                  "min_index_age": "14d"
+                }
+              }
+            ]
+          },
+          {
+            "name": "delete",
+            "actions": [
+              { "delete": {} }
+            ],
+            "transitions": []
+          }
+        ],
+        "ism_template": [
+          {
+            "index_patterns": ["logs-talent-bridge-*"],
+            "priority": 100
+          }
+        ]
+      }
+    }

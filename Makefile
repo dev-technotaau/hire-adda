@@ -6,7 +6,13 @@
        backup-cleanup backup-status \
        ssl-init ssl-renew ssl-status ssl-dev \
        mail-setup mail-up mail-down mail-logs mail-test \
-       mail-accounts mail-dkim mail-restart mail-add-account
+       mail-accounts mail-dkim mail-restart mail-add-account \
+       monitoring-up monitoring-down monitoring-logs \
+       kafka-up kafka-down kafka-logs kafka-topics \
+       kafka-create-topics kafka-describe kafka-consumer-lag \
+       grafana-reset-pw \
+       deploy-dry deploy-backend deploy-frontend deploy-all deploy-status \
+       deploy-blue-green deploy-canary deploy-promote deploy-rollback
 
 # ─── Development ─────────────────────────────────────────
 dev:                    ## Start both backend and frontend
@@ -80,30 +86,103 @@ db-seed-dev:            ## Seed full development data
 db-generate:            ## Generate Prisma client
 	cd backend && npm run db:generate
 
-# ─── Docker ──────────────────────────────────────────────
-docker-up:              ## Start all services with Docker Compose
-	cd backend && docker compose up -d
+# ─── Docker (Production) ─────────────────────────────────
+docker-up:              ## Start production stack (infra/docker)
+	cd infra/docker && docker compose up -d
 
-docker-down:            ## Stop all Docker services
-	cd backend && docker compose down
+docker-down:            ## Stop production stack
+	cd infra/docker && docker compose down
 
-docker-build:           ## Build Docker images
-	cd backend && docker compose build
+docker-build:           ## Build production Docker images
+	cd infra/docker && docker compose build
 
-docker-logs:            ## View Docker logs
-	cd backend && docker compose logs -f
+docker-logs:            ## View production Docker logs
+	cd infra/docker && docker compose logs -f
+
+docker-restart:         ## Restart production stack
+	cd infra/docker && docker compose restart
+
+docker-ps:              ## Show running containers
+	cd infra/docker && docker compose ps
+
+# ─── Kafka ──────────────────────────────────────────────
+kafka-up:               ## Start Kafka broker + exporter
+	cd infra/docker && docker compose up -d kafka kafka-exporter
+
+kafka-down:             ## Stop Kafka broker + exporter
+	cd infra/docker && docker compose stop kafka kafka-exporter
+
+kafka-logs:             ## View Kafka logs
+	cd infra/docker && docker compose logs -f kafka
+
+kafka-topics:           ## List Kafka topics
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+kafka-create-topics:    ## Create consolidated Kafka topics (tb.users, tb.jobs, etc.)
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.users --partitions 3 --replication-factor 1 --if-not-exists
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.jobs --partitions 3 --replication-factor 1 --if-not-exists
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.applications --partitions 3 --replication-factor 1 --if-not-exists
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.notifications --partitions 3 --replication-factor 1 --if-not-exists
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic talent-bridge.dlq --partitions 1 --replication-factor 1 --if-not-exists
+
+kafka-describe:         ## Describe all Kafka topics with partition details
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe
+
+kafka-consumer-lag:     ## Check consumer group lag
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group talent-bridge-backend-group --describe
+
+# ─── Monitoring ─────────────────────────────────────────
+monitoring-up:          ## Start monitoring stack (Prometheus + Grafana + Loki)
+	cd infra/docker && docker compose up -d prometheus grafana loki promtail node-exporter redis-exporter kafka-exporter
+
+monitoring-down:        ## Stop monitoring stack
+	cd infra/docker && docker compose stop prometheus grafana loki promtail node-exporter redis-exporter kafka-exporter
+
+monitoring-logs:        ## View monitoring stack logs
+	cd infra/docker && docker compose logs -f prometheus grafana loki promtail
+
+grafana-reset-pw:       ## Reset Grafana admin password (PASS=newpassword)
+	cd infra/docker && docker compose exec grafana grafana cli admin reset-admin-password $(PASS)
+
+# ─── VPS Deploy (Blue-Green / Canary / Rolling) ───────
+deploy-dry:             ## Dry-run deploy (show what would happen)
+	bash infra/scripts/deploy.sh --strategy blue-green --backend-tag latest --frontend-tag latest --dry-run
+
+deploy-backend:         ## Deploy backend only (blue-green)
+	bash infra/scripts/deploy.sh --strategy blue-green --backend-tag latest
+
+deploy-frontend:        ## Deploy frontend only (blue-green)
+	bash infra/scripts/deploy.sh --strategy blue-green --frontend-tag latest
+
+deploy-all:             ## Deploy both backend and frontend (blue-green)
+	bash infra/scripts/deploy.sh --strategy blue-green --backend-tag latest --frontend-tag latest
+
+deploy-blue-green:      ## Blue-green deploy (zero-downtime instant swap)
+	bash infra/scripts/deploy.sh --strategy blue-green --backend-tag latest --frontend-tag latest
+
+deploy-canary:          ## Canary deploy (20% traffic to new version)
+	bash infra/scripts/deploy.sh --strategy canary --backend-tag latest --frontend-tag latest --canary-weight 20
+
+deploy-promote:         ## Promote canary to 100% traffic
+	bash infra/scripts/deploy.sh --promote
+
+deploy-rollback:        ## Instant rollback to previous version
+	bash infra/scripts/deploy.sh --rollback
+
+deploy-status:          ## Show deployment state (active color, tags, weights)
+	bash infra/scripts/deploy.sh --status
 
 # ─── Backup & Recovery ──────────────────────────────────
 # Automated: BullMQ runs pg_dump → R2 daily at 2AM UTC
 # Manual: Use these commands from your local machine
 backup-db:              ## Create DB backup locally (pg_dump → ./backups/)
-	cd backend && bash scripts/db-backup.sh
+	bash infra/scripts/db-backup.sh
 
 backup-db-restore:      ## Restore database from local backup (FILE=path/to/backup.sql.gz)
-	cd backend && bash scripts/db-restore.sh $(FILE) --confirm
+	bash infra/scripts/db-restore.sh $(FILE) --confirm
 
 backup-cleanup:         ## Remove old local backups beyond retention period
-	cd backend && bash scripts/backup-cleanup.sh
+	bash infra/scripts/backup-cleanup.sh
 
 backup-status:          ## Show last automated backup timestamps from Redis
 	@echo "=== Backup Status (Redis) ===" && \
@@ -124,20 +203,20 @@ backup-status:          ## Show last automated backup timestamps from Redis
 
 # ─── SSL / Let's Encrypt ───────────────────────────────
 ssl-init:               ## Request initial Let's Encrypt certs for hireadda.in
-	cd backend && docker compose exec certbot certbot certonly --webroot \
+	cd infra/docker && docker compose exec certbot certbot certonly --webroot \
 		-w /var/www/certbot \
-		-d hireadda.in -d www.hireadda.in -d api.hireadda.in \
+		-d hireadda.in -d www.hireadda.in -d api.hireadda.in -d grafana.hireadda.in \
 		--agree-tos --non-interactive --email $(EMAIL)
 
 ssl-renew:              ## Force certificate renewal
-	cd backend && docker compose exec certbot certbot renew --webroot -w /var/www/certbot
-	cd backend && docker compose exec nginx nginx -s reload
+	cd infra/docker && docker compose exec certbot certbot renew --webroot -w /var/www/certbot
+	cd infra/docker && docker compose exec nginx nginx -s reload
 
 ssl-status:             ## Show certificate expiry dates
-	cd backend && docker compose exec certbot certbot certificates
+	cd infra/docker && docker compose exec certbot certbot certificates
 
 ssl-dev:                ## Generate self-signed certs for local development
-	cd backend/nginx/ssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+	cd infra/docker/nginx/ssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 		-keyout privkey.pem -out fullchain.pem -subj "/CN=localhost"
 
 # ─── Mail Server (Docker Mailserver) ──────────────────────

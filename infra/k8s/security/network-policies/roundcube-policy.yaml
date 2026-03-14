@@ -1,0 +1,46 @@
+# ============================================================
+# Roundcube Webmail — Network Policy
+# Ingress from nginx-ingress only.
+# Egress to Docker mailserver (external) + DNS.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: roundcube-netpol
+  namespace: talent-bridge
+spec:
+  podSelector:
+    matchLabels:
+      app: roundcube
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # From nginx-ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 80
+          protocol: TCP
+  egress:
+    # To Docker mailserver (via mailserver-external service)
+    # IMAP + SMTP submission
+    - to:
+        - ipBlock:
+            cidr: 148.230.67.210/32
+      ports:
+        - port: 143
+          protocol: TCP
+        - port: 587
+          protocol: TCP
+        - port: 993
+          protocol: TCP
+    # DNS
+    - to: []
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP

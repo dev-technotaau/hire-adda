@@ -23,10 +23,10 @@ services:
     stop_grace_period: 1m
 
     ports:
-      - "25:25"       # SMTP  (incoming mail from other servers)
-      - "465:465"     # SMTPS (secure SMTP submission)
-      - "587:587"     # SMTP  (STARTTLS submission)
-      - "993:993"     # IMAPS (secure IMAP for mail clients)
+      - '25:25' # SMTP  (incoming mail from other servers)
+      - '465:465' # SMTPS (secure SMTP submission)
+      - '587:587' # SMTP  (STARTTLS submission)
+      - '993:993' # IMAPS (secure IMAP for mail clients)
 
     volumes:
       - mail_data:/var/mail
@@ -109,81 +109,26 @@ services:
       - LOGWATCH_INTERVAL=weekly
 
     cap_add:
-      - NET_ADMIN  # Required for fail2ban
+      - NET_ADMIN # Required for fail2ban
       - SYS_PTRACE # Required for process monitoring
 
     healthcheck:
-      test: ["CMD", "ss", "--listening", "--tcp", "--no-header", "( sport = :smtp )"]
+      test: ['CMD', 'ss', '--listening', '--tcp', '--no-header', '( sport = :smtp )']
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
 
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "20m"
-        max-file: "5"
+        max-size: '20m'
+        max-file: '5'
 
-  # ── Roundcube Webmail ──
-  roundcube:
-    image: roundcube/roundcubemail:latest
-    container_name: hireadda_webmail
-    restart: always
-    depends_on:
-      mailserver:
-        condition: service_healthy
-
-    environment:
-      - ROUNDCUBEMAIL_DEFAULT_HOST=tls://mailserver
-      - ROUNDCUBEMAIL_DEFAULT_PORT=143
-      - ROUNDCUBEMAIL_SMTP_SERVER=tls://mailserver
-      - ROUNDCUBEMAIL_SMTP_PORT=587
-      - ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE=25M
-      - ROUNDCUBEMAIL_SKIN=elastic
-      - ROUNDCUBEMAIL_PLUGINS=archive,managesieve,zipdownload,markasjunk
-      - ROUNDCUBEMAIL_DB_TYPE=sqlite
-
-    volumes:
-      - roundcube_data:/var/roundcube/db
-      - roundcube_temp:/tmp/roundcube-temp
-      - ./roundcube-custom.php:/var/roundcube/config/custom.config.php:ro
-
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # ── Nginx (reverse proxy + SSL for webmail) ──
-  nginx:
-    image: nginx:alpine
-    container_name: hireadda_webmail_nginx
-    restart: always
-    depends_on:
-      roundcube:
-        condition: service_healthy
-
-    ports:
-      - "80:80"
-      - "443:443"
-
-    volumes:
-      - ./webmail-nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+  # Roundcube webmail has been moved to K3s.
+  # See: infra/k8s/apps/roundcube/
+  # It connects to this mailserver via K8s ExternalName service
+  # (mailserver-external → 148.230.67.210 on ports 143/587).
 
 volumes:
   mail_data:
@@ -193,8 +138,4 @@ volumes:
   mail_logs:
     driver: local
   mail_config:
-    driver: local
-  roundcube_data:
-    driver: local
-  roundcube_temp:
     driver: local

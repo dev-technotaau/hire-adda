@@ -1,0 +1,58 @@
+# ============================================================
+# OpenSearch — Network Policy
+# Backend + Fluent Bit + Dashboards can connect.
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: opensearch-netpol
+  namespace: talent-bridge
+spec:
+  podSelector:
+    matchLabels:
+      app: opensearch
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # From backend (search queries)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - port: 9200
+          protocol: TCP
+    # From Fluent Bit (log ingestion)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: logging
+      ports:
+        - port: 9200
+          protocol: TCP
+    # From OpenSearch Dashboards
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: logging
+          podSelector:
+            matchLabels:
+              app: opensearch-dashboards
+      ports:
+        - port: 9200
+          protocol: TCP
+    # From snapshot CronJobs
+    - from:
+        - podSelector:
+            matchLabels:
+              app: opensearch-snapshot
+      ports:
+        - port: 9200
+          protocol: TCP
+  egress:
+    # DNS
+    - to: []
+      ports:
+        - port: 53
+          protocol: UDP

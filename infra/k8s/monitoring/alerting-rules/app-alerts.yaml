@@ -1,0 +1,171 @@
+# ============================================================
+# Application Alert Rules
+# ============================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: talent-bridge-app-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus
+    app.kubernetes.io/part-of: talent-bridge
+spec:
+  groups:
+    - name: talent-bridge.app
+      rules:
+        # ── HTTP Errors ──
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{namespace="talent-bridge",status=~"5.."}[5m]))
+            / sum(rate(http_requests_total{namespace="talent-bridge"}[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+            team: backend
+          annotations:
+            summary: 'High error rate (>5% of requests returning 5xx)'
+            description: '{{ $value | humanizePercentage }} of requests are failing in the last 5 minutes.'
+
+        # ── High Latency ──
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{namespace="talent-bridge"}[5m])) by (le)
+            ) > 2
+          for: 5m
+          labels:
+            severity: warning
+            team: backend
+          annotations:
+            summary: 'High API latency (p95 > 2s)'
+            description: '95th percentile latency is {{ $value }}s.'
+
+        # ── Pod Issues ──
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total{namespace="talent-bridge"}[15m]) > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: infra
+          annotations:
+            summary: 'Pod {{ $labels.pod }} is crash-looping'
+            description: 'Pod {{ $labels.pod }} in {{ $labels.namespace }} has restarted {{ $value | humanize }} times in the last 15 minutes.'
+
+        - alert: PodNotReady
+          expr: |
+            kube_pod_status_ready{namespace="talent-bridge",condition="true"} == 0
+          for: 5m
+          labels:
+            severity: warning
+            team: infra
+          annotations:
+            summary: 'Pod {{ $labels.pod }} is not ready'
+
+        # ── Database ──
+        - alert: DatabaseDown
+          expr: |
+            kube_pod_container_status_ready{namespace="talent-bridge",container="postgres"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            team: infra
+          annotations:
+            summary: 'PostgreSQL is down'
+
+        # ── Redis ──
+        - alert: RedisDown
+          expr: |
+            kube_pod_container_status_ready{namespace="talent-bridge",container="redis"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            team: infra
+          annotations:
+            summary: 'Redis is down'
+
+        - alert: RedisHighMemory
+          expr: |
+            redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+          for: 5m
+          labels:
+            severity: warning
+            team: infra
+          annotations:
+            summary: 'Redis memory usage above 90%'
+
+        # ── OpenSearch ──
+        - alert: OpenSearchDown
+          expr: |
+            kube_pod_container_status_ready{namespace="talent-bridge",container="opensearch"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            team: infra
+          annotations:
+            summary: 'OpenSearch is down'
+
+        # ── BullMQ Queues ──
+        - alert: BullMQQueueBacklog
+          expr: |
+            bullmq_queue_waiting{namespace="talent-bridge"} > 1000
+          for: 10m
+          labels:
+            severity: warning
+            team: backend
+          annotations:
+            summary: 'BullMQ queue {{ $labels.queue }} has {{ $value }} waiting jobs'
+
+        # ── Resource Pressure ──
+        - alert: HighMemoryUsage
+          expr: |
+            container_memory_working_set_bytes{namespace="talent-bridge"}
+            / container_spec_memory_limit_bytes{namespace="talent-bridge"} > 0.9
+          for: 5m
+          labels:
+            severity: warning
+            team: infra
+          annotations:
+            summary: 'Container {{ $labels.container }} memory usage above 90%'
+
+        # ── Kafka ──
+        - alert: KafkaDown
+          expr: |
+            kube_pod_container_status_ready{namespace="talent-bridge",container="kafka"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            team: infra
+          annotations:
+            summary: 'Kafka broker is down'
+
+        - alert: KafkaConsumerLagHigh
+          expr: |
+            sum(kafka_consumergroup_lag{consumergroup="talent-bridge-backend-group"}) > 10000
+          for: 10m
+          labels:
+            severity: warning
+            team: backend
+          annotations:
+            summary: 'Kafka consumer lag exceeds 10,000 messages'
+            description: 'Consumer group talent-bridge-backend-group has {{ $value }} messages of lag.'
+
+        - alert: KafkaUnderReplicatedPartitions
+          expr: |
+            kafka_topic_partition_under_replicated_partition > 0
+          for: 5m
+          labels:
+            severity: warning
+            team: infra
+          annotations:
+            summary: 'Kafka has under-replicated partitions'
+
+        - alert: KafkaNoActiveController
+          expr: |
+            kafka_controller_kafkacontroller_activecontrollercount != 1
+          for: 1m
+          labels:
+            severity: critical
+            team: infra
+          annotations:
+            summary: 'Kafka has no active controller'

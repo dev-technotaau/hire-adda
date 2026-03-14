@@ -1,0 +1,64 @@
+# Build Stage
+FROM node:20.18-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+
+# Build-time env vars — baked into Next.js static output by `npm run build`
+# Passed via --build-arg in CI/CD (see .github/workflows/cd.yml)
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_SOCKET_URL
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_SUPPORT_EMAIL
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
+ARG NEXT_PUBLIC_LINKEDIN_CLIENT_ID
+ARG NEXT_PUBLIC_WEBAUTHN_RP_ID
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+ARG NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+ARG NEXT_PUBLIC_FIREBASE_DATABASE_URL
+ARG NEXT_PUBLIC_FIREBASE_VAPID_KEY
+ARG NEXT_PUBLIC_GA_ID
+ARG NEXT_PUBLIC_GTM_ID
+ARG NEXT_PUBLIC_FB_PIXEL_ID
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ARG NEXT_PUBLIC_SENTRY_DSN
+ARG NEXT_PUBLIC_ENABLE_MOCK_DATA
+ARG NEXT_PUBLIC_MAINTENANCE_MODE
+ARG NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+ARG NEXT_PUBLIC_R2_PUBLIC_URL
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
+ARG NEXT_PUBLIC_NOMINATIM_BASE_URL
+ARG NEXT_PUBLIC_RAZORPAY_KEY_ID
+ARG SENTRY_AUTH_TOKEN
+
+RUN npm run build
+
+# Production Stage
+FROM node:20.18-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV production
+
+# Don't run as root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+ENV PORT 3000
+ENV HOSTNAME 0.0.0.0
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30s \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
+CMD ["node", "server.js"]

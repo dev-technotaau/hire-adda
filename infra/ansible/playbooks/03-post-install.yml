@@ -1,0 +1,182 @@
+# ============================================================
+# Post-Install Playbook
+# Creates K8s namespaces, adds Helm repos, verifies cluster.
+# ============================================================
+# Usage:
+#   ansible-playbook -i inventory/production.ini playbooks/03-post-install.yml
+# ============================================================
+
+---
+- name: Post-install K3s configuration
+  hosts: k3s_server
+  become: true
+  gather_facts: false
+
+  tasks:
+    # ── Create Namespaces ──
+    - name: Create Kubernetes namespaces
+      ansible.builtin.command:
+        cmd: 'k3s kubectl create namespace {{ item }}'
+      loop: '{{ k8s_namespaces }}'
+      register: ns_result
+      changed_when: "'created' in ns_result.stdout"
+      failed_when:
+        - ns_result.rc != 0
+        - "'already exists' not in ns_result.stderr"
+
+    # ── Label Namespaces for Pod Security ──
+    - name: Apply restricted Pod Security Standard to talent-bridge
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl label namespace talent-bridge
+          pod-security.kubernetes.io/enforce=restricted
+          pod-security.kubernetes.io/audit=restricted
+          pod-security.kubernetes.io/warn=restricted
+          --overwrite
+      changed_when: true
+
+    - name: Apply baseline Pod Security Standard to monitoring
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl label namespace monitoring
+          pod-security.kubernetes.io/enforce=baseline
+          pod-security.kubernetes.io/audit=restricted
+          pod-security.kubernetes.io/warn=restricted
+          --overwrite
+      changed_when: true
+
+    - name: Apply baseline Pod Security Standard to logging
+      ansible.builtin.command:
+        cmd: >
+          k3s kubectl label namespace logging
+          pod-security.kubernetes.io/enforce=baseline
+          pod-security.kubernetes.io/audit=restricted
+          pod-security.kubernetes.io/warn=restricted
+          --overwrite
+      changed_when: true
+
+    # ── Add Helm Repositories ──
+    - name: Add Helm repositories
+      ansible.builtin.command:
+        cmd: 'helm repo add {{ item.name }} {{ item.url }}'
+      loop:
+        - { name: jetstack, url: 'https://charts.jetstack.io' }
+        - { name: ingress-nginx, url: 'https://kubernetes.github.io/ingress-nginx' }
+        - { name: prometheus-community, url: 'https://prometheus-community.github.io/helm-charts' }
+        - { name: fluent, url: 'https://fluent.github.io/helm-charts' }
+        - { name: argo, url: 'https://argoproj.github.io/argo-helm' }
+        - { name: sealed-secrets, url: 'https://bitnami-labs.github.io/sealed-secrets' }
+        - { name: vmware-tanzu, url: 'https://vmware-tanzu.github.io/helm-charts' }
+      register: helm_add
+      changed_when: "'has been added' in helm_add.stdout"
+      failed_when:
+        - helm_add.rc != 0
+        - "'already exists' not in helm_add.stderr"
+
+    - name: Update Helm repositories
+      ansible.builtin.command:
+        cmd: helm repo update
+      changed_when: true
+
+    # ── Install metrics-server (required for HPA) ──
+    - name: Check if metrics-server is running
+      ansible.builtin.command:
+        cmd: k3s kubectl get deployment metrics-server -n kube-system
+      register: metrics_server
+      changed_when: false
+      failed_when: false
+
+    - name: Install metrics-server if not present
+      ansible.builtin.shell: |
+        k3s kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+      when: metrics_server.rc != 0
+
+    # ── Create GHCR Image Pull Secret ──
+    - name: Check if GHCR secret exists
+      ansible.builtin.command:
+        cmd: k3s kubectl get secret ghcr-credentials -n talent-bridge
+      register: ghcr_secret
+      changed_when: false
+      failed_when: false
+
+    - name: Remind to create GHCR pull secret
+      ansible.builtin.debug:
+        msg: |
+          GHCR image pull secret not found. Create it manually:
+            kubectl create secret docker-registry ghcr-credentials \
+              --namespace=talent-bridge \
+              --docker-server=ghcr.io \
+              --docker-username=YOUR_GITHUB_USERNAME \
+              --docker-password=YOUR_GITHUB_PAT \
+              --docker-email=YOUR_EMAIL
+      when: ghcr_secret.rc != 0
+
+    # ── Create local-path storage directories ──
+    - name: Create persistent storage directories
+      ansible.builtin.file:
+        path: '{{ item }}'
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/k3s-storage/postgres
+        - /opt/k3s-storage/redis
+        - /opt/k3s-storage/opensearch/data
+        - /opt/k3s-storage/opensearch/snapshots
+        - /opt/k3s-storage/uploads
+        - /opt/k3s-storage/backups
+        - /opt/k3s-storage/prometheus
+
+    # ── Final Verification ──
+    - name: Get cluster info
+      ansible.builtin.command:
+        cmd: k3s kubectl cluster-info
+      register: cluster_info
+      changed_when: false
+
+    - name: Show cluster info
+      ansible.builtin.debug:
+        msg: '{{ cluster_info.stdout }}'
+
+    - name: Get all namespaces
+      ansible.builtin.command:
+        cmd: k3s kubectl get namespaces
+      register: namespaces
+      changed_when: false
+
+    - name: Show namespaces
+      ansible.builtin.debug:
+        msg: '{{ namespaces.stdout }}'
+
+    - name: Get all pods across namespaces
+      ansible.builtin.command:
+        cmd: k3s kubectl get pods -A
+      register: all_pods
+      changed_when: false
+
+    - name: Show all pods
+      ansible.builtin.debug:
+        msg: '{{ all_pods.stdout }}'
+
+    - name: Verify Docker containers still running
+      ansible.builtin.command:
+        cmd: docker ps --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}"
+      register: docker_ps
+      changed_when: false
+
+    - name: Show Docker containers
+      ansible.builtin.debug:
+        msg: '{{ docker_ps.stdout }}'
+
+    - name: Print setup summary
+      ansible.builtin.debug:
+        msg: |
+          ╔══════════════════════════════════════════════╗
+          ║  K3s Post-Install Complete                   ║
+          ╠══════════════════════════════════════════════╣
+          ║  Cluster:    Ready                           ║
+          ║  Helm:       Installed + repos added         ║
+          ║  Namespaces: {{ k8s_namespaces | length }} created                       ║
+          ║  Docker:     Still running (mail server)     ║
+          ║                                              ║
+          ║  Next: Deploy K8s manifests (Session 2)      ║
+          ╚══════════════════════════════════════════════╝

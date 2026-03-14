@@ -1,0 +1,126 @@
+# ============================================================
+# Redis 7 — StatefulSet
+# Cache + BullMQ job queue, matches existing docker-compose
+# ============================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: talent-bridge
+  labels:
+    app: redis
+    tier: cache
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: talent-bridge
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+        tier: cache
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9121'
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command:
+            - redis-server
+            - '--appendonly'
+            - 'yes'
+            - '--maxmemory'
+            - '256mb'
+            - '--maxmemory-policy'
+            - 'allkeys-lru'
+            - '--save'
+            - '900 1'
+            - '--save'
+            - '300 10'
+          ports:
+            - name: tcp-redis
+              containerPort: 6379
+              protocol: TCP
+          resources:
+            requests:
+              memory: '256Mi'
+              cpu: '100m'
+            limits:
+              memory: '512Mi'
+              cpu: '500m'
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+
+        # Redis Exporter sidecar for Prometheus
+        - name: redis-exporter
+          image: oliver006/redis_exporter:v1.66.0-alpine
+          ports:
+            - name: metrics
+              containerPort: 9121
+              protocol: TCP
+          env:
+            - name: REDIS_ADDR
+              value: 'redis://localhost:6379'
+          resources:
+            requests:
+              memory: '16Mi'
+              cpu: '10m'
+            limits:
+              memory: '32Mi'
+              cpu: '50m'
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+        labels:
+          app: redis
+      spec:
+        accessModes: ['ReadWriteOnce']
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi

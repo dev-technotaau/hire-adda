@@ -1,0 +1,178 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "title": "Messages In Per Second (by topic)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"talent-bridge\",topic=~\"tb\\\\..*\"}[5m])) by (topic)",
+          "legendFormat": "{{topic}}"
+        }
+      ]
+    },
+    {
+      "title": "Consumer Group Lag",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(kafka_consumergroup_lag{namespace=\"talent-bridge\",consumergroup=\"talent-bridge-backend-group\"}) by (topic)",
+          "legendFormat": "{{topic}}"
+        }
+      ]
+    },
+    {
+      "title": "Total Consumer Lag",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1000 },
+              { "color": "red", "value": 10000 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(kafka_consumergroup_lag{namespace=\"talent-bridge\",consumergroup=\"talent-bridge-backend-group\"})",
+          "legendFormat": "Total Lag"
+        }
+      ]
+    },
+    {
+      "title": "Partitions Per Topic",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+      "targets": [
+        {
+          "expr": "kafka_topic_partitions{namespace=\"talent-bridge\",topic=~\"tb\\\\..*|talent-bridge\\\\..*\"}",
+          "legendFormat": "{{topic}}"
+        }
+      ]
+    },
+    {
+      "title": "Under-Replicated Partitions",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(kafka_topic_partition_under_replicated_partition{namespace=\"talent-bridge\",topic=~\"tb\\\\..*|talent-bridge\\\\..*\"})",
+          "legendFormat": "Under-Replicated"
+        }
+      ]
+    },
+    {
+      "title": "Consumer Group Members",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "expr": "kafka_consumergroup_members{namespace=\"talent-bridge\",consumergroup=\"talent-bridge-backend-group\"}",
+          "legendFormat": "Members"
+        }
+      ]
+    },
+    {
+      "title": "Messages Per Topic (Rate)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"talent-bridge\",topic=\"tb.users\"}[5m]))",
+          "legendFormat": "tb.users"
+        },
+        {
+          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"talent-bridge\",topic=\"tb.jobs\"}[5m]))",
+          "legendFormat": "tb.jobs"
+        },
+        {
+          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"talent-bridge\",topic=\"tb.applications\"}[5m]))",
+          "legendFormat": "tb.applications"
+        },
+        {
+          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"talent-bridge\",topic=\"tb.notifications\"}[5m]))",
+          "legendFormat": "tb.notifications"
+        }
+      ]
+    },
+    {
+      "title": "DLQ Messages",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"talent-bridge\",topic=\"talent-bridge.dlq\"}[5m]))",
+          "legendFormat": "DLQ msgs/s"
+        },
+        {
+          "expr": "sum(kafka_topic_partition_current_offset{namespace=\"talent-bridge\",topic=\"talent-bridge.dlq\"})",
+          "legendFormat": "DLQ total offset"
+        }
+      ]
+    },
+    {
+      "title": "Consumer Group Lag by Partition",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [
+        {
+          "expr": "kafka_consumergroup_lag{namespace=\"talent-bridge\",consumergroup=\"talent-bridge-backend-group\"}",
+          "legendFormat": "{{topic}}-{{partition}}"
+        }
+      ]
+    },
+    {
+      "title": "Current Offset by Topic",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        {
+          "expr": "sum(kafka_topic_partition_current_offset{namespace=\"talent-bridge\",topic=~\"tb\\\\..*\"}) by (topic)",
+          "legendFormat": "{{topic}}"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["kafka", "messaging", "talent-bridge"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Kafka",
+  "uid": "tb-kafka"
+}

@@ -1,0 +1,60 @@
+# ============================================================
+# Velero Backup Schedules
+# ============================================================
+
+# ── Daily Full Backup (3AM UTC, after DB backup at 2AM) ──
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: daily-full-backup
+  namespace: velero
+spec:
+  schedule: '0 3 * * *'
+  template:
+    includedNamespaces:
+      - talent-bridge
+    ttl: 720h # 30 days retention
+    storageLocation: default
+    defaultVolumesToFsBackup: true
+    snapshotVolumes: false
+    includedResources:
+      - '*'
+    labelSelector:
+      matchExpressions:
+        - key: app
+          operator: Exists
+---
+# ── Weekly Config Backup (all namespaces, Sunday 4AM) ──
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: weekly-config-backup
+  namespace: velero
+spec:
+  schedule: '0 4 * * 0'
+  template:
+    includedNamespaces:
+      - talent-bridge
+      - monitoring
+      - logging
+      - argocd
+      - ingress-nginx
+      - cert-manager
+    ttl: 2160h # 90 days retention
+    storageLocation: default
+    defaultVolumesToFsBackup: false
+    snapshotVolumes: false
+    # Only backup config resources (not data volumes)
+    includedResources:
+      - configmaps
+      - secrets
+      - services
+      - deployments
+      - statefulsets
+      - ingresses
+      - cronjobs
+      - networkpolicies
+      - serviceaccounts
+      - clusterroles
+      - clusterrolebindings
+      - persistentvolumeclaims

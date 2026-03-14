@@ -13,6 +13,11 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import logger from './config/logger';
 import healthRoutes from './routes/health.routes';
+import metricsRoutes, {
+  httpRequestDuration,
+  httpRequestsTotal,
+  activeConnections,
+} from './routes/metrics.routes';
 import requestId from './middleware/request-id';
 // Audit middleware applied per-route in admin.routes.ts
 
@@ -180,7 +185,9 @@ if (env.NODE_ENV === 'production') {
 // CSP violation reporting endpoint (before CSRF so browser reports aren't blocked)
 app.post(
   '/api/csp-report',
-  express.json({ type: ['application/csp-report', 'application/json', 'application/reports+json'] }),
+  express.json({
+    type: ['application/csp-report', 'application/json', 'application/reports+json'],
+  }),
   handleCspReport
 );
 
@@ -250,6 +257,23 @@ apiV1Router.use(doubleCsrfProtection);
 
 // Health check route
 app.use('/health', healthRoutes);
+
+// Prometheus metrics endpoint (no auth — restricted by NetworkPolicy in K3s)
+app.use('/metrics', metricsRoutes);
+
+// Prometheus HTTP metrics middleware
+app.use((req: Request, res: Response, next) => {
+  activeConnections.inc();
+  const end = httpRequestDuration.startTimer();
+  res.on('finish', () => {
+    const route = req.route?.path || req.path;
+    const labels = { method: req.method, route, status: String(res.statusCode) };
+    end(labels);
+    httpRequestsTotal.inc(labels);
+    activeConnections.dec();
+  });
+  next();
+});
 
 // Maintenance mode check (after health routes so probes still work)
 import { maintenanceCheck } from './middleware/maintenance';

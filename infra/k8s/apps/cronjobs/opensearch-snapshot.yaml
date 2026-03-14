@@ -1,0 +1,85 @@
+# ============================================================
+# OpenSearch Snapshot — CronJob (Daily 3AM UTC)
+# ============================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: opensearch-snapshot
+  namespace: talent-bridge
+  labels:
+    app: opensearch-snapshot
+    tier: maintenance
+spec:
+  schedule: '0 3 * * *'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            app: opensearch-snapshot
+        spec:
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 1001
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: snapshot
+              image: curlimages/curl:8.11.0
+              command: ['/bin/sh', '-c']
+              args:
+                - |
+                  set -e
+                  OS_URL="http://opensearch.talent-bridge.svc.cluster.local:9200"
+                  REPO="talentbridge_snapshots"
+                  SNAPSHOT="snapshot_$(date +%Y%m%d_%H%M%S)"
+
+                  # Ensure snapshot repository exists
+                  curl -sf -X PUT "$OS_URL/_snapshot/$REPO" \
+                    -H 'Content-Type: application/json' \
+                    -d '{
+                      "type": "fs",
+                      "settings": {
+                        "location": "/usr/share/opensearch/snapshots",
+                        "compress": true
+                      }
+                    }' || true
+
+                  # Create snapshot
+                  echo "Creating snapshot: $SNAPSHOT"
+                  curl -sf -X PUT "$OS_URL/_snapshot/$REPO/$SNAPSHOT?wait_for_completion=true" \
+                    -H 'Content-Type: application/json' \
+                    -d '{"indices": "*", "ignore_unavailable": true}'
+
+                  echo "Snapshot complete: $SNAPSHOT"
+
+                  # Cleanup: remove snapshots older than 30 days
+                  CUTOFF=$(date -d '30 days ago' +%Y%m%d 2>/dev/null || date -v-30d +%Y%m%d)
+                  curl -sf "$OS_URL/_snapshot/$REPO/_all" | \
+                    grep -o '"snapshot_[0-9]*_[0-9]*"' | tr -d '"' | while read snap; do
+                      SNAP_DATE=$(echo "$snap" | grep -o '[0-9]\{8\}')
+                      if [ "$SNAP_DATE" -lt "$CUTOFF" ] 2>/dev/null; then
+                        echo "Deleting old snapshot: $snap"
+                        curl -sf -X DELETE "$OS_URL/_snapshot/$REPO/$snap" || true
+                      fi
+                    done
+              resources:
+                requests:
+                  memory: '32Mi'
+                  cpu: '25m'
+                limits:
+                  memory: '64Mi'
+                  cpu: '100m'
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+          restartPolicy: OnFailure

@@ -1,0 +1,102 @@
+# ============================================================
+# Grafana Dashboard ConfigMaps
+# Loaded by Grafana sidecar via label: grafana_dashboard
+# ============================================================
+# All 5 dashboards are provisioned from JSON files in this directory.
+# The Grafana sidecar watches for ConfigMaps with the label
+# grafana_dashboard: "1" and imports them automatically.
+#
+# Dashboard files:
+#   1. talent-bridge-overview.json — HTTP rates, latency, errors, queues
+#   2. node-resources.json — CPU, memory, disk, network
+#   3. redis-dashboard.json — Memory, hit rate, ops/s, evictions
+#   4. opensearch-dashboard.json — Cluster health, index sizes, query latency
+#   5. nginx-ingress.json — Request rates, upstream latency, SSL, 4xx/5xx
+#
+# For production: create one ConfigMap per dashboard with the full JSON
+# embedded in the data field, OR use Grafana dashboardProviders to load
+# from a directory mount.
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tb-dashboard-overview
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+  annotations:
+    grafana_folder: 'Talent Bridge'
+data:
+  talent-bridge-overview.json: |-
+    # Import talent-bridge-overview.json via Grafana UI or embed full JSON here
+    # File: infra/k8s/monitoring/grafana-dashboards/talent-bridge-overview.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tb-dashboard-node-resources
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+  annotations:
+    grafana_folder: 'Talent Bridge'
+data:
+  node-resources.json: |-
+    # Import node-resources.json via Grafana UI or embed full JSON here
+    # File: infra/k8s/monitoring/grafana-dashboards/node-resources.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tb-dashboard-redis
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+  annotations:
+    grafana_folder: 'Talent Bridge'
+data:
+  redis-dashboard.json: |-
+    # Import redis-dashboard.json via Grafana UI or embed full JSON here
+    # File: infra/k8s/monitoring/grafana-dashboards/redis-dashboard.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tb-dashboard-opensearch
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+  annotations:
+    grafana_folder: 'Talent Bridge'
+data:
+  opensearch-dashboard.json: |-
+    # Import opensearch-dashboard.json via Grafana UI or embed full JSON here
+    # File: infra/k8s/monitoring/grafana-dashboards/opensearch-dashboard.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tb-dashboard-nginx-ingress
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+  annotations:
+    grafana_folder: 'Talent Bridge'
+data:
+  nginx-ingress.json: |-
+    # Import nginx-ingress.json via Grafana UI or embed full JSON here
+    # File: infra/k8s/monitoring/grafana-dashboards/nginx-ingress.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tb-dashboard-kafka
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+  annotations:
+    grafana_folder: 'Talent Bridge'
+data:
+  kafka-dashboard.json: |-
+    # Import kafka-dashboard.json via Grafana UI or embed full JSON here
+    # File: infra/k8s/monitoring/grafana-dashboards/kafka-dashboard.json

@@ -1,0 +1,106 @@
+# ============================================================
+# Database Backup — CronJob (Daily 2AM UTC)
+# pg_dump → gzip → PVC storage
+# ============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backups-pvc
+  namespace: talent-bridge
+  labels:
+    app: backups
+spec:
+  accessModes: ['ReadWriteOnce']
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc
+  namespace: talent-bridge
+  labels:
+    app: uploads
+spec:
+  accessModes: ['ReadWriteOnce']
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-backup
+  namespace: talent-bridge
+  labels:
+    app: db-backup
+    tier: maintenance
+spec:
+  schedule: '0 2 * * *'
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            app: db-backup
+        spec:
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 1001
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: db-backup
+              image: postgres:16-alpine
+              command: ['/bin/sh', '-c']
+              args:
+                - |
+                  set -e
+                  BACKUP_FILE="/backups/db/talent_bridge_$(date +%Y%m%d_%H%M%S).sql.gz"
+                  mkdir -p /backups/db
+                  echo "Starting database backup..."
+                  pg_dump "$DATABASE_URL" \
+                    --no-owner \
+                    --no-privileges \
+                    --clean \
+                    --if-exists \
+                    --format=plain | gzip > "$BACKUP_FILE"
+                  SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+                  echo "Backup complete: $BACKUP_FILE ($SIZE)"
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secrets
+                      key: POSTGRES_PASSWORD
+                - name: DATABASE_URL
+                  value: 'postgresql://postgres:$(PGPASSWORD)@postgres.talent-bridge.svc.cluster.local:5432/talentbridge'
+              resources:
+                requests:
+                  memory: '64Mi'
+                  cpu: '50m'
+                limits:
+                  memory: '256Mi'
+                  cpu: '250m'
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+          restartPolicy: OnFailure
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: backups-pvc

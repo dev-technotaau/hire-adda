@@ -1,0 +1,243 @@
+# ============================================================
+# Talent Bridge — Ingress Configuration
+# Routes all domains through nginx-ingress with SSL
+# Replaces: backend/nginx/conf.d/default.conf
+# ============================================================
+
+# ── API Ingress (api.hireadda.in) ──
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress
+  namespace: talent-bridge
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # SSL
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    # HSTS (2 years)
+    nginx.ingress.kubernetes.io/hsts: 'true'
+    nginx.ingress.kubernetes.io/hsts-max-age: '63072000'
+    nginx.ingress.kubernetes.io/hsts-include-subdomains: 'true'
+    # Rate limiting (matches existing: 10r/s for API)
+    nginx.ingress.kubernetes.io/limit-rps: '10'
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: '2'
+    nginx.ingress.kubernetes.io/limit-connections: '20'
+    # Request size (10MB for uploads)
+    nginx.ingress.kubernetes.io/proxy-body-size: '10m'
+    nginx.ingress.kubernetes.io/client-body-buffer-size: '128k'
+    # WebSocket support for Socket.IO
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-http-version: '1.1'
+    # Sticky sessions for Socket.IO
+    nginx.ingress.kubernetes.io/affinity: 'cookie'
+    nginx.ingress.kubernetes.io/session-cookie-name: 'SERVERID'
+    nginx.ingress.kubernetes.io/session-cookie-hash: 'sha1'
+    nginx.ingress.kubernetes.io/session-cookie-max-age: '3600'
+    # Proxy headers
+    nginx.ingress.kubernetes.io/proxy-set-headers: 'talent-bridge/custom-headers'
+    # ModSecurity WAF
+    nginx.ingress.kubernetes.io/enable-modsecurity: 'true'
+    nginx.ingress.kubernetes.io/enable-owasp-modsecurity-crs: 'true'
+    nginx.ingress.kubernetes.io/modsecurity-snippet: |
+      SecRuleEngine On
+      SecRequestBodyAccess On
+      SecAuditEngine RelevantOnly
+      SecAuditLogRelevantStatus "^(?:5|4(?!04))"
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Permissions-Policy: camera=(), microphone=(), geolocation=(self), interest-cohort=()";
+    # Hide server version
+    nginx.ingress.kubernetes.io/server-snippet: |
+      server_tokens off;
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.hireadda.in
+      secretName: api-hireadda-tls
+  rules:
+    - host: api.hireadda.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 5000
+---
+# ── Auth Rate Limiting Ingress (stricter for login/register) ──
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-auth-ingress
+  namespace: talent-bridge
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    # Strict rate limit: 5 requests per minute for auth
+    nginx.ingress.kubernetes.io/limit-rps: '1'
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: '5'
+    nginx.ingress.kubernetes.io/limit-connections: '5'
+    nginx.ingress.kubernetes.io/proxy-body-size: '1m'
+    nginx.ingress.kubernetes.io/enable-modsecurity: 'true'
+    nginx.ingress.kubernetes.io/enable-owasp-modsecurity-crs: 'true'
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.hireadda.in
+      secretName: api-hireadda-tls
+  rules:
+    - host: api.hireadda.in
+      http:
+        paths:
+          - path: /api/v1/auth/login
+            pathType: Exact
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 5000
+          - path: /api/v1/auth/register
+            pathType: Exact
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 5000
+---
+# ── Frontend Ingress (hireadda.in) ──
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  namespace: talent-bridge
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/hsts: 'true'
+    nginx.ingress.kubernetes.io/hsts-max-age: '63072000'
+    nginx.ingress.kubernetes.io/hsts-include-subdomains: 'true'
+    nginx.ingress.kubernetes.io/proxy-body-size: '1m'
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+    # WebSocket for HMR in dev (harmless in prod)
+    nginx.ingress.kubernetes.io/proxy-http-version: '1.1'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '60'
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - hireadda.in
+        - www.hireadda.in
+      secretName: frontend-hireadda-tls
+  rules:
+    - host: hireadda.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000
+    - host: www.hireadda.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000
+---
+# ── Mail Webmail Ingress (mail.hireadda.in) ──
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mail-ingress
+  namespace: talent-bridge
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/hsts: 'true'
+    nginx.ingress.kubernetes.io/hsts-max-age: '63072000'
+    # Allow 25MB uploads for email attachments
+    nginx.ingress.kubernetes.io/proxy-body-size: '25m'
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - mail.hireadda.in
+      secretName: mail-hireadda-tls
+  rules:
+    - host: mail.hireadda.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: roundcube
+                port:
+                  number: 80
+---
+# ── Mail Autodiscovery (served from frontend ingress) ──
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mail-autoconfig
+  namespace: talent-bridge
+data:
+  autoconfig.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <clientConfig version="1.1">
+      <emailProvider id="hireadda.in">
+        <domain>hireadda.in</domain>
+        <displayName>HireAdda Mail</displayName>
+        <displayShortName>HireAdda</displayShortName>
+        <incomingServer type="imap">
+          <hostname>mail.hireadda.in</hostname>
+          <port>993</port>
+          <socketType>SSL</socketType>
+          <authentication>password-cleartext</authentication>
+          <username>%EMAILADDRESS%</username>
+        </incomingServer>
+        <outgoingServer type="smtp">
+          <hostname>mail.hireadda.in</hostname>
+          <port>587</port>
+          <socketType>STARTTLS</socketType>
+          <authentication>password-cleartext</authentication>
+          <username>%EMAILADDRESS%</username>
+        </outgoingServer>
+      </emailProvider>
+    </clientConfig>
+---
+# ── Custom Proxy Headers ──
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-headers
+  namespace: talent-bridge
+data:
+  X-Forwarded-Proto: 'https'

@@ -1,0 +1,14 @@
+# ============================================================
+# Default Deny All — talent-bridge namespace
+# All traffic must be explicitly allowed by subsequent policies
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: talent-bridge
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress

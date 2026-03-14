@@ -1,0 +1,127 @@
+# ============================================================
+# OpenSearch 2.18 — StatefulSet
+# Dual-purpose: application search + log storage
+# Matches existing docker-compose (single-node, security off)
+# ============================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: opensearch
+  namespace: talent-bridge
+  labels:
+    app: opensearch
+    tier: search
+    app.kubernetes.io/name: opensearch
+    app.kubernetes.io/component: search
+    app.kubernetes.io/part-of: talent-bridge
+spec:
+  serviceName: opensearch
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensearch
+  template:
+    metadata:
+      labels:
+        app: opensearch
+        tier: search
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      # Ensure vm.max_map_count is set (done at host level via Ansible)
+      initContainers:
+        - name: sysctl-check
+          image: busybox:1.36
+          command: ['sh', '-c', 'sysctl -n vm.max_map_count | grep -q 262144 || exit 1']
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+      containers:
+        - name: opensearch
+          image: opensearchproject/opensearch:2.18.0
+          ports:
+            - name: http
+              containerPort: 9200
+              protocol: TCP
+            - name: transport
+              containerPort: 9300
+              protocol: TCP
+          env:
+            - name: cluster.name
+              value: 'talentbridge'
+            - name: node.name
+              value: 'opensearch-node1'
+            - name: discovery.type
+              value: 'single-node'
+            - name: OPENSEARCH_JAVA_OPTS
+              value: '-Xms1g -Xmx1g'
+            - name: DISABLE_SECURITY_PLUGIN
+              value: 'true'
+            - name: DISABLE_INSTALL_DEMO_CONFIG
+              value: 'true'
+            - name: path.repo
+              value: '/usr/share/opensearch/snapshots'
+          resources:
+            requests:
+              memory: '1Gi'
+              cpu: '250m'
+            limits:
+              memory: '2Gi'
+              cpu: '1000m'
+          livenessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health?wait_for_status=yellow&timeout=5s
+              port: 9200
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: opensearch-data
+              mountPath: /usr/share/opensearch/data
+            - name: opensearch-snapshots
+              mountPath: /usr/share/opensearch/snapshots
+  volumeClaimTemplates:
+    - metadata:
+        name: opensearch-data
+        labels:
+          app: opensearch
+      spec:
+        accessModes: ['ReadWriteOnce']
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 50Gi
+    - metadata:
+        name: opensearch-snapshots
+        labels:
+          app: opensearch
+      spec:
+        accessModes: ['ReadWriteOnce']
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 20Gi
