@@ -33,10 +33,6 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
-      - name: Generate Prisma client
-        working-directory: ./backend
-        run: npx prisma generate
-
       - name: Lint
         working-directory: ./backend
         run: npm run lint
