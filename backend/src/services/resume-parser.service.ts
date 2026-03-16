@@ -103,7 +103,7 @@ export async function parseResume(
       }
 
       const text = document.text;
-      const entities = document.entities || [];
+      const entities = (document.entities || []).filter(Boolean);
 
       // Step 3: Extract raw data from Document AI response
       const rawParsed: ParsedResumeData = {

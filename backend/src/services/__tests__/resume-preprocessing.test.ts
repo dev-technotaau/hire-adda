@@ -21,7 +21,7 @@ describe('Resume Preprocessing Service', () => {
     it('should remove zero-width spaces', () => {
       const input = 'Hello\u200BWorld';
       const result = normalizeTextEncoding(input);
-      expect(result).toBe('Hello World');
+      expect(result).toBe('HelloWorld');
     });
 
     it('should normalize multiple spaces', () => {

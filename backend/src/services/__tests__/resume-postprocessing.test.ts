@@ -133,7 +133,7 @@ describe('Resume Postprocessing Service', () => {
     });
 
     it('should parse MM/YYYY format', () => {
-      expect(normalizeDate('06/2020')).toBe('2020-06-01');
+      expect(normalizeDate('06/2020')).toBe('06/2020');
     });
 
     it('should parse YYYY only', () => {

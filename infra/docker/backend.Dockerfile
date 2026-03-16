@@ -14,6 +14,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Sentry sourcemaps (token passed via --build-arg in CD workflow)
+ARG SENTRY_AUTH_TOKEN
+
 # Build TypeScript
 RUN npm run build
 

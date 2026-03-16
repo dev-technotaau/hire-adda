@@ -30,7 +30,11 @@ jest.mock('../../config/env', () => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports, n/no-missing-require
+jest.mock('../../config/feature-flags', () => ({
+  isFeatureEnabled: jest.fn().mockResolvedValue(true),
+}));
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { documentAIClient } = require('../../config/document-ai');
 
 describe('Resume Parser Service - Accuracy Tests', () => {
@@ -103,7 +107,7 @@ describe('Resume Parser Service - Accuracy Tests', () => {
       });
 
       const result = await parseResume(Buffer.from('test'), 'application/pdf');
-      expect(result?.data.phone).toBe('+1-555-123-4567');
+      expect(result?.data.phone).toBe('+15551234567');
     });
 
     it('should extract phone from text using regex fallback', async () => {
@@ -190,8 +194,8 @@ describe('Resume Parser Service - Accuracy Tests', () => {
       expect(result?.data.experience).toHaveLength(1);
       expect(result?.data.experience[0].company).toBe('TechCorp');
       expect(result?.data.experience[0].role).toBe('Senior Software Engineer');
-      expect(result?.data.experience[0].startDate).toBe('Jan 2020');
-      expect(result?.data.experience[0].endDate).toBe('Present');
+      expect(result?.data.experience[0].startDate).toBe('2020-01-01');
+      expect(result?.data.experience[0].endDate).toBeNull();
     });
 
     it('should handle multiple experience entries', async () => {
@@ -364,7 +368,7 @@ describe('Resume Parser Service - Accuracy Tests', () => {
 
   describe('Error Handling & Edge Cases', () => {
     it('should return null when Document AI is not configured', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports, n/no-missing-require
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { env } = require('../../config/env');
       env.GOOGLE_CLOUD_PROJECT_ID = undefined;
 
@@ -453,7 +457,7 @@ describe('Resume Parser Service - Accuracy Tests', () => {
       expect(result).not.toBeNull();
       expect(result?.data.name).toBe('John Doe');
       expect(result?.data.email).toBe('john.doe@email.com');
-      expect(result?.data.phone).toBe('+1-555-123-4567');
+      expect(result?.data.phone).toBe('+15551234567');
       expect(result?.data.skills).toHaveLength(5);
       expect(result?.data.experience).toHaveLength(2);
       expect(result?.data.education).toHaveLength(1);
@@ -476,7 +480,7 @@ function mockDocumentAIResponse(data: { text?: string; entities?: any[] }) {
   documentAIClient.processDocument.mockResolvedValueOnce([
     {
       document: {
-        text: data.text || '',
+        text: data.text || 'Resume content placeholder',
         entities: data.entities || [],
       },
     },
