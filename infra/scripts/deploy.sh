@@ -309,9 +309,13 @@ deploy_blue_green() {
   log "============================================"
 
   # Update tags for inactive color
-  local inactive_upper
+  local inactive_upper active_upper
   inactive_upper=$(echo "$inactive" | tr '[:lower:]' '[:upper:]')
+  active_upper=$(echo "$ACTIVE_COLOR" | tr '[:lower:]' '[:upper:]')
 
+  # When only one service changes (e.g. CD only built backend), copy the
+  # active color's unchanged-service tag to inactive so both environments
+  # run the same image for the unchanged service.
   if [[ -n "$BACKEND_TAG" ]]; then
     if [[ "$DRY_RUN" == "true" ]]; then
       info "[DRY RUN] Would set ${inactive_upper}_BACKEND_TAG=${BACKEND_TAG}"
@@ -320,6 +324,12 @@ deploy_blue_green() {
       eval "${inactive_upper}_BACKEND_TAG=${BACKEND_TAG}"
       log "Set ${inactive_upper}_BACKEND_TAG=${BACKEND_TAG}"
     fi
+  else
+    local active_btag_var="${active_upper}_BACKEND_TAG"
+    local active_btag="${!active_btag_var:-latest}"
+    update_env_var "${inactive_upper}_BACKEND_TAG" "$active_btag"
+    eval "${inactive_upper}_BACKEND_TAG=${active_btag}"
+    log "Copied active backend tag: ${inactive_upper}_BACKEND_TAG=${active_btag}"
   fi
 
   if [[ -n "$FRONTEND_TAG" ]]; then
@@ -330,6 +340,12 @@ deploy_blue_green() {
       eval "${inactive_upper}_FRONTEND_TAG=${FRONTEND_TAG}"
       log "Set ${inactive_upper}_FRONTEND_TAG=${FRONTEND_TAG}"
     fi
+  else
+    local active_ftag_var="${active_upper}_FRONTEND_TAG"
+    local active_ftag="${!active_ftag_var:-latest}"
+    update_env_var "${inactive_upper}_FRONTEND_TAG" "$active_ftag"
+    eval "${inactive_upper}_FRONTEND_TAG=${active_ftag}"
+    log "Copied active frontend tag: ${inactive_upper}_FRONTEND_TAG=${active_ftag}"
   fi
 
   # Pull new images
@@ -430,8 +446,9 @@ deploy_canary() {
   log "============================================"
 
   # Update tags for inactive color
-  local inactive_upper
+  local inactive_upper active_upper
   inactive_upper=$(echo "$inactive" | tr '[:lower:]' '[:upper:]')
+  active_upper=$(echo "$ACTIVE_COLOR" | tr '[:lower:]' '[:upper:]')
 
   if [[ -n "$BACKEND_TAG" ]]; then
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -441,6 +458,12 @@ deploy_canary() {
       eval "${inactive_upper}_BACKEND_TAG=${BACKEND_TAG}"
       log "Set ${inactive_upper}_BACKEND_TAG=${BACKEND_TAG}"
     fi
+  else
+    local active_btag_var="${active_upper}_BACKEND_TAG"
+    local active_btag="${!active_btag_var:-latest}"
+    update_env_var "${inactive_upper}_BACKEND_TAG" "$active_btag"
+    eval "${inactive_upper}_BACKEND_TAG=${active_btag}"
+    log "Copied active backend tag: ${inactive_upper}_BACKEND_TAG=${active_btag}"
   fi
 
   if [[ -n "$FRONTEND_TAG" ]]; then
@@ -451,6 +474,12 @@ deploy_canary() {
       eval "${inactive_upper}_FRONTEND_TAG=${FRONTEND_TAG}"
       log "Set ${inactive_upper}_FRONTEND_TAG=${FRONTEND_TAG}"
     fi
+  else
+    local active_ftag_var="${active_upper}_FRONTEND_TAG"
+    local active_ftag="${!active_ftag_var:-latest}"
+    update_env_var "${inactive_upper}_FRONTEND_TAG" "$active_ftag"
+    eval "${inactive_upper}_FRONTEND_TAG=${active_ftag}"
+    log "Copied active frontend tag: ${inactive_upper}_FRONTEND_TAG=${active_ftag}"
   fi
 
   # Pull new images
@@ -640,11 +669,14 @@ deploy_rolling() {
     log "Frontend switched to ${inactive}."
   fi
 
-  # Stop old frontend (old backend already stopped in Phase 1)
+  # Stop old containers that were replaced
   local old_color="$ACTIVE_COLOR"
   if [[ "$DRY_RUN" != "true" ]]; then
-    log "Stopping old frontend-${old_color}..."
-    docker compose stop "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+    if [[ -n "$FRONTEND_TAG" ]]; then
+      log "Stopping old frontend-${old_color}..."
+      docker compose stop "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+    fi
+    # Old backend already stopped in Phase 1 (if backend was deployed)
   fi
 
   # Update state
