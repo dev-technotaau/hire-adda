@@ -218,6 +218,7 @@ services:
         required: false
     networks:
       - hireadda_network
+      - mail_network
     healthcheck:
       test:
         [
@@ -283,6 +284,7 @@ services:
         required: false
     networks:
       - hireadda_network
+      - mail_network
     healthcheck:
       test:
         [
