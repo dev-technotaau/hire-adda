@@ -81,6 +81,7 @@ const createPool = () => {
 const pool = globalForPrisma.pool ?? createPool();
 
 // Create adapter with pool
+// @ts-expect-error - @types/pg version mismatch between top-level and @prisma/adapter-pg's bundled copy
 const adapter = new PrismaPg(pool);
 
 // ---------------------------------------------------------------------------

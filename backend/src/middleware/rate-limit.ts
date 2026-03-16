@@ -10,7 +10,7 @@ import { redis } from '../config/redis';
 function createRedisStore(prefix: string): RedisStore {
   return new RedisStore({
     prefix: `rl:${prefix}:`,
-    sendCommand: (...args: string[]) => redis.call(...args),
+    sendCommand: (...args: string[]) => redis.call(args[0], ...args.slice(1)) as Promise<number>,
   });
 }
 
