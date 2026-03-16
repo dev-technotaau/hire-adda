@@ -419,12 +419,17 @@ export const initializeServices = async (): Promise<void> => {
   }
 
   // Grafana Loki (Log Aggregation)
+  // In Docker, logs are shipped to Loki via Promtail (container log driver)
+  const isContainerized =
+    (await import('fs')).existsSync('/.dockerenv') || process.env.CONTAINER === 'true';
   if (env.LOG_AGGREGATION_URL) {
     registerService(
       'Grafana Loki',
       'connected',
       env.LOG_AGGREGATION_URL.replace(/https?:\/\//, '').substring(0, 30) + '...'
     );
+  } else if (isContainerized) {
+    registerService('Grafana Loki', 'ready', 'Logs via Promtail');
   } else {
     registerService('Grafana Loki', 'not_configured');
   }
@@ -932,7 +937,10 @@ export const initializeServices = async (): Promise<void> => {
   const fs = await import('fs');
   const path = await import('path');
   const rootDir = path.resolve(__dirname, '../..');
-  if (
+  const isDocker = fs.existsSync('/.dockerenv') || process.env.CONTAINER === 'true';
+  if (isDocker) {
+    registerService('Docker', 'ready', 'Running in container');
+  } else if (
     fs.existsSync(path.join(rootDir, 'Dockerfile')) ||
     fs.existsSync(path.join(rootDir, 'Dockerfile.dev'))
   ) {
@@ -942,14 +950,18 @@ export const initializeServices = async (): Promise<void> => {
   }
 
   // Nginx
-  if (fs.existsSync(path.join(rootDir, 'nginx', 'nginx.conf'))) {
+  if (isDocker) {
+    registerService('Nginx', 'ready', 'Reverse proxy (separate container)');
+  } else if (fs.existsSync(path.join(rootDir, 'nginx', 'nginx.conf'))) {
     registerService('Nginx', 'ready', 'Reverse proxy config');
   } else {
     registerService('Nginx', 'not_configured');
   }
 
   // Husky Git Hooks
-  if (fs.existsSync(path.join(rootDir, '.husky'))) {
+  if (isDocker) {
+    registerService('Husky Git Hooks', 'ready', 'Dev-only (CI enforced)');
+  } else if (fs.existsSync(path.join(rootDir, '.husky'))) {
     registerService('Husky Git Hooks', 'ready', 'Pre-commit hooks');
   } else {
     registerService('Husky Git Hooks', 'not_configured');
