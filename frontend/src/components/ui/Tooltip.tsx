@@ -145,7 +145,7 @@ function Tooltip({ content, children, position = 'auto', className }: TooltipPro
   return (
     <div
       ref={wrapperRef}
-      className="relative flex"
+      className="flex min-w-0 flex-col"
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
