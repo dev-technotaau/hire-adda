@@ -112,14 +112,11 @@ app.use(
 );
 
 // Rate limiting
-import { apiLimiter, authLimiter } from './middleware/rate-limit';
+import { apiLimiter } from './middleware/rate-limit';
 
 // Apply rate limits
-// Note: authLimiter should be applied specifically to auth routes in their router,
-// but we perform a global API limit here.
+// authLimiter is applied inside auth.routes.ts via router.use(authLimiter)
 app.use('/api', apiLimiter);
-// We can also apply strict limits to specific paths globally if the router isn't mounted yet
-app.use('/api/v1/auth', authLimiter);
 
 // Body parsing
 app.use(express.json({ limit: '10kb' }));

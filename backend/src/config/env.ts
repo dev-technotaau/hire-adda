@@ -208,7 +208,7 @@ const envSchema = z
     RATE_LIMIT_WINDOW_MS: z.string().default('900000'), // 15 minutes
     RATE_LIMIT_MAX_REQUESTS: z.string().default('100'),
     AUTH_RATE_LIMIT_WINDOW_MS: z.string().default('300000'), // 5 minutes
-    AUTH_RATE_LIMIT_MAX_ATTEMPTS: z.string().default('10'),
+    AUTH_RATE_LIMIT_MAX_ATTEMPTS: z.string().default('30'),
 
     // Logging
     LOG_LEVEL: z
