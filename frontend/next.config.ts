@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-          // CSP is now managed by src/middleware.ts with per-request nonce
+          // CSP is now managed by src/proxy.ts with per-request nonce
         ],
       },
     ];
