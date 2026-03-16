@@ -357,6 +357,16 @@ deploy_blue_green() {
     info "Skipping migrations."
   fi
 
+  # Stop old backend BEFORE starting new one to free Redis connections.
+  # Redis Cloud has limited connections (~30), each backend uses 15-20+
+  # (BullMQ queues, cache, Socket.IO, rate limiter), so both can't run
+  # simultaneously. This causes brief backend downtime during deploys.
+  local old_color="$ACTIVE_COLOR"
+  if [[ "$DRY_RUN" != "true" ]]; then
+    log "Stopping old backend-${old_color} to free Redis connections..."
+    docker compose stop "backend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+  fi
+
   # Start/recreate inactive containers
   log "Starting ${inactive} containers..."
   if [[ "$DRY_RUN" == "true" ]]; then
@@ -369,7 +379,8 @@ deploy_blue_green() {
   if [[ "$DRY_RUN" != "true" ]]; then
     sleep 5
     if ! health_check_color "$inactive"; then
-      err "Health checks failed for ${inactive}! Aborting — no traffic switched."
+      err "Health checks failed for ${inactive}! Restarting old backend-${old_color}..."
+      docker compose up -d --no-build "backend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
       exit 1
     fi
   fi
@@ -385,11 +396,10 @@ deploy_blue_green() {
     reload_nginx
   fi
 
-  # Stop old (previously active) containers to free resources
-  local old_color="$ACTIVE_COLOR"
+  # Stop old frontend (old backend already stopped above)
   if [[ "$DRY_RUN" != "true" ]]; then
-    log "Stopping old ${old_color} containers..."
-    docker compose stop "backend-${old_color}" "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+    log "Stopping old frontend-${old_color}..."
+    docker compose stop "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
   fi
 
   # Update state
@@ -556,12 +566,19 @@ deploy_rolling() {
       fi
     fi
 
+    # Stop old backend to free Redis connections before starting new one
+    if [[ "$DRY_RUN" != "true" ]]; then
+      log "Stopping old backend-${ACTIVE_COLOR} to free Redis connections..."
+      docker compose stop "backend-${ACTIVE_COLOR}" 2>&1 | tee -a "$LOG_FILE" || true
+    fi
+
     # Start backend
     if [[ "$DRY_RUN" != "true" ]]; then
       docker compose up -d --no-build "backend-${inactive}" 2>&1 | tee -a "$LOG_FILE"
       sleep 5
       if ! health_check "backend-${inactive}" "http://127.0.0.1:5000/health/live"; then
-        err "Backend health check failed! Aborting."
+        err "Backend health check failed! Restarting old backend-${ACTIVE_COLOR}..."
+        docker compose up -d --no-build "backend-${ACTIVE_COLOR}" 2>&1 | tee -a "$LOG_FILE" || true
         exit 1
       fi
     fi
@@ -623,11 +640,11 @@ deploy_rolling() {
     log "Frontend switched to ${inactive}."
   fi
 
-  # Stop old (previously active) containers to free resources
+  # Stop old frontend (old backend already stopped in Phase 1)
   local old_color="$ACTIVE_COLOR"
   if [[ "$DRY_RUN" != "true" ]]; then
-    log "Stopping old ${old_color} containers..."
-    docker compose stop "backend-${old_color}" "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+    log "Stopping old frontend-${old_color}..."
+    docker compose stop "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
   fi
 
   # Update state
