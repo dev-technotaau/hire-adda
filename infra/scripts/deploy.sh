@@ -385,6 +385,13 @@ deploy_blue_green() {
     reload_nginx
   fi
 
+  # Stop old (previously active) containers to free resources
+  local old_color="$ACTIVE_COLOR"
+  if [[ "$DRY_RUN" != "true" ]]; then
+    log "Stopping old ${old_color} containers..."
+    docker compose stop "backend-${old_color}" "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+  fi
+
   # Update state
   ACTIVE_COLOR="$inactive"
   DEPLOY_STRATEGY="blue-green"
@@ -616,6 +623,13 @@ deploy_rolling() {
     log "Frontend switched to ${inactive}."
   fi
 
+  # Stop old (previously active) containers to free resources
+  local old_color="$ACTIVE_COLOR"
+  if [[ "$DRY_RUN" != "true" ]]; then
+    log "Stopping old ${old_color} containers..."
+    docker compose stop "backend-${old_color}" "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+  fi
+
   # Update state
   ACTIVE_COLOR="$inactive"
   DEPLOY_STRATEGY="rolling"
@@ -666,6 +680,13 @@ do_promote() {
 
   if [[ "$DRY_RUN" != "true" ]]; then
     reload_nginx
+  fi
+
+  # Stop old (previously active) containers to free resources
+  local old_color="$ACTIVE_COLOR"
+  if [[ "$DRY_RUN" != "true" ]]; then
+    log "Stopping old ${old_color} containers..."
+    docker compose stop "backend-${old_color}" "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
   fi
 
   # Update state

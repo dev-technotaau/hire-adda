@@ -183,7 +183,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add infra/k8s/
-          git diff --cached --quiet || git commit -m "chore(cd): update image tags to ${{ github.sha }}"
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore(cd): update image tags to ${{ github.sha }}"
+          # Pull any commits pushed since checkout (e.g. by concurrent CD runs)
+          git pull --rebase
           git push
 
   # ── Deploy to VPS via Docker Compose (Blue-Green) ──
