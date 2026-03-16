@@ -168,7 +168,12 @@ jobs:
           if_key_exists: replace
 
       - name: Add VPS to known hosts
-        run: ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+        run: |
+          for i in 1 2 3; do
+            ssh-keyscan -T 10 -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null && break
+            echo "ssh-keyscan attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
 
       - name: Sync infra configs to VPS
         if: steps.plan.outputs.action == 'deploy'
