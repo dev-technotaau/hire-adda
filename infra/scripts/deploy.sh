@@ -263,7 +263,7 @@ health_check_color() {
 
   log "Running health checks for ${CYAN}${color}${NC} environment..."
 
-  if ! health_check "backend-${color}" "http://localhost:5000/health"; then
+  if ! health_check "backend-${color}" "http://localhost:5000/health/live"; then
     failed=true
   fi
 
@@ -553,7 +553,7 @@ deploy_rolling() {
     if [[ "$DRY_RUN" != "true" ]]; then
       docker compose up -d --no-build "backend-${inactive}" 2>&1 | tee -a "$LOG_FILE"
       sleep 5
-      if ! health_check "backend-${inactive}" "http://localhost:5000/health"; then
+      if ! health_check "backend-${inactive}" "http://localhost:5000/health/live"; then
         err "Backend health check failed! Aborting."
         exit 1
       fi

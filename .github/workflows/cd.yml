@@ -12,12 +12,14 @@ on:
     paths:
       - 'backend/src/**'
       - 'backend/package*.json'
-      - 'infra/docker/backend.Dockerfile'
       - 'backend/prisma/**'
+      - 'backend/prisma.config.*'
+      - 'infra/docker/backend.Dockerfile'
       - 'frontend/src/**'
       - 'frontend/package*.json'
-      - 'infra/docker/frontend.Dockerfile'
+      - 'frontend/next.config.*'
       - 'frontend/public/**'
+      - 'infra/docker/frontend.Dockerfile'
 
 concurrency:
   group: cd-${{ github.ref }}
@@ -44,13 +46,15 @@ jobs:
             backend:
               - 'backend/src/**'
               - 'backend/package*.json'
-              - 'infra/docker/backend.Dockerfile'
               - 'backend/prisma/**'
+              - 'backend/prisma.config.*'
+              - 'infra/docker/backend.Dockerfile'
             frontend:
               - 'frontend/src/**'
               - 'frontend/package*.json'
-              - 'infra/docker/frontend.Dockerfile'
+              - 'frontend/next.config.*'
               - 'frontend/public/**'
+              - 'infra/docker/frontend.Dockerfile'
 
   # ── Build & Push Backend Image ──
   build-backend:
