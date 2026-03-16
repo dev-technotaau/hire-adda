@@ -72,7 +72,7 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://connect.facebook.net" />
         <link rel="dns-prefetch" href="https://fcm.googleapis.com" />
       </head>
-      <body className="min-h-screen antialiased">
+      <body className="flex min-h-screen flex-col antialiased">
         <GTMBody />
         {/* Skip-to-content for accessibility */}
         <a
@@ -84,7 +84,9 @@ export default async function RootLayout({
         <TopLoadingBar />
         <OfflineBanner />
         <Providers>
-          <main id="main-content">{children}</main>
+          <main id="main-content" className="flex flex-1 flex-col">
+            {children}
+          </main>
         </Providers>
         <WebVitals />
         <GoogleAnalytics nonce={nonce} />

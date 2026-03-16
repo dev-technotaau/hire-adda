@@ -8,7 +8,7 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--bg-secondary)]">
+    <div className="flex flex-1 flex-col bg-[var(--bg-secondary)]">
       {/* Minimal header */}
       <header className="flex h-16 items-center px-4 sm:px-6">
         <Logo />

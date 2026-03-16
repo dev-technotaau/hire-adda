@@ -59,7 +59,7 @@ export default function DashboardLayout({ children, requiredRole }: DashboardLay
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-secondary)]">
+    <div className="flex min-h-screen flex-1 flex-col bg-[var(--bg-secondary)]">
       <DashboardHeader />
       <MobileSidebar />
       <div className="flex">

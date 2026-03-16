@@ -121,7 +121,7 @@
         "defaults": {
           "color": { "mode": "thresholds" },
           "mappings": [
-            { "options": { "1": { "text": "RUNNING", "color": "green" } }, "type": "value" },
+            { "options": { "1": { "text": "UP", "color": "green" } }, "type": "value" },
             { "options": { "0": { "text": "DOWN", "color": "red" } }, "type": "value" }
           ],
           "thresholds": {
@@ -146,7 +146,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "clamp_max(container_memory_usage_bytes{name=\"hireadda_frontend_blue\"}, 1) or vector(0)",
+          "expr": "up{job=\"backend-blue\"}",
           "legendFormat": "frontend-blue"
         }
       ]
@@ -160,7 +160,7 @@
         "defaults": {
           "color": { "mode": "thresholds" },
           "mappings": [
-            { "options": { "1": { "text": "RUNNING", "color": "green" } }, "type": "value" },
+            { "options": { "1": { "text": "UP", "color": "green" } }, "type": "value" },
             { "options": { "0": { "text": "DOWN", "color": "red" } }, "type": "value" }
           ],
           "thresholds": {
@@ -185,7 +185,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "clamp_max(container_memory_usage_bytes{name=\"hireadda_frontend_green\"}, 1) or vector(0)",
+          "expr": "up{job=\"backend-green\"}",
           "legendFormat": "frontend-green"
         }
       ]
@@ -224,8 +224,8 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "container_memory_usage_bytes{name=~\"hireadda_backend_blue|hireadda_backend_green|hireadda_frontend_blue|hireadda_frontend_green\"}",
-          "legendFormat": "{{name}}"
+          "expr": "process_resident_memory_bytes{job=~\"backend-blue|backend-green\"}",
+          "legendFormat": "{{job}}"
         }
       ]
     },
@@ -256,8 +256,8 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{name=~\"hireadda_backend_blue|hireadda_backend_green|hireadda_frontend_blue|hireadda_frontend_green\"}[5m])",
-          "legendFormat": "{{name}}"
+          "expr": "rate(process_cpu_seconds_total{job=~\"backend-blue|backend-green\"}[5m])",
+          "legendFormat": "{{job}}"
         }
       ]
     },

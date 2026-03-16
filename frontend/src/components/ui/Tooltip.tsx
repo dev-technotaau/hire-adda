@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useLayoutEffect, useCallback, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
 type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
@@ -13,13 +14,6 @@ interface TooltipProps {
   className?: string;
 }
 
-const positionStyles: Record<TooltipPosition, string> = {
-  top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-  bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-  left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-  right: 'left-full top-1/2 -translate-y-1/2 ml-2',
-};
-
 const arrowStyles: Record<TooltipPosition, string> = {
   top: 'top-full left-1/2 -translate-x-1/2 border-t-[var(--text)] border-x-transparent border-b-transparent',
   bottom:
@@ -29,33 +23,10 @@ const arrowStyles: Record<TooltipPosition, string> = {
     'right-full top-1/2 -translate-y-1/2 border-r-[var(--text)] border-y-transparent border-l-transparent',
 };
 
-const PADDING = 8; // min distance from viewport edge
+const GAP = 8;
+const PADDING = 8;
 
-function resolvePosition(
-  triggerRect: DOMRect,
-  tooltipRect: DOMRect,
-  preferred: TooltipPosition | 'auto',
-): TooltipPosition {
-  if (preferred !== 'auto') {
-    // Check if preferred position fits
-    if (fitsInViewport(triggerRect, tooltipRect, preferred)) return preferred;
-  }
-
-  // Try positions in order of preference: top → bottom → right → left
-  const order: TooltipPosition[] = ['top', 'bottom', 'right', 'left'];
-  for (const pos of order) {
-    if (fitsInViewport(triggerRect, tooltipRect, pos)) return pos;
-  }
-
-  // Fallback: bottom (least likely to block content)
-  return 'bottom';
-}
-
-function fitsInViewport(
-  trigger: DOMRect,
-  tooltip: DOMRect,
-  pos: TooltipPosition,
-): boolean {
+function fitsInViewport(trigger: DOMRect, tw: number, th: number, pos: TooltipPosition): boolean {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const cx = trigger.left + trigger.width / 2;
@@ -64,71 +35,140 @@ function fitsInViewport(
   switch (pos) {
     case 'top':
       return (
-        trigger.top - tooltip.height - PADDING > 0 &&
-        cx - tooltip.width / 2 > PADDING &&
-        cx + tooltip.width / 2 < vw - PADDING
+        trigger.top - th - GAP > PADDING && cx - tw / 2 > PADDING && cx + tw / 2 < vw - PADDING
       );
     case 'bottom':
       return (
-        trigger.bottom + tooltip.height + PADDING < vh &&
-        cx - tooltip.width / 2 > PADDING &&
-        cx + tooltip.width / 2 < vw - PADDING
+        trigger.bottom + th + GAP < vh - PADDING &&
+        cx - tw / 2 > PADDING &&
+        cx + tw / 2 < vw - PADDING
       );
     case 'left':
       return (
-        trigger.left - tooltip.width - PADDING > 0 &&
-        cy - tooltip.height / 2 > PADDING &&
-        cy + tooltip.height / 2 < vh - PADDING
+        trigger.left - tw - GAP > PADDING && cy - th / 2 > PADDING && cy + th / 2 < vh - PADDING
       );
     case 'right':
       return (
-        trigger.right + tooltip.width + PADDING < vw &&
-        cy - tooltip.height / 2 > PADDING &&
-        cy + tooltip.height / 2 < vh - PADDING
+        trigger.right + tw + GAP < vw - PADDING &&
+        cy - th / 2 > PADDING &&
+        cy + th / 2 < vh - PADDING
       );
   }
 }
 
+function resolvePosition(
+  trigger: DOMRect,
+  tw: number,
+  th: number,
+  preferred: TooltipPosition | 'auto',
+): TooltipPosition {
+  if (preferred !== 'auto' && fitsInViewport(trigger, tw, th, preferred)) return preferred;
+  const order: TooltipPosition[] = ['top', 'bottom', 'right', 'left'];
+  for (const pos of order) {
+    if (fitsInViewport(trigger, tw, th, pos)) return pos;
+  }
+  return 'bottom';
+}
+
+function getCoords(
+  trigger: DOMRect,
+  tw: number,
+  th: number,
+  pos: TooltipPosition,
+): { top: number; left: number } {
+  let top: number;
+  let left: number;
+
+  switch (pos) {
+    case 'top':
+      top = trigger.top - th - GAP;
+      left = trigger.left + trigger.width / 2 - tw / 2;
+      break;
+    case 'bottom':
+      top = trigger.bottom + GAP;
+      left = trigger.left + trigger.width / 2 - tw / 2;
+      break;
+    case 'left':
+      top = trigger.top + trigger.height / 2 - th / 2;
+      left = trigger.left - tw - GAP;
+      break;
+    case 'right':
+      top = trigger.top + trigger.height / 2 - th / 2;
+      left = trigger.right + GAP;
+      break;
+  }
+
+  // Clamp to keep tooltip within viewport
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  top = Math.max(PADDING, Math.min(top, vh - th - PADDING));
+  left = Math.max(PADDING, Math.min(left, vw - tw - PADDING));
+
+  return { top, left };
+}
+
+const SHOW_DELAY = 400;
+
 function Tooltip({ content, children, position = 'auto', className }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [resolved, setResolved] = useState<TooltipPosition>('top');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useLayoutEffect(() => {
-    if (!isVisible || !wrapperRef.current || !tooltipRef.current) return;
-    const triggerRect = wrapperRef.current.getBoundingClientRect();
-    const tooltipRect = tooltipRef.current.getBoundingClientRect();
-    setResolved(resolvePosition(triggerRect, tooltipRect, position));
+    const el = tooltipRef.current;
+    if (!isVisible || !wrapperRef.current || !el) return;
+    // Position relative to the first child element (the actual trigger),
+    // not the wrapper div, so tooltip centers on the visible element.
+    const trigger = wrapperRef.current.firstElementChild ?? wrapperRef.current;
+    const triggerRect = trigger.getBoundingClientRect();
+    const tw = el.offsetWidth;
+    const th = el.offsetHeight;
+    const resolved = resolvePosition(triggerRect, tw, th, position);
+    const coords = getCoords(triggerRect, tw, th, resolved);
+    // Direct DOM update to avoid setState in effect
+    el.style.top = `${coords.top}px`;
+    el.style.left = `${coords.left}px`;
+    el.classList.add('animate-fade-in');
+    const arrow = el.querySelector<HTMLSpanElement>('[data-arrow]');
+    if (arrow) arrow.className = `absolute border-4 ${arrowStyles[resolved]}`;
   }, [isVisible, position]);
 
-  const show = useCallback(() => setIsVisible(true), []);
-  const hide = useCallback(() => setIsVisible(false), []);
+  const show = useCallback(() => {
+    timerRef.current = setTimeout(() => setIsVisible(true), SHOW_DELAY);
+  }, []);
+  const hide = useCallback(() => {
+    clearTimeout(timerRef.current);
+    setIsVisible(false);
+  }, []);
 
   return (
     <div
       ref={wrapperRef}
-      className="relative inline-flex"
+      className="relative flex"
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
     >
       {children}
-      {isVisible && content && (
-        <div
-          ref={tooltipRef}
-          role="tooltip"
-          className={cn(
-            'animate-fade-in pointer-events-none absolute z-50 rounded-md bg-[var(--text)] px-2.5 py-1.5 text-xs font-medium whitespace-nowrap text-white shadow-[var(--shadow-md)]',
-            positionStyles[resolved],
-            className,
-          )}
-        >
-          {content}
-          <span className={cn('absolute border-4', arrowStyles[resolved])} />
-        </div>
-      )}
+      {isVisible &&
+        content &&
+        createPortal(
+          <div
+            ref={tooltipRef}
+            role="tooltip"
+            style={{ position: 'fixed', top: -9999, left: -9999 }}
+            className={cn(
+              'pointer-events-none z-[9999] rounded-md bg-[var(--text)] px-2.5 py-1.5 text-xs font-medium whitespace-nowrap text-white shadow-[var(--shadow-md)]',
+              className,
+            )}
+          >
+            {content}
+            <span data-arrow className="absolute border-4 border-transparent" />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

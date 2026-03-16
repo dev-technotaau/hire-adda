@@ -695,7 +695,11 @@ services:
   # cAdvisor (Docker container metrics)
   # ===========================================
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: gcr.io/cadvisor/cadvisor:v0.51.0
+    # NOTE: cAdvisor cannot discover Docker containers on this VPS because
+    # Docker 29 uses containerd snapshotter (overlayfs) which lacks the
+    # legacy layerdb structure cAdvisor expects. It still exports host-level
+    # cgroup metrics. Per-container metrics come from Prometheus scrape targets.
     container_name: hireadda_cadvisor
     restart: unless-stopped
     deploy:
@@ -706,14 +710,29 @@ services:
     privileged: true
     devices:
       - /dev/kmsg:/dev/kmsg
+    command:
+      - '--docker_only=true'
+      - '--housekeeping_interval=30s'
+      - '--disable_metrics=percpu,sched,tcp,udp,disk,diskIO,hugetlb,referenced_memory,resctrl,process'
+      - '--containerd=/run/containerd/containerd.sock'
+      - '--containerd-namespace=moby'
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
+      - /run/containerd/containerd.sock:/run/containerd/containerd.sock:ro
       - /sys:/sys:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
       - /var/lib/docker:/var/lib/docker:ro
+      - /var/lib/containerd:/var/lib/containerd:ro
       - /dev/disk:/dev/disk:ro
     networks:
       - hireadda_network
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/healthz || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     logging:
       driver: 'json-file'
       options:
