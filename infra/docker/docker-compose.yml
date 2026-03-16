@@ -484,7 +484,7 @@ services:
 
   # ===========================================
   # Roundcube Webmail
-  # Connects to Docker mailserver on host ports
+  # Connects to Docker mailserver via shared mail network
   # ===========================================
   roundcube:
     image: roundcube/roundcubemail:latest
@@ -496,9 +496,9 @@ services:
           memory: 256M
           cpus: '0.25'
     environment:
-      - ROUNDCUBEMAIL_DEFAULT_HOST=tls://mail.hireadda.in
+      - ROUNDCUBEMAIL_DEFAULT_HOST=tls://hireadda_mailserver
       - ROUNDCUBEMAIL_DEFAULT_PORT=993
-      - ROUNDCUBEMAIL_SMTP_SERVER=tls://mail.hireadda.in
+      - ROUNDCUBEMAIL_SMTP_SERVER=tls://hireadda_mailserver
       - ROUNDCUBEMAIL_SMTP_PORT=465
       - ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE=25M
       - ROUNDCUBEMAIL_SKIN=elastic
@@ -509,6 +509,7 @@ services:
       - roundcube_temp:/tmp/roundcube-temp
     networks:
       - hireadda_network
+      - mail_network
     healthcheck:
       test: ['CMD', 'curl', '-sf', 'http://localhost:80/']
       interval: 30s
@@ -883,6 +884,9 @@ services:
 networks:
   hireadda_network:
     driver: bridge
+  mail_network:
+    external: true
+    name: mail-server_default
 
 # ===========================================
 # Volumes
