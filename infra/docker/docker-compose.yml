@@ -496,9 +496,9 @@ services:
           memory: 256M
           cpus: '0.25'
     environment:
-      - ROUNDCUBEMAIL_DEFAULT_HOST=hireadda_mailserver
+      - ROUNDCUBEMAIL_DEFAULT_HOST=tls://mail.hireadda.in
       - ROUNDCUBEMAIL_DEFAULT_PORT=143
-      - ROUNDCUBEMAIL_SMTP_SERVER=hireadda_mailserver
+      - ROUNDCUBEMAIL_SMTP_SERVER=tls://mail.hireadda.in
       - ROUNDCUBEMAIL_SMTP_PORT=587
       - ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE=25M
       - ROUNDCUBEMAIL_SKIN=elastic

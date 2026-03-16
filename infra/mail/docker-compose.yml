@@ -119,16 +119,20 @@ services:
       retries: 5
       start_period: 60s
 
+    networks:
+      default:
+        aliases:
+          - mail.hireadda.in
+
     logging:
       driver: 'json-file'
       options:
         max-size: '20m'
         max-file: '5'
 
-  # Roundcube webmail has been moved to K3s.
-  # See: infra/k8s/apps/roundcube/
-  # It connects to this mailserver via K8s ExternalName service
-  # (mailserver-external → 148.230.67.210 on ports 143/587).
+  # Roundcube webmail runs in the main docker-compose stack.
+  # It connects to this mailserver via shared Docker network
+  # (mail-server_default) using STARTTLS on ports 143/587.
 
 volumes:
   mail_data:
