@@ -40,8 +40,8 @@ COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nodejs:nodejs /app/prisma.config.js ./
 COPY --from=builder --chown=nodejs:nodejs /app/certs ./certs
 
-# Create uploads directory
-RUN mkdir -p uploads && chown nodejs:nodejs uploads
+# Create writable directories for non-root user
+RUN mkdir -p uploads logs && chown nodejs:nodejs uploads logs
 
 # Switch to non-root user
 USER nodejs
