@@ -21,7 +21,11 @@ async function proxyRequest(
   const { path } = await params;
   const backendPath = `/${path.join('/')}`;
   const searchParams = request.nextUrl.searchParams.toString();
-  const url = `${BACKEND_URL}${backendPath}${searchParams ? `?${searchParams}` : ''}`;
+  // Health endpoints live at root, not under /api/v1
+  const baseUrl = backendPath.startsWith('/health')
+    ? BACKEND_URL.replace(/\/api\/v\d+$/, '')
+    : BACKEND_URL;
+  const url = `${baseUrl}${backendPath}${searchParams ? `?${searchParams}` : ''}`;
 
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN)?.value;

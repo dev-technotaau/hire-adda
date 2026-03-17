@@ -34,6 +34,7 @@ import PublicLayout from '@/components/layout/PublicLayout';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
 import StatsSection from '@/components/common/StatsSection';
+import AuthHomeRedirect from '@/components/common/AuthHomeRedirect';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -85,7 +86,8 @@ const jsonLd = [
     name: 'TalentBridge',
     url: APP_URL,
     logo: `${APP_URL}/icons/logo.svg`,
-    description: "India's leading job portal and recruitment platform. Find top jobs, hire the best talent, and build your career.",
+    description:
+      "India's leading job portal and recruitment platform. Find top jobs, hire the best talent, and build your career.",
     sameAs: [],
     contactPoint: {
       '@type': 'ContactPoint',
@@ -369,6 +371,7 @@ export default async function Home() {
 
   return (
     <PublicLayout>
+      <AuthHomeRedirect />
       {/* Structured Data for SEO */}
       <script
         type="application/ld+json"
@@ -392,7 +395,7 @@ export default async function Home() {
               </span>
 
               <h1 className="mt-6 text-4xl font-bold tracking-tight text-[var(--text)] sm:text-5xl lg:text-6xl">
-                Find Your <span className="whitespace-nowrap text-primary">Dream Job,</span>{' '}
+                Find Your <span className="text-primary whitespace-nowrap">Dream Job,</span>{' '}
                 <br className="hidden sm:block" />
                 Build Your Future
               </h1>
@@ -779,7 +782,11 @@ export default async function Home() {
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-[var(--text-secondary)]">
               Got questions? We have answers. If you can&apos;t find what you&apos;re looking for,{' '}
-              <Link href="/contact" title="Go to contact page" className="text-primary hover:underline">
+              <Link
+                href="/contact"
+                title="Go to contact page"
+                className="text-primary hover:underline"
+              >
                 contact us
               </Link>
               .

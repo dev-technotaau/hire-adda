@@ -134,18 +134,29 @@ function Tooltip({ content, children, position = 'auto', className }: TooltipPro
     if (arrow) arrow.className = `absolute border-4 ${arrowStyles[resolved]}`;
   }, [isVisible, position]);
 
+  const touchRef = useRef(false);
+
   const show = useCallback(() => {
+    if (touchRef.current) return; // suppress hover triggered by touch
     timerRef.current = setTimeout(() => setIsVisible(true), SHOW_DELAY);
   }, []);
   const hide = useCallback(() => {
     clearTimeout(timerRef.current);
     setIsVisible(false);
   }, []);
+  const onTouch = useCallback(() => {
+    touchRef.current = true;
+    hide();
+  }, [hide]);
 
   return (
     <div
       ref={wrapperRef}
       className="flex min-w-0 flex-col"
+      onTouchStart={onTouch}
+      onMouseMove={() => {
+        touchRef.current = false;
+      }}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
