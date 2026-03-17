@@ -43,6 +43,7 @@ import {
   Heart,
   Lightbulb,
   Building2,
+  Power,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -137,7 +138,8 @@ export default function AdminUserDetailPage() {
   // Activity query
   const { data: activityData, isLoading: activityLoading } = useQuery({
     queryKey: ['admin', 'audit-logs', { performedBy: userId, page: activityPage }],
-    queryFn: () => adminService.getAuditLogs({ performedBy: userId, page: activityPage, limit: 20 }),
+    queryFn: () =>
+      adminService.getAuditLogs({ performedBy: userId, page: activityPage, limit: 20 }),
     enabled: !!userId && activeTab === 'activity',
   });
 
@@ -272,9 +274,7 @@ export default function AdminUserDetailPage() {
     ...(user?.role === 'CANDIDATE'
       ? [{ key: 'applications' as const, label: 'Applications' }]
       : []),
-    ...(user?.role === 'EMPLOYER'
-      ? [{ key: 'jobs' as const, label: 'Jobs' }]
-      : []),
+    ...(user?.role === 'EMPLOYER' ? [{ key: 'jobs' as const, label: 'Jobs' }] : []),
     { key: 'activity', label: 'Activity' },
   ];
 
@@ -352,18 +352,31 @@ export default function AdminUserDetailPage() {
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2">
-                  {user.isSuspended ? (
+                  {user.isSuspended && (
                     <Button
                       variant="outline"
                       size="sm"
-                      tooltip="Reactivate this user"
+                      tooltip="Remove suspension from this user"
                       leftIcon={<CheckCircle className="h-4 w-4" />}
                       onClick={() => activateMutation.mutate()}
                       isLoading={activateMutation.isPending}
                     >
-                      Activate
+                      Unsuspend
                     </Button>
-                  ) : (
+                  )}
+                  {!user.isActive && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      tooltip="Reactivate this user account"
+                      leftIcon={<Power className="h-4 w-4" />}
+                      onClick={() => activateMutation.mutate()}
+                      isLoading={activateMutation.isPending}
+                    >
+                      Reactivate
+                    </Button>
+                  )}
+                  {user.isActive && !user.isSuspended && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -413,12 +426,18 @@ export default function AdminUserDetailPage() {
               {activeTab === 'account' && (
                 <Card
                   header={
-                    <h2 className="text-lg font-semibold text-[var(--text)]">Account Information</h2>
+                    <h2 className="text-lg font-semibold text-[var(--text)]">
+                      Account Information
+                    </h2>
                   }
                 >
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <InfoItem icon={Mail} label="Email" value={user.email} />
-                    <InfoItem icon={Phone} label="Mobile" value={user.mobileNumber || 'Not provided'} />
+                    <InfoItem
+                      icon={Phone}
+                      label="Mobile"
+                      value={user.mobileNumber || 'Not provided'}
+                    />
                     <InfoItem
                       icon={Phone}
                       label="WhatsApp"
@@ -444,7 +463,11 @@ export default function AdminUserDetailPage() {
                       label="Login Attempts"
                       value={String(user.loginAttempts)}
                     />
-                    <InfoItem icon={Key} label="MFA Enabled" value={user.mfaEnabled ? 'Yes' : 'No'} />
+                    <InfoItem
+                      icon={Key}
+                      label="MFA Enabled"
+                      value={user.mfaEnabled ? 'Yes' : 'No'}
+                    />
                     <InfoItem
                       icon={ShieldCheck}
                       label="Email Verified"
@@ -460,7 +483,11 @@ export default function AdminUserDetailPage() {
                       label="WhatsApp Verified"
                       value={user.isWhatsappVerified ? 'Yes' : 'No'}
                     />
-                    <InfoItem icon={Shield} label="Role" value={ROLE_LABELS[user.role] || user.role} />
+                    <InfoItem
+                      icon={Shield}
+                      label="Role"
+                      value={ROLE_LABELS[user.role] || user.role}
+                    />
                   </div>
                 </Card>
               )}
@@ -611,7 +638,9 @@ export default function AdminUserDetailPage() {
                                 <td className="px-4 py-3 text-[var(--text-muted)]">
                                   {formatDate(job.createdAt)}
                                 </td>
-                                <td className="px-4 py-3 font-medium text-[var(--text)]">{job.title}</td>
+                                <td className="px-4 py-3 font-medium text-[var(--text)]">
+                                  {job.title}
+                                </td>
                                 <td className="px-4 py-3">
                                   <span
                                     className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${getStatusColor(job.status)}`}
@@ -622,7 +651,9 @@ export default function AdminUserDetailPage() {
                                 <td className="px-4 py-3 text-[var(--text-muted)]">
                                   {job._applicationCount}
                                 </td>
-                                <td className="px-4 py-3 text-[var(--text-muted)]">{job._savedCount}</td>
+                                <td className="px-4 py-3 text-[var(--text-muted)]">
+                                  {job._savedCount}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -662,7 +693,7 @@ export default function AdminUserDetailPage() {
                     <>
                       <div className="space-y-3">
                         {activityData.data.items.map((log: AuditLog) => (
-                          <div key={log.id} className="border-l-2 border-primary pl-4 py-2">
+                          <div key={log.id} className="border-primary border-l-2 py-2 pl-4">
                             <div className="flex items-center justify-between">
                               <span className="font-medium text-[var(--text)]">{log.action}</span>
                               <span className="text-xs text-[var(--text-muted)]">
@@ -670,15 +701,14 @@ export default function AdminUserDetailPage() {
                               </span>
                             </div>
                             <p className="text-sm text-[var(--text-muted)]">
-                              {log.entity}{' '}
-                              {log.entityId && `(${log.entityId.substring(0, 8)}...)`}
+                              {log.entity} {log.entityId && `(${log.entityId.substring(0, 8)}...)`}
                             </p>
                             {log.details && (
                               <details className="mt-1">
-                                <summary className="text-xs cursor-pointer text-[var(--text-muted)]">
+                                <summary className="cursor-pointer text-xs text-[var(--text-muted)]">
                                   View Details
                                 </summary>
-                                <pre className="text-xs bg-[var(--bg-secondary)] p-2 rounded mt-1 overflow-x-auto">
+                                <pre className="mt-1 overflow-x-auto rounded bg-[var(--bg-secondary)] p-2 text-xs">
                                   {JSON.stringify(log.details, null, 2)}
                                 </pre>
                               </details>
@@ -781,7 +811,11 @@ export default function AdminUserDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" tooltip="Cancel deletion" onClick={() => setShowDeleteModal(false)}>
+              <Button
+                variant="outline"
+                tooltip="Cancel deletion"
+                onClick={() => setShowDeleteModal(false)}
+              >
                 Cancel
               </Button>
               <Button
@@ -1043,7 +1077,7 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
           {profile.bio && (
             <div className="mt-4">
               <p className="text-xs text-[var(--text-muted)]">Bio</p>
-              <p className="text-sm text-[var(--text)] whitespace-pre-line">{profile.bio}</p>
+              <p className="text-sm whitespace-pre-line text-[var(--text)]">{profile.bio}</p>
             </div>
           )}
         </Card>
@@ -1058,7 +1092,7 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
             <div className="space-y-4 border-l-2 border-[var(--border)] pl-4">
               {profile.education!.map((edu, i) => (
                 <div key={i} className="relative">
-                  <div className="absolute -left-[1.3rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white" />
+                  <div className="border-primary absolute top-1.5 -left-[1.3rem] h-2.5 w-2.5 rounded-full border-2 bg-white" />
                   <p className="font-semibold text-[var(--text)]">{edu.institution}</p>
                   <p className="text-sm text-[var(--text)]">
                     {edu.degree} {edu.fieldOfStudy && `in ${edu.fieldOfStudy}`}
@@ -1087,7 +1121,7 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
             <div className="space-y-4 border-l-2 border-[var(--border)] pl-4">
               {profile.experience!.map((exp, i) => (
                 <div key={i} className="relative">
-                  <div className="absolute -left-[1.3rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white" />
+                  <div className="border-primary absolute top-1.5 -left-[1.3rem] h-2.5 w-2.5 rounded-full border-2 bg-white" />
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-semibold text-[var(--text)]">{exp.company}</p>
@@ -1105,7 +1139,7 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
                     </p>
                   )}
                   {exp.description && (
-                    <p className="mt-2 text-sm text-[var(--text-muted)] whitespace-pre-line">
+                    <p className="mt-2 text-sm whitespace-pre-line text-[var(--text-muted)]">
                       {exp.description}
                     </p>
                   )}
@@ -1126,7 +1160,9 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
               {profile.certifications!.map((cert, i) => (
                 <div key={i} className="rounded-lg border border-[var(--border)] p-3">
                   <p className="font-medium text-[var(--text)]">{cert.name}</p>
-                  {cert.issuer && <p className="mt-1 text-sm text-[var(--text-muted)]">{cert.issuer}</p>}
+                  {cert.issuer && (
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">{cert.issuer}</p>
+                  )}
                   {cert.issueDate && (
                     <p className="text-xs text-[var(--text-muted)]">Issued: {cert.issueDate}</p>
                   )}
@@ -1136,7 +1172,7 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
                         href={cert.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        className="text-primary mt-2 inline-flex items-center gap-1 text-xs hover:underline"
                       >
                         View Certificate <ExternalLink className="h-3 w-3" />
                       </a>
@@ -1177,7 +1213,7 @@ function CandidateProfileViewer({ profile }: { profile: CandidateProfile }) {
                         href={project.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        className="text-primary mt-2 inline-flex items-center gap-1 text-xs hover:underline"
                       >
                         View Project <ExternalLink className="h-3 w-3" />
                       </a>
@@ -1246,7 +1282,7 @@ function EmployerProfileViewer({ profile }: { profile: CompanyProfile }) {
       <Card>
         {/* Cover Image Banner */}
         {profile.coverImage && (
-          <div className="mb-6 -mx-6 -mt-6 h-48 w-[calc(100%+3rem)] overflow-hidden rounded-t-lg">
+          <div className="-mx-6 -mt-6 mb-6 h-48 w-[calc(100%+3rem)] overflow-hidden rounded-t-lg">
             <img
               src={profile.coverImage}
               alt={`${profile.companyName} cover`}
@@ -1257,7 +1293,11 @@ function EmployerProfileViewer({ profile }: { profile: CompanyProfile }) {
         <div className="flex gap-6">
           {profile.logo && (
             <div className="h-32 w-32 shrink-0 overflow-hidden rounded-lg border border-[var(--border)]">
-              <img src={profile.logo} alt={profile.companyName} className="h-full w-full object-cover" />
+              <img
+                src={profile.logo}
+                alt={profile.companyName}
+                className="h-full w-full object-cover"
+              />
             </div>
           )}
           <div className="flex-1">
@@ -1289,7 +1329,7 @@ function EmployerProfileViewer({ profile }: { profile: CompanyProfile }) {
                       href={profile.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline"
+                      className="text-primary text-sm hover:underline"
                     >
                       Website
                     </a>
@@ -1305,7 +1345,9 @@ function EmployerProfileViewer({ profile }: { profile: CompanyProfile }) {
               {profile.employeeCount && (
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-[var(--text-muted)]" />
-                  <span className="text-sm text-[var(--text)]">{profile.employeeCount} employees</span>
+                  <span className="text-sm text-[var(--text)]">
+                    {profile.employeeCount} employees
+                  </span>
                 </div>
               )}
               {profile.headquarters && (
@@ -1323,7 +1365,7 @@ function EmployerProfileViewer({ profile }: { profile: CompanyProfile }) {
       {profile.description && (
         <Card>
           <h3 className="mb-4 text-lg font-semibold text-[var(--text)]">About</h3>
-          <p className="text-[var(--text-muted)] whitespace-pre-line">{profile.description}</p>
+          <p className="whitespace-pre-line text-[var(--text-muted)]">{profile.description}</p>
         </Card>
       )}
 
@@ -1356,7 +1398,7 @@ function EmployerProfileViewer({ profile }: { profile: CompanyProfile }) {
         <Card>
           <h3 className="mb-4 text-lg font-semibold text-[var(--text)]">Culture & Values</h3>
           {profile.companyCulture && (
-            <p className="text-sm text-[var(--text-muted)] whitespace-pre-line">
+            <p className="text-sm whitespace-pre-line text-[var(--text-muted)]">
               {profile.companyCulture}
             </p>
           )}
@@ -1430,7 +1472,9 @@ function EmployerProfileViewer({ profile }: { profile: CompanyProfile }) {
       )}
 
       {/* Social Links */}
-      {(profile.socialLinks?.linkedin || profile.socialLinks?.twitter || profile.socialLinks?.facebook) && (
+      {(profile.socialLinks?.linkedin ||
+        profile.socialLinks?.twitter ||
+        profile.socialLinks?.facebook) && (
         <Card>
           <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
             <Globe className="h-5 w-5" />

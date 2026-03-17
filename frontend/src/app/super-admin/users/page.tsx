@@ -86,14 +86,18 @@ export default function SuperAdminUsersPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [profileCompletenessMin, setProfileCompletenessMin] = useState<number | undefined>();
   const [profileCompletenessMax, setProfileCompletenessMax] = useState<number | undefined>();
-  const [lastActiveFilter, setLastActiveFilter] = useState<'week' | 'month' | 'quarter' | 'inactive' | ''>('');
+  const [lastActiveFilter, setLastActiveFilter] = useState<
+    'week' | 'month' | 'quarter' | 'inactive' | ''
+  >('');
   const [verifiedFilters, setVerifiedFilters] = useState<('email' | 'mobile' | 'whatsapp')[]>([]);
 
   // Bulk operation modals
   const [showBulkNotifyModal, setShowBulkNotifyModal] = useState(false);
   const [bulkNotificationTitle, setBulkNotificationTitle] = useState('');
   const [bulkNotificationMessage, setBulkNotificationMessage] = useState('');
-  const [bulkNotificationType, setBulkNotificationType] = useState<'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR'>('INFO');
+  const [bulkNotificationType, setBulkNotificationType] = useState<
+    'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR'
+  >('INFO');
   const [showBulkSuspendModal, setShowBulkSuspendModal] = useState(false);
   const [bulkSuspendReason, setBulkSuspendReason] = useState('');
 
@@ -376,8 +380,15 @@ export default function SuperAdminUsersPage() {
       },
     },
     ...(user.isSuspended
-      ? [{ label: 'Activate', icon: CheckCircle, onClick: () => activateMutation.mutate(user.id) }]
-      : [{ label: 'Suspend', icon: Ban, onClick: () => setSuspendTarget(user) }]),
+      ? [{ label: 'Unsuspend', icon: CheckCircle, onClick: () => activateMutation.mutate(user.id) }]
+      : user.isActive
+        ? [{ label: 'Suspend', icon: Ban, onClick: () => setSuspendTarget(user) }]
+        : []),
+    ...(!user.isActive
+      ? [{ label: 'Reactivate', icon: Power, onClick: () => activateMutation.mutate(user.id) }]
+      : !user.isSuspended
+        ? [{ label: 'Deactivate', icon: Power, onClick: () => deactivateMutation.mutate(user.id) }]
+        : []),
     {
       label: 'Change Role',
       icon: UserCog,
@@ -391,9 +402,6 @@ export default function SuperAdminUsersPage() {
       icon: Key,
       onClick: () => setResetPwTarget(user),
     },
-    ...(user.isActive && !user.isSuspended
-      ? [{ label: 'Deactivate', icon: Power, onClick: () => deactivateMutation.mutate(user.id) }]
-      : []),
     { label: '', onClick: () => {}, separator: true },
     {
       label: 'Delete',
@@ -488,11 +496,14 @@ export default function SuperAdminUsersPage() {
                   lastActiveFilter ||
                   verifiedFilters.length > 0) && (
                   <Badge variant="info" size="sm" className="ml-2">
-                    {[
-                      profileCompletenessMin !== undefined || profileCompletenessMax !== undefined,
-                      lastActiveFilter,
-                      verifiedFilters.length > 0,
-                    ].filter(Boolean).length}
+                    {
+                      [
+                        profileCompletenessMin !== undefined ||
+                          profileCompletenessMax !== undefined,
+                        lastActiveFilter,
+                        verifiedFilters.length > 0,
+                      ].filter(Boolean).length
+                    }
                   </Badge>
                 )}
               </Button>
@@ -532,7 +543,9 @@ export default function SuperAdminUsersPage() {
                     placeholder="Min"
                     value={profileCompletenessMin ?? ''}
                     onChange={(e) => {
-                      setProfileCompletenessMin(e.target.value ? Number(e.target.value) : undefined);
+                      setProfileCompletenessMin(
+                        e.target.value ? Number(e.target.value) : undefined,
+                      );
                       setPage(1);
                     }}
                     min={0}
@@ -543,7 +556,9 @@ export default function SuperAdminUsersPage() {
                     placeholder="Max"
                     value={profileCompletenessMax ?? ''}
                     onChange={(e) => {
-                      setProfileCompletenessMax(e.target.value ? Number(e.target.value) : undefined);
+                      setProfileCompletenessMax(
+                        e.target.value ? Number(e.target.value) : undefined,
+                      );
                       setPage(1);
                     }}
                     min={0}
@@ -571,7 +586,9 @@ export default function SuperAdminUsersPage() {
 
               {/* Verification Status */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-[var(--text)]">Verified</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                  Verified
+                </label>
                 <div className="flex flex-col gap-2">
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -626,7 +643,7 @@ export default function SuperAdminUsersPage() {
 
         {/* Bulk Actions Bar */}
         {selectedUserIds.size > 0 && (
-          <Card className="sticky top-16 z-10 border-primary bg-primary/5">
+          <Card className="border-primary bg-primary/5 sticky top-16 z-10">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <span className="font-medium text-[var(--text)]">
@@ -870,7 +887,11 @@ export default function SuperAdminUsersPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowCreateModal(false)} tooltip="Cancel and close">
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateModal(false)}
+                tooltip="Cancel and close"
+              >
                 Cancel
               </Button>
               <Button
@@ -1009,7 +1030,11 @@ export default function SuperAdminUsersPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)} tooltip="Cancel deletion">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteTarget(null)}
+                tooltip="Cancel deletion"
+              >
                 Cancel
               </Button>
               <Button
@@ -1096,7 +1121,11 @@ export default function SuperAdminUsersPage() {
                 Cancel
               </Button>
               {resetStep === 'send' ? (
-                <Button onClick={handleSendResetOtp} isLoading={isSendingOtp} tooltip="Send verification code to user email">
+                <Button
+                  onClick={handleSendResetOtp}
+                  isLoading={isSendingOtp}
+                  tooltip="Send verification code to user email"
+                >
                   Send Verification Code
                 </Button>
               ) : (
@@ -1207,7 +1236,7 @@ export default function SuperAdminUsersPage() {
               <textarea
                 value={bulkNotificationMessage}
                 onChange={(e) => setBulkNotificationMessage(e.target.value)}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="focus:border-primary focus:ring-primary/20 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] focus:ring-2 focus:outline-none"
                 rows={4}
                 placeholder="Enter your message..."
                 required
@@ -1239,7 +1268,9 @@ export default function SuperAdminUsersPage() {
               </Button>
               <Button
                 onClick={() => bulkNotifyMutation.mutate()}
-                disabled={!bulkNotificationTitle || !bulkNotificationMessage || bulkNotifyMutation.isPending}
+                disabled={
+                  !bulkNotificationTitle || !bulkNotificationMessage || bulkNotifyMutation.isPending
+                }
                 tooltip="Send notification to selected users"
               >
                 {bulkNotifyMutation.isPending ? 'Sending...' : 'Send Notification'}
@@ -1260,11 +1291,12 @@ export default function SuperAdminUsersPage() {
           <div className="space-y-4">
             <div className="rounded-lg bg-[var(--bg-secondary)] p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+                <AlertCircle className="text-warning mt-0.5 h-5 w-5 shrink-0" />
                 <div>
                   <p className="font-medium text-[var(--text)]">Warning</p>
                   <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    This will suspend all selected users. They will not be able to log in until reactivated.
+                    This will suspend all selected users. They will not be able to log in until
+                    reactivated.
                   </p>
                 </div>
               </div>
@@ -1276,7 +1308,7 @@ export default function SuperAdminUsersPage() {
               <textarea
                 value={bulkSuspendReason}
                 onChange={(e) => setBulkSuspendReason(e.target.value)}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="focus:border-primary focus:ring-primary/20 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] focus:ring-2 focus:outline-none"
                 rows={3}
                 placeholder="Optional suspension reason..."
               />

@@ -1,7 +1,7 @@
 import { prisma } from '../config/prisma';
 import { Role, JobStatus, VerificationStatus } from '@prisma/client';
 import { AppError } from '../middleware/error';
-import {  } from '../kafka/producer';
+import {} from '../kafka/producer';
 import { publishEvent } from '../kafka/producer';
 import { KafkaTopics } from '../kafka/topics';
 
@@ -138,15 +138,38 @@ export class AdminService {
     page = 1,
     limit = 10,
     filters?: {
+      search?: string;
+      status?: 'active' | 'suspended' | 'inactive';
       profileCompleteness?: { min?: number; max?: number };
       lastActive?: 'week' | 'month' | 'quarter' | 'inactive';
       verified?: ('email' | 'mobile' | 'whatsapp')[];
     }
   ) {
     const skip = (page - 1) * limit;
-    const where: any = {};
+    const where: any = {
+      role: { notIn: [Role.ADMIN, Role.SUPER_ADMIN] },
+    };
 
     if (role) where.role = role;
+
+    // Search by name or email
+    if (filters?.search) {
+      where.OR = [
+        { email: { contains: filters.search, mode: 'insensitive' } },
+        { firstName: { contains: filters.search, mode: 'insensitive' } },
+        { lastName: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Status filter
+    if (filters?.status === 'active') {
+      where.isActive = true;
+      where.isSuspended = false;
+    } else if (filters?.status === 'suspended') {
+      where.isSuspended = true;
+    } else if (filters?.status === 'inactive') {
+      where.isActive = false;
+    }
 
     // Email/Mobile/WhatsApp verification filters
     if (filters?.verified?.includes('email')) where.isEmailVerified = true;
@@ -157,15 +180,28 @@ export class AdminService {
     if (filters?.lastActive) {
       const now = new Date();
       const cutoffDays =
-        filters.lastActive === 'week' ? 7 : filters.lastActive === 'month' ? 30 : filters.lastActive === 'quarter' ? 90 : 0;
+        filters.lastActive === 'week'
+          ? 7
+          : filters.lastActive === 'month'
+            ? 30
+            : filters.lastActive === 'quarter'
+              ? 90
+              : 0;
 
       if (cutoffDays > 0) {
         where.lastActiveAt = { gte: new Date(now.getTime() - cutoffDays * 24 * 60 * 60 * 1000) };
       } else if (filters.lastActive === 'inactive') {
-        where.OR = [
+        // Avoid overwriting search's OR clause
+        const inactiveCondition = [
           { lastActiveAt: null },
           { lastActiveAt: { lt: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) } },
         ];
+        if (where.OR) {
+          where.AND = [{ OR: where.OR }, { OR: inactiveCondition }];
+          delete where.OR;
+        } else {
+          where.OR = inactiveCondition;
+        }
       }
     }
 
@@ -187,9 +223,13 @@ export class AdminService {
           role: true,
           firstName: true,
           lastName: true,
+          isActive: true,
+          isSuspended: true,
+          mfaEnabled: true,
           isEmailVerified: true,
           isMobileVerified: true,
           isWhatsappVerified: true,
+          lastLoginAt: true,
           lastActiveAt: true,
           createdAt: true,
           candidateProfile: {
@@ -260,7 +300,13 @@ export class AdminService {
         data: { isSuspended: true, suspendedAt: new Date(), suspendedBy: adminId },
       }),
       prisma.auditLog.create({
-        data: { action: 'SUSPEND_USER', entity: 'User', entityId: userId, performedBy: adminId, details: reason ? { reason } : undefined },
+        data: {
+          action: 'SUSPEND_USER',
+          entity: 'User',
+          entityId: userId,
+          performedBy: adminId,
+          details: reason ? { reason } : undefined,
+        },
       }),
     ]);
 

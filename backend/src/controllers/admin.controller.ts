@@ -50,11 +50,23 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
     // Parse filters
     const filters: any = {};
 
+    // Search filter
+    if (req.query.search) {
+      filters.search = req.query.search as string;
+    }
+
+    // Status filter
+    if (req.query.status) {
+      filters.status = req.query.status as 'active' | 'suspended' | 'inactive';
+    }
+
     // Profile completeness filter
     if (req.query.profileCompletenessMin || req.query.profileCompletenessMax) {
       filters.profileCompleteness = {};
-      if (req.query.profileCompletenessMin) filters.profileCompleteness.min = Number(req.query.profileCompletenessMin);
-      if (req.query.profileCompletenessMax) filters.profileCompleteness.max = Number(req.query.profileCompletenessMax);
+      if (req.query.profileCompletenessMin)
+        filters.profileCompleteness.min = Number(req.query.profileCompletenessMin);
+      if (req.query.profileCompletenessMax)
+        filters.profileCompleteness.max = Number(req.query.profileCompletenessMax);
     }
 
     // Last active filter
@@ -64,11 +76,18 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
 
     // Verification filters
     if (req.query.verified) {
-      const verifiedArray = Array.isArray(req.query.verified) ? req.query.verified : [req.query.verified];
+      const verifiedArray = Array.isArray(req.query.verified)
+        ? req.query.verified
+        : [req.query.verified];
       filters.verified = verifiedArray as ('email' | 'mobile' | 'whatsapp')[];
     }
 
-    const result = await adminService.getUsers(role, page, limit, Object.keys(filters).length > 0 ? filters : undefined);
+    const result = await adminService.getUsers(
+      role,
+      page,
+      limit,
+      Object.keys(filters).length > 0 ? filters : undefined
+    );
 
     res.status(200).json({
       status: 'success',
@@ -384,12 +403,13 @@ export const getExportJobs = async (req: Request, res: Response, next: NextFunct
     const exportJobs = jobs.filter((j) => j.name === 'export-data');
 
     const userIds = [...new Set(exportJobs.map((j) => j.data?.userId).filter(Boolean))];
-    const users = userIds.length > 0
-      ? await prisma.user.findMany({
-          where: { id: { in: userIds } },
-          select: { id: true, firstName: true, lastName: true, email: true, role: true },
-        })
-      : [];
+    const users =
+      userIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, firstName: true, lastName: true, email: true, role: true },
+          })
+        : [];
     const userMap = new Map(users.map((u) => [u.id, u]));
 
     const items = exportJobs.map((j) => {
@@ -580,7 +600,13 @@ export const bulkExportUsers = async (
     if (!req.user) throw new AppError('Not authorized', 401);
     const { userIds, format } = req.body;
     const result = await adminService.bulkExportUsers(userIds, req.user.id, format);
-    res.status(200).json({ status: 'success', data: result, message: 'Export queued. You will receive an email.' });
+    res
+      .status(200)
+      .json({
+        status: 'success',
+        data: result,
+        message: 'Export queued. You will receive an email.',
+      });
   } catch (error) {
     next(error);
   }
@@ -598,7 +624,13 @@ export const bulkNotifyUsers = async (
     if (!req.user) throw new AppError('Not authorized', 401);
     const { userIds, notification } = req.body;
     const result = await adminService.bulkNotifyUsers(userIds, req.user.id, notification);
-    res.status(200).json({ status: 'success', data: result, message: `Notifications sent to ${result.count} users` });
+    res
+      .status(200)
+      .json({
+        status: 'success',
+        data: result,
+        message: `Notifications sent to ${result.count} users`,
+      });
   } catch (error) {
     next(error);
   }
@@ -616,7 +648,9 @@ export const bulkSuspendUsers = async (
     if (!req.user) throw new AppError('Not authorized', 401);
     const { userIds, reason } = req.body;
     const result = await adminService.bulkSuspendUsers(userIds, req.user.id, reason);
-    res.status(200).json({ status: 'success', data: result, message: `${result.count} users suspended` });
+    res
+      .status(200)
+      .json({ status: 'success', data: result, message: `${result.count} users suspended` });
   } catch (error) {
     next(error);
   }
@@ -634,7 +668,9 @@ export const bulkActivateUsers = async (
     if (!req.user) throw new AppError('Not authorized', 401);
     const { userIds } = req.body;
     const result = await adminService.bulkActivateUsers(userIds, req.user.id);
-    res.status(200).json({ status: 'success', data: result, message: `${result.count} users activated` });
+    res
+      .status(200)
+      .json({ status: 'success', data: result, message: `${result.count} users activated` });
   } catch (error) {
     next(error);
   }
@@ -665,12 +701,18 @@ export const getTrending = async (req: Request, res: Response, next: NextFunctio
 
     // Enrich trending jobs with basic info
     const jobIds = trendingJobs.map((t) => t.jobId);
-    const jobs = jobIds.length > 0
-      ? await prisma.jobPost.findMany({
-          where: { id: { in: jobIds } },
-          select: { id: true, title: true, location: true, company: { select: { companyName: true, logo: true } } },
-        })
-      : [];
+    const jobs =
+      jobIds.length > 0
+        ? await prisma.jobPost.findMany({
+            where: { id: { in: jobIds } },
+            select: {
+              id: true,
+              title: true,
+              location: true,
+              company: { select: { companyName: true, logo: true } },
+            },
+          })
+        : [];
     const jobMap = new Map(jobs.map((j) => [j.id, j]));
 
     const enrichedJobs = trendingJobs

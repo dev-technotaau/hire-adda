@@ -97,7 +97,14 @@ interface EditableFieldProps {
   className?: string;
 }
 
-function EditableField({ value, onSave, type = 'text', maxLength, placeholder, className = '' }: EditableFieldProps) {
+function EditableField({
+  value,
+  onSave,
+  type = 'text',
+  maxLength,
+  placeholder,
+  className = '',
+}: EditableFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState<string | number>(value != null ? String(value) : '');
   const [isSaving, setIsSaving] = useState(false);
@@ -110,7 +117,13 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
 
     setIsSaving(true);
     try {
-      await onSave(type === 'number' ? Number(editValue) : type === 'boolean' ? editValue === 'true' : editValue);
+      await onSave(
+        type === 'number'
+          ? Number(editValue)
+          : type === 'boolean'
+            ? editValue === 'true'
+            : editValue,
+      );
       setIsEditing(false);
       showToast.success('Field updated successfully');
     } catch (error) {
@@ -133,10 +146,10 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
           <Tooltip content="Edit this field">
             <button
               onClick={() => setIsEditing(true)}
-              className="cursor-pointer text-primary hover:text-primary/80 p-1"
+              className="text-primary hover:text-primary/80 cursor-pointer p-1"
               title="Edit"
             >
-              <Edit className="w-4 h-4" />
+              <Edit className="h-4 w-4" />
             </button>
           </Tooltip>
         ) : (
@@ -153,20 +166,20 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="cursor-pointer text-success hover:text-success/80 p-1"
+                className="text-success hover:text-success/80 cursor-pointer p-1"
                 title="Save"
               >
-                <Save className="w-4 h-4" />
+                <Save className="h-4 w-4" />
               </button>
             </Tooltip>
             <Tooltip content="Discard changes">
               <button
                 onClick={handleCancel}
                 disabled={isSaving}
-                className="cursor-pointer text-error hover:text-error/80 p-1"
+                className="text-error hover:text-error/80 cursor-pointer p-1"
                 title="Cancel"
               >
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             </Tooltip>
           </div>
@@ -177,7 +190,7 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
 
   if (!isEditing) {
     return (
-      <div className={`flex items-center gap-2 group ${className}`}>
+      <div className={`group flex items-center gap-2 ${className}`}>
         <span>{value || placeholder || '—'}</span>
         <Tooltip content="Edit this field">
           <button
@@ -185,10 +198,10 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
               setEditValue(value != null ? String(value) : '');
               setIsEditing(true);
             }}
-            className="cursor-pointer text-primary hover:text-primary/80 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="text-primary hover:text-primary/80 cursor-pointer p-1 opacity-0 transition-opacity group-hover:opacity-100"
             title="Edit"
           >
-            <Edit className="w-4 h-4" />
+            <Edit className="h-4 w-4" />
           </button>
         </Tooltip>
       </div>
@@ -203,7 +216,7 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
           onChange={(e) => setEditValue(e.target.value)}
           maxLength={maxLength}
           placeholder={placeholder}
-          className="flex-1 px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--bg)] text-[var(--text)] resize-none"
+          className="flex-1 resize-none rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]"
           rows={3}
           autoFocus
         />
@@ -222,20 +235,20 @@ function EditableField({ value, onSave, type = 'text', maxLength, placeholder, c
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="cursor-pointer text-success hover:text-success/80 p-1"
+          className="text-success hover:text-success/80 cursor-pointer p-1"
           title="Save"
         >
-          <Save className="w-4 h-4" />
+          <Save className="h-4 w-4" />
         </button>
       </Tooltip>
       <Tooltip content="Discard changes">
         <button
           onClick={handleCancel}
           disabled={isSaving}
-          className="cursor-pointer text-error hover:text-error/80 p-1"
+          className="text-error hover:text-error/80 cursor-pointer p-1"
           title="Cancel"
         >
-          <X className="w-4 h-4" />
+          <X className="h-4 w-4" />
         </button>
       </Tooltip>
     </div>
@@ -254,7 +267,14 @@ export default function SuperAdminUserDetailPage() {
 
   // Tab state
   type TabKey = 'account' | 'profile' | 'applications' | 'jobs' | 'activity' | 'verification';
-  const validTabs: TabKey[] = ['account', 'profile', 'applications', 'jobs', 'activity', 'verification'];
+  const validTabs: TabKey[] = [
+    'account',
+    'profile',
+    'applications',
+    'jobs',
+    'activity',
+    'verification',
+  ];
   const [activeTab, setActiveTab] = useState<TabKey>('account');
 
   useEffect(() => {
@@ -413,7 +433,8 @@ export default function SuperAdminUserDetailPage() {
   // Activity query
   const { data: activityData, isLoading: activityLoading } = useQuery({
     queryKey: ['admin', 'audit-logs', { performedBy: userId, page: activityPage }],
-    queryFn: () => adminService.getAuditLogs({ performedBy: userId, page: activityPage, limit: 20 }),
+    queryFn: () =>
+      adminService.getAuditLogs({ performedBy: userId, page: activityPage, limit: 20 }),
     enabled: !!userId && activeTab === 'activity',
   });
 
@@ -550,7 +571,8 @@ export default function SuperAdminUserDetailPage() {
   });
 
   const updateCandidateProfileMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => adminService.updateCandidateProfile(userId, data),
+    mutationFn: (data: Record<string, unknown>) =>
+      adminService.updateCandidateProfile(userId, data),
     onSuccess: () => {
       invalidateUser();
     },
@@ -584,8 +606,15 @@ export default function SuperAdminUserDetailPage() {
   });
 
   const updateVerificationMutation = useMutation({
-    mutationFn: ({ verificationId, status, reason }: { verificationId: string; status: 'APPROVED' | 'REJECTED'; reason?: string }) =>
-      adminService.updateVerificationStatus(verificationId, status, reason),
+    mutationFn: ({
+      verificationId,
+      status,
+      reason,
+    }: {
+      verificationId: string;
+      status: 'APPROVED' | 'REJECTED';
+      reason?: string;
+    }) => adminService.updateVerificationStatus(verificationId, status, reason),
     onSuccess: () => {
       showToast.success('Verification status updated');
       queryClient.invalidateQueries({ queryKey: ['admin', 'user-verifications', userId] });
@@ -644,7 +673,18 @@ export default function SuperAdminUserDetailPage() {
     }
 
     return false;
-  }, [isEditing, user, editFirstName, editLastName, editEmail, editMobileNumber, editWhatsappNumber, editIsMobileVerified, editIsWhatsappVerified, isAdminTarget]);
+  }, [
+    isEditing,
+    user,
+    editFirstName,
+    editLastName,
+    editEmail,
+    editMobileNumber,
+    editWhatsappNumber,
+    editIsMobileVerified,
+    editIsWhatsappVerified,
+    isAdminTarget,
+  ]);
 
   const startEditing = () => {
     if (!user) return;
@@ -714,7 +754,15 @@ export default function SuperAdminUserDetailPage() {
   };
 
   // Helper component for info items
-  const InfoItem = ({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) => (
+  const InfoItem = ({
+    icon: Icon,
+    label,
+    value,
+  }: {
+    icon: LucideIcon;
+    label: string;
+    value: string;
+  }) => (
     <div>
       <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
         <Icon className="h-3.5 w-3.5" />
@@ -728,7 +776,9 @@ export default function SuperAdminUserDetailPage() {
   const tabItems = [
     { key: 'account' as const, label: 'Account' },
     { key: 'profile' as const, label: 'Profile' },
-    ...(user?.role === 'CANDIDATE' ? [{ key: 'applications' as const, label: 'Applications' }] : []),
+    ...(user?.role === 'CANDIDATE'
+      ? [{ key: 'applications' as const, label: 'Applications' }]
+      : []),
     ...(user?.role === 'EMPLOYER' ? [{ key: 'jobs' as const, label: 'Jobs' }] : []),
     { key: 'activity' as const, label: 'Activity' },
     { key: 'verification' as const, label: 'Verification' },
@@ -752,8 +802,8 @@ export default function SuperAdminUserDetailPage() {
                     completeness < 50
                       ? 'text-[var(--error)]'
                       : completeness < 80
-                      ? 'text-[var(--warning)]'
-                      : 'text-[var(--success)]'
+                        ? 'text-[var(--warning)]'
+                        : 'text-[var(--success)]'
                   }`}
                 >
                   {completeness < 50 ? 'Low' : completeness < 80 ? 'Good' : 'Excellent'}
@@ -766,8 +816,8 @@ export default function SuperAdminUserDetailPage() {
                     completeness < 50
                       ? 'bg-[var(--error)]'
                       : completeness < 80
-                      ? 'bg-[var(--warning)]'
-                      : 'bg-[var(--success)]'
+                        ? 'bg-[var(--warning)]'
+                        : 'bg-[var(--success)]'
                   }`}
                 />
               </div>
@@ -852,7 +902,10 @@ export default function SuperAdminUserDetailPage() {
           </Card>
 
           {/* Contact */}
-          {(profile.phone || profile.alternatePhone || profile.alternateEmail || profile.currentLocation) && (
+          {(profile.phone ||
+            profile.alternatePhone ||
+            profile.alternateEmail ||
+            profile.currentLocation) && (
             <Card>
               <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Contact</h3>
               <div className="space-y-2 text-sm">
@@ -885,7 +938,8 @@ export default function SuperAdminUserDetailPage() {
           )}
 
           {/* Work Preferences */}
-          {((profile.preferredJobType?.length ?? 0) > 0 || (profile.preferredWorkMode?.length ?? 0) > 0) && (
+          {((profile.preferredJobType?.length ?? 0) > 0 ||
+            (profile.preferredWorkMode?.length ?? 0) > 0) && (
             <Card>
               <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Work Preferences</h3>
               <div className="space-y-2">
@@ -918,26 +972,40 @@ export default function SuperAdminUserDetailPage() {
           )}
 
           {/* Additional Info */}
-          {(profile.visaStatus || profile.workPermitStatus || profile.passportNumber || profile.drivingLicenseType || profile.ownVehicle !== undefined || profile.isPwD || profile.disabilityType || profile.veteranStatus || profile.blockedCompanies?.length > 0) && (
+          {(profile.visaStatus ||
+            profile.workPermitStatus ||
+            profile.passportNumber ||
+            profile.drivingLicenseType ||
+            profile.ownVehicle !== undefined ||
+            profile.isPwD ||
+            profile.disabilityType ||
+            profile.veteranStatus ||
+            profile.blockedCompanies?.length > 0) && (
             <Card>
               <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Additional Info</h3>
               <div className="space-y-2 text-sm">
                 {profile.visaStatus && (
                   <div>
                     <p className="text-xs text-[var(--text-muted)]">Visa Status</p>
-                    <Badge variant="neutral" size="sm">{profile.visaStatus}</Badge>
+                    <Badge variant="neutral" size="sm">
+                      {profile.visaStatus}
+                    </Badge>
                   </div>
                 )}
                 {profile.workPermitStatus && (
                   <div>
                     <p className="text-xs text-[var(--text-muted)]">Work Permit</p>
-                    <Badge variant="neutral" size="sm">{profile.workPermitStatus}</Badge>
+                    <Badge variant="neutral" size="sm">
+                      {profile.workPermitStatus}
+                    </Badge>
                   </div>
                 )}
                 {profile.passportNumber && (
                   <div>
                     <p className="text-xs text-[var(--text-muted)]">Passport</p>
-                    <p className="text-[var(--text)]">XXX-XXXX-{profile.passportNumber.slice(-4)}</p>
+                    <p className="text-[var(--text)]">
+                      XXX-XXXX-{profile.passportNumber.slice(-4)}
+                    </p>
                   </div>
                 )}
                 {profile.drivingLicenseType && (
@@ -957,15 +1025,25 @@ export default function SuperAdminUserDetailPage() {
                 {profile.isPwD && (
                   <div>
                     <p className="text-xs text-[var(--text-muted)]">PwD Status</p>
-                    <Badge variant="info" size="sm">Person with Disability</Badge>
-                    {profile.disabilityType && <p className="mt-1 text-xs text-[var(--text)]">{profile.disabilityType}</p>}
-                    {profile.disabilityPercentage && <p className="text-xs text-[var(--text-muted)]">{profile.disabilityPercentage}%</p>}
+                    <Badge variant="info" size="sm">
+                      Person with Disability
+                    </Badge>
+                    {profile.disabilityType && (
+                      <p className="mt-1 text-xs text-[var(--text)]">{profile.disabilityType}</p>
+                    )}
+                    {profile.disabilityPercentage && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {profile.disabilityPercentage}%
+                      </p>
+                    )}
                   </div>
                 )}
                 {profile.veteranStatus && (
                   <div>
                     <p className="text-xs text-[var(--text-muted)]">Veteran Status</p>
-                    <Badge variant="success" size="sm">{profile.veteranStatus}</Badge>
+                    <Badge variant="success" size="sm">
+                      {profile.veteranStatus}
+                    </Badge>
                   </div>
                 )}
                 {profile.blockedCompanies?.length > 0 && (
@@ -996,9 +1074,11 @@ export default function SuperAdminUserDetailPage() {
               </h3>
               <div className="flex items-center justify-between rounded-lg border border-[var(--border)] p-3">
                 <div className="flex items-center gap-3">
-                  <FileText className="h-8 w-8 text-primary" />
+                  <FileText className="text-primary h-8 w-8" />
                   <div>
-                    <p className="font-medium text-[var(--text)]">{profile.resume.split('/').pop()}</p>
+                    <p className="font-medium text-[var(--text)]">
+                      {profile.resume.split('/').pop()}
+                    </p>
                     <p className="text-xs text-[var(--text-muted)]">Uploaded resume</p>
                   </div>
                 </div>
@@ -1059,7 +1139,7 @@ export default function SuperAdminUserDetailPage() {
               <div className="space-y-4 border-l-2 border-[var(--border)] pl-4">
                 {profile.education!.map((edu, i) => (
                   <div key={i} className="relative">
-                    <div className="absolute -left-[1.3rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white" />
+                    <div className="border-primary absolute top-1.5 -left-[1.3rem] h-2.5 w-2.5 rounded-full border-2 bg-white" />
                     <p className="font-semibold text-[var(--text)]">{edu.institution}</p>
                     <p className="text-sm text-[var(--text)]">
                       {edu.degree} {edu.fieldOfStudy && `in ${edu.fieldOfStudy}`}
@@ -1069,7 +1149,9 @@ export default function SuperAdminUserDetailPage() {
                         {edu.startDate} - {edu.endDate || 'Present'}
                       </p>
                     )}
-                    {edu.grade && <p className="text-sm text-[var(--text-muted)]">Grade: {edu.grade}</p>}
+                    {edu.grade && (
+                      <p className="text-sm text-[var(--text-muted)]">Grade: {edu.grade}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1086,7 +1168,7 @@ export default function SuperAdminUserDetailPage() {
               <div className="space-y-4 border-l-2 border-[var(--border)] pl-4">
                 {profile.experience!.map((exp, i) => (
                   <div key={i} className="relative">
-                    <div className="absolute -left-[1.3rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white" />
+                    <div className="border-primary absolute top-1.5 -left-[1.3rem] h-2.5 w-2.5 rounded-full border-2 bg-white" />
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="font-semibold text-[var(--text)]">{exp.company}</p>
@@ -1103,7 +1185,9 @@ export default function SuperAdminUserDetailPage() {
                         {exp.startDate} - {exp.endDate || 'Present'}
                       </p>
                     )}
-                    {exp.description && <p className="mt-2 text-sm text-[var(--text-muted)]">{exp.description}</p>}
+                    {exp.description && (
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">{exp.description}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1121,7 +1205,9 @@ export default function SuperAdminUserDetailPage() {
                 {profile.certifications!.map((cert, i) => (
                   <div key={i} className="rounded-lg border border-[var(--border)] p-3">
                     <p className="font-medium text-[var(--text)]">{cert.name}</p>
-                    {cert.issuer && <p className="text-sm text-[var(--text-muted)]">{cert.issuer}</p>}
+                    {cert.issuer && (
+                      <p className="text-sm text-[var(--text-muted)]">{cert.issuer}</p>
+                    )}
                     {cert.issueDate && (
                       <p className="text-xs text-[var(--text-muted)]">
                         Issued: {cert.issueDate}
@@ -1153,7 +1239,7 @@ export default function SuperAdminUserDetailPage() {
                         href={project.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        className="text-primary mt-2 inline-flex items-center gap-1 text-xs hover:underline"
                         title="Open project link"
                       >
                         View Project <ExternalLink className="h-3 w-3" />
@@ -1176,11 +1262,21 @@ export default function SuperAdminUserDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)]">
-                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Technology</th>
-                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Version</th>
-                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Proficiency</th>
-                      <th className="pb-2 text-right font-medium text-[var(--text-muted)]">Years</th>
-                      <th className="pb-2 text-right font-medium text-[var(--text-muted)]">Last Used</th>
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">
+                        Technology
+                      </th>
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">
+                        Version
+                      </th>
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">
+                        Proficiency
+                      </th>
+                      <th className="pb-2 text-right font-medium text-[var(--text-muted)]">
+                        Years
+                      </th>
+                      <th className="pb-2 text-right font-medium text-[var(--text-muted)]">
+                        Last Used
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1189,10 +1285,16 @@ export default function SuperAdminUserDetailPage() {
                         <td className="py-2 text-[var(--text)]">{skill.technology}</td>
                         <td className="py-2 text-[var(--text-muted)]">{skill.version || '—'}</td>
                         <td className="py-2">
-                          <Badge variant="info" size="sm">{skill.proficiency}</Badge>
+                          <Badge variant="info" size="sm">
+                            {skill.proficiency}
+                          </Badge>
                         </td>
-                        <td className="py-2 text-right text-[var(--text)]">{skill.experienceYears || '—'}</td>
-                        <td className="py-2 text-right text-[var(--text-muted)]">{skill.lastUsed || '—'}</td>
+                        <td className="py-2 text-right text-[var(--text)]">
+                          {skill.experienceYears || '—'}
+                        </td>
+                        <td className="py-2 text-right text-[var(--text-muted)]">
+                          {skill.lastUsed || '—'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1213,8 +1315,12 @@ export default function SuperAdminUserDetailPage() {
                   <thead>
                     <tr className="border-b border-[var(--border)]">
                       <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Skill</th>
-                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Proficiency</th>
-                      <th className="pb-2 text-right font-medium text-[var(--text-muted)]">Years</th>
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">
+                        Proficiency
+                      </th>
+                      <th className="pb-2 text-right font-medium text-[var(--text-muted)]">
+                        Years
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1223,7 +1329,13 @@ export default function SuperAdminUserDetailPage() {
                         <td className="py-2 text-[var(--text)]">{skill.skill}</td>
                         <td className="py-2">
                           <Badge
-                            variant={skill.proficiency === 'EXPERT' ? 'success' : skill.proficiency === 'ADVANCED' ? 'info' : 'neutral'}
+                            variant={
+                              skill.proficiency === 'EXPERT'
+                                ? 'success'
+                                : skill.proficiency === 'ADVANCED'
+                                  ? 'info'
+                                  : 'neutral'
+                            }
                             size="sm"
                           >
                             {skill.proficiency}
@@ -1266,11 +1378,21 @@ export default function SuperAdminUserDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)]">
-                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Language</th>
-                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">Proficiency</th>
-                      <th className="pb-2 text-center font-medium text-[var(--text-muted)]">Read</th>
-                      <th className="pb-2 text-center font-medium text-[var(--text-muted)]">Write</th>
-                      <th className="pb-2 text-center font-medium text-[var(--text-muted)]">Speak</th>
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">
+                        Language
+                      </th>
+                      <th className="pb-2 text-left font-medium text-[var(--text-muted)]">
+                        Proficiency
+                      </th>
+                      <th className="pb-2 text-center font-medium text-[var(--text-muted)]">
+                        Read
+                      </th>
+                      <th className="pb-2 text-center font-medium text-[var(--text-muted)]">
+                        Write
+                      </th>
+                      <th className="pb-2 text-center font-medium text-[var(--text-muted)]">
+                        Speak
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1278,7 +1400,9 @@ export default function SuperAdminUserDetailPage() {
                       <tr key={i} className="border-b border-[var(--border)] last:border-0">
                         <td className="py-2 text-[var(--text)]">{lang.language}</td>
                         <td className="py-2">
-                          <Badge variant="info" size="sm">{lang.proficiency}</Badge>
+                          <Badge variant="info" size="sm">
+                            {lang.proficiency}
+                          </Badge>
                         </td>
                         <td className="py-2 text-center">{lang.read ? '✓' : '—'}</td>
                         <td className="py-2 text-center">{lang.write ? '✓' : '—'}</td>
@@ -1302,22 +1426,28 @@ export default function SuperAdminUserDetailPage() {
                 {profile.publications!.map((pub, i) => (
                   <div key={i} className="rounded-lg border border-[var(--border)] p-3">
                     <p className="font-medium text-[var(--text)]">{pub.title}</p>
-                    {pub.publisher && <p className="mt-1 text-sm text-[var(--text-muted)]">{pub.publisher}</p>}
+                    {pub.publisher && (
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{pub.publisher}</p>
+                    )}
                     {pub.publicationDate && (
-                      <p className="text-xs text-[var(--text-muted)]">Published: {pub.publicationDate}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Published: {pub.publicationDate}
+                      </p>
                     )}
                     {pub.description && (
                       <p className="mt-2 text-sm text-[var(--text-muted)]">{pub.description}</p>
                     )}
                     {pub.authors && (
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">Authors: {pub.authors}</p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Authors: {pub.authors}
+                      </p>
                     )}
                     {pub.url && (
                       <a
                         href={pub.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        className="text-primary mt-2 inline-flex items-center gap-1 text-xs hover:underline"
                         title="Open publication link"
                       >
                         View Publication <ExternalLink className="h-3 w-3" />
@@ -1342,14 +1472,21 @@ export default function SuperAdminUserDetailPage() {
                     <div className="flex items-start justify-between">
                       <p className="font-medium text-[var(--text)]">{patent.title}</p>
                       {patent.status && (
-                        <Badge variant={patent.status === 'GRANTED' ? 'success' : 'warning'} size="sm">
+                        <Badge
+                          variant={patent.status === 'GRANTED' ? 'success' : 'warning'}
+                          size="sm"
+                        >
                           {patent.status}
                         </Badge>
                       )}
                     </div>
-                    {patent.patentOffice && <p className="mt-1 text-sm text-[var(--text-muted)]">{patent.patentOffice}</p>}
+                    {patent.patentOffice && (
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{patent.patentOffice}</p>
+                    )}
                     {patent.patentNumber && (
-                      <p className="text-xs text-[var(--text-muted)]">Patent #: {patent.patentNumber}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Patent #: {patent.patentNumber}
+                      </p>
                     )}
                     {(patent.filingDate || patent.issueDate) && (
                       <p className="text-xs text-[var(--text-muted)]">
@@ -1361,14 +1498,16 @@ export default function SuperAdminUserDetailPage() {
                       <p className="mt-2 text-sm text-[var(--text-muted)]">{patent.description}</p>
                     )}
                     {patent.inventors && (
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">Inventors: {patent.inventors}</p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Inventors: {patent.inventors}
+                      </p>
                     )}
                     {patent.url && (
                       <a
                         href={patent.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        className="text-primary mt-2 inline-flex items-center gap-1 text-xs hover:underline"
                         title="Open patent link"
                       >
                         View Patent <ExternalLink className="h-3 w-3" />
@@ -1391,8 +1530,12 @@ export default function SuperAdminUserDetailPage() {
                 {profile.awards!.map((award, i) => (
                   <div key={i} className="rounded-lg border border-[var(--border)] p-3">
                     <p className="font-medium text-[var(--text)]">{award.title}</p>
-                    {award.issuer && <p className="mt-1 text-sm text-[var(--text-muted)]">{award.issuer}</p>}
-                    {award.date && <p className="text-xs text-[var(--text-muted)]">Awarded: {award.date}</p>}
+                    {award.issuer && (
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{award.issuer}</p>
+                    )}
+                    {award.date && (
+                      <p className="text-xs text-[var(--text-muted)]">Awarded: {award.date}</p>
+                    )}
                     {award.description && (
                       <p className="mt-2 text-sm text-[var(--text-muted)]">{award.description}</p>
                     )}
@@ -1413,19 +1556,25 @@ export default function SuperAdminUserDetailPage() {
                 {profile.courses!.map((course, i) => (
                   <div key={i} className="rounded-lg border border-[var(--border)] p-3">
                     <p className="font-medium text-[var(--text)]">{course.name}</p>
-                    {course.provider && <p className="mt-1 text-sm text-[var(--text-muted)]">{course.provider}</p>}
+                    {course.provider && (
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{course.provider}</p>
+                    )}
                     {course.completionDate && (
-                      <p className="text-xs text-[var(--text-muted)]">Completed: {course.completionDate}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Completed: {course.completionDate}
+                      </p>
                     )}
                     {course.associatedWith && (
-                      <p className="text-xs text-[var(--text-muted)]">Associated: {course.associatedWith}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Associated: {course.associatedWith}
+                      </p>
                     )}
                     {course.url && (
                       <a
                         href={course.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        className="text-primary mt-2 inline-flex items-center gap-1 text-xs hover:underline"
                         title="Open certificate link"
                       >
                         View Certificate <ExternalLink className="h-3 w-3" />
@@ -1459,7 +1608,9 @@ export default function SuperAdminUserDetailPage() {
                       <p className="text-xs text-[var(--text-muted)]">Taken: {test.dateOfExam}</p>
                     )}
                     {test.associatedWith && (
-                      <p className="text-xs text-[var(--text-muted)]">Associated: {test.associatedWith}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Associated: {test.associatedWith}
+                      </p>
                     )}
                     {test.description && (
                       <p className="mt-2 text-sm text-[var(--text-muted)]">{test.description}</p>
@@ -1480,7 +1631,7 @@ export default function SuperAdminUserDetailPage() {
               <div className="space-y-4 border-l-2 border-[var(--border)] pl-4">
                 {profile.volunteerExperience!.map((vol, i) => (
                   <div key={i} className="relative">
-                    <div className="absolute -left-[1.3rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-primary bg-white" />
+                    <div className="border-primary absolute top-1.5 -left-[1.3rem] h-2.5 w-2.5 rounded-full border-2 bg-white" />
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="font-semibold text-[var(--text)]">{vol.organization}</p>
@@ -1492,13 +1643,17 @@ export default function SuperAdminUserDetailPage() {
                         </Badge>
                       )}
                     </div>
-                    {vol.cause && <p className="text-sm text-[var(--text-muted)]">Cause: {vol.cause}</p>}
+                    {vol.cause && (
+                      <p className="text-sm text-[var(--text-muted)]">Cause: {vol.cause}</p>
+                    )}
                     {(vol.startDate || vol.endDate) && (
                       <p className="text-xs text-[var(--text-muted)]">
                         {vol.startDate} - {vol.endDate || 'Present'}
                       </p>
                     )}
-                    {vol.description && <p className="mt-2 text-sm text-[var(--text-muted)]">{vol.description}</p>}
+                    {vol.description && (
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">{vol.description}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1516,17 +1671,23 @@ export default function SuperAdminUserDetailPage() {
                 {profile.professionalMemberships!.map((membership, i) => (
                   <div key={i} className="rounded-lg border border-[var(--border)] p-3">
                     <p className="font-medium text-[var(--text)]">{membership.organization}</p>
-                    {membership.role && <p className="mt-1 text-sm text-[var(--text-muted)]">{membership.role}</p>}
+                    {membership.role && (
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{membership.role}</p>
+                    )}
                     {(membership.startDate || membership.endDate) && (
                       <p className="text-xs text-[var(--text-muted)]">
                         {membership.startDate} - {membership.endDate || 'Present'}
                       </p>
                     )}
                     {membership.membershipId && (
-                      <p className="text-xs text-[var(--text-muted)]">ID: {membership.membershipId}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        ID: {membership.membershipId}
+                      </p>
                     )}
                     {membership.description && (
-                      <p className="mt-2 text-sm text-[var(--text-muted)]">{membership.description}</p>
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">
+                        {membership.description}
+                      </p>
                     )}
                   </div>
                 ))}
@@ -1545,20 +1706,28 @@ export default function SuperAdminUserDetailPage() {
                 {profile.references!.map((refEntry, i) => (
                   <div key={i} className="rounded-lg border border-[var(--border)] p-3">
                     <p className="font-medium text-[var(--text)]">{refEntry.name}</p>
-                    {refEntry.designation && <p className="text-sm text-[var(--text-muted)]">{refEntry.designation}</p>}
-                    {refEntry.organization && <p className="text-sm text-[var(--text-muted)]">{refEntry.organization}</p>}
+                    {refEntry.designation && (
+                      <p className="text-sm text-[var(--text-muted)]">{refEntry.designation}</p>
+                    )}
+                    {refEntry.organization && (
+                      <p className="text-sm text-[var(--text-muted)]">{refEntry.organization}</p>
+                    )}
                     {refEntry.email && (
                       <p className="text-xs text-[var(--text-muted)]">
-                        Email: {refEntry.email.substring(0, 3)}***{refEntry.email.substring(refEntry.email.indexOf('@'))}
+                        Email: {refEntry.email.substring(0, 3)}***
+                        {refEntry.email.substring(refEntry.email.indexOf('@'))}
                       </p>
                     )}
                     {refEntry.phone && (
                       <p className="text-xs text-[var(--text-muted)]">
-                        Phone: {refEntry.phone.substring(0, 4)}****{refEntry.phone.substring(refEntry.phone.length - 3)}
+                        Phone: {refEntry.phone.substring(0, 4)}****
+                        {refEntry.phone.substring(refEntry.phone.length - 3)}
                       </p>
                     )}
                     {refEntry.relationship && (
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">Relationship: {refEntry.relationship}</p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Relationship: {refEntry.relationship}
+                      </p>
                     )}
                   </div>
                 ))}
@@ -1678,7 +1847,7 @@ export default function SuperAdminUserDetailPage() {
         <Card>
           {/* Cover Image Banner */}
           {profile.coverImage && (
-            <div className="mb-6 -mx-6 -mt-6 h-48 w-[calc(100%+3rem)] overflow-hidden rounded-t-lg">
+            <div className="-mx-6 -mt-6 mb-6 h-48 w-[calc(100%+3rem)] overflow-hidden rounded-t-lg">
               <img
                 src={profile.coverImage}
                 alt={`${profile.companyName} cover`}
@@ -1689,7 +1858,11 @@ export default function SuperAdminUserDetailPage() {
           <div className="flex gap-6">
             {profile.logo && (
               <div className="h-32 w-32 shrink-0 overflow-hidden rounded-lg border border-[var(--border)]">
-                <img src={profile.logo} alt={profile.companyName} className="h-full w-full object-cover" />
+                <img
+                  src={profile.logo}
+                  alt={profile.companyName}
+                  className="h-full w-full object-cover"
+                />
               </div>
             )}
             <div className="flex-1">
@@ -1740,7 +1913,13 @@ export default function SuperAdminUserDetailPage() {
                 {profile.website && (
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-[var(--text-muted)]" />
-                    <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline" title="Open company website">
+                    <a
+                      href={profile.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary text-sm hover:underline"
+                      title="Open company website"
+                    >
                       Website
                     </a>
                   </div>
@@ -1748,13 +1927,17 @@ export default function SuperAdminUserDetailPage() {
                 {profile.foundedYear && (
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-[var(--text-muted)]" />
-                    <span className="text-sm text-[var(--text)]">Founded {profile.foundedYear}</span>
+                    <span className="text-sm text-[var(--text)]">
+                      Founded {profile.foundedYear}
+                    </span>
                   </div>
                 )}
                 {profile.employeeCount && (
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-[var(--text-muted)]" />
-                    <span className="text-sm text-[var(--text)]">{profile.employeeCount} employees</span>
+                    <span className="text-sm text-[var(--text)]">
+                      {profile.employeeCount} employees
+                    </span>
                   </div>
                 )}
                 {profile.headquarters && (
@@ -1827,7 +2010,9 @@ export default function SuperAdminUserDetailPage() {
               Culture & Values
             </h3>
             {profile.companyCulture && (
-              <p className="mb-4 whitespace-pre-line text-[var(--text-muted)]">{profile.companyCulture}</p>
+              <p className="mb-4 whitespace-pre-line text-[var(--text-muted)]">
+                {profile.companyCulture}
+              </p>
             )}
             {profile.coreValues?.length > 0 && (
               <div>
@@ -1926,7 +2111,9 @@ export default function SuperAdminUserDetailPage() {
               <Users className="h-5 w-5" />
               Interview Process
             </h3>
-            <p className="whitespace-pre-line text-[var(--text-muted)]">{profile.interviewProcess}</p>
+            <p className="whitespace-pre-line text-[var(--text-muted)]">
+              {profile.interviewProcess}
+            </p>
           </Card>
         )}
 
@@ -1942,7 +2129,11 @@ export default function SuperAdminUserDetailPage() {
                 <div key={i} className="text-center">
                   {leader.photo && (
                     <div className="mx-auto mb-3 h-20 w-20 overflow-hidden rounded-full">
-                      <img src={leader.photo} alt={leader.name} className="h-full w-full object-cover" />
+                      <img
+                        src={leader.photo}
+                        alt={leader.name}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
                   )}
                   <p className="font-medium text-[var(--text)]">{leader.name}</p>
@@ -1954,7 +2145,7 @@ export default function SuperAdminUserDetailPage() {
                       href={leader.linkedinUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      className="text-primary mt-1 inline-flex items-center gap-1 text-xs hover:underline"
                       title="Open LinkedIn profile"
                     >
                       LinkedIn <ExternalLink className="h-3 w-3" />
@@ -1962,7 +2153,9 @@ export default function SuperAdminUserDetailPage() {
                   )}
                   {leader.bio && (
                     <details className="mt-2 text-left">
-                      <summary className="cursor-pointer text-xs text-[var(--text-muted)]">View Bio</summary>
+                      <summary className="cursor-pointer text-xs text-[var(--text-muted)]">
+                        View Bio
+                      </summary>
                       <p className="mt-1 text-xs text-[var(--text-muted)]">{leader.bio}</p>
                     </details>
                   )}
@@ -1984,17 +2177,27 @@ export default function SuperAdminUserDetailPage() {
                 <div key={i} className="rounded-lg border border-[var(--border)] p-4">
                   {testimonial.photo && (
                     <div className="mb-3 h-15 w-15 overflow-hidden rounded-full">
-                      <img src={testimonial.photo} alt={testimonial.authorName} className="h-full w-full object-cover" />
+                      <img
+                        src={testimonial.photo}
+                        alt={testimonial.authorName}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
                   )}
-                  <p className="italic text-[var(--text-muted)]">&quot;{testimonial.quote}&quot;</p>
+                  <p className="text-[var(--text-muted)] italic">&quot;{testimonial.quote}&quot;</p>
                   <div className="mt-2">
-                    <p className="text-sm font-medium text-[var(--text)]">{testimonial.authorName}</p>
+                    <p className="text-sm font-medium text-[var(--text)]">
+                      {testimonial.authorName}
+                    </p>
                     {testimonial.authorDesignation && (
-                      <p className="text-xs text-[var(--text-muted)]">{testimonial.authorDesignation}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {testimonial.authorDesignation}
+                      </p>
                     )}
                     {testimonial.authorDepartment && (
-                      <p className="text-xs text-[var(--text-muted)]">{testimonial.authorDepartment}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {testimonial.authorDepartment}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -2014,9 +2217,13 @@ export default function SuperAdminUserDetailPage() {
               {profile.awards!.map((award, i) => (
                 <div key={i} className="rounded-lg border border-[var(--border)] p-3">
                   <p className="font-medium text-[var(--text)]">{award.title}</p>
-                  {award.year && <p className="text-sm text-[var(--text-muted)]">Year: {award.year}</p>}
+                  {award.year && (
+                    <p className="text-sm text-[var(--text-muted)]">Year: {award.year}</p>
+                  )}
                   {award.issuingOrg && (
-                    <p className="text-xs text-[var(--text-muted)]">Issuing Org: {award.issuingOrg}</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Issuing Org: {award.issuingOrg}
+                    </p>
                   )}
                   {award.description && (
                     <p className="mt-2 text-sm text-[var(--text-muted)]">{award.description}</p>
@@ -2055,7 +2262,11 @@ export default function SuperAdminUserDetailPage() {
             <div className="grid gap-4 sm:grid-cols-3">
               {profile.officePhotos!.map((photo, i) => (
                 <div key={i} className="aspect-video overflow-hidden rounded-lg">
-                  <img src={photo.url} alt={photo.caption || `Office ${i + 1}`} className="h-full w-full object-cover" />
+                  <img
+                    src={photo.url}
+                    alt={photo.caption || `Office ${i + 1}`}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
               ))}
             </div>
@@ -2073,7 +2284,7 @@ export default function SuperAdminUserDetailPage() {
               <div className="mb-4 rounded-lg border border-[var(--border)] p-3">
                 <p className="mb-1 text-xs font-medium text-[var(--text-muted)]">Headquarters</p>
                 <p className="text-sm text-[var(--text)]">{profile.headquarters}</p>
-                {(profile.latitude && profile.longitude) && (
+                {profile.latitude && profile.longitude && (
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
                     Coordinates: {profile.latitude}, {profile.longitude}
                   </p>
@@ -2120,7 +2331,9 @@ export default function SuperAdminUserDetailPage() {
                   <p className="text-xs text-[var(--text-muted)]">Contact Person</p>
                   <p className="text-[var(--text)]">{profile.contactPersonName}</p>
                   {profile.contactPersonDesignation && (
-                    <p className="text-xs text-[var(--text-muted)]">{profile.contactPersonDesignation}</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {profile.contactPersonDesignation}
+                    </p>
                   )}
                 </div>
               )}
@@ -2161,8 +2374,8 @@ export default function SuperAdminUserDetailPage() {
                       profile.verificationStatus === 'VERIFIED'
                         ? 'success'
                         : profile.verificationStatus === 'PENDING'
-                        ? 'warning'
-                        : 'error'
+                          ? 'warning'
+                          : 'error'
                     }
                   >
                     {profile.verificationStatus}
@@ -2191,7 +2404,9 @@ export default function SuperAdminUserDetailPage() {
         )}
 
         {/* Social Links */}
-        {(profile.socialLinks?.linkedin || profile.socialLinks?.twitter || profile.socialLinks?.facebook) && (
+        {(profile.socialLinks?.linkedin ||
+          profile.socialLinks?.twitter ||
+          profile.socialLinks?.facebook) && (
           <Card>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
               <Globe className="h-5 w-5" />
@@ -2345,39 +2560,52 @@ export default function SuperAdminUserDetailPage() {
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2">
-                  {user.isSuspended ? (
+                  {user.isSuspended && (
                     <Button
                       variant="outline"
                       size="sm"
                       leftIcon={<CheckCircle className="h-4 w-4" />}
                       onClick={() => activateMutation.mutate()}
                       isLoading={activateMutation.isPending}
-                      tooltip="Reactivate this user"
+                      tooltip="Remove suspension from this user"
                     >
-                      Activate
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      leftIcon={<Ban className="h-4 w-4" />}
-                      onClick={() => setShowSuspendModal(true)}
-                      tooltip="Suspend this user"
-                    >
-                      Suspend
+                      Unsuspend
                     </Button>
                   )}
-                  {user.isActive && !user.isSuspended && (
+                  {!user.isActive && (
                     <Button
                       variant="outline"
                       size="sm"
                       leftIcon={<Power className="h-4 w-4" />}
-                      onClick={() => deactivateMutation.mutate()}
-                      isLoading={deactivateMutation.isPending}
-                      tooltip="Deactivate this user account"
+                      onClick={() => activateMutation.mutate()}
+                      isLoading={activateMutation.isPending}
+                      tooltip="Reactivate this user account"
                     >
-                      Deactivate
+                      Reactivate
                     </Button>
+                  )}
+                  {user.isActive && !user.isSuspended && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        leftIcon={<Ban className="h-4 w-4" />}
+                        onClick={() => setShowSuspendModal(true)}
+                        tooltip="Suspend this user"
+                      >
+                        Suspend
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        leftIcon={<Power className="h-4 w-4" />}
+                        onClick={() => deactivateMutation.mutate()}
+                        isLoading={deactivateMutation.isPending}
+                        tooltip="Deactivate this user account"
+                      >
+                        Deactivate
+                      </Button>
+                    </>
                   )}
                   <Button
                     variant="outline"
@@ -2424,7 +2652,12 @@ export default function SuperAdminUserDetailPage() {
             </Card>
 
             {/* Tabs */}
-            <Tabs tabs={tabItems} activeTab={activeTab} onChange={handleTabChange} variant="underline" />
+            <Tabs
+              tabs={tabItems}
+              activeTab={activeTab}
+              onChange={handleTabChange}
+              variant="underline"
+            />
 
             {/* Tab Content */}
             <div className="space-y-6">
@@ -2433,292 +2666,343 @@ export default function SuperAdminUserDetailPage() {
                 <>
                   {/* Edit Profile */}
                   <Card
-              header={
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-[var(--text)]">Edit Profile</h2>
-                  {!isEditing && (
-                    <Button variant="outline" size="sm" onClick={startEditing} tooltip="Edit user profile">
-                      Edit
-                    </Button>
-                  )}
-                </div>
-              }
-            >
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Input
-                      label="First Name"
-                      value={editFirstName}
-                      onChange={(e) => setEditFirstName(e.target.value)}
-                    />
-                    <Input
-                      label="Last Name"
-                      value={editLastName}
-                      onChange={(e) => setEditLastName(e.target.value)}
-                    />
-                  </div>
-                  {/* Email/Mobile/WhatsApp fields only for non-admin targets */}
-                  {!isAdminTarget && (
-                    <>
-                      <Input
-                        label="Email"
-                        type="email"
-                        value={editEmail}
-                        onChange={(e) => setEditEmail(e.target.value)}
-                      />
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <Input
-                          label="Mobile Number"
-                          placeholder="+919876543210"
-                          value={editMobileNumber}
-                          onChange={(e) => setEditMobileNumber(e.target.value)}
-                        />
-                        <Input
-                          label="WhatsApp Number"
-                          placeholder="+919876543210"
-                          value={editWhatsappNumber}
-                          onChange={(e) => setEditWhatsappNumber(e.target.value)}
-                        />
-                      </div>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <Switch
-                          label="Mobile Verified"
-                          description="Mark mobile number as verified (trusted bypass)"
-                          checked={editIsMobileVerified}
-                          onChange={(e) => setEditIsMobileVerified(e.target.checked)}
-                          disabled={!editMobileNumber.trim()}
-                        />
-                        <Switch
-                          label="WhatsApp Verified"
-                          description="Mark WhatsApp number as verified (trusted bypass)"
-                          checked={editIsWhatsappVerified}
-                          onChange={(e) => setEditIsWhatsappVerified(e.target.checked)}
-                          disabled={!editWhatsappNumber.trim()}
-                        />
-                      </div>
-                    </>
-                  )}
-                  {isAdminTarget && (
-                    <p className="text-xs text-[var(--text-muted)]">
-                      Email, mobile, and WhatsApp are managed separately below with OTP verification.
-                    </p>
-                  )}
-                  <div className="flex gap-3">
-                    <Button onClick={handleSaveProfile} isLoading={updateProfileMutation.isPending} disabled={!hasUnsavedChanges} tooltip="Save profile changes">
-                      Save Changes
-                    </Button>
-                    <Button variant="outline" onClick={() => setIsEditing(false)} tooltip="Discard changes">
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <p className="text-xs text-[var(--text-muted)]">First Name</p>
-                    <p className="text-sm font-medium text-[var(--text)]">
-                      {user.firstName || '—'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-muted)]">Last Name</p>
-                    <p className="text-sm font-medium text-[var(--text)]">{user.lastName || '—'}</p>
-                  </div>
-                  {!isAdminTarget && (
-                    <>
-                      <div>
-                        <p className="text-xs text-[var(--text-muted)]">Email</p>
-                        <p className="text-sm font-medium text-[var(--text)]">{user.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[var(--text-muted)]">Mobile Number</p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-[var(--text)]">
-                            {user.mobileNumber || '—'}
-                          </p>
-                          {user.mobileNumber && (
-                            <Badge variant={user.isMobileVerified ? 'success' : 'warning'} size="sm">
-                              {user.isMobileVerified ? 'Verified' : 'Unverified'}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[var(--text-muted)]">WhatsApp Number</p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-[var(--text)]">
-                            {user.whatsappNumber || '—'}
-                          </p>
-                          {user.whatsappNumber && (
-                            <Badge variant={user.isWhatsappVerified ? 'success' : 'warning'} size="sm">
-                              {user.isWhatsappVerified ? 'Verified' : 'Unverified'}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </Card>
-
-            {/* Admin Contact Management (OTP-verified) */}
-            {user.role === 'ADMIN' && (
-              <>
-                <AdminEmailSection userId={userId} user={user} invalidateUser={invalidateUser} />
-                <AdminMobileSection userId={userId} user={user} invalidateUser={invalidateUser} />
-                <AdminWhatsappSection userId={userId} user={user} invalidateUser={invalidateUser} />
-              </>
-            )}
-
-            {user.role === 'SUPER_ADMIN' && (
-              <Card>
-                <div className="flex items-center gap-3 py-4">
-                  <Shield className="h-5 w-5 text-[var(--text-muted)]" />
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    Email, mobile, and WhatsApp for super admin accounts can only be managed directly
-                    in the database.
-                  </p>
-                </div>
-              </Card>
-            )}
-
-            {/* Account Info */}
-            <Card
-              header={
-                <h2 className="text-lg font-semibold text-[var(--text)]">Account Information</h2>
-              }
-            >
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <InfoItem icon={Mail} label="Email" value={user.email} />
-                <InfoItem icon={Phone} label="Mobile" value={user.mobileNumber || 'Not provided'} />
-                <InfoItem
-                  icon={Calendar}
-                  label="Account Created"
-                  value={formatDate(user.createdAt)}
-                />
-                <InfoItem
-                  icon={Clock}
-                  label="Last Login"
-                  value={user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never'}
-                />
-                <InfoItem
-                  icon={Activity}
-                  label="Last Active"
-                  value={user.lastActiveAt ? formatDate(user.lastActiveAt) : 'Never'}
-                />
-                <InfoItem
-                  icon={ShieldAlert}
-                  label="Login Attempts"
-                  value={String(user.loginAttempts)}
-                />
-                <InfoItem icon={Key} label="MFA Enabled" value={user.mfaEnabled ? 'Yes' : 'No'} />
-                <InfoItem
-                  icon={ShieldCheck}
-                  label="Email Verified"
-                  value={user.isEmailVerified ? 'Yes' : 'No'}
-                />
-                <InfoItem
-                  icon={Smartphone}
-                  label="Mobile Verified"
-                  value={user.isMobileVerified ? 'Yes' : 'No'}
-                />
-                <InfoItem
-                  icon={MessageCircle}
-                  label="WhatsApp"
-                  value={user.whatsappNumber || 'Not provided'}
-                />
-                <InfoItem
-                  icon={MessageCircle}
-                  label="WhatsApp Verified"
-                  value={user.isWhatsappVerified ? 'Yes' : 'No'}
-                />
-                <InfoItem icon={Shield} label="Role" value={ROLE_LABELS[user.role] || user.role} />
-              </div>
-            </Card>
-
-            {/* Active Sessions */}
-            <Card
-              header={
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-[var(--text)]">Active Sessions</h2>
-                  {sessions.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      leftIcon={<LogOut className="h-4 w-4" />}
-                      onClick={() => revokeSessionsMutation.mutate()}
-                      isLoading={revokeSessionsMutation.isPending}
-                      tooltip="Revoke all active sessions for this user"
-                    >
-                      Revoke All
-                    </Button>
-                  )}
-                </div>
-              }
-            >
-              {sessionsLoading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} variant="rect" height={48} />
-                  ))}
-                </div>
-              ) : sessions.length > 0 ? (
-                <div className="space-y-3">
-                  {sessions.map((session) => (
-                    <div
-                      key={session.id}
-                      className="flex items-center justify-between rounded-lg border border-[var(--border)] p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
-                          <Monitor className="h-4 w-4 text-[var(--text-muted)]" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-[var(--text)]">
-                            {parseUserAgent(session.userAgent)}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                            <Globe className="h-3 w-3" />
-                            <span>{session.ipAddress || 'Unknown IP'}</span>
-                            <span className="text-[var(--border)]">|</span>
-                            <span>Created {formatDate(session.createdAt)}</span>
-                            {session.lastSeenAt && (
-                              <>
-                                <span className="text-[var(--border)]">|</span>
-                                <span>Last seen {formatDate(session.lastSeenAt)}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={session.isActive ? 'success' : 'neutral'} size="sm">
-                          {session.isActive ? 'Active' : 'Expired'}
-                        </Badge>
-                        {session.isActive && (
+                    header={
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-[var(--text)]">Edit Profile</h2>
+                        {!isEditing && (
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            isLoading={revokingSessionId === session.id}
-                            onClick={() => handleRevokeSession(session.id)}
-                            className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
-                            tooltip="Revoke this session"
+                            onClick={startEditing}
+                            tooltip="Edit user profile"
                           >
-                            Revoke
+                            Edit
                           </Button>
                         )}
                       </div>
+                    }
+                  >
+                    {isEditing ? (
+                      <div className="space-y-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <Input
+                            label="First Name"
+                            value={editFirstName}
+                            onChange={(e) => setEditFirstName(e.target.value)}
+                          />
+                          <Input
+                            label="Last Name"
+                            value={editLastName}
+                            onChange={(e) => setEditLastName(e.target.value)}
+                          />
+                        </div>
+                        {/* Email/Mobile/WhatsApp fields only for non-admin targets */}
+                        {!isAdminTarget && (
+                          <>
+                            <Input
+                              label="Email"
+                              type="email"
+                              value={editEmail}
+                              onChange={(e) => setEditEmail(e.target.value)}
+                            />
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <Input
+                                label="Mobile Number"
+                                placeholder="+919876543210"
+                                value={editMobileNumber}
+                                onChange={(e) => setEditMobileNumber(e.target.value)}
+                              />
+                              <Input
+                                label="WhatsApp Number"
+                                placeholder="+919876543210"
+                                value={editWhatsappNumber}
+                                onChange={(e) => setEditWhatsappNumber(e.target.value)}
+                              />
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <Switch
+                                label="Mobile Verified"
+                                description="Mark mobile number as verified (trusted bypass)"
+                                checked={editIsMobileVerified}
+                                onChange={(e) => setEditIsMobileVerified(e.target.checked)}
+                                disabled={!editMobileNumber.trim()}
+                              />
+                              <Switch
+                                label="WhatsApp Verified"
+                                description="Mark WhatsApp number as verified (trusted bypass)"
+                                checked={editIsWhatsappVerified}
+                                onChange={(e) => setEditIsWhatsappVerified(e.target.checked)}
+                                disabled={!editWhatsappNumber.trim()}
+                              />
+                            </div>
+                          </>
+                        )}
+                        {isAdminTarget && (
+                          <p className="text-xs text-[var(--text-muted)]">
+                            Email, mobile, and WhatsApp are managed separately below with OTP
+                            verification.
+                          </p>
+                        )}
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={handleSaveProfile}
+                            isLoading={updateProfileMutation.isPending}
+                            disabled={!hasUnsavedChanges}
+                            tooltip="Save profile changes"
+                          >
+                            Save Changes
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsEditing(false)}
+                            tooltip="Discard changes"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <div>
+                          <p className="text-xs text-[var(--text-muted)]">First Name</p>
+                          <p className="text-sm font-medium text-[var(--text)]">
+                            {user.firstName || '—'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[var(--text-muted)]">Last Name</p>
+                          <p className="text-sm font-medium text-[var(--text)]">
+                            {user.lastName || '—'}
+                          </p>
+                        </div>
+                        {!isAdminTarget && (
+                          <>
+                            <div>
+                              <p className="text-xs text-[var(--text-muted)]">Email</p>
+                              <p className="text-sm font-medium text-[var(--text)]">{user.email}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-[var(--text-muted)]">Mobile Number</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-[var(--text)]">
+                                  {user.mobileNumber || '—'}
+                                </p>
+                                {user.mobileNumber && (
+                                  <Badge
+                                    variant={user.isMobileVerified ? 'success' : 'warning'}
+                                    size="sm"
+                                  >
+                                    {user.isMobileVerified ? 'Verified' : 'Unverified'}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs text-[var(--text-muted)]">WhatsApp Number</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-[var(--text)]">
+                                  {user.whatsappNumber || '—'}
+                                </p>
+                                {user.whatsappNumber && (
+                                  <Badge
+                                    variant={user.isWhatsappVerified ? 'success' : 'warning'}
+                                    size="sm"
+                                  >
+                                    {user.isWhatsappVerified ? 'Verified' : 'Unverified'}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+
+                  {/* Admin Contact Management (OTP-verified) */}
+                  {user.role === 'ADMIN' && (
+                    <>
+                      <AdminEmailSection
+                        userId={userId}
+                        user={user}
+                        invalidateUser={invalidateUser}
+                      />
+                      <AdminMobileSection
+                        userId={userId}
+                        user={user}
+                        invalidateUser={invalidateUser}
+                      />
+                      <AdminWhatsappSection
+                        userId={userId}
+                        user={user}
+                        invalidateUser={invalidateUser}
+                      />
+                    </>
+                  )}
+
+                  {user.role === 'SUPER_ADMIN' && (
+                    <Card>
+                      <div className="flex items-center gap-3 py-4">
+                        <Shield className="h-5 w-5 text-[var(--text-muted)]" />
+                        <p className="text-sm text-[var(--text-secondary)]">
+                          Email, mobile, and WhatsApp for super admin accounts can only be managed
+                          directly in the database.
+                        </p>
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* Account Info */}
+                  <Card
+                    header={
+                      <h2 className="text-lg font-semibold text-[var(--text)]">
+                        Account Information
+                      </h2>
+                    }
+                  >
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <InfoItem icon={Mail} label="Email" value={user.email} />
+                      <InfoItem
+                        icon={Phone}
+                        label="Mobile"
+                        value={user.mobileNumber || 'Not provided'}
+                      />
+                      <InfoItem
+                        icon={Calendar}
+                        label="Account Created"
+                        value={formatDate(user.createdAt)}
+                      />
+                      <InfoItem
+                        icon={Clock}
+                        label="Last Login"
+                        value={user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never'}
+                      />
+                      <InfoItem
+                        icon={Activity}
+                        label="Last Active"
+                        value={user.lastActiveAt ? formatDate(user.lastActiveAt) : 'Never'}
+                      />
+                      <InfoItem
+                        icon={ShieldAlert}
+                        label="Login Attempts"
+                        value={String(user.loginAttempts)}
+                      />
+                      <InfoItem
+                        icon={Key}
+                        label="MFA Enabled"
+                        value={user.mfaEnabled ? 'Yes' : 'No'}
+                      />
+                      <InfoItem
+                        icon={ShieldCheck}
+                        label="Email Verified"
+                        value={user.isEmailVerified ? 'Yes' : 'No'}
+                      />
+                      <InfoItem
+                        icon={Smartphone}
+                        label="Mobile Verified"
+                        value={user.isMobileVerified ? 'Yes' : 'No'}
+                      />
+                      <InfoItem
+                        icon={MessageCircle}
+                        label="WhatsApp"
+                        value={user.whatsappNumber || 'Not provided'}
+                      />
+                      <InfoItem
+                        icon={MessageCircle}
+                        label="WhatsApp Verified"
+                        value={user.isWhatsappVerified ? 'Yes' : 'No'}
+                      />
+                      <InfoItem
+                        icon={Shield}
+                        label="Role"
+                        value={ROLE_LABELS[user.role] || user.role}
+                      />
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="py-4 text-center text-sm text-[var(--text-muted)]">
-                  No active sessions found.
-                </p>
-              )}
-            </Card>
+                  </Card>
+
+                  {/* Active Sessions */}
+                  <Card
+                    header={
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-[var(--text)]">
+                          Active Sessions
+                        </h2>
+                        {sessions.length > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<LogOut className="h-4 w-4" />}
+                            onClick={() => revokeSessionsMutation.mutate()}
+                            isLoading={revokeSessionsMutation.isPending}
+                            tooltip="Revoke all active sessions for this user"
+                          >
+                            Revoke All
+                          </Button>
+                        )}
+                      </div>
+                    }
+                  >
+                    {sessionsLoading ? (
+                      <div className="space-y-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <Skeleton key={i} variant="rect" height={48} />
+                        ))}
+                      </div>
+                    ) : sessions.length > 0 ? (
+                      <div className="space-y-3">
+                        {sessions.map((session) => (
+                          <div
+                            key={session.id}
+                            className="flex items-center justify-between rounded-lg border border-[var(--border)] p-3"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
+                                <Monitor className="h-4 w-4 text-[var(--text-muted)]" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[var(--text)]">
+                                  {parseUserAgent(session.userAgent)}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                                  <Globe className="h-3 w-3" />
+                                  <span>{session.ipAddress || 'Unknown IP'}</span>
+                                  <span className="text-[var(--border)]">|</span>
+                                  <span>Created {formatDate(session.createdAt)}</span>
+                                  {session.lastSeenAt && (
+                                    <>
+                                      <span className="text-[var(--border)]">|</span>
+                                      <span>Last seen {formatDate(session.lastSeenAt)}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={session.isActive ? 'success' : 'neutral'} size="sm">
+                                {session.isActive ? 'Active' : 'Expired'}
+                              </Badge>
+                              {session.isActive && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  isLoading={revokingSessionId === session.id}
+                                  onClick={() => handleRevokeSession(session.id)}
+                                  className="text-[var(--error)] hover:bg-[var(--error-light)] hover:text-[var(--error)]"
+                                  tooltip="Revoke this session"
+                                >
+                                  Revoke
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="py-4 text-center text-sm text-[var(--text-muted)]">
+                        No active sessions found.
+                      </p>
+                    )}
+                  </Card>
                 </>
               )}
 
@@ -2731,11 +3015,15 @@ export default function SuperAdminUserDetailPage() {
                   {user.role === 'EMPLOYER' && user.companyProfile && (
                     <EmployerProfileViewer profile={user.companyProfile} />
                   )}
-                  {(user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || (!user.candidateProfile && !user.companyProfile)) && (
+                  {(user.role === 'ADMIN' ||
+                    user.role === 'SUPER_ADMIN' ||
+                    (!user.candidateProfile && !user.companyProfile)) && (
                     <Card>
                       <div className="py-12 text-center">
                         <User className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
-                        <p className="mt-4 text-[var(--text-muted)]">No profile data available for this role.</p>
+                        <p className="mt-4 text-[var(--text-muted)]">
+                          No profile data available for this role.
+                        </p>
                       </div>
                     </Card>
                   )}
@@ -2764,25 +3052,55 @@ export default function SuperAdminUserDetailPage() {
                         <table className="w-full">
                           <thead>
                             <tr className="border-b border-[var(--border)]">
-                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Applied</th>
-                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Job Title</th>
-                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Company</th>
-                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Status</th>
-                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Match</th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">
+                                Applied
+                              </th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">
+                                Job Title
+                              </th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">
+                                Company
+                              </th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">
+                                Status
+                              </th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">
+                                Match
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
                             {applicationsData.data.items.map((app) => (
-                              <tr key={app.id} className="border-b border-[var(--border)] last:border-0">
-                                <td className="py-3 text-sm text-[var(--text)]">{formatDate(app.appliedAt)}</td>
-                                <td className="py-3 text-sm font-medium text-[var(--text)]">{app.job.title}</td>
-                                <td className="py-3 text-sm text-[var(--text)]">{app.job.company.companyName}</td>
+                              <tr
+                                key={app.id}
+                                className="border-b border-[var(--border)] last:border-0"
+                              >
+                                <td className="py-3 text-sm text-[var(--text)]">
+                                  {formatDate(app.appliedAt)}
+                                </td>
+                                <td className="py-3 text-sm font-medium text-[var(--text)]">
+                                  {app.job.title}
+                                </td>
+                                <td className="py-3 text-sm text-[var(--text)]">
+                                  {app.job.company.companyName}
+                                </td>
                                 <td className="py-3">
-                                  <Badge variant={app.status === 'SHORTLISTED' ? 'success' : app.status === 'REJECTED' ? 'error' : 'info'} size="sm">
+                                  <Badge
+                                    variant={
+                                      app.status === 'SHORTLISTED'
+                                        ? 'success'
+                                        : app.status === 'REJECTED'
+                                          ? 'error'
+                                          : 'info'
+                                    }
+                                    size="sm"
+                                  >
                                     {app.status}
                                   </Badge>
                                 </td>
-                                <td className="py-3 text-sm text-[var(--text)]">{app.matchScore ? `${app.matchScore}%` : '—'}</td>
+                                <td className="py-3 text-sm text-[var(--text)]">
+                                  {app.matchScore ? `${app.matchScore}%` : '—'}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -2793,7 +3111,7 @@ export default function SuperAdminUserDetailPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setApplicationsPage(p => Math.max(1, p - 1))}
+                            onClick={() => setApplicationsPage((p) => Math.max(1, p - 1))}
                             disabled={applicationsPage === 1}
                             tooltip="Go to previous page"
                           >
@@ -2805,7 +3123,7 @@ export default function SuperAdminUserDetailPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setApplicationsPage(p => p + 1)}
+                            onClick={() => setApplicationsPage((p) => p + 1)}
                             disabled={!applicationsData.data.hasMore}
                             tooltip="Go to next page"
                           >
@@ -2818,7 +3136,9 @@ export default function SuperAdminUserDetailPage() {
                     <Card>
                       <div className="py-12 text-center">
                         <Briefcase className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
-                        <p className="mt-4 text-[var(--text-muted)]">This candidate hasn&apos;t applied to any jobs yet.</p>
+                        <p className="mt-4 text-[var(--text-muted)]">
+                          This candidate hasn&apos;t applied to any jobs yet.
+                        </p>
                       </div>
                     </Card>
                   )}
@@ -2847,25 +3167,55 @@ export default function SuperAdminUserDetailPage() {
                         <table className="w-full">
                           <thead>
                             <tr className="border-b border-[var(--border)]">
-                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Posted</th>
-                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Job Title</th>
-                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">Status</th>
-                              <th className="pb-3 text-right text-sm font-medium text-[var(--text-muted)]">Applications</th>
-                              <th className="pb-3 text-right text-sm font-medium text-[var(--text-muted)]">Saved</th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">
+                                Posted
+                              </th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">
+                                Job Title
+                              </th>
+                              <th className="pb-3 text-left text-sm font-medium text-[var(--text-muted)]">
+                                Status
+                              </th>
+                              <th className="pb-3 text-right text-sm font-medium text-[var(--text-muted)]">
+                                Applications
+                              </th>
+                              <th className="pb-3 text-right text-sm font-medium text-[var(--text-muted)]">
+                                Saved
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
                             {jobsData.data.items.map((job) => (
-                              <tr key={job.id} className="border-b border-[var(--border)] last:border-0">
-                                <td className="py-3 text-sm text-[var(--text)]">{formatDate(job.createdAt)}</td>
-                                <td className="py-3 text-sm font-medium text-[var(--text)]">{job.title}</td>
+                              <tr
+                                key={job.id}
+                                className="border-b border-[var(--border)] last:border-0"
+                              >
+                                <td className="py-3 text-sm text-[var(--text)]">
+                                  {formatDate(job.createdAt)}
+                                </td>
+                                <td className="py-3 text-sm font-medium text-[var(--text)]">
+                                  {job.title}
+                                </td>
                                 <td className="py-3">
-                                  <Badge variant={job.status === 'ACTIVE' ? 'success' : job.status === 'CLOSED' ? 'error' : 'neutral'} size="sm">
+                                  <Badge
+                                    variant={
+                                      job.status === 'ACTIVE'
+                                        ? 'success'
+                                        : job.status === 'CLOSED'
+                                          ? 'error'
+                                          : 'neutral'
+                                    }
+                                    size="sm"
+                                  >
                                     {job.status}
                                   </Badge>
                                 </td>
-                                <td className="py-3 text-right text-sm text-[var(--text)]">{job._applicationCount}</td>
-                                <td className="py-3 text-right text-sm text-[var(--text)]">{job._savedCount}</td>
+                                <td className="py-3 text-right text-sm text-[var(--text)]">
+                                  {job._applicationCount}
+                                </td>
+                                <td className="py-3 text-right text-sm text-[var(--text)]">
+                                  {job._savedCount}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -2876,7 +3226,7 @@ export default function SuperAdminUserDetailPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setJobsPage(p => Math.max(1, p - 1))}
+                            onClick={() => setJobsPage((p) => Math.max(1, p - 1))}
                             disabled={jobsPage === 1}
                             tooltip="Go to previous page"
                           >
@@ -2888,7 +3238,7 @@ export default function SuperAdminUserDetailPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setJobsPage(p => p + 1)}
+                            onClick={() => setJobsPage((p) => p + 1)}
                             disabled={!jobsData.data.hasMore}
                             tooltip="Go to next page"
                           >
@@ -2901,7 +3251,9 @@ export default function SuperAdminUserDetailPage() {
                     <Card>
                       <div className="py-12 text-center">
                         <Building2 className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
-                        <p className="mt-4 text-[var(--text-muted)]">This employer hasn&apos;t posted any jobs yet.</p>
+                        <p className="mt-4 text-[var(--text-muted)]">
+                          This employer hasn&apos;t posted any jobs yet.
+                        </p>
                       </div>
                     </Card>
                   )}
@@ -2923,7 +3275,9 @@ export default function SuperAdminUserDetailPage() {
                     <Card>
                       <div className="py-12 text-center">
                         <Activity className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
-                        <p className="mt-4 text-[var(--text-muted)]">No activity found for this user.</p>
+                        <p className="mt-4 text-[var(--text-muted)]">
+                          No activity found for this user.
+                        </p>
                       </div>
                     </Card>
                   ) : (
@@ -2932,24 +3286,35 @@ export default function SuperAdminUserDetailPage() {
                         <h3 className="text-lg font-semibold text-[var(--text)]">
                           Activity Log ({activityData.data.total} actions)
                         </h3>
-                        <p className="mt-1 text-sm text-[var(--text-muted)]">Recent actions performed by this user</p>
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">
+                          Recent actions performed by this user
+                        </p>
                       </div>
                       <div className="space-y-3">
                         {activityData.data.items.map((log) => (
-                          <div key={log.id} className="rounded-r-lg border border-[var(--border)] border-l-2 border-l-primary py-2 pl-4">
+                          <div
+                            key={log.id}
+                            className="border-l-primary rounded-r-lg border border-l-2 border-[var(--border)] py-2 pl-4"
+                          >
                             <div className="flex items-center justify-between">
                               <span className="font-medium text-[var(--text)]">{log.action}</span>
-                              <span className="text-xs text-[var(--text-muted)]">{formatDate(log.createdAt)}</span>
+                              <span className="text-xs text-[var(--text-muted)]">
+                                {formatDate(log.createdAt)}
+                              </span>
                             </div>
                             <p className="text-sm text-[var(--text-muted)]">
                               {log.entity} {log.entityId && `(${log.entityId.substring(0, 8)}...)`}
                             </p>
                             {log.ipAddress && (
-                              <p className="text-xs text-[var(--text-muted)]">IP: {log.ipAddress}</p>
+                              <p className="text-xs text-[var(--text-muted)]">
+                                IP: {log.ipAddress}
+                              </p>
                             )}
                             {log.details && (
                               <details className="mt-1">
-                                <summary className="cursor-pointer text-xs text-primary">View Details</summary>
+                                <summary className="text-primary cursor-pointer text-xs">
+                                  View Details
+                                </summary>
                                 <pre className="mt-1 overflow-x-auto rounded bg-[var(--bg-secondary)] p-2 text-xs">
                                   {JSON.stringify(log.details, null, 2)}
                                 </pre>
@@ -2963,7 +3328,7 @@ export default function SuperAdminUserDetailPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setActivityPage(p => Math.max(1, p - 1))}
+                            onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
                             disabled={activityPage === 1}
                             tooltip="Go to previous page"
                           >
@@ -2975,7 +3340,7 @@ export default function SuperAdminUserDetailPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setActivityPage(p => p + 1)}
+                            onClick={() => setActivityPage((p) => p + 1)}
                             disabled={!activityData.data.hasMore}
                             tooltip="Go to next page"
                           >
@@ -3008,19 +3373,24 @@ export default function SuperAdminUserDetailPage() {
                       </div>
                       <div className="space-y-4">
                         {verificationsData.data.items.map((verification) => (
-                          <div key={verification.id} className="rounded-lg border border-[var(--border)] p-4">
+                          <div
+                            key={verification.id}
+                            className="rounded-lg border border-[var(--border)] p-4"
+                          >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" />
-                                  <p className="font-medium text-[var(--text)]">{verification.type}</p>
+                                  <p className="font-medium text-[var(--text)]">
+                                    {verification.type}
+                                  </p>
                                   <Badge
                                     variant={
                                       verification.status === 'APPROVED'
                                         ? 'success'
                                         : verification.status === 'REJECTED'
-                                        ? 'error'
-                                        : 'warning'
+                                          ? 'error'
+                                          : 'warning'
                                     }
                                     size="sm"
                                   >
@@ -3086,7 +3456,7 @@ export default function SuperAdminUserDetailPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setVerificationsPage(p => Math.max(1, p - 1))}
+                            onClick={() => setVerificationsPage((p) => Math.max(1, p - 1))}
                             disabled={verificationsPage === 1}
                             tooltip="Go to previous page"
                           >
@@ -3098,7 +3468,7 @@ export default function SuperAdminUserDetailPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setVerificationsPage(p => p + 1)}
+                            onClick={() => setVerificationsPage((p) => p + 1)}
                             disabled={!verificationsData.data.hasMore}
                             tooltip="Go to next page"
                           >
@@ -3111,7 +3481,9 @@ export default function SuperAdminUserDetailPage() {
                     <Card>
                       <div className="py-12 text-center">
                         <ShieldCheck className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
-                        <p className="mt-4 text-[var(--text-muted)]">No verification requests found.</p>
+                        <p className="mt-4 text-[var(--text-muted)]">
+                          No verification requests found.
+                        </p>
                       </div>
                     </Card>
                   )}
@@ -3205,7 +3577,11 @@ export default function SuperAdminUserDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)} tooltip="Cancel deletion">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+                tooltip="Cancel deletion"
+              >
                 Cancel
               </Button>
               <Button
@@ -3291,7 +3667,10 @@ export default function SuperAdminUserDetailPage() {
                 <Button
                   onClick={handleSendResetOtp}
                   isLoading={isSendingOtp}
-                  disabled={isAdminPasswordFlow && (!resetSuperAdminPassword || !newPassword || !resetConfirmPassword)}
+                  disabled={
+                    isAdminPasswordFlow &&
+                    (!resetSuperAdminPassword || !newPassword || !resetConfirmPassword)
+                  }
                   tooltip="Send verification code to user email"
                 >
                   Send Verification Code
@@ -3321,7 +3700,8 @@ export default function SuperAdminUserDetailPage() {
                 <div className="flex items-start gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2">
                   <AlertCircle className="h-4 w-4 shrink-0 text-[var(--warning)]" />
                   <p className="text-xs text-[var(--text-secondary)]">
-                    A verification code will be sent to the admin&apos;s email. All their active sessions will be revoked.
+                    A verification code will be sent to the admin&apos;s email. All their active
+                    sessions will be revoked.
                   </p>
                 </div>
                 <Input
@@ -3389,7 +3769,7 @@ export default function SuperAdminUserDetailPage() {
                         type="button"
                         onClick={handleResendResetOtp}
                         disabled={isResending}
-                        className="cursor-pointer text-primary font-medium hover:underline disabled:opacity-50"
+                        className="text-primary cursor-pointer font-medium hover:underline disabled:opacity-50"
                       >
                         {isResending ? 'Sending...' : 'Resend Code'}
                       </button>
@@ -3444,7 +3824,13 @@ function InfoItem({
 
 type AdminSectionProps = {
   userId: string;
-  user: { email: string; mobileNumber: string | null; isMobileVerified: boolean; whatsappNumber: string | null; isWhatsappVerified: boolean };
+  user: {
+    email: string;
+    mobileNumber: string | null;
+    isMobileVerified: boolean;
+    whatsappNumber: string | null;
+    isWhatsappVerified: boolean;
+  };
   invalidateUser: () => void;
 };
 
@@ -3463,7 +3849,12 @@ function AdminEmailSection({ userId, user, invalidateUser }: AdminSectionProps) 
     return () => clearInterval(t);
   }, [resendTimer]);
 
-  const reset = () => { setStep('idle'); setNewEmail(''); setPassword(''); setOtp(''); };
+  const reset = () => {
+    setStep('idle');
+    setNewEmail('');
+    setPassword('');
+    setOtp('');
+  };
 
   const handleInitiate = async () => {
     setLoading(true);
@@ -3474,7 +3865,9 @@ function AdminEmailSection({ userId, user, invalidateUser }: AdminSectionProps) 
       setResendTimer(otpConfig.RESEND_COOLDOWN);
     } catch (err) {
       showToast.error((err as unknown as ApiError).message || 'Failed to initiate email change');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleConfirm = async () => {
@@ -3486,7 +3879,9 @@ function AdminEmailSection({ userId, user, invalidateUser }: AdminSectionProps) 
       reset();
     } catch (err) {
       showToast.error((err as unknown as ApiError).message || 'Invalid verification code');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleResend = async () => {
@@ -3508,20 +3903,50 @@ function AdminEmailSection({ userId, user, invalidateUser }: AdminSectionProps) 
             <Mail className="h-5 w-5 text-[var(--text-muted)]" />
             <div>
               <p className="text-sm font-medium text-[var(--text)]">{user.email}</p>
-              <Badge variant="success" size="sm">Verified</Badge>
+              <Badge variant="success" size="sm">
+                Verified
+              </Badge>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setStep('form')} tooltip="Change admin email address">Change Email</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setStep('form')}
+            tooltip="Change admin email address"
+          >
+            Change Email
+          </Button>
         </div>
       )}
 
       {step === 'form' && (
         <div className="space-y-4">
-          <Input label="New Email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="new@example.com" />
-          <Input label="Your Password (Super Admin)" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password to confirm" />
+          <Input
+            label="New Email"
+            type="email"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            placeholder="new@example.com"
+          />
+          <Input
+            label="Your Password (Super Admin)"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password to confirm"
+          />
           <div className="flex gap-3">
-            <Button onClick={handleInitiate} isLoading={loading} disabled={!newEmail || !password} tooltip="Send verification code to new email">Send Verification Code</Button>
-            <Button variant="outline" onClick={reset} tooltip="Cancel email change">Cancel</Button>
+            <Button
+              onClick={handleInitiate}
+              isLoading={loading}
+              disabled={!newEmail || !password}
+              tooltip="Send verification code to new email"
+            >
+              Send Verification Code
+            </Button>
+            <Button variant="outline" onClick={reset} tooltip="Cancel email change">
+              Cancel
+            </Button>
           </div>
         </div>
       )}
@@ -3529,7 +3954,9 @@ function AdminEmailSection({ userId, user, invalidateUser }: AdminSectionProps) 
       {step === 'otp' && (
         <div className="space-y-4">
           <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
-            <p className="text-sm text-[var(--text-secondary)]">Enter the 6-digit code sent to <span className="font-medium">{newEmail}</span></p>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Enter the 6-digit code sent to <span className="font-medium">{newEmail}</span>
+            </p>
           </div>
           <OtpInput value={otp} onChange={setOtp} length={otpConfig.LENGTH} />
           <div className="text-center">
@@ -3537,13 +3964,30 @@ function AdminEmailSection({ userId, user, invalidateUser }: AdminSectionProps) 
               {resendTimer > 0 ? (
                 <span>Resend in {resendTimer}s</span>
               ) : (
-                <Tooltip content="Resend verification code"><button type="button" onClick={handleResend} className="cursor-pointer text-primary font-medium hover:underline">Resend Code</button></Tooltip>
+                <Tooltip content="Resend verification code">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    className="text-primary cursor-pointer font-medium hover:underline"
+                  >
+                    Resend Code
+                  </button>
+                </Tooltip>
               )}
             </p>
           </div>
           <div className="flex gap-3">
-            <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH} tooltip="Confirm email change">Confirm Email Change</Button>
-            <Button variant="outline" onClick={reset} tooltip="Cancel email change">Cancel</Button>
+            <Button
+              onClick={handleConfirm}
+              isLoading={loading}
+              disabled={otp.length !== otpConfig.LENGTH}
+              tooltip="Confirm email change"
+            >
+              Confirm Email Change
+            </Button>
+            <Button variant="outline" onClick={reset} tooltip="Cancel email change">
+              Cancel
+            </Button>
           </div>
         </div>
       )}
@@ -3572,7 +4016,12 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
     return () => clearInterval(t);
   }, [resendTimer]);
 
-  const reset = () => { setStep('idle'); setMobileNumber(''); setPassword(''); setOtp(''); };
+  const reset = () => {
+    setStep('idle');
+    setMobileNumber('');
+    setPassword('');
+    setOtp('');
+  };
 
   const handleInitiate = async () => {
     setLoading(true);
@@ -3585,7 +4034,9 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
       setResendTimer(otpConfig.RESEND_COOLDOWN);
     } catch (err) {
       showToast.error((err as unknown as ApiError).message || 'Failed to send SMS OTP');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleConfirm = async () => {
@@ -3597,7 +4048,9 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
       reset();
     } catch (err) {
       showToast.error((err as unknown as ApiError).message || 'Invalid verification code');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleResend = async () => {
@@ -3620,12 +4073,18 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
       setShowRemoveModal(false);
     } catch (err) {
       showToast.error((err as unknown as ApiError).message || 'Failed to remove');
-    } finally { setRemoving(false); }
+    } finally {
+      setRemoving(false);
+    }
   };
 
   return (
     <>
-      <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">Mobile Number Management</h2>}>
+      <Card
+        header={
+          <h2 className="text-lg font-semibold text-[var(--text)]">Mobile Number Management</h2>
+        }
+      >
         {step === 'idle' && (
           <>
             {user.mobileNumber ? (
@@ -3640,14 +4099,36 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setStep('form')} tooltip="Change mobile number">Change</Button>
-                  <Button variant="outline" size="sm" className="text-[var(--error)]" onClick={() => setShowRemoveModal(true)} tooltip="Remove mobile number">Remove</Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setStep('form')}
+                    tooltip="Change mobile number"
+                  >
+                    Change
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-[var(--error)]"
+                    onClick={() => setShowRemoveModal(true)}
+                    tooltip="Remove mobile number"
+                  >
+                    Remove
+                  </Button>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-between">
                 <p className="text-sm text-[var(--text-muted)]">No mobile number set</p>
-                <Button variant="outline" size="sm" onClick={() => setStep('form')} tooltip="Add a mobile number">Add Mobile</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setStep('form')}
+                  tooltip="Add a mobile number"
+                >
+                  Add Mobile
+                </Button>
               </div>
             )}
           </>
@@ -3674,15 +4155,23 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
               <div className="flex items-start gap-2 rounded-lg bg-[var(--warning-light)] px-3 py-2">
                 <AlertCircle className="h-4 w-4 shrink-0 text-[var(--warning)]" />
                 <p className="text-xs text-[var(--text-secondary)]">
-                  Changing mobile will reset WhatsApp verification since no separate WhatsApp number is set.
+                  Changing mobile will reset WhatsApp verification since no separate WhatsApp number
+                  is set.
                 </p>
               </div>
             )}
             <div className="flex gap-3">
-              <Button onClick={handleInitiate} isLoading={loading} disabled={!mobileNumber || (!!user.mobileNumber && !password)} tooltip="Send SMS verification code">
+              <Button
+                onClick={handleInitiate}
+                isLoading={loading}
+                disabled={!mobileNumber || (!!user.mobileNumber && !password)}
+                tooltip="Send SMS verification code"
+              >
                 Send SMS Code
               </Button>
-              <Button variant="outline" onClick={reset} tooltip="Cancel mobile change">Cancel</Button>
+              <Button variant="outline" onClick={reset} tooltip="Cancel mobile change">
+                Cancel
+              </Button>
             </div>
           </div>
         )}
@@ -3690,7 +4179,9 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
         {step === 'otp' && (
           <div className="space-y-4">
             <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
-              <p className="text-sm text-[var(--text-secondary)]">Enter the code sent to <span className="font-medium">{mobileNumber}</span></p>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Enter the code sent to <span className="font-medium">{mobileNumber}</span>
+              </p>
             </div>
             <OtpInput value={otp} onChange={setOtp} length={otpConfig.LENGTH} />
             <div className="text-center">
@@ -3698,13 +4189,30 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
                 {resendTimer > 0 ? (
                   <span>Resend in {resendTimer}s</span>
                 ) : (
-                  <Tooltip content="Resend verification code"><button type="button" onClick={handleResend} className="cursor-pointer text-primary font-medium hover:underline">Resend Code</button></Tooltip>
+                  <Tooltip content="Resend verification code">
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      className="text-primary cursor-pointer font-medium hover:underline"
+                    >
+                      Resend Code
+                    </button>
+                  </Tooltip>
                 )}
               </p>
             </div>
             <div className="flex gap-3">
-              <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH} tooltip="Confirm mobile number change">Confirm</Button>
-              <Button variant="outline" onClick={reset} tooltip="Cancel mobile change">Cancel</Button>
+              <Button
+                onClick={handleConfirm}
+                isLoading={loading}
+                disabled={otp.length !== otpConfig.LENGTH}
+                tooltip="Confirm mobile number change"
+              >
+                Confirm
+              </Button>
+              <Button variant="outline" onClick={reset} tooltip="Cancel mobile change">
+                Cancel
+              </Button>
             </div>
           </div>
         )}
@@ -3717,14 +4225,29 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowRemoveModal(false)} tooltip="Cancel removal">Cancel</Button>
-            <Button variant="destructive" onClick={handleRemove} isLoading={removing} tooltip="Confirm removing mobile number">Remove</Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowRemoveModal(false)}
+              tooltip="Cancel removal"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRemove}
+              isLoading={removing}
+              tooltip="Confirm removing mobile number"
+            >
+              Remove
+            </Button>
           </div>
         }
       >
         <p className="text-sm text-[var(--text-secondary)]">
           This will remove the admin&apos;s mobile number and reset mobile verification.
-          {!user.whatsappNumber && user.isWhatsappVerified && ' WhatsApp verification will also be reset.'}
+          {!user.whatsappNumber &&
+            user.isWhatsappVerified &&
+            ' WhatsApp verification will also be reset.'}
         </p>
       </Modal>
     </>
@@ -3752,7 +4275,12 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
     return () => clearInterval(t);
   }, [resendTimer]);
 
-  const reset = () => { setStep('idle'); setWhatsappNumber(''); setPassword(''); setOtp(''); };
+  const reset = () => {
+    setStep('idle');
+    setWhatsappNumber('');
+    setPassword('');
+    setOtp('');
+  };
 
   const hasMobile = !!user.mobileNumber;
   const effectiveWhatsapp = user.whatsappNumber || user.mobileNumber;
@@ -3767,7 +4295,9 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
       setResendTimer(otpConfig.RESEND_COOLDOWN);
     } catch (err) {
       showToast.error((err as unknown as ApiError).message || 'Failed to send WhatsApp OTP');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddSeparate = async () => {
@@ -3782,19 +4312,26 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
       setResendTimer(otpConfig.RESEND_COOLDOWN);
     } catch (err) {
       showToast.error((err as unknown as ApiError).message || 'Failed to send WhatsApp OTP');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = async () => {
     setLoading(true);
     try {
-      await adminService.initiateAdminWhatsappChange(userId, { newWhatsappNumber: whatsappNumber, password });
+      await adminService.initiateAdminWhatsappChange(userId, {
+        newWhatsappNumber: whatsappNumber,
+        password,
+      });
       showToast.success('WhatsApp OTP sent to new number');
       setStep('otp');
       setResendTimer(otpConfig.RESEND_COOLDOWN);
     } catch (err) {
       showToast.error((err as unknown as ApiError).message || 'Failed to change WhatsApp number');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleConfirm = async () => {
@@ -3806,7 +4343,9 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
       reset();
     } catch (err) {
       showToast.error((err as unknown as ApiError).message || 'Invalid code');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRemove = async () => {
@@ -3818,12 +4357,16 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
       setShowRemoveModal(false);
     } catch (err) {
       showToast.error((err as unknown as ApiError).message || 'Failed to remove');
-    } finally { setRemoving(false); }
+    } finally {
+      setRemoving(false);
+    }
   };
 
   return (
     <>
-      <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">WhatsApp Management</h2>}>
+      <Card
+        header={<h2 className="text-lg font-semibold text-[var(--text)]">WhatsApp Management</h2>}
+      >
         {step === 'idle' && (
           <>
             {!hasMobile && !user.isMobileVerified ? (
@@ -3837,16 +4380,35 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
                   <MessageCircle className="h-5 w-5 text-[var(--text-muted)]" />
                   <div>
                     <p className="text-sm font-medium text-[var(--text)]">{effectiveWhatsapp}</p>
-                    <Badge variant="success" size="sm">Verified</Badge>
+                    <Badge variant="success" size="sm">
+                      Verified
+                    </Badge>
                     {user.whatsappNumber && (
-                      <span className="ml-2 text-xs text-[var(--text-muted)]">(separate number)</span>
+                      <span className="ml-2 text-xs text-[var(--text-muted)]">
+                        (separate number)
+                      </span>
                     )}
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setStep('change')} tooltip="Change WhatsApp number">Change</Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setStep('change')}
+                    tooltip="Change WhatsApp number"
+                  >
+                    Change
+                  </Button>
                   {user.whatsappNumber && (
-                    <Button variant="outline" size="sm" className="text-[var(--error)]" onClick={() => setShowRemoveModal(true)} tooltip="Remove WhatsApp number">Remove</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-[var(--error)]"
+                      onClick={() => setShowRemoveModal(true)}
+                      tooltip="Remove WhatsApp number"
+                    >
+                      Remove
+                    </Button>
                   )}
                 </div>
               </div>
@@ -3858,11 +4420,22 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
                 </div>
                 <div className="flex gap-2">
                   {hasMobile && (
-                    <Button variant="outline" size="sm" onClick={handleVerifyMobile} isLoading={loading} tooltip="Verify mobile number for WhatsApp">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleVerifyMobile}
+                      isLoading={loading}
+                      tooltip="Verify mobile number for WhatsApp"
+                    >
                       Verify Mobile for WhatsApp
                     </Button>
                   )}
-                  <Button variant="outline" size="sm" onClick={() => setStep('add-separate')} tooltip="Add a separate WhatsApp number">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setStep('add-separate')}
+                    tooltip="Add a separate WhatsApp number"
+                  >
                     Add Separate Number
                   </Button>
                 </div>
@@ -3880,8 +4453,17 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
               onChange={(e) => setWhatsappNumber(e.target.value)}
             />
             <div className="flex gap-3">
-              <Button onClick={handleAddSeparate} isLoading={loading} disabled={!whatsappNumber} tooltip="Send OTP via WhatsApp">Send WhatsApp OTP</Button>
-              <Button variant="outline" onClick={reset} tooltip="Cancel adding WhatsApp number">Cancel</Button>
+              <Button
+                onClick={handleAddSeparate}
+                isLoading={loading}
+                disabled={!whatsappNumber}
+                tooltip="Send OTP via WhatsApp"
+              >
+                Send WhatsApp OTP
+              </Button>
+              <Button variant="outline" onClick={reset} tooltip="Cancel adding WhatsApp number">
+                Cancel
+              </Button>
             </div>
           </div>
         )}
@@ -3902,8 +4484,17 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
               placeholder="Enter your password to confirm"
             />
             <div className="flex gap-3">
-              <Button onClick={handleChange} isLoading={loading} disabled={!whatsappNumber || !password} tooltip="Send OTP to new WhatsApp number">Send WhatsApp OTP</Button>
-              <Button variant="outline" onClick={reset} tooltip="Cancel WhatsApp change">Cancel</Button>
+              <Button
+                onClick={handleChange}
+                isLoading={loading}
+                disabled={!whatsappNumber || !password}
+                tooltip="Send OTP to new WhatsApp number"
+              >
+                Send WhatsApp OTP
+              </Button>
+              <Button variant="outline" onClick={reset} tooltip="Cancel WhatsApp change">
+                Cancel
+              </Button>
             </div>
           </div>
         )}
@@ -3911,17 +4502,34 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
         {step === 'otp' && (
           <div className="space-y-4">
             <div className="rounded-lg bg-[var(--bg-secondary)] px-4 py-3">
-              <p className="text-sm text-[var(--text-secondary)]">Enter the OTP received on WhatsApp</p>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Enter the OTP received on WhatsApp
+              </p>
             </div>
             <OtpInput value={otp} onChange={setOtp} length={otpConfig.LENGTH} />
             <div className="text-center">
               <p className="text-sm text-[var(--text-muted)]">
-                {resendTimer > 0 ? <span>Resend in {resendTimer}s</span> : <span className="text-[var(--text-muted)]">Use the buttons above to request a new code</span>}
+                {resendTimer > 0 ? (
+                  <span>Resend in {resendTimer}s</span>
+                ) : (
+                  <span className="text-[var(--text-muted)]">
+                    Use the buttons above to request a new code
+                  </span>
+                )}
               </p>
             </div>
             <div className="flex gap-3">
-              <Button onClick={handleConfirm} isLoading={loading} disabled={otp.length !== otpConfig.LENGTH} tooltip="Confirm WhatsApp verification">Confirm</Button>
-              <Button variant="outline" onClick={reset} tooltip="Cancel WhatsApp verification">Cancel</Button>
+              <Button
+                onClick={handleConfirm}
+                isLoading={loading}
+                disabled={otp.length !== otpConfig.LENGTH}
+                tooltip="Confirm WhatsApp verification"
+              >
+                Confirm
+              </Button>
+              <Button variant="outline" onClick={reset} tooltip="Cancel WhatsApp verification">
+                Cancel
+              </Button>
             </div>
           </div>
         )}
@@ -3934,8 +4542,21 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowRemoveModal(false)} tooltip="Cancel removal">Cancel</Button>
-            <Button variant="destructive" onClick={handleRemove} isLoading={removing} tooltip="Confirm removing WhatsApp number">Remove</Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowRemoveModal(false)}
+              tooltip="Cancel removal"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRemove}
+              isLoading={removing}
+              tooltip="Confirm removing WhatsApp number"
+            >
+              Remove
+            </Button>
           </div>
         }
       >

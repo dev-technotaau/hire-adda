@@ -13,6 +13,7 @@ import {
   UserCog,
   Trash2,
   AlertCircle,
+  Power,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -176,20 +177,13 @@ export default function UsersPage() {
       },
     },
     ...(user.isSuspended
-      ? [
-          {
-            label: 'Activate',
-            icon: CheckCircle,
-            onClick: () => activateMutation.mutate(user.id),
-          },
-        ]
-      : [
-          {
-            label: 'Suspend',
-            icon: Ban,
-            onClick: () => setSuspendTarget(user),
-          },
-        ]),
+      ? [{ label: 'Unsuspend', icon: CheckCircle, onClick: () => activateMutation.mutate(user.id) }]
+      : user.isActive
+        ? [{ label: 'Suspend', icon: Ban, onClick: () => setSuspendTarget(user) }]
+        : []),
+    ...(!user.isActive
+      ? [{ label: 'Reactivate', icon: Power, onClick: () => activateMutation.mutate(user.id) }]
+      : []),
     {
       label: 'Change Role',
       icon: UserCog,
@@ -468,7 +462,11 @@ export default function UsersPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" tooltip="Cancel deletion" onClick={() => setDeleteTarget(null)}>
+              <Button
+                variant="outline"
+                tooltip="Cancel deletion"
+                onClick={() => setDeleteTarget(null)}
+              >
                 Cancel
               </Button>
               <Button
