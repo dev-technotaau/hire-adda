@@ -51,6 +51,34 @@ export async function releaseLock(key: string, lockValue: string): Promise<boole
 }
 
 /**
+ * Renew a lock's TTL. Only renews if the value matches (prevents renewing another process's lock).
+ * @param key - Lock key
+ * @param lockValue - The UUID returned by acquireLock
+ * @param ttlSeconds - New TTL in seconds
+ */
+export async function renewLock(
+  key: string,
+  lockValue: string,
+  ttlSeconds: number
+): Promise<boolean> {
+  try {
+    // Lua script for atomic check-and-renew
+    const script = `
+      if redis.call("get", KEYS[1]) == ARGV[1] then
+        return redis.call("expire", KEYS[1], ARGV[2])
+      else
+        return 0
+      end
+    `;
+    const result = await redis.call('EVAL', script, '1', key, lockValue, String(ttlSeconds));
+    return result === 1;
+  } catch (error) {
+    logger.error(`Failed to renew lock ${key}:`, error);
+    return false;
+  }
+}
+
+/**
  * Execute a function while holding a distributed lock.
  * Returns null if the lock cannot be acquired (resource is already being processed).
  *

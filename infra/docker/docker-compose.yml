@@ -352,13 +352,13 @@ services:
         limits:
           memory: 512M
           cpus: '0.5'
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     networks:
       - hireadda_network
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', '--no-auth-warning', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -654,7 +654,7 @@ services:
           memory: 64M
           cpus: '0.1'
     environment:
-      - REDIS_ADDR=redis://redis:6379
+      - REDIS_ADDR=redis://default:${REDIS_PASSWORD}@redis:6379
     depends_on:
       redis:
         condition: service_healthy

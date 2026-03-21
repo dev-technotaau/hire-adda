@@ -80,6 +80,13 @@ export const initializeServices = async (): Promise<void> => {
     registerService('Redis', 'disabled');
   }
 
+  // BullMQ Workers (leader election status — updated by WorkerLeaderManager)
+  if (env.REDIS_ENABLED === 'true') {
+    registerService('BullMQ Workers', 'ready', 'Pending leader election');
+  } else {
+    registerService('BullMQ Workers', 'disabled', 'Requires Redis');
+  }
+
   // BullMQ Job Queue (depends on Redis)
   if (env.REDIS_ENABLED === 'true') {
     registerService('BullMQ Job Queue', 'ready', 'Email queue ready');

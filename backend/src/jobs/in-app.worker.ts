@@ -14,53 +14,57 @@ interface InAppJobData {
   link?: string;
 }
 
-export const inAppWorker = new Worker<InAppJobData>(
-  IN_APP_QUEUE_NAME,
-  async (job: Job<InAppJobData>) => {
-    const TIMEOUT_MS = 15_000;
-    const timeoutId = setTimeout(() => {
-      /* safety net */
-    }, TIMEOUT_MS);
-    try {
-      logger.info(`Processing In-App notification job ${job.id} for User ${job.data.userId}`);
-
-      // Send via Socket.IO (Real-time)
-      // Note: Notification record is already created by NotificationService.send()
+export function createInAppWorker(): Worker<InAppJobData> {
+  const worker = new Worker<InAppJobData>(
+    IN_APP_QUEUE_NAME,
+    async (job: Job<InAppJobData>) => {
+      const TIMEOUT_MS = 15_000;
+      const timeoutId = setTimeout(() => {
+        /* safety net */
+      }, TIMEOUT_MS);
       try {
-        const io = getIO();
-        io.to(`user:${job.data.userId}`).emit('notification', {
-          title: job.data.title,
-          message: job.data.message,
-          type: job.data.type,
-          link: job.data.link,
-          createdAt: new Date().toISOString(),
-        });
-      } catch {
-        // Socket.IO may not be initialized in worker process
-        logger.debug('Socket.IO not available in worker - skipping real-time emit');
+        logger.info(`Processing In-App notification job ${job.id} for User ${job.data.userId}`);
+
+        // Send via Socket.IO (Real-time)
+        // Note: Notification record is already created by NotificationService.send()
+        try {
+          const io = getIO();
+          io.to(`user:${job.data.userId}`).emit('notification', {
+            title: job.data.title,
+            message: job.data.message,
+            type: job.data.type,
+            link: job.data.link,
+            createdAt: new Date().toISOString(),
+          });
+        } catch {
+          // Socket.IO may not be initialized in worker process
+          logger.debug('Socket.IO not available in worker - skipping real-time emit');
+        }
+
+        logger.info(`In-App notification processed for User ${job.data.userId}`);
+        return { sent: true };
+      } catch (error) {
+        logger.error(`Failed to process In-App notification for User ${job.data.userId}:`, error);
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      logger.info(`In-App notification processed for User ${job.data.userId}`);
-      return { sent: true };
-    } catch (error) {
-      logger.error(`Failed to process In-App notification for User ${job.data.userId}:`, error);
-      throw error;
-    } finally {
-      clearTimeout(timeoutId);
+    },
+    {
+      connection: redis,
+      concurrency: parseInt(env.BULLMQ_INAPP_CONCURRENCY, 10),
+      lockDuration: 60000,
+      limiter: { max: 50, duration: 1000 },
     }
-  },
-  {
-    connection: redis,
-    concurrency: parseInt(env.BULLMQ_INAPP_CONCURRENCY, 10),
-    lockDuration: 60000,
-    limiter: { max: 50, duration: 1000 },
-  }
-);
+  );
 
-inAppWorker.on('completed', (job) => {
-  logger.info(`In-App job ${job.id} completed`);
-});
+  worker.on('completed', (job) => {
+    logger.info(`In-App job ${job.id} completed`);
+  });
 
-inAppWorker.on('failed', (job, err) => {
-  logger.error(`In-App job ${job?.id} failed: ${err.message}`);
-});
+  worker.on('failed', (job, err) => {
+    logger.error(`In-App job ${job?.id} failed: ${err.message}`);
+  });
+
+  return worker;
+}

@@ -9,115 +9,119 @@ import { geocodingService } from '../services/geocoding.service';
 import { prisma } from '../config/prisma';
 import { searchService } from '../services/search.service';
 
-export const geocodingWorker = new Worker<GeocodingJobData>(
-  GEOCODING_QUEUE_NAME,
-  async (job: Job<GeocodingJobData>) => {
-    const TIMEOUT_MS = 30_000;
-    const timeoutId = setTimeout(() => {
-      /* safety net */
-    }, TIMEOUT_MS);
-    try {
-      const { entityType, entityId, address } = job.data;
-      logger.info(`Geocoding ${entityType} ${entityId}: "${address}"`);
+export function createGeocodingWorker(): Worker<GeocodingJobData> {
+  const worker = new Worker<GeocodingJobData>(
+    GEOCODING_QUEUE_NAME,
+    async (job: Job<GeocodingJobData>) => {
+      const TIMEOUT_MS = 30_000;
+      const timeoutId = setTimeout(() => {
+        /* safety net */
+      }, TIMEOUT_MS);
+      try {
+        const { entityType, entityId, address } = job.data;
+        logger.info(`Geocoding ${entityType} ${entityId}: "${address}"`);
 
-      const result = await Promise.race([
-        geocodingService.geocode(address),
-        new Promise<never>((_resolve, reject) =>
-          setTimeout(() => reject(new Error('Geocoding worker timeout after 30s')), TIMEOUT_MS)
-        ),
-      ]);
-      if (!result) {
-        logger.warn(`Geocoding returned no results for: "${address}"`);
-        return { success: false, address };
-      }
+        const result = await Promise.race([
+          geocodingService.geocode(address),
+          new Promise<never>((_resolve, reject) =>
+            setTimeout(() => reject(new Error('Geocoding worker timeout after 30s')), TIMEOUT_MS)
+          ),
+        ]);
+        if (!result) {
+          logger.warn(`Geocoding returned no results for: "${address}"`);
+          return { success: false, address };
+        }
 
-      const { latitude, longitude } = result;
+        const { latitude, longitude } = result;
 
-      switch (entityType) {
-        case 'candidate': {
-          await prisma.candidateProfile.update({
-            where: { userId: entityId },
-            data: { latitude, longitude },
-          });
-
-          // Re-index to ES with new coordinates
-          try {
-            const profile = await prisma.candidateProfile.findUnique({
+        switch (entityType) {
+          case 'candidate': {
+            await prisma.candidateProfile.update({
               where: { userId: entityId },
-              include: { user: true },
+              data: { latitude, longitude },
             });
-            if (profile) {
-              await searchService.indexCandidate(profile);
+
+            // Re-index to ES with new coordinates
+            try {
+              const profile = await prisma.candidateProfile.findUnique({
+                where: { userId: entityId },
+                include: { user: true },
+              });
+              if (profile) {
+                await searchService.indexCandidate(profile);
+              }
+            } catch (e) {
+              logger.error(`Failed to re-index candidate ${entityId} after geocoding`, e);
             }
-          } catch (e) {
-            logger.error(`Failed to re-index candidate ${entityId} after geocoding`, e);
+            break;
           }
-          break;
-        }
 
-        case 'job': {
-          await prisma.jobPost.update({
-            where: { id: entityId },
-            data: { latitude, longitude },
-          });
-
-          try {
-            const jobPost = await prisma.jobPost.findUnique({
+          case 'job': {
+            await prisma.jobPost.update({
               where: { id: entityId },
-              include: { company: true },
+              data: { latitude, longitude },
             });
-            if (jobPost) {
-              await searchService.indexJob(jobPost);
+
+            try {
+              const jobPost = await prisma.jobPost.findUnique({
+                where: { id: entityId },
+                include: { company: true },
+              });
+              if (jobPost) {
+                await searchService.indexJob(jobPost);
+              }
+            } catch (e) {
+              logger.error(`Failed to re-index job ${entityId} after geocoding`, e);
             }
-          } catch (e) {
-            logger.error(`Failed to re-index job ${entityId} after geocoding`, e);
+            break;
           }
-          break;
-        }
 
-        case 'company': {
-          await prisma.companyProfile.update({
-            where: { id: entityId },
-            data: { latitude, longitude },
-          });
-
-          try {
-            const company = await prisma.companyProfile.findUnique({
+          case 'company': {
+            await prisma.companyProfile.update({
               where: { id: entityId },
-              include: { user: true },
+              data: { latitude, longitude },
             });
-            if (company) {
-              await searchService.indexEmployer(company);
+
+            try {
+              const company = await prisma.companyProfile.findUnique({
+                where: { id: entityId },
+                include: { user: true },
+              });
+              if (company) {
+                await searchService.indexEmployer(company);
+              }
+            } catch (e) {
+              logger.error(`Failed to re-index company ${entityId} after geocoding`, e);
             }
-          } catch (e) {
-            logger.error(`Failed to re-index company ${entityId} after geocoding`, e);
+            break;
           }
-          break;
         }
+
+        logger.info(`Geocoded ${entityType} ${entityId}: lat=${latitude}, lon=${longitude}`);
+        return { success: true, latitude, longitude, formattedAddress: result.formattedAddress };
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      logger.info(`Geocoded ${entityType} ${entityId}: lat=${latitude}, lon=${longitude}`);
-      return { success: true, latitude, longitude, formattedAddress: result.formattedAddress };
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  },
-  {
-    connection: redis,
-    concurrency: parseInt(env.BULLMQ_GEOCODING_CONCURRENCY, 10),
-    lockDuration: 60000, // 60s — lightweight HTTP call
-    stalledInterval: 30000,
-    limiter: {
-      max: 1,
-      duration: 1100, // 1 req/sec + margin
     },
-  }
-);
+    {
+      connection: redis,
+      concurrency: parseInt(env.BULLMQ_GEOCODING_CONCURRENCY, 10),
+      lockDuration: 60000, // 60s — lightweight HTTP call
+      stalledInterval: 30000,
+      limiter: {
+        max: 1,
+        duration: 1100, // 1 req/sec + margin
+      },
+    }
+  );
 
-geocodingWorker.on('completed', (job) => {
-  logger.info(`Geocoding job ${job.id} completed`);
-});
+  worker.on('completed', (job) => {
+    logger.info(`Geocoding job ${job.id} completed`);
+  });
 
-geocodingWorker.on('failed', (job, err) => {
-  logger.error(`Geocoding job ${job?.id} failed: ${err.message}`);
-});
+  worker.on('failed', (job, err) => {
+    logger.error(`Geocoding job ${job?.id} failed: ${err.message}`);
+  });
+
+  return worker;
+}

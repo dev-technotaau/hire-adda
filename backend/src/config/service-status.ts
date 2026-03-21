@@ -23,6 +23,7 @@ const SERVICE_CATEGORIES = {
   database: ['PostgreSQL (Prisma)'],
   cache: [
     'Redis',
+    'BullMQ Workers',
     'BullMQ Job Queue',
     'SMS Queue',
     'WhatsApp Queue',

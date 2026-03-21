@@ -1,27 +1,8 @@
-import type { Worker } from 'bullmq';
 import logger from '../config/logger';
-
-// Essential (on-demand) workers — each creates 1 blocking Redis connection
-import { emailWorker } from './email.worker';
-import { smsWorker } from './sms.worker';
-import { fcmWorker } from './fcm.worker';
-import { webPushWorker } from './web-push.worker';
-import { inAppWorker } from './in-app.worker';
-import { whatsappWorker } from './whatsapp.worker';
-import { webhookWorker } from './webhook.worker';
-import { matchingWorker } from './matching.worker';
-import { geocodingWorker } from './geocoding.worker';
-import { resumeParseWorker } from './resume-parse.worker';
-import { esReindexWorker } from './es-reindex.worker';
-import { onboardingDripWorker } from './onboarding-drip.worker';
-import { imageProcessingWorker } from './image-processing.worker';
-
-// Combined scheduler worker — handles ALL periodic/cron jobs through
-// a single Worker (1 blocking connection) instead of 8 separate workers.
-import { schedulerWorker } from './scheduler.worker';
+import { workerLeader } from './worker-leader';
 
 // Import periodic queue files to register their repeatable jobs.
-// These all funnel into the shared scheduler queue (no extra connections).
+// These call schedulerQueue.add() which is idempotent — safe on all instances.
 import './job-expiration.queue';
 import './token-cleanup.queue';
 import './sla-check.queue';
@@ -38,26 +19,6 @@ import './view-counter-flush.queue';
 
 // Scheduler queue for stale job cleanup
 import { schedulerQueue } from './scheduler.queue';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const workers: Worker<any>[] = [
-  // On-demand workers (12)
-  emailWorker,
-  smsWorker,
-  fcmWorker,
-  webPushWorker,
-  inAppWorker,
-  whatsappWorker,
-  webhookWorker,
-  matchingWorker,
-  geocodingWorker,
-  resumeParseWorker,
-  esReindexWorker,
-  onboardingDripWorker,
-  imageProcessingWorker,
-  // Combined scheduler (1 — replaces individual periodic workers)
-  schedulerWorker,
-];
 
 /**
  * Clean up stale repeatable jobs before the queue files re-register them.
@@ -78,15 +39,25 @@ async function cleanStaleRepeatableJobs(): Promise<void> {
   }
 }
 
-export async function closeAllWorkers() {
-  await Promise.allSettled(workers.map((w) => w.close()));
-  logger.info('All BullMQ workers closed');
+/**
+ * Initialize BullMQ workers via leader election.
+ * Only the leader instance creates Worker objects (blocking Redis connections).
+ * The standby instance runs in API-only mode and auto-promotes if the leader dies.
+ */
+export async function initializeWorkers(): Promise<void> {
+  await cleanStaleRepeatableJobs();
+  const isLeader = await workerLeader.tryBecomeLeader();
+  logger.info(
+    isLeader
+      ? 'This instance is the BullMQ worker leader'
+      : 'This instance is in standby mode (another instance is the worker leader)'
+  );
 }
 
-// Clean stale repeatables on startup, then log initialization
-cleanStaleRepeatableJobs()
-  .then(() => logger.info(`Initialized ${workers.length} BullMQ workers (repeatable jobs cleaned)`))
-  .catch((err) => {
-    logger.error('Failed to clean stale repeatable jobs:', err);
-    logger.info(`Initialized ${workers.length} BullMQ workers`);
-  });
+/**
+ * Shutdown: stop workers + release leader lock.
+ */
+export async function closeAllWorkers(): Promise<void> {
+  await workerLeader.shutdown();
+  logger.info('BullMQ worker leader shutdown complete');
+}

@@ -2,7 +2,7 @@ import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';
 import { initializeServices, shutdownServices } from './config/service-init';
-import { closeAllWorkers } from './jobs';
+import { initializeWorkers, closeAllWorkers } from './jobs';
 
 // Initialize OpenTelemetry (must be before other imports that need tracing)
 initTelemetry();
@@ -13,6 +13,9 @@ const PORT: number = parseInt(process.env.PORT || '5000', 10);
 const startServer = async () => {
   // Initialize all services and display status dashboard
   await initializeServices();
+
+  // Leader election: only one instance runs BullMQ workers
+  await initializeWorkers();
 
   // Start HTTP server
   const server = app.listen(PORT, () => {
