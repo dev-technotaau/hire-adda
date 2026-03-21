@@ -9,17 +9,6 @@ name: CD
 on:
   push:
     branches: [main]
-    paths:
-      - 'backend/src/**'
-      - 'backend/package*.json'
-      - 'backend/prisma/**'
-      - 'backend/prisma.config.*'
-      - 'infra/docker/backend.Dockerfile'
-      - 'frontend/src/**'
-      - 'frontend/package*.json'
-      - 'frontend/next.config.*'
-      - 'frontend/public/**'
-      - 'infra/docker/frontend.Dockerfile'
 
 concurrency:
   group: cd-${{ github.ref }}
@@ -37,6 +26,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -55,6 +45,9 @@ jobs:
               - 'frontend/next.config.*'
               - 'frontend/public/**'
               - 'infra/docker/frontend.Dockerfile'
+            infra:
+              - 'infra/**'
+              - '.github/workflows/**'
 
   # ── Build & Push Backend Image ──
   build-backend:
@@ -192,13 +185,13 @@ jobs:
   # ── Deploy to VPS via Docker Compose (Blue-Green) ──
   deploy-vps:
     needs: [changes, build-backend, build-frontend]
-    if: always() && (needs.build-backend.result == 'success' || needs.build-frontend.result == 'success')
+    if: always() && (needs.build-backend.result == 'success' || needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true')
     uses: ./.github/workflows/deploy-vps.yml
     with:
       backend_tag: ${{ needs.build-backend.result == 'success' && github.sha || 'latest' }}
       frontend_tag: ${{ needs.build-frontend.result == 'success' && github.sha || 'latest' }}
-      deploy_backend: ${{ needs.build-backend.result == 'success' }}
-      deploy_frontend: ${{ needs.build-frontend.result == 'success' }}
+      deploy_backend: ${{ needs.build-backend.result == 'success' || needs.changes.outputs.infra == 'true' }}
+      deploy_frontend: ${{ needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true' }}
       strategy: blue-green
     secrets:
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
