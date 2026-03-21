@@ -7,8 +7,6 @@ import {
   registerService,
 } from './service-status';
 
-import { startKafkaConsumer, stopKafkaConsumer } from '../kafka/consumer';
-import { startDlqConsumer, stopDlqConsumer } from '../kafka/dlq-consumer';
 import { searchService } from '../services/search.service';
 
 /**
@@ -190,10 +188,6 @@ export const initializeServices = async (): Promise<void> => {
         await admin.connect();
         await admin.disconnect();
         registerService('Kafka', 'connected', '4 consolidated topics');
-
-        // Start Kafka consumer + DLQ consumer
-        await startKafkaConsumer();
-        await startDlqConsumer();
       } else {
         registerService('Kafka', 'not_configured');
       }
@@ -202,6 +196,13 @@ export const initializeServices = async (): Promise<void> => {
     }
   } else {
     registerService('Kafka', 'not_configured');
+  }
+
+  // Kafka Consumer (leader election status — updated by WorkerLeaderManager)
+  if (env.KAFKA_BROKERS) {
+    registerService('Kafka Consumer', 'ready', 'Pending leader election');
+  } else {
+    registerService('Kafka Consumer', 'not_configured');
   }
 
   // Firebase FCM
@@ -1011,10 +1012,8 @@ export const shutdownServices = async (): Promise<void> => {
     }
   }
 
-  // Kafka Consumer & Producer
+  // Kafka Producer (consumers are stopped by WorkerLeaderManager)
   try {
-    await stopDlqConsumer();
-    await stopKafkaConsumer();
     const { producer } = await import('./kafka');
     if (producer) {
       await producer.disconnect();

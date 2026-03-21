@@ -17,6 +17,8 @@ import { createEsReindexWorker } from './es-reindex.worker';
 import { createOnboardingDripWorker } from './onboarding-drip.worker';
 import { createImageProcessingWorker } from './image-processing.worker';
 import { createSchedulerWorker } from './scheduler.worker';
+import { startKafkaConsumer, stopKafkaConsumer } from '../kafka/consumer';
+import { startDlqConsumer, stopDlqConsumer } from '../kafka/dlq-consumer';
 
 const LOCK_KEY = 'tb:worker-leader';
 const LOCK_TTL = 30; // seconds — auto-expires if leader crashes
@@ -24,10 +26,11 @@ const RENEW_INTERVAL = 10_000; // ms — renew every 10s (3 chances before TTL)
 const MONITOR_INTERVAL = 5_000; // ms — standby checks every 5s
 
 /**
- * Manages BullMQ worker lifecycle via Redis-based leader election.
+ * Manages BullMQ worker and Kafka consumer lifecycle via Redis-based leader election.
  *
  * In a blue-green deployment, only the leader instance creates Worker objects
- * (each creates a blocking Redis connection). The standby instance runs in
+ * (each creates a blocking Redis connection) and Kafka consumers (which cause
+ * rebalancing storms if both instances run them). The standby instance runs in
  * API-only mode and auto-promotes if the leader dies or shuts down.
  */
 class WorkerLeaderManager {
@@ -36,13 +39,14 @@ class WorkerLeaderManager {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private workers: Worker<any>[] = [];
   private _isLeader = false;
+  private kafkaRunning = false;
 
   get isLeader(): boolean {
     return this._isLeader;
   }
 
   /**
-   * Try to become the worker leader. If successful, starts all workers.
+   * Try to become the worker leader. If successful, starts all workers + Kafka consumers.
    * If not, enters standby mode and monitors for leader failure.
    */
   async tryBecomeLeader(): Promise<boolean> {
@@ -50,13 +54,20 @@ class WorkerLeaderManager {
     if (this.lockValue) {
       this._isLeader = true;
       this.startWorkers();
+      await this.startKafka();
       this.startRenewal();
       updateService('BullMQ Workers', 'ready', `Leader — ${this.workers.length} workers`);
+      updateService(
+        'Kafka Consumer',
+        this.kafkaRunning ? 'ready' : 'disabled',
+        this.kafkaRunning ? 'Leader — consuming' : 'Kafka not available'
+      );
       return true;
     }
     // Standby mode — monitor for leader failure
     this.startMonitoring();
     updateService('BullMQ Workers', 'ready', 'Standby — monitoring');
+    updateService('Kafka Consumer', 'ready', 'Standby — monitoring');
     return false;
   }
 
@@ -80,6 +91,29 @@ class WorkerLeaderManager {
     logger.info(`Worker leader elected — started ${this.workers.length} BullMQ workers`);
   }
 
+  private async startKafka(): Promise<void> {
+    try {
+      await startKafkaConsumer();
+      await startDlqConsumer();
+      this.kafkaRunning = true;
+    } catch (error) {
+      logger.error('Failed to start Kafka consumers on leader:', error);
+      this.kafkaRunning = false;
+    }
+  }
+
+  private async stopKafka(): Promise<void> {
+    if (!this.kafkaRunning) return;
+    try {
+      await stopDlqConsumer();
+      await stopKafkaConsumer();
+      this.kafkaRunning = false;
+      logger.info('Stopped Kafka consumers');
+    } catch (error) {
+      logger.error('Error stopping Kafka consumers:', error);
+    }
+  }
+
   /**
    * Periodically renew the leader lock. If renewal fails (lock stolen or Redis down),
    * transition to standby mode.
@@ -91,7 +125,9 @@ class WorkerLeaderManager {
         logger.warn('Lost worker leadership (lock renewal failed)');
         this._isLeader = false;
         await this.stopWorkers();
+        await this.stopKafka();
         updateService('BullMQ Workers', 'ready', 'Standby — monitoring');
+        updateService('Kafka Consumer', 'ready', 'Standby — monitoring');
         this.startMonitoring();
       }
     }, RENEW_INTERVAL);
@@ -99,7 +135,7 @@ class WorkerLeaderManager {
 
   /**
    * Standby mode: poll periodically to check if the leader lock is available.
-   * When detected, acquire it and start workers.
+   * When detected, acquire it and start workers + Kafka consumers.
    */
   private startMonitoring(): void {
     if (this.timer) clearInterval(this.timer);
@@ -110,8 +146,14 @@ class WorkerLeaderManager {
         this._isLeader = true;
         if (this.timer) clearInterval(this.timer);
         this.startWorkers();
+        await this.startKafka();
         this.startRenewal();
         updateService('BullMQ Workers', 'ready', `Leader — ${this.workers.length} workers`);
+        updateService(
+          'Kafka Consumer',
+          this.kafkaRunning ? 'ready' : 'disabled',
+          this.kafkaRunning ? 'Leader — consuming' : 'Kafka not available'
+        );
       }
     }, MONITOR_INTERVAL);
   }
@@ -123,11 +165,12 @@ class WorkerLeaderManager {
   }
 
   /**
-   * Graceful shutdown: stop workers and release the leader lock.
+   * Graceful shutdown: stop workers, Kafka consumers, and release the leader lock.
    */
   async shutdown(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
     await this.stopWorkers();
+    await this.stopKafka();
     if (this.lockValue) {
       await releaseLock(LOCK_KEY, this.lockValue);
       logger.info('Released worker leader lock');
