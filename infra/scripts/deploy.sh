@@ -39,6 +39,7 @@ LOG_FILE="/var/log/talent-bridge-deploy.log"
 LOCK_FILE="/tmp/tb-deploy.lock"
 MAX_HEALTH_RETRIES=15
 HEALTH_CHECK_INTERVAL=10
+DRAIN_WAIT=5               # seconds to let in-flight requests finish after upstream switch
 
 # ── Colors ──
 RED='\033[0;31m'
@@ -291,10 +292,12 @@ grafana_annotate() {
     return 0
   fi
 
-  curl -sf -X POST "http://localhost:3000/api/annotations" \
-    -u "${grafana_user}:${grafana_pass}" \
-    -H "Content-Type: application/json" \
-    -d "{\"text\": \"${text}\", \"tags\": [\"${tags}\"]}" \
+  # Grafana has no host port — reach it via Docker network
+  docker compose exec -T grafana \
+    wget -q --post-data="{\"text\": \"${text}\", \"tags\": [\"${tags}\"]}" \
+    --header="Content-Type: application/json" \
+    --user="${grafana_user}" --password="${grafana_pass}" \
+    -O /dev/null "http://localhost:3000/api/annotations" \
     2>/dev/null || true
 }
 
@@ -373,17 +376,11 @@ deploy_blue_green() {
     info "Skipping migrations."
   fi
 
-  # Stop old backend BEFORE starting new one to free Redis connections.
-  # Redis Cloud has limited connections (~30), each backend uses 15-20+
-  # (BullMQ queues, cache, Socket.IO, rate limiter), so both can't run
-  # simultaneously. This causes brief backend downtime during deploys.
   local old_color="$ACTIVE_COLOR"
-  if [[ "$DRY_RUN" != "true" ]]; then
-    log "Stopping old backend-${old_color} to free Redis connections..."
-    docker compose stop "backend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
-  fi
 
-  # Start/recreate inactive containers
+  # Start inactive containers (both colors run simultaneously during transition;
+  # leader election ensures only one instance runs BullMQ workers + Kafka consumers)
+  #
   log "Starting ${inactive} containers..."
   if [[ "$DRY_RUN" == "true" ]]; then
     info "[DRY RUN] Would start: backend-${inactive} frontend-${inactive}"
@@ -395,8 +392,8 @@ deploy_blue_green() {
   if [[ "$DRY_RUN" != "true" ]]; then
     sleep 5
     if ! health_check_color "$inactive"; then
-      err "Health checks failed for ${inactive}! Restarting old backend-${old_color}..."
-      docker compose up -d --no-build "backend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+      err "Health checks failed for ${inactive}! Old ${old_color} still serving — zero downtime."
+      docker compose stop "backend-${inactive}" "frontend-${inactive}" 2>&1 | tee -a "$LOG_FILE" || true
       exit 1
     fi
   fi
@@ -412,10 +409,12 @@ deploy_blue_green() {
     reload_nginx
   fi
 
-  # Stop old frontend (old backend already stopped above)
+  # Drain in-flight requests, then stop old containers
   if [[ "$DRY_RUN" != "true" ]]; then
-    log "Stopping old frontend-${old_color}..."
-    docker compose stop "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+    log "Draining connections from ${old_color} (${DRAIN_WAIT}s)..."
+    sleep "$DRAIN_WAIT"
+    log "Stopping old ${old_color} containers..."
+    docker compose stop "backend-${old_color}" "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
   fi
 
   # Update state
@@ -520,6 +519,7 @@ deploy_canary() {
     sleep 5
     if ! health_check_color "$inactive"; then
       err "Health checks failed for ${inactive}! Aborting — no traffic switched."
+      docker compose stop "backend-${inactive}" "frontend-${inactive}" 2>&1 | tee -a "$LOG_FILE" || true
       exit 1
     fi
   fi
@@ -595,19 +595,13 @@ deploy_rolling() {
       fi
     fi
 
-    # Stop old backend to free Redis connections before starting new one
-    if [[ "$DRY_RUN" != "true" ]]; then
-      log "Stopping old backend-${ACTIVE_COLOR} to free Redis connections..."
-      docker compose stop "backend-${ACTIVE_COLOR}" 2>&1 | tee -a "$LOG_FILE" || true
-    fi
-
-    # Start backend
+    # Start new backend alongside old (leader election handles worker singleton)
     if [[ "$DRY_RUN" != "true" ]]; then
       docker compose up -d --no-build "backend-${inactive}" 2>&1 | tee -a "$LOG_FILE"
       sleep 5
       if ! health_check "backend-${inactive}" "http://127.0.0.1:5000/health/live"; then
-        err "Backend health check failed! Restarting old backend-${ACTIVE_COLOR}..."
-        docker compose up -d --no-build "backend-${ACTIVE_COLOR}" 2>&1 | tee -a "$LOG_FILE" || true
+        err "Backend health check failed! Old backend-${ACTIVE_COLOR} still serving — zero downtime."
+        docker compose stop "backend-${inactive}" 2>&1 | tee -a "$LOG_FILE" || true
         exit 1
       fi
     fi
@@ -622,6 +616,14 @@ deploy_rolling() {
       reload_nginx
     fi
     log "Backend switched to ${inactive}."
+
+    # Drain and stop old backend
+    if [[ "$DRY_RUN" != "true" ]]; then
+      log "Draining backend connections (${DRAIN_WAIT}s)..."
+      sleep "$DRAIN_WAIT"
+      log "Stopping old backend-${ACTIVE_COLOR}..."
+      docker compose stop "backend-${ACTIVE_COLOR}" 2>&1 | tee -a "$LOG_FILE" || true
+    fi
   fi
 
   # ── Phase 2: Frontend ──
@@ -645,14 +647,8 @@ deploy_rolling() {
       docker compose up -d --no-build "frontend-${inactive}" 2>&1 | tee -a "$LOG_FILE"
       sleep 5
       if ! health_check "frontend-${inactive}" "http://127.0.0.1:3000/"; then
-        err "Frontend health check failed! Rolling back backend..."
-        # Rollback backend upstream to active color
-        if [[ "$ACTIVE_COLOR" == "blue" ]]; then
-          generate_backend_upstream 100 0
-        else
-          generate_backend_upstream 0 100
-        fi
-        reload_nginx
+        err "Frontend health check failed! Old frontend-${ACTIVE_COLOR} still serving."
+        docker compose stop "frontend-${inactive}" 2>&1 | tee -a "$LOG_FILE" || true
         exit 1
       fi
     fi
@@ -667,16 +663,14 @@ deploy_rolling() {
       reload_nginx
     fi
     log "Frontend switched to ${inactive}."
-  fi
 
-  # Stop old containers that were replaced
-  local old_color="$ACTIVE_COLOR"
-  if [[ "$DRY_RUN" != "true" ]]; then
-    if [[ -n "$FRONTEND_TAG" ]]; then
-      log "Stopping old frontend-${old_color}..."
-      docker compose stop "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+    # Drain and stop old frontend
+    if [[ "$DRY_RUN" != "true" ]]; then
+      log "Draining frontend connections (${DRAIN_WAIT}s)..."
+      sleep "$DRAIN_WAIT"
+      log "Stopping old frontend-${ACTIVE_COLOR}..."
+      docker compose stop "frontend-${ACTIVE_COLOR}" 2>&1 | tee -a "$LOG_FILE" || true
     fi
-    # Old backend already stopped in Phase 1 (if backend was deployed)
   fi
 
   # Update state
@@ -731,9 +725,11 @@ do_promote() {
     reload_nginx
   fi
 
-  # Stop old (previously active) containers to free resources
+  # Drain in-flight requests, then stop old containers
   local old_color="$ACTIVE_COLOR"
   if [[ "$DRY_RUN" != "true" ]]; then
+    log "Draining connections from ${old_color} (${DRAIN_WAIT}s)..."
+    sleep "$DRAIN_WAIT"
     log "Stopping old ${old_color} containers..."
     docker compose stop "backend-${old_color}" "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
   fi
@@ -777,6 +773,13 @@ do_rollback() {
 
     if [[ "$DRY_RUN" != "true" ]]; then
       reload_nginx
+
+      # Stop canary containers to free resources
+      local canary_color
+      canary_color=$(get_inactive_color)
+      log "Stopping canary ${canary_color} containers..."
+      docker compose stop "backend-${canary_color}" "frontend-${canary_color}" 2>&1 | tee -a "$LOG_FILE" || true
+
       CANARY_WEIGHT=0
       DEPLOY_STRATEGY="blue-green"
       write_state
@@ -811,6 +814,14 @@ do_rollback() {
 
   if [[ "$DRY_RUN" != "true" ]]; then
     reload_nginx
+  fi
+
+  # Drain and stop the failed current containers (ACTIVE_COLOR = current failing color)
+  if [[ "$DRY_RUN" != "true" ]]; then
+    log "Draining connections from ${ACTIVE_COLOR} (${DRAIN_WAIT}s)..."
+    sleep "$DRAIN_WAIT"
+    log "Stopping old ${ACTIVE_COLOR} containers..."
+    docker compose stop "backend-${ACTIVE_COLOR}" "frontend-${ACTIVE_COLOR}" 2>&1 | tee -a "$LOG_FILE" || true
   fi
 
   # Update state

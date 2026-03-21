@@ -178,6 +178,7 @@ services:
     container_name: hireadda_backend_blue
     image: ghcr.io/${GHCR_OWNER:-chandreshkkhatri}/talent-bridge-backend:${BLUE_BACKEND_TAG:-latest}
     restart: unless-stopped
+    stop_grace_period: 30s
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
     deploy:
@@ -246,6 +247,7 @@ services:
     container_name: hireadda_backend_green
     image: ghcr.io/${GHCR_OWNER:-chandreshkkhatri}/talent-bridge-backend:${GREEN_BACKEND_TAG:-latest}
     restart: unless-stopped
+    stop_grace_period: 30s
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
     deploy:
