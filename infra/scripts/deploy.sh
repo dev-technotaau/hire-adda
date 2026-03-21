@@ -8,7 +8,8 @@
 #   ./deploy.sh [OPTIONS]
 #
 # Strategies:
-#   --strategy blue-green   Deploy to inactive color, instant swap (default)
+#   --strategy progressive  Rolling phases + canary traffic shift (default)
+#   --strategy blue-green   Deploy to inactive color, instant swap
 #   --strategy canary       Deploy to inactive color, gradual traffic shift
 #   --strategy rolling      Sequential: backend first → frontend second
 #
@@ -40,6 +41,7 @@ LOCK_FILE="/tmp/tb-deploy.lock"
 MAX_HEALTH_RETRIES=15
 HEALTH_CHECK_INTERVAL=10
 DRAIN_WAIT=5               # seconds to let in-flight requests finish after upstream switch
+CANARY_STAGE_WAIT=15       # seconds to observe each canary weight stage before advancing
 
 # ── Colors ──
 RED='\033[0;31m'
@@ -56,7 +58,7 @@ err()  { echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR:${NC} $*" | tee -a 
 info() { echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')] INFO:${NC} $*" | tee -a "$LOG_FILE"; }
 
 # ── Argument Parsing ──
-STRATEGY="blue-green"
+STRATEGY="progressive"
 ACTION="deploy"
 BACKEND_TAG=""
 FRONTEND_TAG=""
@@ -82,8 +84,8 @@ done
 # ── Validate strategy ──
 if [[ "$ACTION" == "deploy" ]]; then
   case "$STRATEGY" in
-    blue-green|canary|rolling) ;;
-    *) err "Invalid strategy: $STRATEGY (use: blue-green, canary, rolling)"; exit 1 ;;
+    progressive|blue-green|canary|rolling) ;;
+    *) err "Invalid strategy: $STRATEGY (use: progressive, blue-green, canary, rolling)"; exit 1 ;;
   esac
 fi
 
@@ -690,6 +692,258 @@ deploy_rolling() {
   log "============================================"
 }
 
+# ── Deploy: Progressive (Blue-Green + Rolling + Canary) ──
+# Combines all three strategies into one pipeline:
+#   - Blue-green infra (two colors, instant rollback)
+#   - Rolling phases (backend first → frontend second)
+#   - Canary traffic shifting (20% → 50% → 100% per phase)
+deploy_progressive() {
+  local inactive
+  inactive=$(get_inactive_color)
+  local old_color="$ACTIVE_COLOR"
+
+  log "============================================"
+  log "  Strategy: ${CYAN}Progressive${NC} (rolling + canary)"
+  log "  Active: ${ACTIVE_COLOR} → Deploying to: ${inactive}"
+  log "  Canary stages: 20% → 50% → 100%"
+  log "============================================"
+
+  # Update tags for inactive color
+  local inactive_upper active_upper
+  inactive_upper=$(echo "$inactive" | tr '[:lower:]' '[:upper:]')
+  active_upper=$(echo "$ACTIVE_COLOR" | tr '[:lower:]' '[:upper:]')
+
+  if [[ -n "$BACKEND_TAG" ]]; then
+    if [[ "$DRY_RUN" != "true" ]]; then
+      update_env_var "${inactive_upper}_BACKEND_TAG" "$BACKEND_TAG"
+      eval "${inactive_upper}_BACKEND_TAG=${BACKEND_TAG}"
+      log "Set ${inactive_upper}_BACKEND_TAG=${BACKEND_TAG}"
+    else
+      info "[DRY RUN] Would set ${inactive_upper}_BACKEND_TAG=${BACKEND_TAG}"
+    fi
+  else
+    local active_btag_var="${active_upper}_BACKEND_TAG"
+    local active_btag="${!active_btag_var:-latest}"
+    update_env_var "${inactive_upper}_BACKEND_TAG" "$active_btag"
+    eval "${inactive_upper}_BACKEND_TAG=${active_btag}"
+    log "Copied active backend tag: ${inactive_upper}_BACKEND_TAG=${active_btag}"
+  fi
+
+  if [[ -n "$FRONTEND_TAG" ]]; then
+    if [[ "$DRY_RUN" != "true" ]]; then
+      update_env_var "${inactive_upper}_FRONTEND_TAG" "$FRONTEND_TAG"
+      eval "${inactive_upper}_FRONTEND_TAG=${FRONTEND_TAG}"
+      log "Set ${inactive_upper}_FRONTEND_TAG=${FRONTEND_TAG}"
+    else
+      info "[DRY RUN] Would set ${inactive_upper}_FRONTEND_TAG=${FRONTEND_TAG}"
+    fi
+  else
+    local active_ftag_var="${active_upper}_FRONTEND_TAG"
+    local active_ftag="${!active_ftag_var:-latest}"
+    update_env_var "${inactive_upper}_FRONTEND_TAG" "$active_ftag"
+    eval "${inactive_upper}_FRONTEND_TAG=${active_ftag}"
+    log "Copied active frontend tag: ${inactive_upper}_FRONTEND_TAG=${active_ftag}"
+  fi
+
+  # Pull all needed images upfront
+  log "Pulling images for ${inactive}..."
+  if [[ "$DRY_RUN" == "true" ]]; then
+    info "[DRY RUN] Would pull: backend-${inactive} frontend-${inactive}"
+  else
+    docker compose pull "backend-${inactive}" "frontend-${inactive}" 2>&1 | tee -a "$LOG_FILE"
+  fi
+
+  # Run Prisma migrations before starting any containers
+  if [[ "$SKIP_MIGRATIONS" == "false" && -n "$BACKEND_TAG" ]]; then
+    log "Running Prisma migrations (via backend-${inactive})..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "[DRY RUN] Would run migrations via backend-${inactive}"
+    else
+      if docker compose run --rm --no-deps "backend-${inactive}" npx prisma migrate deploy 2>&1 | tee -a "$LOG_FILE"; then
+        log "Migrations completed successfully."
+      else
+        err "Migration failed! Aborting deploy."
+        exit 1
+      fi
+    fi
+  else
+    info "Skipping migrations."
+  fi
+
+  local canary_stages=(20 50 100)
+  local backend_phase_done=false
+
+  # Helper: undo backend phase if it was completed (called on frontend failure)
+  _undo_backend() {
+    if [[ "$backend_phase_done" != "true" || "$DRY_RUN" == "true" ]]; then return; fi
+    warn "Undoing backend phase — restoring backend to ${old_color}..."
+    docker compose up -d --no-build "backend-${old_color}" 2>&1 | tee -a "$LOG_FILE"
+    sleep 5
+    if health_check "backend-${old_color}" "http://127.0.0.1:5000/health/live"; then
+      if [[ "$old_color" == "blue" ]]; then
+        generate_backend_upstream 100 0
+      else
+        generate_backend_upstream 0 100
+      fi
+      reload_nginx || true
+      log "Draining backend from ${inactive} (${DRAIN_WAIT}s)..."
+      sleep "$DRAIN_WAIT"
+      docker compose stop "backend-${inactive}" 2>&1 | tee -a "$LOG_FILE" || true
+      log "Backend restored to ${old_color}."
+    else
+      err "Old backend-${old_color} unhealthy! Backend stays on ${inactive}. Manual intervention needed."
+    fi
+  }
+
+  # ── Phase 1: Backend ──
+  if [[ -n "$BACKEND_TAG" ]]; then
+    log ""
+    log "── Phase 1: Backend (canary 20% → 50% → 100%) ──"
+
+    # Start new backend alongside old (leader election handles worker singleton)
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "[DRY RUN] Would start backend-${inactive}"
+    else
+      docker compose up -d --no-build "backend-${inactive}" 2>&1 | tee -a "$LOG_FILE"
+      sleep 5
+      if ! health_check "backend-${inactive}" "http://127.0.0.1:5000/health/live"; then
+        err "Backend health check failed! Old backend-${old_color} still serving — zero downtime."
+        docker compose stop "backend-${inactive}" 2>&1 | tee -a "$LOG_FILE" || true
+        exit 1
+      fi
+    fi
+
+    # Canary progression for backend
+    for weight in "${canary_stages[@]}"; do
+      local be_old_weight=$((100 - weight))
+
+      if [[ "$inactive" == "green" ]]; then
+        generate_backend_upstream "$be_old_weight" "$weight"
+      else
+        generate_backend_upstream "$weight" "$be_old_weight"
+      fi
+
+      if [[ "$DRY_RUN" != "true" ]]; then
+        reload_nginx
+        log "Backend canary: ${CYAN}${weight}%${NC} → ${inactive}"
+
+        if [[ $weight -lt 100 ]]; then
+          log "  Observing under ${weight}% traffic (${CANARY_STAGE_WAIT}s)..."
+          sleep "$CANARY_STAGE_WAIT"
+
+          if ! health_check "backend-${inactive}" "http://127.0.0.1:5000/health/live"; then
+            err "Backend unhealthy at ${weight}%! Rolling back backend to ${old_color}..."
+            if [[ "$old_color" == "blue" ]]; then
+              generate_backend_upstream 100 0
+            else
+              generate_backend_upstream 0 100
+            fi
+            reload_nginx
+            docker compose stop "backend-${inactive}" 2>&1 | tee -a "$LOG_FILE" || true
+            exit 1
+          fi
+        fi
+      else
+        info "[DRY RUN] Backend canary stage: ${weight}%"
+      fi
+    done
+
+    # Drain + stop old backend
+    if [[ "$DRY_RUN" != "true" ]]; then
+      log "Draining backend connections from ${old_color} (${DRAIN_WAIT}s)..."
+      sleep "$DRAIN_WAIT"
+      log "Stopping old backend-${old_color}..."
+      docker compose stop "backend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+    fi
+
+    backend_phase_done=true
+    log "Backend phase complete — ${inactive} at 100%."
+  fi
+
+  # ── Phase 2: Frontend ──
+  # If frontend fails at any point, also undo backend phase (atomic deploy)
+  if [[ -n "$FRONTEND_TAG" ]]; then
+    log ""
+    log "── Phase 2: Frontend (canary 20% → 50% → 100%) ──"
+
+    # Start new frontend alongside old
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "[DRY RUN] Would start frontend-${inactive}"
+    else
+      docker compose up -d --no-build "frontend-${inactive}" 2>&1 | tee -a "$LOG_FILE"
+      sleep 5
+      if ! health_check "frontend-${inactive}" "http://127.0.0.1:3000/"; then
+        err "Frontend health check failed! Old frontend-${old_color} still serving."
+        docker compose stop "frontend-${inactive}" 2>&1 | tee -a "$LOG_FILE" || true
+        _undo_backend
+        exit 1
+      fi
+    fi
+
+    # Canary progression for frontend
+    for weight in "${canary_stages[@]}"; do
+      local fe_old_weight=$((100 - weight))
+
+      if [[ "$inactive" == "green" ]]; then
+        generate_frontend_upstream "$fe_old_weight" "$weight"
+      else
+        generate_frontend_upstream "$weight" "$fe_old_weight"
+      fi
+
+      if [[ "$DRY_RUN" != "true" ]]; then
+        reload_nginx
+        log "Frontend canary: ${CYAN}${weight}%${NC} → ${inactive}"
+
+        if [[ $weight -lt 100 ]]; then
+          log "  Observing under ${weight}% traffic (${CANARY_STAGE_WAIT}s)..."
+          sleep "$CANARY_STAGE_WAIT"
+
+          if ! health_check "frontend-${inactive}" "http://127.0.0.1:3000/"; then
+            err "Frontend unhealthy at ${weight}%! Rolling back frontend to ${old_color}..."
+            if [[ "$old_color" == "blue" ]]; then
+              generate_frontend_upstream 100 0
+            else
+              generate_frontend_upstream 0 100
+            fi
+            reload_nginx
+            docker compose stop "frontend-${inactive}" 2>&1 | tee -a "$LOG_FILE" || true
+            _undo_backend
+            exit 1
+          fi
+        fi
+      else
+        info "[DRY RUN] Frontend canary stage: ${weight}%"
+      fi
+    done
+
+    # Drain + stop old frontend
+    if [[ "$DRY_RUN" != "true" ]]; then
+      log "Draining frontend connections from ${old_color} (${DRAIN_WAIT}s)..."
+      sleep "$DRAIN_WAIT"
+      log "Stopping old frontend-${old_color}..."
+      docker compose stop "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+    fi
+
+    log "Frontend phase complete — ${inactive} at 100%."
+  fi
+
+  # Update state
+  ACTIVE_COLOR="$inactive"
+  DEPLOY_STRATEGY="progressive"
+  CANARY_WEIGHT=0
+
+  if [[ "$DRY_RUN" != "true" ]]; then
+    write_state
+    grafana_annotate "Deploy (progressive): switched to ${inactive}. Backend: ${BACKEND_TAG:-unchanged}, Frontend: ${FRONTEND_TAG:-unchanged}" "deploy,progressive"
+  fi
+
+  log ""
+  log "============================================"
+  log "  ${GREEN}Progressive Deploy Successful${NC}"
+  log "  Active: ${CYAN}${ACTIVE_COLOR}${NC}"
+  log "============================================"
+}
+
 # ── Promote Canary ──
 do_promote() {
   read_state
@@ -921,9 +1175,10 @@ case "$ACTION" in
     log "============================================"
 
     case "$STRATEGY" in
-      blue-green) deploy_blue_green ;;
-      canary)     deploy_canary ;;
-      rolling)    deploy_rolling ;;
+      progressive) deploy_progressive ;;
+      blue-green)  deploy_blue_green ;;
+      canary)      deploy_canary ;;
+      rolling)     deploy_rolling ;;
     esac
 
     # Cleanup old images

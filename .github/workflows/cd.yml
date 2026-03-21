@@ -192,7 +192,7 @@ jobs:
       frontend_tag: ${{ needs.build-frontend.result == 'success' && github.sha || 'latest' }}
       deploy_backend: ${{ needs.build-backend.result == 'success' || needs.changes.outputs.infra == 'true' }}
       deploy_frontend: ${{ needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true' }}
-      strategy: blue-green
+      strategy: progressive
     secrets:
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
       VPS_HOST: ${{ secrets.VPS_HOST }}
