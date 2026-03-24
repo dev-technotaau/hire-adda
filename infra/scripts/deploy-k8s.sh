@@ -36,7 +36,7 @@ else
 fi
 
 # Test kubectl server access (not just client version)
-if ! $KUBECTL version --short 2>/dev/null | grep -q "Server Version"; then
+if ! $KUBECTL version 2>/dev/null | grep -q "Server Version"; then
   echo "ERROR: Cannot connect to Kubernetes API server."
   echo "If using K3s, ensure it's running: systemctl status k3s"
   exit 1
