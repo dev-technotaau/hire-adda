@@ -33,11 +33,16 @@ spec:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
-      # Ensure vm.max_map_count is set (done at host level via Ansible)
+      # Ensure vm.max_map_count >= 262144 (set at host level via Ansible)
       initContainers:
         - name: sysctl-check
           image: busybox:1.36
-          command: ['sh', '-c', 'sysctl -n vm.max_map_count | grep -q 262144 || exit 1']
+          command:
+            [
+              'sh',
+              '-c',
+              'val=$(cat /proc/sys/vm/max_map_count) && [ "$val" -ge 262144 ] && echo "vm.max_map_count=$val OK" || exit 1',
+            ]
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
