@@ -772,6 +772,46 @@ do_status() {
   echo -e "${CYAN}═══════════════════════════════════════════${NC}"
 }
 
+# ── Ensure Required Resources ──
+ensure_required_resources() {
+  log_info "Ensuring required K8s resources exist..."
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_info "[DRY RUN] Would apply required resources"
+    return 0
+  fi
+
+  local resources_dir="${SCRIPT_DIR}/../k8s/apps/backend"
+
+  # Apply backend ServiceAccount
+  if [[ -f "${resources_dir}/serviceaccount.yaml" ]]; then
+    log_info "Applying backend ServiceAccount..."
+    $KUBECTL apply -f "${resources_dir}/serviceaccount.yaml" 2>&1 | sed 's/^/  /'
+  fi
+
+  # Apply backend PVC
+  if [[ -f "${resources_dir}/pvc.yaml" ]]; then
+    log_info "Applying uploads PVC..."
+    $KUBECTL apply -f "${resources_dir}/pvc.yaml" 2>&1 | sed 's/^/  /'
+  fi
+
+  # Verify required secrets exist
+  if ! $KUBECTL get secret backend-secrets -n "$NAMESPACE" &>/dev/null; then
+    log_error "Required secret 'backend-secrets' not found in namespace $NAMESPACE"
+    log_error "Apply sealed secrets: kubectl apply -f infra/k8s/security/sealed-secrets/"
+    exit 1
+  fi
+
+  # Verify required configmaps exist
+  if ! $KUBECTL get configmap backend-config -n "$NAMESPACE" &>/dev/null; then
+    log_error "Required configmap 'backend-config' not found in namespace $NAMESPACE"
+    log_error "Apply configmap: kubectl apply -f infra/k8s/apps/backend/configmap.yaml"
+    exit 1
+  fi
+
+  log_success "Required resources verified"
+}
+
 # ═══════════════════════════════════════════════════════
 # MAIN
 # ═══════════════════════════════════════════════════════
@@ -814,6 +854,7 @@ main() {
 
       acquire_lock
       read_state
+      ensure_required_resources
 
       case "$STRATEGY" in
         progressive) deploy_progressive ;;
