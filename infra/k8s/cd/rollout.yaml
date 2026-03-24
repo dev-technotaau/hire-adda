@@ -273,12 +273,14 @@ spec:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
             (
-              sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.canary-hash}}.*",status=~"5.."}[2m])) or vector(0)
-              / sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.canary-hash}}.*"}[2m])) or vector(0)
-            ) / (
-              sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.stable-hash}}.*",status=~"5.."}[2m])) or vector(0)
-              / sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.stable-hash}}.*"}[2m])) or vector(0)
-            )
+              (
+                sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.canary-hash}}.*",status=~"5.."}[2m]))
+                / sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.canary-hash}}.*"}[2m]))
+              ) / (
+                sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.stable-hash}}.*",status=~"5.."}[2m]))
+                / sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.stable-hash}}.*"}[2m]))
+              )
+            ) or vector(1)
 
     # ── Latency Ratio ──────────────────────────────────────
     # Canary P95 must not exceed 1.3x the stable P95

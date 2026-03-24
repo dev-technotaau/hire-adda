@@ -232,12 +232,14 @@ spec:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
             (
-              sum(rate(nginx_ingress_controller_requests{host="hireadda.in",service="frontend-canary",status=~"5.."}[2m]))
-              / sum(rate(nginx_ingress_controller_requests{host="hireadda.in",service="frontend-canary"}[2m]))
-            ) / (
-              sum(rate(nginx_ingress_controller_requests{host="hireadda.in",service="frontend",status=~"5.."}[2m]))
-              / sum(rate(nginx_ingress_controller_requests{host="hireadda.in",service="frontend"}[2m]))
-            )
+              (
+                sum(rate(nginx_ingress_controller_requests{host="hireadda.in",service="frontend-canary",status=~"5.."}[2m]))
+                / sum(rate(nginx_ingress_controller_requests{host="hireadda.in",service="frontend-canary"}[2m]))
+              ) / (
+                sum(rate(nginx_ingress_controller_requests{host="hireadda.in",service="frontend",status=~"5.."}[2m]))
+                / sum(rate(nginx_ingress_controller_requests{host="hireadda.in",service="frontend"}[2m]))
+              )
+            ) or vector(1)
 
     # ── Latency Ratio ──────────────────────────────────────
     # Canary P95 must not exceed 1.3x the stable P95
@@ -251,10 +253,12 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            histogram_quantile(0.95,
-              sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in",service="frontend-canary"}[2m])) by (le)
-            )
-            /
-            histogram_quantile(0.95,
-              sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in",service="frontend"}[2m])) by (le)
-            )
+            (
+              histogram_quantile(0.95,
+                sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in",service="frontend-canary"}[2m])) by (le)
+              )
+              /
+              histogram_quantile(0.95,
+                sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in",service="frontend"}[2m])) by (le)
+              )
+            ) or vector(1)

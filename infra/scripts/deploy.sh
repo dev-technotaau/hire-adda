@@ -170,11 +170,17 @@ generate_backend_upstream() {
   local green_weight=$2
 
   local servers=""
-  if [[ $blue_weight -gt 0 ]]; then
+  # Only add servers for containers that are actually running
+  if [[ $blue_weight -gt 0 ]] && docker compose ps -q backend-blue 2>/dev/null | grep -q .; then
     servers="${servers}    server backend-blue:5000 weight=${blue_weight} max_fails=3 fail_timeout=30s;\n"
   fi
-  if [[ $green_weight -gt 0 ]]; then
+  if [[ $green_weight -gt 0 ]] && docker compose ps -q backend-green 2>/dev/null | grep -q .; then
     servers="${servers}    server backend-green:5000 weight=${green_weight} max_fails=3 fail_timeout=30s;\n"
+  fi
+
+  # If no servers are available, use a down server as placeholder
+  if [[ -z "$servers" ]]; then
+    servers="    server 127.0.0.1:65535 down;  # No backend containers running\n"
   fi
 
   cat > "${UPSTREAM_DIR}/backend.conf" <<EOF
@@ -193,11 +199,17 @@ generate_frontend_upstream() {
   local green_weight=$2
 
   local servers=""
-  if [[ $blue_weight -gt 0 ]]; then
+  # Only add servers for containers that are actually running
+  if [[ $blue_weight -gt 0 ]] && docker compose ps -q frontend-blue 2>/dev/null | grep -q .; then
     servers="${servers}    server frontend-blue:3000 weight=${blue_weight};\n"
   fi
-  if [[ $green_weight -gt 0 ]]; then
+  if [[ $green_weight -gt 0 ]] && docker compose ps -q frontend-green 2>/dev/null | grep -q .; then
     servers="${servers}    server frontend-green:3000 weight=${green_weight};\n"
+  fi
+
+  # If no servers are available, use a down server as placeholder
+  if [[ -z "$servers" ]]; then
+    servers="    server 127.0.0.1:65535 down;  # No frontend containers running\n"
   fi
 
   cat > "${UPSTREAM_DIR}/frontend.conf" <<EOF
@@ -219,14 +231,9 @@ set_upstream_weights() {
     return
   fi
 
-  # Only generate upstreams for services that have running containers
-  if docker compose ps -q backend-blue backend-green 2>/dev/null | grep -q .; then
-    generate_backend_upstream "$blue_weight" "$green_weight"
-  fi
-
-  if docker compose ps -q frontend-blue frontend-green 2>/dev/null | grep -q .; then
-    generate_frontend_upstream "$blue_weight" "$green_weight"
-  fi
+  # Always generate both upstream configs (they handle missing containers gracefully)
+  generate_backend_upstream "$blue_weight" "$green_weight"
+  generate_frontend_upstream "$blue_weight" "$green_weight"
 
   log "Updated upstream weights: blue=${blue_weight}% green=${green_weight}%"
 }
