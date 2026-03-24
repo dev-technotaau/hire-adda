@@ -809,6 +809,25 @@ ensure_required_resources() {
     exit 1
   fi
 
+  # Apply/update Argo Rollout resources (ensures AnalysisTemplates are current)
+  local cd_dir="${SCRIPT_DIR}/../k8s/cd"
+  if [[ -f "${cd_dir}/rollout.yaml" ]]; then
+    log_info "Applying backend Rollout manifest (updates AnalysisTemplates)..."
+    $KUBECTL apply -f "${cd_dir}/rollout.yaml" 2>&1 | sed 's/^/  /'
+  fi
+  if [[ -f "${cd_dir}/rollout-bluegreen.yaml" ]]; then
+    log_info "Applying backend blue-green Rollout manifest..."
+    $KUBECTL apply -f "${cd_dir}/rollout-bluegreen.yaml" 2>&1 | sed 's/^/  /'
+  fi
+  if [[ -f "${cd_dir}/frontend-rollout.yaml" ]]; then
+    log_info "Applying frontend Rollout manifest (updates AnalysisTemplates)..."
+    $KUBECTL apply -f "${cd_dir}/frontend-rollout.yaml" 2>&1 | sed 's/^/  /'
+  fi
+  if [[ -f "${cd_dir}/frontend-rollout-bluegreen.yaml" ]]; then
+    log_info "Applying frontend blue-green Rollout manifest..."
+    $KUBECTL apply -f "${cd_dir}/frontend-rollout-bluegreen.yaml" 2>&1 | sed 's/^/  /'
+  fi
+
   log_success "Required resources verified"
 }
 
