@@ -49,7 +49,7 @@ data:
       storage:
         path: /var/tempo/generator/wal
         remote_write:
-          - url: http://kube-prometheus-prometheus.monitoring:9090/api/v1/write
+          - url: http://kube-prometheus-stack-prometheus.monitoring:9090/api/v1/write
             send_exemplars: true
 
     overrides:

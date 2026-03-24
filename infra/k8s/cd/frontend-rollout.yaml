@@ -143,7 +143,7 @@ spec:
       failureLimit: 1
       provider:
         prometheus:
-          address: http://kube-prometheus-prometheus.monitoring:9090
+          address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
             sum(rate(nginx_ingress_controller_requests{host="hireadda.in",status=~"5.."}[2m]))
             /
@@ -157,7 +157,7 @@ spec:
       failureLimit: 1
       provider:
         prometheus:
-          address: http://kube-prometheus-prometheus.monitoring:9090
+          address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
             histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in"}[2m])) by (le))
 
@@ -169,7 +169,7 @@ spec:
       failureLimit: 1
       provider:
         prometheus:
-          address: http://kube-prometheus-prometheus.monitoring:9090
+          address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
             histogram_quantile(0.99, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in"}[2m])) by (le))
 
@@ -181,7 +181,7 @@ spec:
       failureLimit: 1
       provider:
         prometheus:
-          address: http://kube-prometheus-prometheus.monitoring:9090
+          address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
             max(rate(container_cpu_usage_seconds_total{namespace="hire-adda",container="frontend"}[2m]))
             /
@@ -195,7 +195,7 @@ spec:
       failureLimit: 1
       provider:
         prometheus:
-          address: http://kube-prometheus-prometheus.monitoring:9090
+          address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
             max(container_memory_working_set_bytes{namespace="hire-adda",container="frontend"})
             /
@@ -223,7 +223,7 @@ spec:
       inconclusiveLimit: 3
       provider:
         prometheus:
-          address: http://kube-prometheus-prometheus.monitoring:9090
+          address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
             (
               sum(rate(nginx_ingress_controller_requests{host="hireadda.in",service="frontend-canary",status=~"5.."}[2m]))
@@ -243,7 +243,7 @@ spec:
       inconclusiveLimit: 3
       provider:
         prometheus:
-          address: http://kube-prometheus-prometheus.monitoring:9090
+          address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
             histogram_quantile(0.95,
               sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in",service="frontend-canary"}[2m])) by (le)
