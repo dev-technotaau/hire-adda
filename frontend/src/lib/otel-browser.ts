@@ -5,7 +5,8 @@ import { ZoneContextManager } from '@opentelemetry/context-zone';
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
 import { DocumentLoadInstrumentation } from '@opentelemetry/instrumentation-document-load';
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes, defaultResource } from '@opentelemetry/resources';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import { TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-web';
 
 let initialized = false;
@@ -20,9 +21,11 @@ export function initBrowserOtel() {
     (isProduction ? 'https://hireadda.in/otel/v1/traces' : 'http://localhost:4318/v1/traces');
 
   const provider = new WebTracerProvider({
-    resource: new Resource({
-      'service.name': 'hire-adda-frontend-browser',
-    }),
+    resource: defaultResource().merge(
+      resourceFromAttributes({
+        [ATTR_SERVICE_NAME]: 'hire-adda-frontend-browser',
+      }),
+    ),
     sampler: new TraceIdRatioBasedSampler(isProduction ? 0.1 : 1.0),
     spanProcessors: [
       new BatchSpanProcessor(

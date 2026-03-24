@@ -9,6 +9,7 @@ export interface GeocodingJobData {
   entityType: 'candidate' | 'job' | 'company';
   entityId: string;
   address: string;
+  _traceContext?: Record<string, string>;
 }
 
 export const geocodingQueue = new Queue<GeocodingJobData>(GEOCODING_QUEUE_NAME, {
