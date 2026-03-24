@@ -176,6 +176,11 @@ jobs:
             sleep 5
           done
 
+      - name: Install rsync
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y rsync
+
       - name: Sync infra configs to K8s node
         if: steps.plan.outputs.action == 'deploy'
         run: |
