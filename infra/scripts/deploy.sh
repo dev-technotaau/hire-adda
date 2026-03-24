@@ -625,6 +625,8 @@ deploy_rolling() {
       sleep "$DRAIN_WAIT"
       log "Stopping old backend-${ACTIVE_COLOR}..."
       docker compose stop "backend-${ACTIVE_COLOR}" 2>&1 | tee -a "$LOG_FILE" || true
+
+      # Regenerate upstream to exclude stopped container (already done above at line 612-616, just need to ensure it's applied)
     fi
   fi
 
@@ -854,6 +856,13 @@ deploy_progressive() {
       sleep "$DRAIN_WAIT"
       log "Stopping old backend-${old_color}..."
       docker compose stop "backend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+
+      # Regenerate upstream to exclude stopped container
+      if [[ "$inactive" == "green" ]]; then
+        generate_backend_upstream 0 100
+      else
+        generate_backend_upstream 100 0
+      fi
     fi
 
     backend_phase_done=true
@@ -922,6 +931,13 @@ deploy_progressive() {
       sleep "$DRAIN_WAIT"
       log "Stopping old frontend-${old_color}..."
       docker compose stop "frontend-${old_color}" 2>&1 | tee -a "$LOG_FILE" || true
+
+      # Regenerate upstream to exclude stopped container
+      if [[ "$inactive" == "green" ]]; then
+        generate_frontend_upstream 0 100
+      else
+        generate_frontend_upstream 100 0
+      fi
     fi
 
     log "Frontend phase complete — ${inactive} at 100%."
