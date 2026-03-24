@@ -198,23 +198,18 @@ generate_frontend_upstream() {
   local blue_weight=$1
   local green_weight=$2
 
-  log "[upstream] generate_frontend_upstream blue=${blue_weight} green=${green_weight} dir=${UPSTREAM_DIR}"
-
   local servers=""
   # Only add servers for containers that are actually running
   if [[ $blue_weight -gt 0 ]] && docker compose ps -q frontend-blue 2>/dev/null | grep -q .; then
     servers="${servers}    server frontend-blue:3000 weight=${blue_weight};\n"
-    log "[upstream]   → added frontend-blue (running, weight=${blue_weight})"
   fi
   if [[ $green_weight -gt 0 ]] && docker compose ps -q frontend-green 2>/dev/null | grep -q .; then
     servers="${servers}    server frontend-green:3000 weight=${green_weight};\n"
-    log "[upstream]   → added frontend-green (running, weight=${green_weight})"
   fi
 
   # If no servers are available, use a down server as placeholder
   if [[ -z "$servers" ]]; then
     servers="    server 127.0.0.1:65535 down;  # No frontend containers running\n"
-    log "[upstream]   → no running containers, using placeholder"
   fi
 
   cat > "${UPSTREAM_DIR}/frontend.conf" <<EOF
@@ -225,8 +220,6 @@ $(echo -e "$servers" | sed '/^$/d')
     keepalive 16;
 }
 EOF
-  log "[upstream]   → wrote ${UPSTREAM_DIR}/frontend.conf"
-  log "[upstream]   → content: $(cat "${UPSTREAM_DIR}/frontend.conf" | grep server)"
 }
 
 set_upstream_weights() {
@@ -250,12 +243,6 @@ reload_nginx() {
     info "[DRY RUN] Would reload nginx"
     return
   fi
-
-  # Debug: show what nginx will see
-  log "[nginx-debug] frontend.conf on host:"
-  cat "${UPSTREAM_DIR}/frontend.conf" 2>/dev/null | tee -a "$LOG_FILE"
-  log "[nginx-debug] frontend.conf inside container:"
-  docker compose exec -T nginx cat /etc/nginx/upstreams/frontend.conf 2>&1 | tee -a "$LOG_FILE"
 
   if docker compose exec -T nginx nginx -t 2>&1 | tee -a "$LOG_FILE"; then
     docker compose exec -T nginx nginx -s reload 2>&1 | tee -a "$LOG_FILE"
@@ -1220,6 +1207,14 @@ case "$ACTION" in
     else
       generate_backend_upstream 0 100
       generate_frontend_upstream 0 100
+    fi
+
+    # Recreate nginx so bind-mount picks up the current compose directory.
+    # If the deploy path changed since the container was first created,
+    # the old bind-mount still points to the previous directory.
+    if [[ "$DRY_RUN" != "true" ]]; then
+      log "Ensuring nginx container has fresh bind-mounts..."
+      docker compose up -d --force-recreate nginx 2>&1 | tee -a "$LOG_FILE"
     fi
 
     log "============================================"
