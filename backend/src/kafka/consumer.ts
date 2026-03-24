@@ -4,8 +4,9 @@ import { ConsolidatedTopics, KafkaTopics } from './topics';
 import { isFeatureEnabled } from '../config/feature-flags';
 import { isProcessed, markProcessed } from '../utils/idempotency';
 import { validateEvent } from './schemas';
+import { withExtractedContext, SpanKind } from '../utils/trace-propagation';
 
-const DLQ_TOPIC = 'talent-bridge.dlq';
+const DLQ_TOPIC = 'hire-adda.dlq';
 
 /**
  * Publish a failed message to the Dead Letter Queue topic.
@@ -105,7 +106,7 @@ async function handleUserRegistered(data: any): Promise<void> {
 
   await notificationService.send({
     userId: data.userId,
-    title: 'Welcome to Talent Bridge!',
+    title: 'Welcome to Hire Adda!',
     message: 'Complete your profile to get started and find your perfect match.',
     type: 'INFO',
     category: 'onboarding',
@@ -389,7 +390,9 @@ export const startKafkaConsumer = async (): Promise<void> => {
           // Schema validation — invalid messages go to DLQ
           const validation = validateEvent(eventType, data);
           if (!validation.valid) {
-            logger.warn(`Kafka consumer schema validation failed for ${eventType}: ${validation.errors.join(', ')}`);
+            logger.warn(
+              `Kafka consumer schema validation failed for ${eventType}: ${validation.errors.join(', ')}`
+            );
             await publishToDlq(
               topic,
               partition,
@@ -421,7 +424,20 @@ export const startKafkaConsumer = async (): Promise<void> => {
           // Push to event buffer for admin viewer
           pushToEventBuffer(eventType, topic, rawKey);
 
-          await routeByEventType(eventType, data);
+          // Extract trace context from Kafka headers for distributed tracing
+          const traceCarrier: Record<string, string> = {};
+          if (message.headers) {
+            for (const [k, v] of Object.entries(message.headers)) {
+              if (v) traceCarrier[k] = Buffer.isBuffer(v) ? v.toString() : String(v);
+            }
+          }
+
+          await withExtractedContext(
+            traceCarrier,
+            `kafka.process ${eventType}`,
+            SpanKind.CONSUMER,
+            () => routeByEventType(eventType, data)
+          );
 
           // Mark as processed for idempotency
           await markProcessed(idempotencyKey);

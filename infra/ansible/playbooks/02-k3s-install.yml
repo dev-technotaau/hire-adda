@@ -148,7 +148,7 @@
           alias kgn='kubectl get nodes'
           alias kga='kubectl get all'
           alias kns='kubectl config set-context --current --namespace'
-          alias ktb='kubectl -n talent-bridge'
+          alias ktb='kubectl -n hire-adda'
 
           # Helm
           alias h='helm'

@@ -15,6 +15,10 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+# ── Configuration (override via env vars) ──
+DEPLOY_PATH="${VPS_DEPLOY_PATH:-/root/hire_adda}"
+DOMAIN="${DOMAIN:-hireadda.in}"
+
 DRY_RUN=false
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_RUN=true
@@ -33,10 +37,10 @@ kubectl get nodes -o wide || fail "K3s not accessible"
 log "  K3s cluster: OK"
 
 # Verify all K3s app pods are Running
-PODS_NOT_READY=$(kubectl get pods -n talent-bridge --no-headers 2>/dev/null | grep -v "Running\|Completed" | wc -l)
+PODS_NOT_READY=$(kubectl get pods -n hire-adda --no-headers 2>/dev/null | grep -v "Running\|Completed" | wc -l)
 if [[ "$PODS_NOT_READY" -gt 0 ]]; then
-  kubectl get pods -n talent-bridge
-  fail "Not all pods are Running in talent-bridge namespace"
+  kubectl get pods -n hire-adda
+  fail "Not all pods are Running in hire-adda namespace"
 fi
 log "  All application pods: Running"
 
@@ -51,7 +55,7 @@ log "  cert-manager: Running"
 # ── Step 2: Verify SSL Certificates ──
 log "Step 2: Checking SSL certificates..."
 
-CERTS=$(kubectl get certificates -n talent-bridge -o jsonpath='{range .items[*]}{.metadata.name}: {.status.conditions[0].type}={.status.conditions[0].status}{"\n"}{end}' 2>/dev/null)
+CERTS=$(kubectl get certificates -n hire-adda -o jsonpath='{range .items[*]}{.metadata.name}: {.status.conditions[0].type}={.status.conditions[0].status}{"\n"}{end}' 2>/dev/null)
 if echo "$CERTS" | grep -q "Ready=False"; then
   echo "$CERTS"
   fail "Some certificates are not ready"
@@ -61,7 +65,7 @@ log "  SSL certificates: Ready"
 # ── Step 3: Port-forward test ──
 log "Step 3: Testing backend via port-forward..."
 
-kubectl port-forward svc/backend 5099:5000 -n talent-bridge &
+kubectl port-forward svc/backend 5099:5000 -n hire-adda &
 PF_PID=$!
 sleep 3
 
@@ -83,8 +87,8 @@ else
   log "  4a. Migrating PostgreSQL..."
   DOCKER_PG=$(docker ps -q -f name=hireadda_postgres 2>/dev/null || echo "")
   if [[ -n "$DOCKER_PG" ]]; then
-    docker exec "$DOCKER_PG" pg_dump -U postgres -d talentbridge --no-owner --no-privileges --clean --if-exists | \
-      kubectl exec -i statefulset/postgres -n talent-bridge -- psql -U postgres -d talentbridge
+    docker exec "$DOCKER_PG" pg_dump -U postgres -d hireadda --no-owner --no-privileges --clean --if-exists | \
+      kubectl exec -i statefulset/postgres -n hire-adda -- psql -U postgres -d hireadda
     log "    PostgreSQL migration: Complete"
   else
     warn "  Docker PostgreSQL not found — skipping (data may already be in K3s)"
@@ -99,13 +103,13 @@ else
   log "  4c. Migrating uploads..."
   DOCKER_UPLOADS=$(docker volume inspect hireadda_uploads_data --format '{{.Mountpoint}}' 2>/dev/null || echo "")
   if [[ -n "$DOCKER_UPLOADS" && -d "$DOCKER_UPLOADS" ]]; then
-    K3S_UPLOADS=$(kubectl get pvc uploads-pvc -n talent-bridge -o jsonpath='{.spec.volumeName}' 2>/dev/null || echo "")
+    K3S_UPLOADS=$(kubectl get pvc uploads-pvc -n hire-adda -o jsonpath='{.spec.volumeName}' 2>/dev/null || echo "")
     if [[ -n "$K3S_UPLOADS" ]]; then
       # Use a temporary pod to copy data
       kubectl run upload-copy --rm -i --restart=Never \
         --image=busybox:1.36 \
         --overrides='{"spec":{"containers":[{"name":"copy","image":"busybox:1.36","command":["sleep","3600"],"volumeMounts":[{"name":"uploads","mountPath":"/uploads"}]}],"volumes":[{"name":"uploads","persistentVolumeClaim":{"claimName":"uploads-pvc"}}]}}' \
-        -n talent-bridge -- sh -c "echo 'Ready for copy'" &
+        -n hire-adda -- sh -c "echo 'Ready for copy'" &
       sleep 5
       # Copy files from Docker volume to K3s PV via kubectl cp
       warn "  Upload migration may need manual intervention — check volume paths"
@@ -128,7 +132,7 @@ else
 fi
 
 # Verify roundcube is deployed in K3s (not Docker)
-ROUNDCUBE_POD=$(kubectl get pods -n talent-bridge -l app=roundcube --no-headers 2>/dev/null | grep "Running" | wc -l)
+ROUNDCUBE_POD=$(kubectl get pods -n hire-adda -l app=roundcube --no-headers 2>/dev/null | grep "Running" | wc -l)
 if [[ "$ROUNDCUBE_POD" -gt 0 ]]; then
   log "  Roundcube webmail: Running in K3s"
 else
@@ -136,7 +140,7 @@ else
 fi
 
 # Verify mailserver-external service exists (K8s → Docker bridge)
-kubectl get svc mailserver-external -n talent-bridge &>/dev/null && \
+kubectl get svc mailserver-external -n hire-adda &>/dev/null && \
   log "  mailserver-external service: OK" || \
   warn "  mailserver-external service missing — deploy: kubectl apply -f infra/k8s/apps/roundcube/mailserver-external.yaml"
 
@@ -165,7 +169,7 @@ else
   # Stop Docker Compose APP STACK ONLY (frees ports 80 and 443)
   # Mail server is separate and stays running
   log "  Stopping Docker Compose app stack..."
-  cd /root/talent_bridge/infra/docker && docker compose down || warn "Docker compose down had issues"
+  cd "$DEPLOY_PATH/infra/docker" && docker compose down || warn "Docker compose down had issues"
   log "  App stack stopped. K3s ingress is now handling ports 80/443."
   log "  Mail server Docker stack is unaffected."
 fi
@@ -190,9 +194,9 @@ check_url() {
 }
 
 if [[ "$DRY_RUN" == false ]]; then
-  check_url "https://hireadda.in" "Frontend"
-  check_url "https://api.hireadda.in/health" "Backend API"
-  check_url "https://mail.hireadda.in" "Webmail"
+  check_url "https://${DOMAIN}" "Frontend"
+  check_url "https://api.${DOMAIN}/health" "Backend API"
+  check_url "https://mail.${DOMAIN}" "Webmail"
 
   if [[ "$TESTS_PASSED" == false ]]; then
     echo ""

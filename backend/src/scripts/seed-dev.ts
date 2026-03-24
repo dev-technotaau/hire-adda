@@ -46,10 +46,10 @@ async function seed() {
   console.log('Creating users...');
 
   const superAdmin = await prisma.user.upsert({
-    where: { email: 'superadmin@talentbridge.com' },
+    where: { email: 'superadmin@hireadda.in' },
     update: {},
     create: {
-      email: 'superadmin@talentbridge.com',
+      email: 'superadmin@hireadda.in',
       password: hashedPassword,
       role: Role.SUPER_ADMIN,
       firstName: 'Super',
@@ -60,10 +60,10 @@ async function seed() {
   });
 
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@talentbridge.com' },
+    where: { email: 'admin@hireadda.in' },
     update: {},
     create: {
-      email: 'admin@talentbridge.com',
+      email: 'admin@hireadda.in',
       password: hashedPassword,
       role: Role.ADMIN,
       firstName: 'Platform',
@@ -614,8 +614,8 @@ async function seed() {
 
   console.log('\nSeed completed successfully!');
   console.log('\nTest accounts (password: Test@12345):');
-  console.log('  Super Admin: superadmin@talentbridge.com');
-  console.log('  Admin:       admin@talentbridge.com');
+  console.log('  Super Admin: superadmin@hireadda.in');
+  console.log('  Admin:       admin@hireadda.in');
   console.log('  Employer 1:  hr@techcorp.com');
   console.log('  Employer 2:  hiring@startupx.com');
   console.log('  Candidate 1: rahul.dev@gmail.com');

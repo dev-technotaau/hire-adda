@@ -9,6 +9,10 @@
 
 set -euo pipefail
 
+# ── Configuration (override via env vars) ──
+DEPLOY_PATH="${VPS_DEPLOY_PATH:-/root/hire_adda}"
+DOMAIN="${DOMAIN:-hireadda.in}"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -30,14 +34,14 @@ sleep 3
 
 # Step 2: Restart Docker Compose
 log "Step 2: Starting Docker Compose stack..."
-cd /root/talent_bridge/infra/docker
+cd "$DEPLOY_PATH/infra/docker"
 docker compose up -d
 
 # Step 3: Wait for containers to be healthy
 log "Step 3: Waiting for Docker containers to start..."
 sleep 10
 
-docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "hireadda|hireadda"
+docker ps --format "table {{.Names}}\t{{.Status}}"
 
 # Step 4: Verify
 log "Step 4: Verifying endpoints..."
@@ -54,9 +58,9 @@ check_url() {
   fi
 }
 
-check_url "https://hireadda.in" "Frontend"
-check_url "https://api.hireadda.in/health" "Backend API"
-check_url "https://mail.hireadda.in" "Webmail"
+check_url "https://${DOMAIN}" "Frontend"
+check_url "https://api.${DOMAIN}/health" "Backend API"
+check_url "https://mail.${DOMAIN}" "Webmail"
 
 echo ""
 log "╔══════════════════════════════════════════╗"

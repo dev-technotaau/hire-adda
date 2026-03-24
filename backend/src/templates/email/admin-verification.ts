@@ -7,7 +7,7 @@ export function verificationRequestReceivedEmailTemplate(
   userRole: string,
   companyInfo: string
 ) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://talentbridge.com';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hireadda.in';
 
   return {
     subject: `New ${verificationType} Verification Request - Action Required`,
@@ -64,7 +64,7 @@ export function verificationRequestReceivedEmailTemplate(
             </div>
         </div>
         <div class="footer">
-            <p><strong>Talent Bridge</strong> - Admin Notifications</p>
+            <p><strong>Hire Adda</strong> - Admin Notifications</p>
             <p>This is an automated notification. Do not reply to this email.</p>
         </div>
     </div>
@@ -88,7 +88,7 @@ Review at: ${appUrl}/admin/verifications
 ⚡ Action Required: Please review within 24 hours to meet SLA requirements.
 
 ---
-Talent Bridge - Admin Notifications
+Hire Adda - Admin Notifications
 This is an automated notification. Do not reply to this email.
         `.trim(),
   };

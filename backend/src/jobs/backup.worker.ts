@@ -53,7 +53,7 @@ async function notifyBackupFailure(type: string, error: string): Promise<void> {
  * Database backup handler — runs pg_dump and uploads the gzipped SQL to Cloudflare R2.
  *
  * Works on Render, Docker, or any environment with `pg_dump` available.
- * The backup is stored at: r2://<bucket>/backups/db/talent_bridge_YYYYMMDD_HHMMSS.sql.gz
+ * The backup is stored at: r2://<bucket>/backups/db/hire_adda_YYYYMMDD_HHMMSS.sql.gz
  */
 export async function handleDbBackup(job: Job): Promise<{ success: boolean; key?: string }> {
   const timeoutId = setTimeout(() => {}, TIMEOUT_MS);
@@ -79,8 +79,11 @@ export async function handleDbBackup(job: Job): Promise<{ success: boolean; key?
     const compressed = await gzipAsync(Buffer.from(sqlDump, 'utf-8'));
 
     // Upload to R2
-    const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 15);
-    const key = `${BACKUP_FOLDER}/talent_bridge_${timestamp}.sql.gz`;
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[-:T.Z]/g, '')
+      .slice(0, 15);
+    const key = `${BACKUP_FOLDER}/hire_adda_${timestamp}.sql.gz`;
 
     const upload = new Upload({
       client: r2Client,
@@ -156,9 +159,7 @@ export async function handleBackupCleanup(
         }
       }
 
-      continuationToken = listResponse.IsTruncated
-        ? listResponse.NextContinuationToken
-        : undefined;
+      continuationToken = listResponse.IsTruncated ? listResponse.NextContinuationToken : undefined;
     } while (continuationToken);
 
     await trackBackupStatus(BACKUP_KEYS.cleanupLastRun);

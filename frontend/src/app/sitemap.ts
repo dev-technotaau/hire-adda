@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://talentbridge.com';
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://hireadda.in';
 
 /**
  * Sitemap with static pages

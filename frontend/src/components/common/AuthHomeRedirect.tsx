@@ -20,7 +20,7 @@ export default function AuthHomeRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!document.cookie.includes('tb_auth_session=1')) return;
+    if (!document.cookie.includes('ha_auth_session=1')) return;
     const user = storage.get<User>(STORAGE_KEYS.USER);
     const dashboard = user?.role && ROLE_DASHBOARDS[user.role];
     if (dashboard) {

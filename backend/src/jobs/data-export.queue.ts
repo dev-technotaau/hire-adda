@@ -1,5 +1,6 @@
 import logger from '../config/logger';
 import { schedulerQueue } from './scheduler.queue';
+import { injectTraceContext } from '../utils/trace-propagation';
 
 export const DATA_EXPORT_QUEUE_NAME = 'export-data';
 
@@ -33,9 +34,13 @@ export const addDataExportJob = async (data: {
   format?: 'csv' | 'xlsx' | 'json';
   candidateIds?: string[];
 }) => {
-  return await schedulerQueue.add('export-data', data, {
-    priority: data.exportType === 'USER_DATA' ? 1 : 2,
-    attempts: 2,
-    backoff: { type: 'exponential', delay: 5000 },
-  });
+  return await schedulerQueue.add(
+    'export-data',
+    { ...data, _traceContext: injectTraceContext() },
+    {
+      priority: data.exportType === 'USER_DATA' ? 1 : 2,
+      attempts: 2,
+      backoff: { type: 'exponential', delay: 5000 },
+    }
+  );
 };

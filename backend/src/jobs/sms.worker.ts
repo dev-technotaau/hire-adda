@@ -5,6 +5,7 @@ import { env } from '../config/env';
 import logger from '../config/logger';
 import { SMS_QUEUE_NAME } from './sms.queue';
 import { sendSMS } from '../services/sms.service';
+import { withExtractedContext, SpanKind } from '../utils/trace-propagation';
 
 interface SmsJobData {
   to: string;
@@ -15,29 +16,37 @@ export function createSmsWorker(): Worker<SmsJobData> {
   const worker = new Worker<SmsJobData>(
     SMS_QUEUE_NAME,
     async (job: Job<SmsJobData>) => {
-      const TIMEOUT_MS = 30_000;
-      const timeoutId = setTimeout(() => {
-        /* safety net */
-      }, TIMEOUT_MS);
-      try {
-        logger.info(`Processing SMS job ${job.id} to ${job.data.to}`);
+      const traceCtx = (job.data as Record<string, any>)?._traceContext || {};
+      return withExtractedContext(
+        traceCtx,
+        `bullmq.process ${job.name}`,
+        SpanKind.CONSUMER,
+        async () => {
+          const TIMEOUT_MS = 30_000;
+          const timeoutId = setTimeout(() => {
+            /* safety net */
+          }, TIMEOUT_MS);
+          try {
+            logger.info(`Processing SMS job ${job.id} to ${job.data.to}`);
 
-        const sent = await Promise.race([
-          sendSMS(job.data.to, job.data.body),
-          new Promise<never>((_resolve, reject) =>
-            setTimeout(() => reject(new Error('SMS worker timeout after 30s')), TIMEOUT_MS)
-          ),
-        ]);
-        if (!sent) {
-          logger.warn(`SMS not sent to ${job.data.to} - service may be unconfigured`);
+            const sent = await Promise.race([
+              sendSMS(job.data.to, job.data.body),
+              new Promise<never>((_resolve, reject) =>
+                setTimeout(() => reject(new Error('SMS worker timeout after 30s')), TIMEOUT_MS)
+              ),
+            ]);
+            if (!sent) {
+              logger.warn(`SMS not sent to ${job.data.to} - service may be unconfigured`);
+            }
+            return { sent };
+          } catch (error) {
+            logger.error(`Failed to send SMS to ${job.data.to}:`, error);
+            throw error;
+          } finally {
+            clearTimeout(timeoutId);
+          }
         }
-        return { sent };
-      } catch (error) {
-        logger.error(`Failed to send SMS to ${job.data.to}:`, error);
-        throw error;
-      } finally {
-        clearTimeout(timeoutId);
-      }
+      );
     },
     {
       connection: redis,

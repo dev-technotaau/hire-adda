@@ -5,12 +5,12 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Talent Bridge API',
+      title: 'Hire Adda API',
       version: '1.0.0',
       description: 'Job Portal & Recruitment Platform API Documentation',
       contact: {
         name: 'API Support',
-        email: 'support@talentbridge.com',
+        email: 'support@hireadda.in',
       },
     },
     servers: [

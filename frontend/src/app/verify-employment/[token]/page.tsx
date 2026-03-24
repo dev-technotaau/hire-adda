@@ -51,7 +51,7 @@ export default function VerifyEmploymentPage() {
             <ShieldCheck className="text-primary mx-auto h-10 w-10" />
             <h1 className="mt-3 text-xl font-bold text-[var(--text)]">Employment Verification</h1>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
-              Talent Bridge has requested your help to verify a former employee&apos;s work history.
+              Hire Adda has requested your help to verify a former employee&apos;s work history.
               Please confirm or deny the employment details below.
             </p>
           </div>
@@ -117,7 +117,7 @@ export default function VerifyEmploymentPage() {
           </div>
 
           <p className="mt-6 text-center text-xs text-[var(--text-muted)]">
-            This is a one-time verification request from Talent Bridge. Your response will help us
+            This is a one-time verification request from Hire Adda. Your response will help us
             maintain accurate employment records.
           </p>
         </div>

@@ -26,49 +26,64 @@ warn() { echo -e "${YELLOW}[sealed-secrets]${NC} $*"; }
 fail() { echo -e "${RED}[sealed-secrets]${NC} $*"; exit 1; }
 
 # Check prerequisites
-command -v kubeseal >/dev/null 2>&1 || fail "kubeseal not found. Install: https://github.com/bitnami-labs/sealed-secrets/releases"
+# Check for kubeseal in PATH or ~/bin
+if command -v kubeseal >/dev/null 2>&1; then
+  KUBESEAL_CMD="kubeseal"
+elif [[ -x "$HOME/bin/kubeseal.exe" ]]; then
+  KUBESEAL_CMD="$HOME/bin/kubeseal.exe"
+elif [[ -x "$HOME/bin/kubeseal" ]]; then
+  KUBESEAL_CMD="$HOME/bin/kubeseal"
+else
+  fail "kubeseal not found. Install: https://github.com/bitnami-labs/sealed-secrets/releases"
+fi
+
 command -v kubectl >/dev/null 2>&1 || fail "kubectl not found"
 
 mkdir -p "$OUTPUT_DIR"
 
 # ── Backend Secrets ──
-BACKEND_ENV="$ROOT_DIR/backend/.env"
+# Use infra/docker/.env as source of truth for production K8s
+BACKEND_ENV="$ROOT_DIR/infra/docker/.env"
 if [[ -f "$BACKEND_ENV" ]]; then
   log "Creating backend secrets from $BACKEND_ENV..."
 
   # Filter out comments and empty lines, create K8s secret
   kubectl create secret generic backend-secrets \
-    --namespace=talent-bridge \
+    --namespace=hire-adda \
     --from-env-file="$BACKEND_ENV" \
     --dry-run=client -o yaml | \
-    kubeseal --format yaml \
-    > "$OUTPUT_DIR/backend-secrets.yaml"
+    $KUBESEAL_CMD --format yaml \
+    > "$OUTPUT_DIR/backend-sealed-secret.yaml"
 
-  log "  Written: $OUTPUT_DIR/backend-secrets.yaml"
+  log "  Written: $OUTPUT_DIR/backend-sealed-secret.yaml"
 else
   warn "Backend .env not found at $BACKEND_ENV — skipping"
 fi
 
 # ── PostgreSQL Secrets ──
 log "Creating postgres secrets..."
-# Extract POSTGRES_PASSWORD from backend .env or prompt
+# Extract POSTGRES_PASSWORD from backend .env (including commented lines for K8s)
 if [[ -f "$BACKEND_ENV" ]]; then
+  # Try uncommented line first
   PG_PASS=$(grep "^POSTGRES_PASSWORD=" "$BACKEND_ENV" | cut -d'=' -f2-)
+  # If not found, try commented line
+  if [[ -z "${PG_PASS:-}" ]]; then
+    PG_PASS=$(grep "^# POSTGRES_PASSWORD=" "$BACKEND_ENV" | head -1 | sed 's/^# //' | cut -d'=' -f2-)
+  fi
 fi
 
-if [[ -z "${PG_PASS:-}" ]]; then
-  read -sp "Enter POSTGRES_PASSWORD: " PG_PASS
-  echo ""
+if [[ -n "${PG_PASS:-}" ]]; then
+  kubectl create secret generic postgres-secrets \
+    --namespace=hire-adda \
+    --from-literal=POSTGRES_PASSWORD="$PG_PASS" \
+    --dry-run=client -o yaml | \
+    $KUBESEAL_CMD --format yaml \
+    > "$OUTPUT_DIR/postgres-secrets.yaml"
+
+  log "  Written: $OUTPUT_DIR/postgres-secrets.yaml"
+else
+  warn "POSTGRES_PASSWORD not found, skipping postgres secrets"
 fi
-
-kubectl create secret generic postgres-secrets \
-  --namespace=talent-bridge \
-  --from-literal=POSTGRES_PASSWORD="$PG_PASS" \
-  --dry-run=client -o yaml | \
-  kubeseal --format yaml \
-  > "$OUTPUT_DIR/postgres-secrets.yaml"
-
-log "  Written: $OUTPUT_DIR/postgres-secrets.yaml"
 
 # ── Summary ──
 echo ""

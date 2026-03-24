@@ -1,5 +1,5 @@
 var fs = require("fs");
-var fp = "d:/Projects/talent_bridge/frontend/src/constants/suggestions.ts";
+var fp = "d:/Projects/hire_adda/frontend/src/constants/suggestions.ts";
 var c = fs.readFileSync(fp, "utf8");
 
 function ex(c, name, items) {

@@ -16,8 +16,8 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/talent-bridge-backend
-  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/talent-bridge-frontend
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/hire-adda-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/hire-adda-frontend
 
 jobs:
   # ── Detect which services changed ──
@@ -162,14 +162,26 @@ jobs:
       - name: Update backend image tag
         if: needs.build-backend.result == 'success'
         run: |
+          # Update Deployment (standard K8s)
           sed -i "s|image: ${{ env.BACKEND_IMAGE }}:.*|image: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}|g" \
             infra/k8s/apps/backend/deployment.yaml
+          # Update Rollouts (Argo Rollouts canary + blue-green)
+          sed -i "s|image: ${{ env.BACKEND_IMAGE }}:.*|image: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}|g" \
+            infra/k8s/cd/rollout.yaml
+          sed -i "s|image: ${{ env.BACKEND_IMAGE }}:.*|image: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}|g" \
+            infra/k8s/cd/rollout-bluegreen.yaml
 
       - name: Update frontend image tag
         if: needs.build-frontend.result == 'success'
         run: |
+          # Update Deployment (standard K8s)
           sed -i "s|image: ${{ env.FRONTEND_IMAGE }}:.*|image: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}|g" \
             infra/k8s/apps/frontend/deployment.yaml
+          # Update Rollouts (Argo Rollouts canary + blue-green)
+          sed -i "s|image: ${{ env.FRONTEND_IMAGE }}:.*|image: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}|g" \
+            infra/k8s/cd/frontend-rollout.yaml
+          sed -i "s|image: ${{ env.FRONTEND_IMAGE }}:.*|image: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}|g" \
+            infra/k8s/cd/frontend-rollout-bluegreen.yaml
 
       - name: Commit and push manifest updates
         run: |
@@ -198,4 +210,22 @@ jobs:
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_USER: ${{ secrets.VPS_USER }}
       VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Deploy to K8s via Argo Rollouts (Progressive) ──
+  deploy-k8s:
+    needs: [changes, build-backend, build-frontend, update-manifests]
+    if: always() && (needs.build-backend.result == 'success' || needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true')
+    uses: ./.github/workflows/deploy-k8s.yml
+    with:
+      backend_tag: ${{ needs.build-backend.result == 'success' && github.sha || 'latest' }}
+      frontend_tag: ${{ needs.build-frontend.result == 'success' && github.sha || 'latest' }}
+      deploy_backend: ${{ needs.build-backend.result == 'success' || needs.changes.outputs.infra == 'true' }}
+      deploy_frontend: ${{ needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true' }}
+      strategy: progressive
+    secrets:
+      K8S_SSH_KEY: ${{ secrets.K8S_SSH_KEY }}
+      K8S_HOST: ${{ secrets.K8S_HOST }}
+      K8S_USER: ${{ secrets.K8S_USER }}
+      K8S_DEPLOY_PATH: ${{ secrets.K8S_DEPLOY_PATH }}
       GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq';
 import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { injectTraceContext } from '../utils/trace-propagation';
 
 export const GEOCODING_QUEUE_NAME = 'geocoding-queue';
 
@@ -28,10 +29,14 @@ geocodingQueue.on('error', (err) => {
 });
 
 export const addGeocodingJob = async (data: GeocodingJobData) => {
-  return geocodingQueue.add('geocode', data, {
-    // Deduplicate: if same entity already queued, skip
-    jobId: `geocode-${data.entityType}-${data.entityId}`,
-  });
+  return geocodingQueue.add(
+    'geocode',
+    { ...data, _traceContext: injectTraceContext() },
+    {
+      // Deduplicate: if same entity already queued, skip
+      jobId: `geocode-${data.entityType}-${data.entityId}`,
+    }
+  );
 };
 
 logger.info(`Geocoding Queue initialized: ${GEOCODING_QUEUE_NAME}`);

@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq';
 import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { injectTraceContext } from '../utils/trace-propagation';
 
 export const ES_REINDEX_QUEUE_NAME = 'es-reindex-queue';
 
@@ -30,8 +31,12 @@ export interface ReindexJobData {
 }
 
 export async function addReindexJob(data: ReindexJobData) {
-  return esReindexQueue.add('reindex', data, {
-    // Deduplicate: if same doc is queued multiple times, only process once
-    jobId: `reindex:${data.indexType}:${data.documentId}:${data.action}`,
-  });
+  return esReindexQueue.add(
+    'reindex',
+    { ...data, _traceContext: injectTraceContext() },
+    {
+      // Deduplicate: if same doc is queued multiple times, only process once
+      jobId: `reindex:${data.indexType}:${data.documentId}:${data.action}`,
+    }
+  );
 }

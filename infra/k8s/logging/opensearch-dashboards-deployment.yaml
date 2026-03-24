@@ -1,6 +1,6 @@
 # ============================================================
 # OpenSearch Dashboards — Deployment + Service
-# Connected to existing OpenSearch in talent-bridge namespace
+# Connected to existing OpenSearch in hire-adda namespace
 # ============================================================
 apiVersion: apps/v1
 kind: Deployment
@@ -26,7 +26,7 @@ spec:
             - containerPort: 5601
           env:
             - name: OPENSEARCH_HOSTS
-              value: '["http://opensearch.talent-bridge.svc.cluster.local:9200"]'
+              value: '["http://opensearch.hire-adda.svc.cluster.local:9200"]'
             - name: DISABLE_SECURITY_DASHBOARDS_PLUGIN
               value: 'true'
             - name: SERVER_BASEPATH

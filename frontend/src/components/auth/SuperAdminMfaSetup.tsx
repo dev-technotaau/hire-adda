@@ -120,7 +120,12 @@ export default function SuperAdminMfaSetup() {
                   </p>
                 </div>
 
-                <Button fullWidth isLoading={setupLoading} onClick={handleSetup} tooltip="Begin MFA setup">
+                <Button
+                  fullWidth
+                  isLoading={setupLoading}
+                  onClick={handleSetup}
+                  tooltip="Begin MFA setup"
+                >
                   Set Up MFA
                 </Button>
               </div>
@@ -214,7 +219,12 @@ export default function SuperAdminMfaSetup() {
                   </div>
                 </div>
 
-                <Button fullWidth isLoading={continueLoading} onClick={handleContinue} tooltip="Go to dashboard">
+                <Button
+                  fullWidth
+                  isLoading={continueLoading}
+                  onClick={handleContinue}
+                  tooltip="Go to dashboard"
+                >
                   Continue to Dashboard
                 </Button>
               </div>
@@ -235,7 +245,7 @@ export default function SuperAdminMfaSetup() {
       </main>
 
       <footer className="py-4 text-center text-sm text-[var(--text-muted)]">
-        &copy; {new Date().getFullYear()} TalentBridge. All rights reserved.
+        &copy; {new Date().getFullYear()} HireAdda. All rights reserved.
       </footer>
     </div>
   );

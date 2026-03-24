@@ -4,7 +4,7 @@ import { env } from '../config/env';
 import logger from '../config/logger';
 import { isFeatureEnabled } from '../config/feature-flags';
 
-const DATASET_ID = 'talent_bridge_analytics';
+const DATASET_ID = 'hire_adda_analytics';
 
 function getDataset() {
   if (!bigqueryClient) return null;
@@ -65,12 +65,14 @@ async function fallbackSalaryTrends(industry?: string, location?: string) {
     params.push(location);
   }
 
-  const rows = await prisma.$queryRawUnsafe<{
-    month: Date;
-    avg_min_salary: number;
-    avg_max_salary: number;
-    job_count: bigint;
-  }[]>(
+  const rows = await prisma.$queryRawUnsafe<
+    {
+      month: Date;
+      avg_min_salary: number;
+      avg_max_salary: number;
+      job_count: bigint;
+    }[]
+  >(
     `SELECT DATE_TRUNC('month', "createdAt") as month,
             AVG("salaryMin") as avg_min_salary,
             AVG("salaryMax") as avg_max_salary,
@@ -82,7 +84,8 @@ async function fallbackSalaryTrends(industry?: string, location?: string) {
     ...params
   );
   return rows.map((r) => ({
-    month: r.month instanceof Date ? r.month.toISOString().slice(0, 7) : String(r.month).slice(0, 7),
+    month:
+      r.month instanceof Date ? r.month.toISOString().slice(0, 7) : String(r.month).slice(0, 7),
     avg_min_salary: Number(r.avg_min_salary),
     avg_max_salary: Number(r.avg_max_salary),
     job_count: Number(r.job_count),
@@ -151,7 +154,9 @@ export const bigqueryService = {
           });
           if (rows.length > 0) return rows;
         } catch (error) {
-          logger.warn(`BigQuery user growth query failed (falling back to Prisma): ${(error as Error).message}`);
+          logger.warn(
+            `BigQuery user growth query failed (falling back to Prisma): ${(error as Error).message}`
+          );
         }
       }
     }
@@ -189,7 +194,9 @@ export const bigqueryService = {
           });
           if (rows.length > 0) return rows;
         } catch (error) {
-          logger.warn(`BigQuery application funnel query failed (falling back to Prisma): ${(error as Error).message}`);
+          logger.warn(
+            `BigQuery application funnel query failed (falling back to Prisma): ${(error as Error).message}`
+          );
         }
       }
     }
@@ -229,7 +236,9 @@ export const bigqueryService = {
           });
           if (rows.length > 0) return rows;
         } catch (error) {
-          logger.warn(`BigQuery popular skills query failed (falling back to Prisma): ${(error as Error).message}`);
+          logger.warn(
+            `BigQuery popular skills query failed (falling back to Prisma): ${(error as Error).message}`
+          );
         }
       }
     }
@@ -278,7 +287,9 @@ export const bigqueryService = {
           const [rows] = await bigqueryClient.query({ query, params });
           if (rows.length > 0) return rows;
         } catch (error) {
-          logger.warn(`BigQuery salary trends query failed (falling back to Prisma): ${(error as Error).message}`);
+          logger.warn(
+            `BigQuery salary trends query failed (falling back to Prisma): ${(error as Error).message}`
+          );
         }
       }
     }
@@ -317,7 +328,9 @@ export const bigqueryService = {
           });
           if (rows.length > 0) return rows;
         } catch (error) {
-          logger.warn(`BigQuery job trends query failed (falling back to Prisma): ${(error as Error).message}`);
+          logger.warn(
+            `BigQuery job trends query failed (falling back to Prisma): ${(error as Error).message}`
+          );
         }
       }
     }

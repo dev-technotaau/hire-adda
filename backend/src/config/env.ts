@@ -72,7 +72,7 @@ const envSchema = z
     SMTP_PASS: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
     EMAIL_REPLY_TO: z.string().optional(),
-    SMTP_FROM_NAME: z.string().default('Talent Bridge'),
+    SMTP_FROM_NAME: z.string().default('Hire Adda'),
     SMTP_SECURE: z.string().default('false'),
     EMAIL_MAX_SEND_PER_HOUR: z.string().default('100'),
     EMAIL_MAX_SEND_PER_DAY: z.string().default('300'),
@@ -104,7 +104,7 @@ const envSchema = z
     CF_TURNSTILE_SECRET_KEY: z.string().optional(),
 
     // MFA Configuration
-    MFA_ISSUER: z.string().default('TalentBridge'),
+    MFA_ISSUER: z.string().default('HireAdda'),
     MFA_ENABLED: z
       .string()
       .default('true')
@@ -112,7 +112,7 @@ const envSchema = z
 
     // WebAuthn (Passkeys)
     WEBAUTHN_RP_ID: z.string().default('localhost'),
-    WEBAUTHN_RP_NAME: z.string().default('Talent Bridge'),
+    WEBAUTHN_RP_NAME: z.string().default('Hire Adda'),
     WEBAUTHN_ORIGIN: z.string().default('http://localhost:3000'),
 
     // Breach Detection
@@ -169,7 +169,7 @@ const envSchema = z
 
     // Apache Kafka
     KAFKA_BROKERS: z.string().default('localhost:9092'),
-    KAFKA_CLIENT_ID: z.string().default(`talent-bridge-${process.env.NODE_ENV || 'development'}`),
+    KAFKA_CLIENT_ID: z.string().default(`hire-adda-${process.env.NODE_ENV || 'development'}`),
     KAFKA_USERNAME: z.string().optional(),
     KAFKA_PASSWORD: z.string().optional(),
     KAFKA_SASL_MECHANISM: z.string().default('plain'),
@@ -228,14 +228,14 @@ const envSchema = z
 
     // OpenTelemetry
     OTEL_ENABLED: z.string().default('true'),
-    OTEL_SERVICE_NAME: z.string().default('talent-bridge-api'),
+    OTEL_SERVICE_NAME: z.string().default('hire-adda-api'),
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default('http://localhost:4318/v1/traces'),
     OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
 
     // Geocoding
     GEOCODING_PROVIDER: z.enum(['nominatim', 'google']).default('nominatim'),
     NOMINATIM_BASE_URL: z.string().default('https://nominatim.openstreetmap.org'),
-    NOMINATIM_USER_AGENT: z.string().default('TalentBridge/1.0'),
+    NOMINATIM_USER_AGENT: z.string().default('HireAdda/1.0'),
     GOOGLE_GEOCODING_API_KEY: z.string().optional(),
 
     // Database Security
@@ -256,7 +256,7 @@ const envSchema = z
     // Backup Configuration
     BACKUP_DIR: z.string().default('./backups'),
     BACKUP_RETENTION_DAYS: z.coerce.number().default(30),
-    OPENSEARCH_SNAPSHOT_REPO: z.string().default('talent_bridge_repo'),
+    OPENSEARCH_SNAPSHOT_REPO: z.string().default('hire_adda_repo'),
   })
   .superRefine((data, ctx) => {
     // RS256 requires both private and public keys

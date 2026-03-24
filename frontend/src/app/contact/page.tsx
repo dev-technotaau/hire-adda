@@ -16,7 +16,7 @@ const contactInfo = [
   {
     icon: Mail,
     title: 'Email Us',
-    detail: 'support@talentbridge.com',
+    detail: 'support@hireadda.in',
     description: 'We typically respond within 24 hours',
   },
   {
@@ -172,7 +172,9 @@ export default function ContactPage() {
                       label="Category"
                       options={categoryOptions}
                       value={form.category}
-                      onChange={(v) => setForm((prev) => ({ ...prev, category: v as '' | TicketCategory }))}
+                      onChange={(v) =>
+                        setForm((prev) => ({ ...prev, category: v as '' | TicketCategory }))
+                      }
                       placeholder="Select a category"
                     />
                   </div>

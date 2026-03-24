@@ -53,10 +53,7 @@ import { employerService } from '@/services/employer.service';
 import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
 import { COMPANY_TYPE_LABELS, FUNDING_STAGE_LABELS } from '@/constants/enums';
-import {
-  INDIAN_STATES,
-  REVENUE_RANGE_OPTIONS,
-} from '@/constants/suggestions';
+import { INDIAN_STATES, REVENUE_RANGE_OPTIONS } from '@/constants/suggestions';
 import { useAuth } from '@/hooks/use-auth';
 import type {
   UpdateCompanyRequest,
@@ -302,7 +299,7 @@ export default function EmployerOnboardingPage() {
     isLastStep,
     skipOnboarding,
   } = useOnboarding<EmployerOnboardingData>({
-    storageKey: 'tb_employer_onboarding',
+    storageKey: 'ha_employer_onboarding',
     totalSteps: STEPS.length,
     initialData: INITIAL_DATA,
   });
@@ -478,26 +475,34 @@ export default function EmployerOnboardingPage() {
         employeeResourceGroups:
           data.employeeResourceGroups.length > 0 ? data.employeeResourceGroups : undefined,
         benefits: data.benefits.length > 0 ? data.benefits : undefined,
-        structuredPerks: data.structuredPerks.length > 0
-          ? data.structuredPerks.filter((p) => p.category.trim()) as UpdateCompanyRequest['structuredPerks']
-          : undefined,
+        structuredPerks:
+          data.structuredPerks.length > 0
+            ? (data.structuredPerks.filter((p) =>
+                p.category.trim(),
+              ) as UpdateCompanyRequest['structuredPerks'])
+            : undefined,
         techStack: data.techStack.length > 0 ? data.techStack : undefined,
         productsServices: data.productsServices.length > 0 ? data.productsServices : undefined,
         // Backend expects Array<{ title, description }> not Record<string, string>
-        workplacePolicies: Object.keys(data.workplacePolicies).length > 0
-          ? Object.entries(data.workplacePolicies)
-              .filter(([, desc]) => desc.trim())
-              .map(([title, description]) => ({ title, description })) as unknown as UpdateCompanyRequest['workplacePolicies']
-          : undefined,
+        workplacePolicies:
+          Object.keys(data.workplacePolicies).length > 0
+            ? (Object.entries(data.workplacePolicies)
+                .filter(([, desc]) => desc.trim())
+                .map(([title, description]) => ({
+                  title,
+                  description,
+                })) as unknown as UpdateCompanyRequest['workplacePolicies'])
+            : undefined,
         // Backend uses 'issuingOrg', frontend uses 'issuer'
-        awardsRecognitions: data.awardsRecognitions.length > 0
-          ? data.awardsRecognitions
-              .filter((a) => a.title.trim())
-              .map(({ issuer, ...award }) => ({
-                ...award,
-                issuingOrg: issuer || undefined,
-              })) as unknown as UpdateCompanyRequest['awardsRecognitions']
-          : undefined,
+        awardsRecognitions:
+          data.awardsRecognitions.length > 0
+            ? (data.awardsRecognitions
+                .filter((a) => a.title.trim())
+                .map(({ issuer, ...award }) => ({
+                  ...award,
+                  issuingOrg: issuer || undefined,
+                })) as unknown as UpdateCompanyRequest['awardsRecognitions'])
+            : undefined,
         gstNumber: data.gstNumber || undefined,
         cinNumber: data.cinNumber || undefined,
         panNumber: data.panNumber || undefined,
@@ -548,8 +553,8 @@ export default function EmployerOnboardingPage() {
           await coverImageMutation.mutateAsync(coverImageFile);
         }
 
-        markOnboardingComplete('tb_employer_onboarding');
-        showToast.success('Company profile created!', 'Welcome to Talent Bridge');
+        markOnboardingComplete('ha_employer_onboarding');
+        showToast.success('Company profile created!', 'Welcome to Hire Adda');
         router.push(ROUTES.EMPLOYER.DASHBOARD);
       } catch (err) {
         const apiErr = err as unknown as ApiError;
@@ -813,7 +818,7 @@ export default function EmployerOnboardingPage() {
   // --- Compute step title / subtitle --------------------------------------
   const getStepTitle = (): string => {
     const titles: Record<string, string> = {
-      welcome: 'Welcome to Talent Bridge!',
+      welcome: 'Welcome to Hire Adda!',
       basics: 'Company Basics',
       identity: 'Company Identity',
       culture: 'Mission & Culture',
@@ -873,8 +878,8 @@ export default function EmployerOnboardingPage() {
         Hey {displayName}! <span className="inline-block animate-bounce">&#128075;</span>
       </h2>
       <p className="mt-2 max-w-md text-[var(--text-secondary)]">
-        Let&apos;s set up your company profile on Talent Bridge. A complete profile helps you
-        attract the best candidates.
+        Let&apos;s set up your company profile on Hire Adda. A complete profile helps you attract
+        the best candidates.
       </p>
 
       <div className="mt-8 w-full max-w-md space-y-3 text-left">
@@ -1425,23 +1430,26 @@ export default function EmployerOnboardingPage() {
               Quick-add categories
             </p>
             <div className="flex flex-wrap gap-2">
-              {['Health & Wellness', 'Financial', 'Work-Life Balance', 'Learning & Development'].map(
-                (cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() =>
-                      updateData({
-                        structuredPerks: [...data.structuredPerks, { category: cat, perks: [] }],
-                      })
-                    }
-                    title={`Add ${cat} category`}
-                    className="hover:border-primary hover:text-primary cursor-pointer rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
-                  >
-                    + {cat}
-                  </button>
-                ),
-              )}
+              {[
+                'Health & Wellness',
+                'Financial',
+                'Work-Life Balance',
+                'Learning & Development',
+              ].map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() =>
+                    updateData({
+                      structuredPerks: [...data.structuredPerks, { category: cat, perks: [] }],
+                    })
+                  }
+                  title={`Add ${cat} category`}
+                  className="hover:border-primary hover:text-primary cursor-pointer rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
+                >
+                  + {cat}
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -1490,9 +1498,7 @@ export default function EmployerOnboardingPage() {
               <Input
                 placeholder="Add a perk"
                 value={perkInputs[catIndex] || ''}
-                onChange={(e) =>
-                  setPerkInputs((prev) => ({ ...prev, [catIndex]: e.target.value }))
-                }
+                onChange={(e) => setPerkInputs((prev) => ({ ...prev, [catIndex]: e.target.value }))}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -2915,23 +2921,23 @@ export default function EmployerOnboardingPage() {
       )}
 
       <OnboardingShell
-      steps={STEPS}
-      currentStep={step}
-      onNext={handleNext}
-      onPrev={prevStep}
-      onSkip={handleSkip}
-      onGoToStep={goToStep}
-      isSubmitting={saveMutation.isPending || logoMutation.isPending}
-      isLastStep={isLastStep}
-      isFirstStep={isFirstStep}
-      nextDisabled={false}
-      nextLabel={isLastStep ? 'Complete Setup' : undefined}
-      dashboardPath={ROUTES.EMPLOYER.DASHBOARD}
-      title={getStepTitle()}
-      subtitle={getStepSubtitle()}
-    >
-      {renderStepContent()}
-    </OnboardingShell>
+        steps={STEPS}
+        currentStep={step}
+        onNext={handleNext}
+        onPrev={prevStep}
+        onSkip={handleSkip}
+        onGoToStep={goToStep}
+        isSubmitting={saveMutation.isPending || logoMutation.isPending}
+        isLastStep={isLastStep}
+        isFirstStep={isFirstStep}
+        nextDisabled={false}
+        nextLabel={isLastStep ? 'Complete Setup' : undefined}
+        dashboardPath={ROUTES.EMPLOYER.DASHBOARD}
+        title={getStepTitle()}
+        subtitle={getStepSubtitle()}
+      >
+        {renderStepContent()}
+      </OnboardingShell>
     </>
   );
 }

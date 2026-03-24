@@ -4,6 +4,7 @@ import { redis } from '../config/redis';
 import { env } from '../config/env';
 import logger from '../config/logger';
 import { SCHEDULER_QUEUE_NAME } from './scheduler.queue';
+import { withExtractedContext, SpanKind } from '../utils/trace-propagation';
 import { handleJobExpiration } from './job-expiration.worker';
 import { handleTokenCleanup } from './token-cleanup.worker';
 import { handleJobAlert } from './job-alert.worker';
@@ -27,41 +28,49 @@ export function createSchedulerWorker(): Worker {
   const worker = new Worker(
     SCHEDULER_QUEUE_NAME,
     async (job: Job) => {
-      switch (job.name) {
-        case 'check-expired-jobs':
-          return handleJobExpiration(job);
-        case 'cleanup-tokens':
-          return handleTokenCleanup(job);
-        case 'process-alerts':
-          return handleJobAlert(job);
-        case 'check-sla-breaches':
-          return handleSlaCheck(job);
-        case 'send-profile-reminders':
-          return handleProfileReminder(job);
-        case 'check-scheduled-jobs':
-          return handleScheduledPublish(job);
-        case 'send-weekly-digest':
-          return handleWeeklyDigest(job);
-        case 'export-data':
-          return handleDataExport(job);
-        case 'db-backup':
-          return handleDbBackup(job);
-        case 'backup-cleanup':
-          return handleBackupCleanup(job);
-        case 'export-cleanup':
-          return handleExportCleanup(job);
-        case 'send-expiration-warnings':
-          return handleExpirationWarning(job);
-        case 'send-review-reminders':
-          return handleReviewReminder(job);
-        case 'check-stale-profiles':
-          return handleStaleProfileCheck(job);
-        case 'flush-view-counters':
-          return handleViewCounterFlush(job);
-        default:
-          logger.warn(`Unknown scheduler job name: ${job.name}`);
-          return null;
-      }
+      const traceCtx = (job.data as Record<string, any>)?._traceContext || {};
+      return withExtractedContext(
+        traceCtx,
+        `bullmq.process ${job.name}`,
+        SpanKind.CONSUMER,
+        async () => {
+          switch (job.name) {
+            case 'check-expired-jobs':
+              return handleJobExpiration(job);
+            case 'cleanup-tokens':
+              return handleTokenCleanup(job);
+            case 'process-alerts':
+              return handleJobAlert(job);
+            case 'check-sla-breaches':
+              return handleSlaCheck(job);
+            case 'send-profile-reminders':
+              return handleProfileReminder(job);
+            case 'check-scheduled-jobs':
+              return handleScheduledPublish(job);
+            case 'send-weekly-digest':
+              return handleWeeklyDigest(job);
+            case 'export-data':
+              return handleDataExport(job);
+            case 'db-backup':
+              return handleDbBackup(job);
+            case 'backup-cleanup':
+              return handleBackupCleanup(job);
+            case 'export-cleanup':
+              return handleExportCleanup(job);
+            case 'send-expiration-warnings':
+              return handleExpirationWarning(job);
+            case 'send-review-reminders':
+              return handleReviewReminder(job);
+            case 'check-stale-profiles':
+              return handleStaleProfileCheck(job);
+            case 'flush-view-counters':
+              return handleViewCounterFlush(job);
+            default:
+              logger.warn(`Unknown scheduler job name: ${job.name}`);
+              return null;
+          }
+        }
+      );
     },
     {
       connection: redis,

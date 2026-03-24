@@ -5,7 +5,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: opensearch-snapshot
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: opensearch-snapshot
     tier: maintenance
@@ -36,8 +36,8 @@ spec:
               args:
                 - |
                   set -e
-                  OS_URL="http://opensearch.talent-bridge.svc.cluster.local:9200"
-                  REPO="talentbridge_snapshots"
+                  OS_URL="http://opensearch:9200"
+                  REPO="hireadda_snapshots"
                   SNAPSHOT="snapshot_$(date +%Y%m%d_%H%M%S)"
 
                   # Ensure snapshot repository exists

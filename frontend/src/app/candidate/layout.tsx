@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | Candidate Portal — Talent Bridge',
-    default: 'Candidate Dashboard | Talent Bridge',
+    template: '%s | Candidate Portal — Hire Adda',
+    default: 'Candidate Dashboard | Hire Adda',
   },
-  description: 'Manage your job applications, profile, and career opportunities on Talent Bridge.',
+  description: 'Manage your job applications, profile, and career opportunities on Hire Adda.',
   robots: { index: false, follow: false },
 };
 

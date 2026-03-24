@@ -30,7 +30,7 @@ export function generateMetadata({
   return {
     title: fullTitle,
     description: desc,
-    keywords: keywords || ['jobs', 'careers', 'recruitment', 'hiring', 'talent bridge'],
+    keywords: keywords || ['jobs', 'careers', 'recruitment', 'hiring', 'hire adda'],
     openGraph: {
       title: fullTitle,
       description: desc,

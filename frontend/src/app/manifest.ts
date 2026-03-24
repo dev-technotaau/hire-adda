@@ -8,10 +8,10 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     // Basic metadata
-    name: 'TalentBridge - Job Portal & Recruitment Platform',
-    short_name: 'TalentBridge',
+    name: 'HireAdda - Job Portal & Recruitment Platform',
+    short_name: 'HireAdda',
     description:
-      "India's leading job portal. Find jobs, post openings, hire top talent, and build your career with TalentBridge.",
+      "India's leading job portal. Find jobs, post openings, hire top talent, and build your career with HireAdda.",
 
     // PWA behavior
     start_url: '/?utm_source=pwa',
@@ -199,12 +199,12 @@ export default function manifest(): MetadataRoute.Manifest {
       // Uncomment when you have mobile apps
       // {
       //   platform: 'play',
-      //   url: 'https://play.google.com/store/apps/details?id=com.talentbridge.app',
-      //   id: 'com.talentbridge.app',
+      //   url: 'https://play.google.com/store/apps/details?id=com.hireadda.app',
+      //   id: 'com.hireadda.app',
       // },
       // {
       //   platform: 'itunes',
-      //   url: 'https://apps.apple.com/app/talentbridge/id123456789',
+      //   url: 'https://apps.apple.com/app/hireadda/id123456789',
       // },
     ],
     prefer_related_applications: false,

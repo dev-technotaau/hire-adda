@@ -502,7 +502,7 @@ export const initializeServices = async (): Promise<void> => {
 
   // MFA (TOTP via Speakeasy)
   if (env.MFA_ENABLED === true) {
-    registerService('MFA (TOTP)', 'ready', env.MFA_ISSUER || 'Talent Bridge');
+    registerService('MFA (TOTP)', 'ready', env.MFA_ISSUER || 'Hire Adda');
   } else {
     registerService('MFA (TOTP)', 'disabled');
   }

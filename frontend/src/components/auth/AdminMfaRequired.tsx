@@ -50,7 +50,7 @@ export default function AdminMfaRequired() {
       </main>
 
       <footer className="py-4 text-center text-sm text-[var(--text-muted)]">
-        &copy; {new Date().getFullYear()} TalentBridge. All rights reserved.
+        &copy; {new Date().getFullYear()} HireAdda. All rights reserved.
       </footer>
     </div>
   );

@@ -123,13 +123,13 @@ kafka-create-topics:    ## Create consolidated Kafka topics (tb.users, tb.jobs, 
 	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.jobs --partitions 3 --replication-factor 1 --if-not-exists
 	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.applications --partitions 3 --replication-factor 1 --if-not-exists
 	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.notifications --partitions 3 --replication-factor 1 --if-not-exists
-	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic talent-bridge.dlq --partitions 1 --replication-factor 1 --if-not-exists
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic hire-adda.dlq --partitions 1 --replication-factor 1 --if-not-exists
 
 kafka-describe:         ## Describe all Kafka topics with partition details
 	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe
 
 kafka-consumer-lag:     ## Check consumer group lag
-	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group talent-bridge-backend-group --describe
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group hire-adda-backend-group --describe
 
 # ─── Monitoring ─────────────────────────────────────────
 monitoring-up:          ## Start monitoring stack (Prometheus + Grafana + Loki)

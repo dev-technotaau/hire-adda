@@ -1,7 +1,13 @@
-import type { Worker } from 'bullmq';
+import type { Queue, Worker } from 'bullmq';
 import { acquireLock, releaseLock, renewLock } from '../utils/distributed-lock';
 import { updateService } from '../config/service-status';
 import logger from '../config/logger';
+import {
+  bullmqQueueWaiting,
+  bullmqQueueActive,
+  bullmqQueueCompleted,
+  bullmqQueueFailed,
+} from '../routes/metrics.routes';
 
 import { createEmailWorker } from './email.worker';
 import { createSmsWorker } from './sms.worker';
@@ -20,7 +26,41 @@ import { createSchedulerWorker } from './scheduler.worker';
 import { startKafkaConsumer, stopKafkaConsumer } from '../kafka/consumer';
 import { startDlqConsumer, stopDlqConsumer } from '../kafka/dlq-consumer';
 
-const LOCK_KEY = 'tb:worker-leader';
+// Queue instances for metrics collection
+import { emailQueue } from './email.queue';
+import { smsQueue } from './sms.queue';
+import { fcmQueue } from './fcm.queue';
+import { webPushQueue } from './web-push.queue';
+import { inAppQueue } from './in-app.queue';
+import { whatsappQueue } from './whatsapp.queue';
+import { webhookQueue } from './webhook.queue';
+import { matchingQueue } from './matching.queue';
+import { geocodingQueue } from './geocoding.queue';
+import { resumeParseQueue } from './resume-parse.queue';
+import { esReindexQueue } from './es-reindex.queue';
+import { onboardingDripQueue } from './onboarding-drip.queue';
+import { imageProcessingQueue } from './image-processing.queue';
+import { schedulerQueue } from './scheduler.queue';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ALL_QUEUES: Queue<any>[] = [
+  emailQueue,
+  smsQueue,
+  fcmQueue,
+  webPushQueue,
+  inAppQueue,
+  whatsappQueue,
+  webhookQueue,
+  matchingQueue,
+  geocodingQueue,
+  resumeParseQueue,
+  esReindexQueue,
+  onboardingDripQueue,
+  imageProcessingQueue,
+  schedulerQueue,
+];
+
+const LOCK_KEY = 'ha:worker-leader';
 const LOCK_TTL = 30; // seconds — auto-expires if leader crashes
 const RENEW_INTERVAL = 10_000; // ms — renew every 10s (3 chances before TTL)
 const MONITOR_INTERVAL = 5_000; // ms — standby checks every 5s
@@ -36,6 +76,7 @@ const MONITOR_INTERVAL = 5_000; // ms — standby checks every 5s
 class WorkerLeaderManager {
   private lockValue: string | null = null;
   private timer: NodeJS.Timeout | null = null;
+  private metricsTimer: NodeJS.Timeout | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private workers: Worker<any>[] = [];
   private _isLeader = false;
@@ -56,6 +97,7 @@ class WorkerLeaderManager {
       this.startWorkers();
       await this.startKafka();
       this.startRenewal();
+      this.startMetricsCollection();
       updateService('BullMQ Workers', 'ready', `Leader — ${this.workers.length} workers`);
       updateService(
         'Kafka Consumer',
@@ -114,6 +156,29 @@ class WorkerLeaderManager {
     }
   }
 
+  private startMetricsCollection(): void {
+    this.metricsTimer = setInterval(async () => {
+      for (const queue of ALL_QUEUES) {
+        try {
+          const counts = await queue.getJobCounts('waiting', 'active', 'completed', 'failed');
+          bullmqQueueWaiting.set({ queue: queue.name }, counts.waiting);
+          bullmqQueueActive.set({ queue: queue.name }, counts.active);
+          bullmqQueueCompleted.set({ queue: queue.name }, counts.completed);
+          bullmqQueueFailed.set({ queue: queue.name }, counts.failed);
+        } catch {
+          // Skip — queue may be temporarily unavailable
+        }
+      }
+    }, 30_000);
+  }
+
+  private stopMetricsCollection(): void {
+    if (this.metricsTimer) {
+      clearInterval(this.metricsTimer);
+      this.metricsTimer = null;
+    }
+  }
+
   /**
    * Periodically renew the leader lock. If renewal fails (lock stolen or Redis down),
    * transition to standby mode.
@@ -124,6 +189,7 @@ class WorkerLeaderManager {
       if (!renewed) {
         logger.warn('Lost worker leadership (lock renewal failed)');
         this._isLeader = false;
+        this.stopMetricsCollection();
         await this.stopWorkers();
         await this.stopKafka();
         updateService('BullMQ Workers', 'ready', 'Standby — monitoring');
@@ -148,6 +214,7 @@ class WorkerLeaderManager {
         this.startWorkers();
         await this.startKafka();
         this.startRenewal();
+        this.startMetricsCollection();
         updateService('BullMQ Workers', 'ready', `Leader — ${this.workers.length} workers`);
         updateService(
           'Kafka Consumer',
@@ -159,6 +226,7 @@ class WorkerLeaderManager {
   }
 
   private async stopWorkers(): Promise<void> {
+    this.stopMetricsCollection();
     await Promise.allSettled(this.workers.map((w) => w.close()));
     this.workers = [];
     logger.info('Stopped all BullMQ workers');

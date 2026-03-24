@@ -1,5 +1,5 @@
 const fs=require("fs");
-const p="d:/Projects/talent_bridge/frontend/src/constants/suggestions.ts";
+const p="d:/Projects/hire_adda/frontend/src/constants/suggestions.ts";
 let c=fs.readFileSync(p,"utf-8");
 const NL="
 ";

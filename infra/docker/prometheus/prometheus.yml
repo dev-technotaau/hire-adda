@@ -1,5 +1,5 @@
 # ============================================================
-# Prometheus Configuration — Talent Bridge Docker Compose
+# Prometheus Configuration — Hire Adda Docker Compose
 # Scrape interval: 30s (matches K8s kube-prometheus values)
 # ============================================================
 global:

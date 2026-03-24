@@ -30,7 +30,7 @@ fi
 # Configuration
 BACKUP_DIR="${BACKUP_DIR:-$BACKEND_DIR/backups/db}"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILE="talent_bridge_${TIMESTAMP}.sql.gz"
+BACKUP_FILE="hire_adda_${TIMESTAMP}.sql.gz"
 
 # Ensure backup directory exists
 mkdir -p "$BACKUP_DIR"

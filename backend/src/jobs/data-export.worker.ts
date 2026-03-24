@@ -5,7 +5,11 @@ import { collectUserData } from '../services/data-export.service';
 import { emailQueue } from './email.queue';
 import { prisma } from '../config/prisma';
 import { r2Client, R2_BUCKET_NAME } from '../config/r2';
-import { userDataExportReady, candidateExportReady, resumeExportReady } from '../templates/email/data-export';
+import {
+  userDataExportReady,
+  candidateExportReady,
+  resumeExportReady,
+} from '../templates/email/data-export';
 import { notificationService } from '../services/notification.service';
 import { NotificationType } from '@prisma/client';
 
@@ -39,22 +43,24 @@ export async function handleDataExport(job: Job<DataExportJob>) {
             html: exportEmail.html,
             attachments: [
               {
-                filename: `talent-bridge-data-export-${new Date().toISOString().split('T')[0]}.json`,
+                filename: `hire-adda-data-export-${new Date().toISOString().split('T')[0]}.json`,
                 content: jsonStr,
                 contentType: 'application/json',
               },
             ],
           });
 
-          notificationService.send({
-            userId,
-            title: 'Data Export Ready',
-            message: 'Your personal data export has been sent to your email.',
-            type: NotificationType.SUCCESS,
-            category: 'export',
-            link: '/candidate/settings',
-            channels: ['in_app'],
-          }).catch(() => {});
+          notificationService
+            .send({
+              userId,
+              title: 'Data Export Ready',
+              message: 'Your personal data export has been sent to your email.',
+              type: NotificationType.SUCCESS,
+              category: 'export',
+              link: '/candidate/settings',
+              channels: ['in_app'],
+            })
+            .catch(() => {});
 
           logger.info(`User data export completed and emailed for user ${userId}`);
           return { success: true };
@@ -131,9 +137,7 @@ export async function handleDataExport(job: Job<DataExportJob>) {
           }
 
           const buffer =
-            format === 'csv'
-              ? await workbook.csv.writeBuffer()
-              : await workbook.xlsx.writeBuffer();
+            format === 'csv' ? await workbook.csv.writeBuffer() : await workbook.xlsx.writeBuffer();
 
           const filename = `candidates-${Date.now()}.${format === 'csv' ? 'csv' : 'xlsx'}`;
           const contentType =
@@ -141,7 +145,8 @@ export async function handleDataExport(job: Job<DataExportJob>) {
               ? 'text/csv'
               : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-          const { uploadFileToR2, getSignedDownloadUrl } = await import('../services/storage.service');
+          const { uploadFileToR2, getSignedDownloadUrl } =
+            await import('../services/storage.service');
           const { key } = await uploadFileToR2(
             Buffer.from(buffer),
             filename,
@@ -161,22 +166,30 @@ export async function handleDataExport(job: Job<DataExportJob>) {
             throw new Error('User email not found');
           }
 
-          const candidateEmail = candidateExportReady(user.firstName, candidates.length, format || 'xlsx', signedUrl, filename);
+          const candidateEmail = candidateExportReady(
+            user.firstName,
+            candidates.length,
+            format || 'xlsx',
+            signedUrl,
+            filename
+          );
           await emailQueue.add('send-email', {
             to: user.email,
             subject: candidateEmail.subject,
             html: candidateEmail.html,
           });
 
-          notificationService.send({
-            userId,
-            title: 'Candidate Export Ready',
-            message: `Your candidate export (${candidates.length} candidates) has been sent to your email.`,
-            type: NotificationType.SUCCESS,
-            category: 'export',
-            link: '/employer/candidates',
-            channels: ['in_app'],
-          }).catch(() => {});
+          notificationService
+            .send({
+              userId,
+              title: 'Candidate Export Ready',
+              message: `Your candidate export (${candidates.length} candidates) has been sent to your email.`,
+              type: NotificationType.SUCCESS,
+              category: 'export',
+              link: '/employer/candidates',
+              channels: ['in_app'],
+            })
+            .catch(() => {});
 
           logger.info(
             `Candidate export completed for user ${userId}: ${candidates.length} candidates, format: ${format}`
@@ -198,9 +211,12 @@ export async function handleDataExport(job: Job<DataExportJob>) {
             },
           });
 
-          const { extractR2KeyFromUrl, downloadFileFromR2, uploadFileToR2, getSignedDownloadUrl: getResumeSignedUrl } = await import(
-            '../services/storage.service'
-          );
+          const {
+            extractR2KeyFromUrl,
+            downloadFileFromR2,
+            uploadFileToR2,
+            getSignedDownloadUrl: getResumeSignedUrl,
+          } = await import('../services/storage.service');
           const archiver = (await import('archiver')).default;
           const path = await import('path');
 
@@ -244,7 +260,9 @@ export async function handleDataExport(job: Job<DataExportJob>) {
               archive.append(fileBuffer, { name: fileName });
               resumeCount++;
             } catch (err) {
-              logger.warn(`Failed to download resume for candidate ${c.user?.id}: ${(err as Error).message}`);
+              logger.warn(
+                `Failed to download resume for candidate ${c.user?.id}: ${(err as Error).message}`
+              );
               skippedCount++;
             }
           }
@@ -294,15 +312,17 @@ export async function handleDataExport(job: Job<DataExportJob>) {
             html: resumeEmail.html,
           });
 
-          notificationService.send({
-            userId,
-            title: 'Resume Export Ready',
-            message: `Your resume export (${resumeCount} resumes) has been sent to your email.`,
-            type: NotificationType.SUCCESS,
-            category: 'export',
-            link: '/employer/candidates',
-            channels: ['in_app'],
-          }).catch(() => {});
+          notificationService
+            .send({
+              userId,
+              title: 'Resume Export Ready',
+              message: `Your resume export (${resumeCount} resumes) has been sent to your email.`,
+              type: NotificationType.SUCCESS,
+              category: 'export',
+              link: '/employer/candidates',
+              channels: ['in_app'],
+            })
+            .catch(() => {});
 
           logger.info(
             `Resume export completed for user ${userId}: ${resumeCount} resumes, ${skippedCount} skipped`

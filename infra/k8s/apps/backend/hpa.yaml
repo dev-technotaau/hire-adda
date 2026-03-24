@@ -6,7 +6,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: backend-hpa
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: backend
 spec:

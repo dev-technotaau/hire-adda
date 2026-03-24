@@ -1,10 +1,10 @@
-import { Kafka } from 'kafkajs';
+import type { Kafka } from 'kafkajs';
 import { env } from '../config/env';
 import { prisma } from '../config/prisma';
 import logger from '../config/logger';
 
-const DLQ_TOPIC = 'talent-bridge.dlq';
-const DLQ_GROUP_ID = 'talent-bridge-dlq-group';
+const DLQ_TOPIC = 'hire-adda.dlq';
+const DLQ_GROUP_ID = 'hire-adda-dlq-group';
 
 let dlqConsumer: ReturnType<Kafka['consumer']> | null = null;
 
@@ -58,16 +58,20 @@ export async function startDlqConsumer(): Promise<void> {
               });
               const { notificationService } = await import('../services/notification.service');
               for (const admin of superAdmins) {
-                await notificationService.send({
-                  userId: admin.id,
-                  title: 'Kafka DLQ Alert',
-                  message: `Failed message from ${data.originalTopic}: ${(data.error || 'Unknown error').slice(0, 200)}`,
-                  type: 'WARNING' as any,
-                  category: 'system',
-                  channels: ['in_app'],
-                }).catch(() => {});
+                await notificationService
+                  .send({
+                    userId: admin.id,
+                    title: 'Kafka DLQ Alert',
+                    message: `Failed message from ${data.originalTopic}: ${(data.error || 'Unknown error').slice(0, 200)}`,
+                    type: 'WARNING' as any,
+                    category: 'system',
+                    channels: ['in_app'],
+                  })
+                  .catch(() => {});
               }
-            } catch { /* non-critical */ }
+            } catch {
+              /* non-critical */
+            }
           })();
 
           logger.warn(`DLQ message persisted from topic: ${data.originalTopic}`);

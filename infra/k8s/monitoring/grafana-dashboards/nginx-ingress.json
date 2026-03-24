@@ -171,7 +171,7 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["nginx", "ingress", "talent-bridge"],
+  "tags": ["nginx", "ingress", "hire-adda"],
   "templating": { "list": [] },
   "time": { "from": "now-6h", "to": "now" },
   "title": "Nginx Ingress",

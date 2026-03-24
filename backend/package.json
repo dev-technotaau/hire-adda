@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Talent Bridge Backend API",
+  "description": "Hire Adda Backend API",
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon",
@@ -27,7 +27,7 @@
     "backfill:cloud-talent": "dotenv -- ts-node src/scripts/backfill-cloud-talent.ts",
     "postinstall": "prisma generate",
     "prepare": "husky",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org technotaau-rn --project talent-bridge-api ./dist && sentry-cli sourcemaps upload --org technotaau-rn --project talent-bridge-api ./dist"
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org technotaau-rn --project hire-adda-api ./dist && sentry-cli sourcemaps upload --org technotaau-rn --project hire-adda-api ./dist"
   },
   "keywords": [],
   "author": "",

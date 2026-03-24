@@ -6,7 +6,7 @@ importScripts('https://www.gstatic.com/firebasejs/11.4.0/firebase-messaging-comp
 let firebaseConfig = self.__FIREBASE_CONFIG__ || null;
 
 function handleBackgroundMessage(payload) {
-    const title = payload.notification?.title || 'Talent Bridge';
+    const title = payload.notification?.title || 'Hire Adda';
     const options = {
         body: payload.notification?.body || '',
         icon: '/icon-192.png',

@@ -36,7 +36,10 @@ import {
   accountDeletionRequested as deletionRequestedEmailTemplate,
 } from '../templates/email/auth';
 import { passwordChanged as passwordChangedEmailTemplate } from '../templates/email/security';
-import { documentVerificationStatus as verificationStatusEmailTemplate, verificationSubmitted as verificationSubmittedEmailTemplate } from '../templates/email/onboarding';
+import {
+  documentVerificationStatus as verificationStatusEmailTemplate,
+  verificationSubmitted as verificationSubmittedEmailTemplate,
+} from '../templates/email/onboarding';
 import { applicationWithdrawn as appWithdrawnEmailTemplate } from '../templates/email/job';
 
 const tracer = trace.getTracer('notification-service');
@@ -44,10 +47,14 @@ const tracer = trace.getTracer('notification-service');
 /** Map user role to their dashboard settings path */
 function settingsLinkForRole(role: string): string {
   switch (role) {
-    case 'EMPLOYER': return '/employer/settings';
-    case 'ADMIN': return '/admin/settings';
-    case 'SUPER_ADMIN': return '/super-admin/settings';
-    default: return '/candidate/settings';
+    case 'EMPLOYER':
+      return '/employer/settings';
+    case 'ADMIN':
+      return '/admin/settings';
+    case 'SUPER_ADMIN':
+      return '/super-admin/settings';
+    default:
+      return '/candidate/settings';
   }
 }
 
@@ -164,10 +171,8 @@ class NotificationService {
       await Promise.allSettled(dispatches);
 
       // Publish Kafka event for analytics pipeline
-      Promise.all([
-        import('../kafka/producer'),
-        import('../kafka/topics')
-      ]).then(([{ publishEvent }, { KafkaTopics }]) =>
+      Promise.all([import('../kafka/producer'), import('../kafka/topics')])
+        .then(([{ publishEvent }, { KafkaTopics }]) =>
           publishEvent(KafkaTopics.NOTIFICATION_SENT, userId, {
             userId,
             type,
@@ -246,7 +251,7 @@ class NotificationService {
     const smsOptions = user.mobileNumber
       ? {
           to: user.mobileNumber,
-          body: `New job match: ${jobTitle} at ${companyName} (${Math.round(matchScore * 100)}% match). View on Talent Bridge.`,
+          body: `New job match: ${jobTitle} at ${companyName} (${Math.round(matchScore * 100)}% match). View on Hire Adda.`,
         }
       : undefined;
     if (smsOptions) channels.push('sms');
@@ -320,7 +325,7 @@ class NotificationService {
     const smsOptions = user.mobileNumber
       ? {
           to: user.mobileNumber,
-          body: `New application: ${candidateName} applied for ${jobTitle}. Review on Talent Bridge.`,
+          body: `New application: ${candidateName} applied for ${jobTitle}. Review on Hire Adda.`,
         }
       : undefined;
     if (smsOptions) channels.push('sms');
@@ -391,7 +396,11 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
-    const statusWhatsappTarget = this.getWhatsappTarget(user, candidateUserId, 'notifyApplicationStatusChange');
+    const statusWhatsappTarget = this.getWhatsappTarget(
+      user,
+      candidateUserId,
+      'notifyApplicationStatusChange'
+    );
     if (statusWhatsappTarget) {
       channels.push('whatsapp');
       const jobLink = `${process.env.FRONTEND_URL}/candidate/jobs/${jobId}`;
@@ -423,7 +432,7 @@ class NotificationService {
     const smsOptions = user.mobileNumber
       ? {
           to: user.mobileNumber,
-          body: `${statusMessage} for ${jobTitle} at ${companyName}. Check Talent Bridge for details.`,
+          body: `${statusMessage} for ${jobTitle} at ${companyName}. Check Hire Adda for details.`,
         }
       : undefined;
     if (smsOptions) channels.push('sms');
@@ -475,7 +484,11 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
-    const whatsappTarget = this.getWhatsappTarget(user, candidateUserId, 'notifyApplicationSubmitted');
+    const whatsappTarget = this.getWhatsappTarget(
+      user,
+      candidateUserId,
+      'notifyApplicationSubmitted'
+    );
     if (whatsappTarget) {
       channels.push('whatsapp');
       const tmpl = applicationSubmittedWhatsapp(jobTitle, companyName);
@@ -489,7 +502,7 @@ class NotificationService {
     const smsOptions = user.mobileNumber
       ? {
           to: user.mobileNumber,
-          body: `Application submitted for ${jobTitle} at ${companyName}. Track it on Talent Bridge.`,
+          body: `Application submitted for ${jobTitle} at ${companyName}. Track it on Hire Adda.`,
         }
       : undefined;
     if (smsOptions) channels.push('sms');
@@ -551,7 +564,7 @@ class NotificationService {
     const smsOptions = user.mobileNumber
       ? {
           to: user.mobileNumber,
-          body: `Your Talent Bridge password was changed on ${time}. If this wasn't you, reset it immediately.`,
+          body: `Your Hire Adda password was changed on ${time}. If this wasn't you, reset it immediately.`,
         }
       : undefined;
     if (smsOptions) channels.push('sms');
@@ -614,7 +627,7 @@ class NotificationService {
     const smsOptions = user.mobileNumber
       ? {
           to: user.mobileNumber,
-          body: `Your Talent Bridge account has been suspended.${reason ? ` Reason: ${reason}` : ''} Contact support for help.`,
+          body: `Your Hire Adda account has been suspended.${reason ? ` Reason: ${reason}` : ''} Contact support for help.`,
         }
       : undefined;
     if (smsOptions) channels.push('sms');
@@ -674,7 +687,7 @@ class NotificationService {
     const smsOptions = user.mobileNumber
       ? {
           to: user.mobileNumber,
-          body: 'Your Talent Bridge account has been reactivated. You can now sign in and use all features.',
+          body: 'Your Hire Adda account has been reactivated. You can now sign in and use all features.',
         }
       : undefined;
     if (smsOptions) channels.push('sms');
@@ -724,7 +737,9 @@ class NotificationService {
       };
     }
 
-    const whatsappTarget = user ? this.getWhatsappTarget(user, userId, 'notifyVerificationSubmitted') : null;
+    const whatsappTarget = user
+      ? this.getWhatsappTarget(user, userId, 'notifyVerificationSubmitted')
+      : null;
     if (whatsappTarget) {
       channels.push('whatsapp');
       const waTmpl = documentRequestWhatsapp(
@@ -798,7 +813,7 @@ class NotificationService {
     const smsOptions = user.mobileNumber
       ? {
           to: user.mobileNumber,
-          body: `Your ${verificationType} verification has been ${status}.${comments ? ` Note: ${comments}` : ''} Check Talent Bridge.`,
+          body: `Your ${verificationType} verification has been ${status}.${comments ? ` Note: ${comments}` : ''} Check Hire Adda.`,
         }
       : undefined;
     if (smsOptions) channels.push('sms');
@@ -907,7 +922,7 @@ class NotificationService {
       if (admin.mobileNumber) {
         smsOptions = {
           to: admin.mobileNumber,
-          body: `New ${verificationType} verification request from ${userName}${companyInfo}. Review at Talent Bridge admin panel.`,
+          body: `New ${verificationType} verification request from ${userName}${companyInfo}. Review at Hire Adda admin panel.`,
         };
         channels.push('sms');
       }
@@ -1160,7 +1175,11 @@ class NotificationService {
       emailOptions = { to: user.email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text };
     }
 
-    const whatsappTarget = this.getWhatsappTarget(user, employerUserId, 'notifyMatchingCandidatesFound');
+    const whatsappTarget = this.getWhatsappTarget(
+      user,
+      employerUserId,
+      'notifyMatchingCandidatesFound'
+    );
     if (whatsappTarget) {
       channels.push('whatsapp');
       const waTmpl = adminAlertWhatsapp(
@@ -1215,7 +1234,11 @@ class NotificationService {
 
     if (user.isEmailVerified) {
       channels.push('email');
-      const withdrawnEmail = appWithdrawnEmailTemplate(user.firstName || 'Hiring Manager', candidateName, jobTitle);
+      const withdrawnEmail = appWithdrawnEmailTemplate(
+        user.firstName || 'Hiring Manager',
+        candidateName,
+        jobTitle
+      );
       emailOptions = {
         to: user.email,
         subject: withdrawnEmail.subject,
@@ -1224,7 +1247,11 @@ class NotificationService {
       };
     }
 
-    const whatsappTarget = this.getWhatsappTarget(user, employerUserId, 'notifyApplicationWithdrawn');
+    const whatsappTarget = this.getWhatsappTarget(
+      user,
+      employerUserId,
+      'notifyApplicationWithdrawn'
+    );
     if (whatsappTarget) {
       channels.push('whatsapp');
       const waTmpl = newApplicationWhatsapp(candidateName, jobTitle);
@@ -1238,7 +1265,7 @@ class NotificationService {
     const smsOptions = user.mobileNumber
       ? {
           to: user.mobileNumber,
-          body: `${candidateName} withdrew their application for ${jobTitle}. Check Talent Bridge for updates.`,
+          body: `${candidateName} withdrew their application for ${jobTitle}. Check Hire Adda for updates.`,
         }
       : undefined;
     if (smsOptions) channels.push('sms');
@@ -1330,7 +1357,11 @@ class NotificationService {
 
   /** Resolve the WhatsApp target number for a user. Returns the number if verified, or null. */
   private getWhatsappTarget(
-    user: { whatsappNumber: string | null; mobileNumber: string | null; isWhatsappVerified: boolean },
+    user: {
+      whatsappNumber: string | null;
+      mobileNumber: string | null;
+      isWhatsappVerified: boolean;
+    },
     userId: string,
     method: string
   ): string | null {
@@ -1516,7 +1547,9 @@ class NotificationService {
           title,
           body,
           data: {
-            ...(data ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])) : {}),
+            ...(data
+              ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
+              : {}),
             ...(link ? { link } : {}),
           },
         },

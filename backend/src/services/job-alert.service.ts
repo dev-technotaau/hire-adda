@@ -160,7 +160,7 @@ export const jobAlertService = {
           let smsOptions;
           let whatsappOptions;
 
-          const frontendUrl = process.env.FRONTEND_URL || 'https://talentbridge.com';
+          const frontendUrl = process.env.FRONTEND_URL || 'https://hireadda.in';
 
           if (alert.user.isEmailVerified && alert.user.email) {
             channels.push('email');

@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button';
 
 /**
  * PWA Share Target Handler
- * Receives shared content from other apps when user shares to TalentBridge
+ * Receives shared content from other apps when user shares to HireAdda
  * @see https://web.dev/web-share-target/
  */
 export default function SharePage() {
@@ -73,18 +73,14 @@ export default function SharePage() {
               <h1 className="text-xl font-semibold text-[var(--text)]">
                 Processing Shared Content
               </h1>
-              <p className="text-sm text-[var(--text-secondary)]">
-                Opening in TalentBridge...
-              </p>
+              <p className="text-sm text-[var(--text-secondary)]">Opening in HireAdda...</p>
             </>
           )}
 
           {status === 'success' && (
             <>
               <CheckCircle className="h-12 w-12 text-[var(--success)]" />
-              <h1 className="text-xl font-semibold text-[var(--text)]">
-                Content Received!
-              </h1>
+              <h1 className="text-xl font-semibold text-[var(--text)]">Content Received!</h1>
               <p className="text-sm text-[var(--text-secondary)]">Redirecting you now...</p>
             </>
           )}
@@ -92,13 +88,15 @@ export default function SharePage() {
           {status === 'error' && (
             <>
               <Share2 className="h-12 w-12 text-[var(--error)]" />
-              <h1 className="text-xl font-semibold text-[var(--text)]">
-                Unable to Process Share
-              </h1>
+              <h1 className="text-xl font-semibold text-[var(--text)]">Unable to Process Share</h1>
               <p className="text-sm text-[var(--text-secondary)]">
                 We encountered an issue processing the shared content.
               </p>
-              <Button onClick={() => router.push('/')} className="mt-4" tooltip="Go to the home page">
+              <Button
+                onClick={() => router.push('/')}
+                className="mt-4"
+                tooltip="Go to the home page"
+              >
                 Go to Home
               </Button>
             </>

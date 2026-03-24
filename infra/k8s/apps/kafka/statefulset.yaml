@@ -6,16 +6,17 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: kafka
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: kafka
     tier: messaging
     app.kubernetes.io/name: kafka
     app.kubernetes.io/component: messaging
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
 spec:
   serviceName: kafka
-  replicas: 1
+  # Phase 2: Cloud Aiven — scale to 1 for Phase 3 (local)
+  replicas: 0
   selector:
     matchLabels:
       app: kafka
@@ -51,11 +52,11 @@ spec:
             - name: KAFKA_PROCESS_ROLES
               value: 'broker,controller'
             - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: '1@kafka-0.kafka.talent-bridge.svc.cluster.local:9093'
+              value: '1@kafka-0.kafka.hire-adda.svc.cluster.local:9093'
             - name: KAFKA_LISTENERS
               value: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: 'PLAINTEXT://kafka-0.kafka.talent-bridge.svc.cluster.local:9092'
+              value: 'PLAINTEXT://kafka-0.kafka.hire-adda.svc.cluster.local:9092'
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: 'PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT'
             - name: KAFKA_CONTROLLER_LISTENER_NAMES
@@ -118,7 +119,7 @@ spec:
           image: danielqsj/kafka-exporter:v1.8.0
           args:
             - '--kafka.server=localhost:9092'
-            - '--topic.filter=tb\..*|talent-bridge\..*'
+            - '--topic.filter=tb\..*|hire-adda\..*'
           ports:
             - name: metrics
               containerPort: 9308

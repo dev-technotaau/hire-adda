@@ -4,7 +4,7 @@ import PublicLayout from '@/components/layout/PublicLayout';
 export const metadata: Metadata = {
   title: 'Cookie Policy',
   description:
-    'Learn how TalentBridge uses cookies and similar technologies to improve your experience on our job portal platform.',
+    'Learn how HireAdda uses cookies and similar technologies to improve your experience on our job portal platform.',
 };
 
 const sections = [
@@ -16,7 +16,7 @@ const sections = [
   {
     title: 'How We Use Cookies',
     content:
-      'TalentBridge uses cookies and similar technologies for several purposes: to keep you signed in to your account, to remember your preferences and settings, to understand how you use our platform so we can improve it, to deliver relevant job recommendations, to measure the effectiveness of our communications, and to protect against fraudulent or unauthorized activity. We also use cookies to provide analytics that help us understand platform usage patterns and optimize performance.',
+      'HireAdda uses cookies and similar technologies for several purposes: to keep you signed in to your account, to remember your preferences and settings, to understand how you use our platform so we can improve it, to deliver relevant job recommendations, to measure the effectiveness of our communications, and to protect against fraudulent or unauthorized activity. We also use cookies to provide analytics that help us understand platform usage patterns and optimize performance.',
   },
   {
     title: 'Types of Cookies We Use',
@@ -26,7 +26,7 @@ const sections = [
   {
     title: 'Cookie Consent and Management',
     content:
-      'When you first visit TalentBridge, you will see a cookie consent banner that allows you to accept or customize your cookie preferences. You can change your preferences at any time through the cookie settings accessible from the footer of our website. You can also control cookies through your browser settings. Most browsers allow you to block or delete cookies, but doing so may affect the functionality of our platform. Note that strictly necessary cookies cannot be disabled as they are required for the platform to function properly.',
+      'When you first visit HireAdda, you will see a cookie consent banner that allows you to accept or customize your cookie preferences. You can change your preferences at any time through the cookie settings accessible from the footer of our website. You can also control cookies through your browser settings. Most browsers allow you to block or delete cookies, but doing so may affect the functionality of our platform. Note that strictly necessary cookies cannot be disabled as they are required for the platform to function properly.',
   },
   {
     title: 'Third-Party Cookies',
@@ -51,7 +51,7 @@ const sections = [
   {
     title: 'Contact Us',
     content:
-      'If you have any questions about our use of cookies or this Cookie Policy, please contact us at privacy@talentbridge.com. You may also write to our Data Protection Officer at TalentBridge Technologies Pvt. Ltd., 4th Floor, Tower B, Koramangala 4th Block, Bangalore, Karnataka 560034, India. For general support, reach out to support@talentbridge.com or call +91 1800-123-4567.',
+      'If you have any questions about our use of cookies or this Cookie Policy, please contact us at privacy@hireadda.in. You may also write to our Data Protection Officer at HireAdda Technologies Pvt. Ltd., 4th Floor, Tower B, Koramangala 4th Block, Bangalore, Karnataka 560034, India. For general support, reach out to support@hireadda.in or call +91 1800-123-4567.',
   },
 ];
 
@@ -75,11 +75,10 @@ export default function CookiePolicyPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-xl border border-[var(--border)] bg-white p-6 sm:p-10">
             <p className="leading-relaxed text-[var(--text-secondary)]">
-              This Cookie Policy explains how TalentBridge Technologies Pvt. Ltd.
-              (&quot;TalentBridge,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) uses
-              cookies and similar tracking technologies when you visit our platform. This policy
-              should be read alongside our Privacy Policy, which provides further details on how we
-              process your personal data.
+              This Cookie Policy explains how HireAdda Technologies Pvt. Ltd. (&quot;HireAdda,&quot;
+              &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) uses cookies and similar tracking
+              technologies when you visit our platform. This policy should be read alongside our
+              Privacy Policy, which provides further details on how we process your personal data.
             </p>
 
             <div className="mt-10 space-y-10">
@@ -97,10 +96,10 @@ export default function CookiePolicyPage() {
 
             <div className="mt-10 border-t border-[var(--border)] pt-6">
               <p className="text-sm text-[var(--text-muted)]">
-                This Cookie Policy is effective as of February 1, 2026. TalentBridge Technologies
-                Pvt. Ltd. is registered under the laws of India with its registered office in
-                Bangalore, Karnataka. By continuing to use our platform, you consent to the use of
-                cookies as described in this policy.
+                This Cookie Policy is effective as of February 1, 2026. HireAdda Technologies Pvt.
+                Ltd. is registered under the laws of India with its registered office in Bangalore,
+                Karnataka. By continuing to use our platform, you consent to the use of cookies as
+                described in this policy.
               </p>
             </div>
           </div>

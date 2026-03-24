@@ -201,7 +201,7 @@ export default function RegisterPage() {
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-[var(--text)]">Create Account</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Join TalentBridge to find your perfect match
+            Join HireAdda to find your perfect match
           </p>
         </div>
 
@@ -414,7 +414,12 @@ export default function RegisterPage() {
 
                 <Turnstile onSuccess={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
 
-                <Button type="submit" fullWidth isLoading={isLoading} tooltip="Create your new account">
+                <Button
+                  type="submit"
+                  fullWidth
+                  isLoading={isLoading}
+                  tooltip="Create your new account"
+                >
                   Create Account
                 </Button>
               </motion.div>

@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq';
 import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { injectTraceContext } from '../utils/trace-propagation';
 
 export const ONBOARDING_DRIP_QUEUE_NAME = 'onboarding-drip-queue';
 
@@ -39,7 +40,7 @@ export async function scheduleOnboardingDrip(userId: string, role: string): Prom
   for (const { delay, step } of delays) {
     await onboardingDripQueue.add(
       'send-drip',
-      { userId, role, step },
+      { userId, role, step, _traceContext: injectTraceContext() },
       {
         delay,
         jobId: `drip:${userId}:${step}`, // Prevent duplicates

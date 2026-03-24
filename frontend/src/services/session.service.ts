@@ -10,7 +10,7 @@ export const sessionService = {
     // Map backend field names to UI-friendly aliases
     const currentSessionId =
       typeof document !== 'undefined'
-        ? (document.cookie.match(/tb_session_id=([^;]+)/)?.[1] || null)
+        ? document.cookie.match(/ha_session_id=([^;]+)/)?.[1] || null
         : null;
     if (data.data) {
       data.data = data.data.map((session) => ({

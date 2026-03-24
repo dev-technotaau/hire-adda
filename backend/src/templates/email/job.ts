@@ -252,21 +252,21 @@ export const jobPostedConfirmation = (
   jobTitle: string,
   jobId: string
 ): EmailTemplate => ({
-  subject: `Job Posted: ${jobTitle} — Talent Bridge`,
+  subject: `Job Posted: ${jobTitle} — Hire Adda`,
   html: emailLayout(
     `
         ${iconCircle('&#9989;', BRAND.successLight)}
         ${heading('Job Posted Successfully')}
         ${greeting(employerName)}
-        ${paragraph(`Your job posting <strong>${jobTitle}</strong> is now live on Talent Bridge.`)}
+        ${paragraph(`Your job posting <strong>${jobTitle}</strong> is now live on Hire Adda.`)}
         ${successBox('Candidates can now discover and apply for this position.')}
         ${paragraph("You'll receive notifications when candidates apply. You can manage your listing at any time from your dashboard.")}
         ${button('View Job Listing', `${BRAND.url}/employer/jobs/${jobId}`)}
         ${signature()}
     `,
-    `Your job posting "${jobTitle}" is now live on Talent Bridge.`
+    `Your job posting "${jobTitle}" is now live on Hire Adda.`
   ),
-  text: `Hi ${employerName}, your job posting "${jobTitle}" is now live on Talent Bridge. You'll receive notifications when candidates apply. View it at ${BRAND.url}/employer/jobs/${jobId}`,
+  text: `Hi ${employerName}, your job posting "${jobTitle}" is now live on Hire Adda. You'll receive notifications when candidates apply. View it at ${BRAND.url}/employer/jobs/${jobId}`,
 });
 
 export const jobClosedNotification = (
@@ -377,7 +377,7 @@ export const jobAlert = (
             ${smallText('You\'re receiving this because you have job alerts enabled. <a href="' + BRAND.url + '/settings/notifications" style="color:' + BRAND.textSecondary + ';text-decoration:underline;">Manage preferences</a>')}
             ${signature()}
         `,
-      `${jobs.length} new jobs match your profile on Talent Bridge.`
+      `${jobs.length} new jobs match your profile on Hire Adda.`
     ),
     text: `Hi ${candidateName}, here are new jobs for you:\n${jobsText}\n\nView all jobs: ${BRAND.url}/jobs`,
   };

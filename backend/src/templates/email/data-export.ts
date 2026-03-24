@@ -23,14 +23,14 @@ import {
  * User data (GDPR) export ready — sent with JSON attachment.
  */
 export const userDataExportReady = (exportedAt: string): EmailTemplate => ({
-  subject: 'Your Data Export — Talent Bridge',
+  subject: 'Your Data Export — Hire Adda',
   html: emailLayout(
     `
         ${iconCircle('&#128230;', '#eef2ff')}
         ${heading('Your Data Export is Ready')}
         ${subtitle('All your personal data has been compiled.')}
         ${paragraph('Hi,')}
-        ${paragraph("As requested, we've compiled all your personal data from Talent Bridge. Your exported data is attached below as a JSON file.")}
+        ${paragraph("As requested, we've compiled all your personal data from Hire Adda. Your exported data is attached below as a JSON file.")}
         ${infoBox([
           { label: 'Export Type', value: 'Full Personal Data' },
           { label: 'Format', value: 'JSON' },
@@ -42,9 +42,9 @@ export const userDataExportReady = (exportedAt: string): EmailTemplate => ({
         ${smallText('This export was generated in compliance with data portability regulations.')}
         ${signature()}
     `,
-    'Your Talent Bridge data export is ready.'
+    'Your Hire Adda data export is ready.'
   ),
-  text: `Your Data Export is Ready\n\nAs requested, we've compiled all your personal data from Talent Bridge. The data is attached as a JSON file.\n\nExported at: ${exportedAt}\n\nIf you did not request this export, please contact support at ${BRAND.supportEmail}.`,
+  text: `Your Data Export is Ready\n\nAs requested, we've compiled all your personal data from Hire Adda. The data is attached as a JSON file.\n\nExported at: ${exportedAt}\n\nIf you did not request this export, please contact support at ${BRAND.supportEmail}.`,
 });
 
 /**
@@ -110,7 +110,9 @@ export const resumeExportReady = (
           ${paragraph(`Your ZIP archive containing <strong>${resumeCount} resume${resumeCount === 1 ? '' : 's'}</strong> is ready for download.${skippedNote}`)}
           ${infoBox([
             { label: 'Resumes', value: resumeCount.toString() },
-            ...(skippedCount > 0 ? [{ label: 'Skipped (no resume)', value: skippedCount.toString() }] : []),
+            ...(skippedCount > 0
+              ? [{ label: 'Skipped (no resume)', value: skippedCount.toString() }]
+              : []),
             { label: 'Format', value: 'ZIP' },
             { label: 'File', value: filename },
           ])}

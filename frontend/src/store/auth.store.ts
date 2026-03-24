@@ -10,7 +10,7 @@ import { storage, STORAGE_KEYS } from '@/utils/storage';
  *
  * This store only tracks:
  *   - User object (cached in localStorage for quick hydration)
- *   - isAuthenticated flag (derived from the `tb_auth_session` cookie)
+ *   - isAuthenticated flag (derived from the `ha_auth_session` cookie)
  *   - Loading/hydrated state
  */
 
@@ -32,7 +32,7 @@ interface AuthState {
 /** Check if the non-httpOnly session indicator cookie exists */
 function hasSessionCookie(): boolean {
   if (typeof document === 'undefined') return false;
-  return document.cookie.includes('tb_auth_session=1');
+  return document.cookie.includes('ha_auth_session=1');
 }
 
 export const useAuthStore = create<AuthState>((set) => ({

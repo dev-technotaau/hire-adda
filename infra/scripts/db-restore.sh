@@ -34,7 +34,7 @@ show_help() {
   echo "  --help           Show this help message"
   echo ""
   echo "Examples:"
-  echo "  ./scripts/db-restore.sh backups/db/talent_bridge_20260226_020000.sql.gz --confirm"
+  echo "  ./scripts/db-restore.sh backups/db/hire_adda_20260226_020000.sql.gz --confirm"
   echo "  ./scripts/db-restore.sh --list"
 }
 

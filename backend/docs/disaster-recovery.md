@@ -2,18 +2,18 @@
 
 ## Overview
 
-Talent Bridge runs on **Render** (backend) + **Managed PostgreSQL** (Neon/Supabase/etc.) + **Managed OpenSearch** + **Cloudflare R2** (file storage). This document covers backup procedures, restore steps, and disaster recovery runbooks.
+Hire Adda runs on **Render** (backend) + **Managed PostgreSQL** (Neon/Supabase/etc.) + **Managed OpenSearch** + **Cloudflare R2** (file storage). This document covers backup procedures, restore steps, and disaster recovery runbooks.
 
 ### Infrastructure
 
-| Component | Provider | Backup Strategy |
-|-----------|----------|-----------------|
-| PostgreSQL | Managed (Neon/Supabase) | **Automated**: BullMQ → `pg_dump` → Cloudflare R2 (daily 2AM UTC) |
-| OpenSearch | Managed service | Provider handles snapshots (check provider dashboard) |
-| Redis | Upstash/Cloud | Ephemeral cache — no backup needed |
-| Resumes & Files | Cloudflare R2 | Provider-managed durability (11 nines) |
-| Avatars | Cloudinary | Provider-managed redundancy |
-| Firebase (RTDB/Firestore) | Google | Google-managed backups |
+| Component                 | Provider                | Backup Strategy                                                   |
+| ------------------------- | ----------------------- | ----------------------------------------------------------------- |
+| PostgreSQL                | Managed (Neon/Supabase) | **Automated**: BullMQ → `pg_dump` → Cloudflare R2 (daily 2AM UTC) |
+| OpenSearch                | Managed service         | Provider handles snapshots (check provider dashboard)             |
+| Redis                     | Upstash/Cloud           | Ephemeral cache — no backup needed                                |
+| Resumes & Files           | Cloudflare R2           | Provider-managed durability (11 nines)                            |
+| Avatars                   | Cloudinary              | Provider-managed redundancy                                       |
+| Firebase (RTDB/Firestore) | Google                  | Google-managed backups                                            |
 
 ---
 
@@ -24,12 +24,13 @@ Talent Bridge runs on **Render** (backend) + **Managed PostgreSQL** (Neon/Supaba
 1. **BullMQ scheduler** triggers `db-backup` job daily at 2:00 AM UTC
 2. The backup worker runs `pg_dump` against `DATABASE_URL`
 3. Output is **gzipped** in memory (no local filesystem needed — works on Render)
-4. Compressed backup is **uploaded to Cloudflare R2** at `backups/db/talent_bridge_YYYYMMDD_HHMMSS.sql.gz`
+4. Compressed backup is **uploaded to Cloudflare R2** at `backups/db/hire_adda_YYYYMMDD_HHMMSS.sql.gz`
 5. Weekly cleanup job deletes R2 backups older than `BACKUP_RETENTION_DAYS` (default 30)
 
 ### Backup Status
 
 Status is tracked in Redis:
+
 - `backup:last-success:db` — last successful backup timestamp
 - `backup:last-failure:db` — last failure timestamp
 - `backup:last-success:cleanup` — last cleanup run
@@ -39,6 +40,7 @@ Check via: `make backup-status`
 ### Failure Alerts
 
 When a backup fails, the worker:
+
 1. Logs the error via Winston (visible in Render logs)
 2. Records the failure in Redis
 3. Sends email notification if `SUPER_ADMIN_EMAIL` + SMTP are configured
@@ -54,7 +56,7 @@ For local/development backups or ad-hoc production backups from your machine:
 # Create a local backup (requires pg_dump installed + DATABASE_URL in .env)
 make backup-db
 
-# Backups saved to: backend/backups/db/talent_bridge_YYYYMMDD_HHMMSS.sql.gz
+# Backups saved to: backend/backups/db/hire_adda_YYYYMMDD_HHMMSS.sql.gz
 ```
 
 ---
@@ -64,15 +66,17 @@ make backup-db
 ### PostgreSQL Restore
 
 **Option A: From local backup file**
+
 ```bash
 # List available local backups
 cd backend && bash scripts/db-restore.sh --list
 
 # Restore (requires --confirm flag to prevent accidents)
-make backup-db-restore FILE=backups/db/talent_bridge_20260226_020000.sql.gz
+make backup-db-restore FILE=backups/db/hire_adda_20260226_020000.sql.gz
 ```
 
 **Option B: From R2 cloud backup**
+
 ```bash
 # Download the backup from R2 first (via Cloudflare dashboard or CLI)
 # Then restore:
@@ -80,6 +84,7 @@ cd backend && bash scripts/db-restore.sh /path/to/downloaded-backup.sql.gz --con
 ```
 
 **After restore:**
+
 ```bash
 cd backend && npx prisma generate   # Sync Prisma client
 ```
@@ -89,6 +94,7 @@ cd backend && npx prisma generate   # Sync Prisma client
 Since OpenSearch runs on a managed service, check your provider's snapshot/restore capabilities.
 
 **Alternative: Full reindex from database** (always works)
+
 ```bash
 cd backend && npx ts-node scripts/reindex-all.ts
 ```
@@ -98,6 +104,7 @@ This rebuilds all OpenSearch indexes from PostgreSQL data. Takes longer but does
 ### Redis Recovery
 
 Redis is ephemeral — just restart the service:
+
 - BullMQ queues automatically recover pending jobs
 - Cache rebuilds on first access (cache-aside pattern)
 - WebAuthn challenges have short TTL and regenerate
@@ -143,6 +150,7 @@ Redis is ephemeral — just restart the service:
 Old R2 backups are automatically cleaned weekly (Sunday 4AM UTC).
 
 For local backups:
+
 ```bash
 make backup-cleanup                              # Default retention (30 days)
 cd backend && bash scripts/backup-cleanup.sh 7   # Custom: 7 days
@@ -166,6 +174,7 @@ cd backend && bash scripts/backup-cleanup.sh --dry-run  # Preview only
 ## Environment Variables Backup
 
 Store these securely (1Password, AWS Secrets Manager, Render env groups):
+
 - `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`
 - `COOKIE_SECRET`, `CSRF_SECRET`, `WEBHOOK_SECRET`
 - `FIREBASE_SERVICE_ACCOUNT`
@@ -175,8 +184,8 @@ Store these securely (1Password, AWS Secrets Manager, Render env groups):
 
 ## RPO / RTO Targets
 
-| Metric | Target | Current |
-|--------|--------|---------|
-| **RPO** (Recovery Point Objective) | 24 hours | Daily backups at 2AM UTC |
-| **RTO** (Recovery Time Objective) | 1 hour | Restore from R2 + reindex |
-| **Backup Storage** | 30 days | R2 with auto-cleanup |
+| Metric                             | Target   | Current                   |
+| ---------------------------------- | -------- | ------------------------- |
+| **RPO** (Recovery Point Objective) | 24 hours | Daily backups at 2AM UTC  |
+| **RTO** (Recovery Time Objective)  | 1 hour   | Restore from R2 + reindex |
+| **Backup Storage**                 | 30 days  | R2 with auto-cleanup      |

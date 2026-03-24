@@ -4,14 +4,14 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: talent-bridge-infra-alerts
+  name: hire-adda-infra-alerts
   namespace: monitoring
   labels:
     release: kube-prometheus
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
 spec:
   groups:
-    - name: talent-bridge.infra
+    - name: hire-adda.infra
       rules:
         # ── CPU ──
         - alert: HighCPUUsage

@@ -31,7 +31,7 @@ export const ticketConfirmation = (
         ${heading("We've Received Your Support Ticket")}
         ${subtitle('Our team will review your request shortly.')}
         ${paragraph('Hello,')}
-        ${paragraph('Thank you for contacting Talent Bridge support. We have successfully received your ticket and our team will review it shortly.')}
+        ${paragraph('Thank you for contacting Hire Adda support. We have successfully received your ticket and our team will review it shortly.')}
         ${infoBox([
           { label: 'Ticket Number', value: ticketNumber },
           { label: 'Subject', value: subject },

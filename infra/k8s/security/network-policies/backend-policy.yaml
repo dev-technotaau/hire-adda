@@ -7,7 +7,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: backend-netpol
-  namespace: talent-bridge
+  namespace: hire-adda
 spec:
   podSelector:
     matchLabels:
@@ -24,7 +24,15 @@ spec:
       ports:
         - port: 5000
           protocol: TCP
-    # From frontend (BFF server-side calls)
+    # From nginx reverse proxy (all traffic routes through nginx)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: nginx
+      ports:
+        - port: 5000
+          protocol: TCP
+    # From frontend (BFF server-side calls via nginx)
     - from:
         - podSelector:
             matchLabels:
@@ -80,7 +88,7 @@ spec:
           protocol: UDP
         - port: 53
           protocol: TCP
-    # External APIs (Firebase, Cloudinary, Google Cloud, Twilio, etc.)
+    # External APIs + Cloud data services
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
@@ -94,4 +102,11 @@ spec:
         - port: 587
           protocol: TCP
         - port: 465
+          protocol: TCP
+        # Cloud data services (Phase 1-3)
+        - port: 5432 # Neon PostgreSQL
+          protocol: TCP
+        - port: 12609 # Redis Cloud
+          protocol: TCP
+        - port: 13983 # Aiven Kafka
           protocol: TCP

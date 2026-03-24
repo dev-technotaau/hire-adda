@@ -1,12 +1,12 @@
 # ============================================================
-# Kubernetes Namespaces for Talent Bridge
+# Kubernetes Namespaces for Hire Adda
 # ============================================================
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: talent-bridge
+  name: hire-adda
   labels:
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
@@ -16,7 +16,7 @@ kind: Namespace
 metadata:
   name: monitoring
   labels:
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
     pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/audit: restricted
 ---
@@ -25,7 +25,7 @@ kind: Namespace
 metadata:
   name: logging
   labels:
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
     pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/audit: restricted
 ---
@@ -34,11 +34,11 @@ kind: Namespace
 metadata:
   name: argocd
   labels:
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: velero
   labels:
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda

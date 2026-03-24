@@ -1,4 +1,4 @@
-# Disaster Recovery Runbook — Talent Bridge
+# Disaster Recovery Runbook — Hire Adda
 
 ## Infrastructure Overview
 
@@ -19,7 +19,7 @@
 **Impact:** Brief service interruption (10-30 seconds)
 **Detection:** Prometheus alert: `PodCrashLooping`
 **Action:** None required — K3s auto-restarts the pod.
-**Verify:** `kubectl get pods -n talent-bridge`
+**Verify:** `kubectl get pods -n hire-adda`
 
 ---
 
@@ -30,21 +30,21 @@
 
 **Recovery Steps:**
 
-1. Identify the issue: `kubectl logs statefulset/postgres -n talent-bridge`
+1. Identify the issue: `kubectl logs statefulset/postgres -n hire-adda`
 2. List available backups: `ls /opt/k3s-storage/backups/db/`
-3. Stop the backend: `kubectl scale deploy/backend -n talent-bridge --replicas=0`
+3. Stop the backend: `kubectl scale deploy/backend -n hire-adda --replicas=0`
 4. Restore from backup:
 
    ```bash
    # From CronJob backup
-   kubectl exec -i statefulset/postgres -n talent-bridge -- \
-     psql -U postgres -d talentbridge < /backups/db/talent_bridge_YYYYMMDD_HHMMSS.sql.gz
+   kubectl exec -i statefulset/postgres -n hire-adda -- \
+     psql -U postgres -d hireadda < /backups/db/hire_adda_YYYYMMDD_HHMMSS.sql.gz
 
    # OR from Velero
    velero restore create --from-backup daily-full-backup-YYYYMMDD
    ```
 
-5. Restart backend: `kubectl scale deploy/backend -n talent-bridge --replicas=1`
+5. Restart backend: `kubectl scale deploy/backend -n hire-adda --replicas=1`
 6. Verify: `curl https://api.hireadda.in/health`
 
 **RTO:** 10-20 minutes
@@ -59,15 +59,15 @@
 
 **Recovery Steps:**
 
-1. Check cluster health: `kubectl exec statefulset/opensearch -n talent-bridge -- curl localhost:9200/_cluster/health`
+1. Check cluster health: `kubectl exec statefulset/opensearch -n hire-adda -- curl localhost:9200/_cluster/health`
 2. Restore from snapshot:
    ```bash
-   kubectl exec statefulset/opensearch -n talent-bridge -- \
-     curl -X POST "localhost:9200/_snapshot/talentbridge_snapshots/snapshot_YYYYMMDD/_restore?wait_for_completion=true"
+   kubectl exec statefulset/opensearch -n hire-adda -- \
+     curl -X POST "localhost:9200/_snapshot/hireadda_snapshots/snapshot_YYYYMMDD/_restore?wait_for_completion=true"
    ```
 3. OR let backend auto-reindex on restart:
    ```bash
-   kubectl rollout restart deploy/backend -n talent-bridge
+   kubectl rollout restart deploy/backend -n hire-adda
    ```
 
 **RTO:** 5-15 minutes (auto-reindex from DB)
@@ -85,8 +85,8 @@
 1. Redis will auto-restart via K3s StatefulSet
 2. If PVC is corrupted:
    ```bash
-   kubectl delete pvc redis-data-redis-0 -n talent-bridge
-   kubectl delete statefulset redis -n talent-bridge
+   kubectl delete pvc redis-data-redis-0 -n hire-adda
+   kubectl delete statefulset redis -n hire-adda
    kubectl apply -f infra/k8s/apps/redis/
    ```
 3. BullMQ jobs will resume automatically when Redis reconnects
@@ -125,8 +125,8 @@
 5. **Restore database:**
    ```bash
    # Velero restores the PVCs, but for consistency:
-   kubectl exec -i statefulset/postgres -n talent-bridge -- \
-     psql -U postgres -d talentbridge < /backups/db/latest.sql.gz
+   kubectl exec -i statefulset/postgres -n hire-adda -- \
+     psql -U postgres -d hireadda < /backups/db/latest.sql.gz
    ```
 6. **Reinstall Helm charts:**
    ```bash
@@ -182,9 +182,9 @@
 Run monthly:
 
 - [ ] `velero backup get` — recent backups exist and completed
-- [ ] Test restore to separate namespace: `velero restore create --from-backup <name> --namespace-mappings talent-bridge:test-restore`
+- [ ] Test restore to separate namespace: `velero restore create --from-backup <name> --namespace-mappings hire-adda:test-restore`
 - [ ] Verify pg_dump backups: `ls -la /opt/k3s-storage/backups/db/`
-- [ ] Verify OpenSearch snapshots: `curl opensearch:9200/_snapshot/talentbridge_snapshots/_all`
+- [ ] Verify OpenSearch snapshots: `curl opensearch:9200/_snapshot/hireadda_snapshots/_all`
 - [ ] Verify R2 bucket has recent uploads
 - [ ] Test DNS failover process
 

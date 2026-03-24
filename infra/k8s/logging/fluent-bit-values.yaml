@@ -1,6 +1,7 @@
 # ============================================================
 # Fluent Bit Helm Values
-# Lightweight log collector — sends to existing OpenSearch
+# Lightweight log collector — dual output to OpenSearch + Loki
+# Replaces both Fluent Bit AND Promtail from Docker Compose
 # ============================================================
 # Install:
 #   helm install fluent-bit fluent/fluent-bit \
@@ -34,7 +35,7 @@ config:
         Path              /var/log/containers/*.log
         Parser            cri
         DB                /var/log/flb_kube.db
-        Mem_Buf_Limit     5MB
+        Mem_Buf_Limit     10MB
         Skip_Long_Lines   On
         Refresh_Interval  10
 
@@ -68,17 +69,26 @@ config:
     [OUTPUT]
         Name            opensearch
         Match           kube.*
-        Host            opensearch.talent-bridge.svc.cluster.local
+        Host            opensearch.hire-adda.svc.cluster.local
         Port            9200
-        Index           logs-talent-bridge
+        Index           logs-hire-adda
         Type            _doc
         Logstash_Format On
-        Logstash_Prefix logs-talent-bridge
+        Logstash_Prefix logs-hire-adda
         Suppress_Type_Name On
         Retry_Limit     3
         tls             Off
         Replace_Dots    On
         Trace_Error     On
+
+    [OUTPUT]
+        Name            loki
+        Match           kube.*
+        Host            loki.logging.svc.cluster.local
+        Port            3100
+        Labels          job=fluent-bit, environment=production
+        Auto_Kubernetes_Labels On
+        Retry_Limit     3
 
 # Tolerations for running on all nodes (DaemonSet)
 tolerations:

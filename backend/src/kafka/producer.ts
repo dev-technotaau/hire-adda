@@ -2,8 +2,7 @@ import { producer } from '../config/kafka';
 import logger from '../config/logger';
 import { validateEvent } from './schemas';
 import { KafkaTopics, ConsolidatedTopics } from './topics';
-
-
+import { injectTraceContext } from '../utils/trace-propagation';
 
 /**
  * Maps each event type to its consolidated Aiven topic.
@@ -52,13 +51,15 @@ export const publishEvent = async (
     ...data,
     eventType,
     timestamp: new Date().toISOString(),
-    source: 'talent-bridge-api',
+    source: 'hire-adda-api',
   };
 
   // Schema validation — warn on failure but still publish
   const validation = validateEvent(eventType, payload);
   if (!validation.valid) {
-    logger.warn(`Kafka producer schema validation failed for ${eventType}: ${validation.errors.join(', ')}`);
+    logger.warn(
+      `Kafka producer schema validation failed for ${eventType}: ${validation.errors.join(', ')}`
+    );
   }
 
   const message = {
@@ -67,6 +68,7 @@ export const publishEvent = async (
       {
         key,
         value: JSON.stringify(payload),
+        headers: injectTraceContext(),
       },
     ],
   };

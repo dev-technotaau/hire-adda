@@ -165,7 +165,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
       "targets": [
         {
-          "expr": "sum(kafka_consumergroup_lag{consumergroup=\"talent-bridge-backend-group\"}) by (topic)",
+          "expr": "sum(kafka_consumergroup_lag{consumergroup=\"hire-adda-backend-group\"}) by (topic)",
           "legendFormat": "{{topic}}"
         }
       ]
@@ -184,9 +184,9 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["talent-bridge"],
+  "tags": ["hire-adda"],
   "templating": { "list": [] },
   "time": { "from": "now-1h", "to": "now" },
-  "title": "Talent Bridge Overview",
+  "title": "Hire Adda Overview",
   "uid": "tb-overview-compose"
 }

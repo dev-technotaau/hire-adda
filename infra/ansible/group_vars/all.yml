@@ -1,5 +1,5 @@
 # ============================================================
-# Talent Bridge — Ansible Global Variables
+# Hire Adda — Ansible Global Variables
 # ============================================================
 
 # ── Domain ──
@@ -32,7 +32,7 @@ kubeconfig_mode: '644'
 
 # ── Kubernetes Namespaces ──
 k8s_namespaces:
-  - talent-bridge
+  - hire-adda
   - monitoring
   - logging
   - argocd

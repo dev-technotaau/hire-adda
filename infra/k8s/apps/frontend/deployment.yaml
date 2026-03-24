@@ -6,13 +6,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: frontend
     tier: app
     app.kubernetes.io/name: frontend
     app.kubernetes.io/component: web
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
 spec:
   replicas: 1
   revisionHistoryLimit: 5
@@ -39,7 +39,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: frontend
-          image: ghcr.io/OWNER/talent-bridge-frontend:latest
+          image: ghcr.io/dev-technotaau/hire-adda-frontend:latest
           imagePullPolicy: Always
           ports:
             - name: http
@@ -51,12 +51,24 @@ spec:
             # NEXT_PUBLIC_* vars are baked at build time in the CD pipeline
             # Only server-side runtime vars needed here:
             - name: BACKEND_INTERNAL_URL
-              value: 'http://backend.talent-bridge.svc.cluster.local:5000/api/v1'
+              value: 'http://nginx:80/api/v1'
             - name: BFF_SECRET
               valueFrom:
                 secretKeyRef:
                   name: backend-secrets
                   key: BFF_SECRET
+            # BFF auth cookie settings (matches Docker Compose)
+            - name: COOKIE_ACCESS_MAX_AGE_DAYS
+              value: '7'
+            - name: COOKIE_REFRESH_MAX_AGE_DAYS
+              value: '30'
+            # OpenTelemetry
+            - name: OTEL_ENABLED
+              value: 'true'
+            - name: OTEL_SERVICE_NAME
+              value: 'hire-adda-frontend'
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: 'http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces'
           resources:
             requests:
               memory: '256Mi'

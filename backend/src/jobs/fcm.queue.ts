@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq';
 import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { injectTraceContext } from '../utils/trace-propagation';
 
 export const FCM_QUEUE_NAME = 'fcm-queue';
 
@@ -32,5 +33,9 @@ export async function addFCMJob(
   },
   priority?: number
 ) {
-  return fcmQueue.add('send-fcm', data, priority ? { priority } : {});
+  return fcmQueue.add(
+    'send-fcm',
+    { ...data, _traceContext: injectTraceContext() },
+    priority ? { priority } : {}
+  );
 }

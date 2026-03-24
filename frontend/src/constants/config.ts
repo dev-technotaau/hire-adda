@@ -1,10 +1,10 @@
 export const APP_CONFIG = {
-  name: 'Talent Bridge',
+  name: 'Hire Adda',
   description: "India's Leading Job Portal & Recruitment Platform",
   url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
   socketUrl: process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000',
-  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@talentbridge.com',
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@hireadda.in',
 } as const;
 
 /** API base URL without the version prefix (e.g. /api/v1 → /api). Useful for
@@ -225,7 +225,11 @@ export const QUERY_KEYS = {
   },
 } as const;
 
-export const EXPERIENCE_BUCKETS: readonly { label: string; min: number; max: number | undefined }[] = [
+export const EXPERIENCE_BUCKETS: readonly {
+  label: string;
+  min: number;
+  max: number | undefined;
+}[] = [
   { label: 'Fresher', min: 0, max: 1 },
   { label: '1-3 years', min: 1, max: 3 },
   { label: '3-5 years', min: 3, max: 5 },

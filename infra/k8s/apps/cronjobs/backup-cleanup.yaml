@@ -6,7 +6,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: backup-cleanup
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: backup-cleanup
     tier: maintenance
@@ -47,15 +47,10 @@ spec:
 
                   echo "Cleaning backups older than $RETENTION_DAYS days..."
 
-                  DELETED=0
-                  find "$BACKUP_DIR" -name "*.sql.gz" -mtime +$RETENTION_DAYS -type f | while read f; do
-                    echo "Deleting: $f"
-                    rm -f "$f"
-                    DELETED=$((DELETED + 1))
-                  done
+                  DELETED=$(find "$BACKUP_DIR" -name "*.sql.gz" -mtime +$RETENTION_DAYS -type f -print -delete | wc -l)
 
                   REMAINING=$(find "$BACKUP_DIR" -name "*.sql.gz" -type f | wc -l)
-                  echo "Cleanup complete. Remaining backups: $REMAINING"
+                  echo "Cleanup complete. Deleted: $DELETED, Remaining: $REMAINING"
               resources:
                 requests:
                   memory: '16Mi'

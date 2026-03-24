@@ -12,7 +12,7 @@ metadata:
 spec:
   namespaceSelector:
     matchNames:
-      - talent-bridge
+      - hire-adda
   selector:
     matchLabels:
       app: redis

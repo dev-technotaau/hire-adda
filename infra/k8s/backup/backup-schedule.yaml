@@ -12,7 +12,7 @@ spec:
   schedule: '0 3 * * *'
   template:
     includedNamespaces:
-      - talent-bridge
+      - hire-adda
     ttl: 720h # 30 days retention
     storageLocation: default
     defaultVolumesToFsBackup: true
@@ -34,7 +34,7 @@ spec:
   schedule: '0 4 * * 0'
   template:
     includedNamespaces:
-      - talent-bridge
+      - hire-adda
       - monitoring
       - logging
       - argocd

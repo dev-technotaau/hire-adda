@@ -13,7 +13,7 @@ export const welcomeWhatsapp = (name: string): WhatsappTemplate => ({
       parameters: [{ type: 'text', text: name }],
     },
   ],
-  text: `Welcome to Talent Bridge, ${name}! We're excited to help you find your perfect career match. Complete your profile to get started.`,
+  text: `Welcome to Hire Adda, ${name}! We're excited to help you find your perfect career match. Complete your profile to get started.`,
 });
 
 export const otpWhatsapp = (otp: string): WhatsappTemplate => ({
@@ -31,7 +31,7 @@ export const otpWhatsapp = (otp: string): WhatsappTemplate => ({
       parameters: [{ type: 'text', text: otp }],
     },
   ],
-  text: `Your Talent Bridge verification code is ${otp}. Valid for 10 minutes. Do not share this code.`,
+  text: `Your Hire Adda verification code is ${otp}. Valid for 10 minutes. Do not share this code.`,
 });
 
 export const profileCompletionWhatsapp = (name: string, progress: number): WhatsappTemplate => ({
@@ -46,7 +46,7 @@ export const profileCompletionWhatsapp = (name: string, progress: number): Whats
       ],
     },
   ],
-  text: `Hi ${name}, your Talent Bridge profile is ${progress}% complete. Complete it to get up to 5x more interview invitations!`,
+  text: `Hi ${name}, your Hire Adda profile is ${progress}% complete. Complete it to get up to 5x more interview invitations!`,
 });
 
 // ===============================
@@ -120,7 +120,7 @@ export const applicationStatusWhatsapp = (
       ],
     },
   ],
-  text: `Your application for ${jobTitle} at ${company} has been updated to: ${status}. Open Talent Bridge for details.`,
+  text: `Your application for ${jobTitle} at ${company} has been updated to: ${status}. Open Hire Adda for details.`,
 });
 
 export const jobOfferWhatsapp = (
@@ -165,7 +165,7 @@ export const jobMatchWhatsapp = (
       ],
     },
   ],
-  text: `New job match (${matchPercentage}): ${jobTitle} at ${companyName}. View details on Talent Bridge.`,
+  text: `New job match (${matchPercentage}): ${jobTitle} at ${companyName}. View details on Hire Adda.`,
 });
 
 // ===============================
@@ -184,7 +184,7 @@ export const ticketReplyWhatsapp = (ticketNumber: string, subject: string): What
       ],
     },
   ],
-  text: `You have a new reply on your support ticket #${ticketNumber}: ${subject}. Open Talent Bridge to view.`,
+  text: `You have a new reply on your support ticket #${ticketNumber}: ${subject}. Open Hire Adda to view.`,
 });
 
 // ===============================
@@ -244,7 +244,7 @@ export const newApplicationWhatsapp = (
       ],
     },
   ],
-  text: `New application: ${candidateName} applied for ${jobTitle}. Review on Talent Bridge.`,
+  text: `New application: ${candidateName} applied for ${jobTitle}. Review on Hire Adda.`,
 });
 
 export const applicationSubmittedWhatsapp = (
@@ -262,7 +262,7 @@ export const applicationSubmittedWhatsapp = (
       ],
     },
   ],
-  text: `Your application for ${jobTitle} at ${companyName} has been submitted. Track it on Talent Bridge.`,
+  text: `Your application for ${jobTitle} at ${companyName} has been submitted. Track it on Hire Adda.`,
 });
 
 // ===============================
@@ -294,5 +294,5 @@ export const securityAlertWhatsapp = (action: string): WhatsappTemplate => ({
       parameters: [{ type: 'text', text: action }],
     },
   ],
-  text: `Security alert: ${action} was detected on your Talent Bridge account. If this wasn't you, secure your account immediately.`,
+  text: `Security alert: ${action} was detected on your Hire Adda account. If this wasn't you, secure your account immediately.`,
 });

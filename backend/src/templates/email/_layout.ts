@@ -4,7 +4,7 @@
 // ============================================================
 
 const BRAND = {
-  name: 'Talent Bridge',
+  name: 'Hire Adda',
   primary: '#4F46E5',
   primaryDark: '#4338CA',
   success: '#059669',
@@ -20,8 +20,8 @@ const BRAND = {
   bgPage: '#f3f4f6',
   bgCard: '#ffffff',
   bgMuted: '#f9fafb',
-  url: process.env.FRONTEND_URL || 'https://talentbridge.com',
-  supportEmail: 'support@talentbridge.com',
+  url: process.env.FRONTEND_URL || 'https://hireadda.in',
+  supportEmail: 'support@hireadda.in',
   year: new Date().getFullYear(),
 };
 
@@ -62,7 +62,7 @@ export const emailLayout = (content: string, preheader?: string): string => `<!D
           <tr>
             <td style="text-align:center;padding:0 0 32px 0;">
               <a href="${BRAND.url}" style="text-decoration:none;display:inline-block;">
-                <span style="font-size:28px;font-weight:800;color:${BRAND.primary};letter-spacing:-0.5px;">Talent</span><span style="font-size:28px;font-weight:800;color:${BRAND.text};letter-spacing:-0.5px;">Bridge</span>
+                <span style="font-size:28px;font-weight:800;color:${BRAND.primary};letter-spacing:-0.5px;">Hire</span><span style="font-size:28px;font-weight:800;color:${BRAND.text};letter-spacing:-0.5px;">Adda</span>
               </a>
             </td>
           </tr>
@@ -125,7 +125,7 @@ export const signature = (): string => `
     <td style="padding-top:28px;">
       <p style="margin:0;font-size:15px;color:#374151;line-height:1.7;">
         Best regards,<br>
-        <strong style="color:${BRAND.text};">The Talent Bridge Team</strong>
+        <strong style="color:${BRAND.text};">The Hire Adda Team</strong>
       </p>
     </td>
   </tr>

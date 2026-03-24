@@ -154,7 +154,7 @@ export default function Footer() {
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)] pt-8 sm:flex-row">
           <Logo size="sm" />
           <p className="text-sm text-[var(--text-muted)]">
-            &copy; {new Date().getFullYear()} TalentBridge. All rights reserved.
+            &copy; {new Date().getFullYear()} HireAdda. All rights reserved.
           </p>
         </div>
       </div>

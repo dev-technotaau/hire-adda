@@ -1,0 +1,263 @@
+# ============================================================
+# Nginx — ConfigMap (adapted from infra/docker/nginx/)
+# ============================================================
+# K8s adaptation of Docker's nginx reverse proxy:
+#   - TLS termination handled by ingress-nginx (not here)
+#   - Upstreams point to K8s service names (not blue/green)
+#   - Same rate limiting, security headers, gzip, WebSocket
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: hire-adda
+  labels:
+    app: nginx
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/part-of: hire-adda
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+
+    events {
+        worker_connections 1024;
+        use epoll;
+        multi_accept on;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        # Logging format (matches Docker nginx)
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log /var/log/nginx/access.log main;
+
+        # Performance optimizations
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+
+        # Gzip compression (matches Docker nginx)
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types text/plain text/css text/xml application/json application/javascript
+                   application/xml application/xml+rss text/javascript application/x-font-ttf
+                   font/opentype image/svg+xml;
+
+        # Security headers (matches Docker nginx)
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self), interest-cohort=()" always;
+
+        # Hide nginx version
+        server_tokens off;
+
+        # Rate limiting zones (matches Docker nginx)
+        limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+        limit_req_zone $binary_remote_addr zone=login:10m rate=30r/m;
+
+        # Connection limiting
+        limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+
+        # ── Upstreams (K8s service DNS) ──
+        upstream backend_api {
+            least_conn;
+            server backend:5000 weight=1 max_fails=3 fail_timeout=30s;
+            keepalive 32;
+        }
+
+        upstream frontend_app {
+            server frontend:3000;
+            keepalive 16;
+        }
+
+        # ─────────────────────────────────────────────
+        # API server (api.hireadda.in)
+        # TLS is terminated by ingress-nginx; this handles
+        # internal proxying, rate limiting, and headers.
+        # ─────────────────────────────────────────────
+        server {
+            listen 80;
+            server_name api.hireadda.in;
+
+            # Request size limits
+            client_max_body_size 10M;
+            client_body_buffer_size 128k;
+
+            # Proxy headers
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Forwarded-Port $server_port;
+
+            # WebSocket support
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+
+            # Timeouts
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+
+            # Health check endpoint (no rate limiting)
+            location /health {
+                proxy_pass http://backend_api;
+            }
+
+            # API documentation
+            location /api-docs {
+                proxy_pass http://backend_api;
+            }
+
+            # Rate limited auth endpoints
+            location /api/auth/login {
+                limit_req zone=login burst=10 nodelay;
+                limit_conn conn_limit 10;
+                proxy_pass http://backend_api;
+            }
+
+            location /api/auth/register {
+                limit_req zone=login burst=5 nodelay;
+                limit_conn conn_limit 5;
+                proxy_pass http://backend_api;
+            }
+
+            # General API routes
+            location /api {
+                limit_req zone=api burst=20 nodelay;
+                limit_conn conn_limit 20;
+                proxy_pass http://backend_api;
+            }
+
+            # Static file uploads (Docker serves from disk via alias;
+            # K8s proxies to backend since uploads PVC is on backend pod)
+            location /uploads {
+                proxy_pass http://backend_api;
+                expires 30d;
+                add_header Cache-Control "public, immutable";
+            }
+
+            # Default — proxy to backend
+            location / {
+                proxy_pass http://backend_api;
+            }
+
+            # Error pages
+            error_page 502 503 504 /50x.html;
+            location = /50x.html {
+                root /usr/share/nginx/html;
+                internal;
+            }
+        }
+
+        # ─────────────────────────────────────────────
+        # Frontend server (hireadda.in)
+        # ─────────────────────────────────────────────
+        server {
+            listen 80;
+            server_name hireadda.in www.hireadda.in;
+
+            # Mail client auto-configuration (matches Docker nginx)
+            location /.well-known/autoconfig/mail/config-v1.1.xml {
+                alias /etc/nginx/mail/autoconfig.xml;
+                default_type application/xml;
+            }
+
+            location /autodiscover/autodiscover.xml {
+                alias /etc/nginx/mail/autodiscover.xml;
+                default_type application/xml;
+            }
+
+            # Proxy to Next.js frontend
+            location / {
+                proxy_pass http://frontend_app;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            # Next.js static files
+            location /_next/static {
+                proxy_pass http://frontend_app;
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+            }
+        }
+
+        # ─────────────────────────────────────────────
+        # Default server — internal BFF calls from
+        # frontend use http://nginx:80/api/v1 without
+        # a Host header matching a domain, so this
+        # catches those and proxies to backend.
+        # ─────────────────────────────────────────────
+        server {
+            listen 80 default_server;
+            server_name _;
+
+            client_max_body_size 10M;
+
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+
+            location /api {
+                proxy_pass http://backend_api;
+            }
+
+            location /health {
+                proxy_pass http://backend_api;
+            }
+
+            location / {
+                proxy_pass http://frontend_app;
+            }
+        }
+
+        # ─────────────────────────────────────────────
+        # Internal — stub_status for nginx-exporter
+        # ─────────────────────────────────────────────
+        server {
+            listen 8080;
+            server_name _;
+
+            location /stub_status {
+                stub_status;
+                allow 10.0.0.0/8;
+                allow 172.16.0.0/12;
+                allow 192.168.0.0/16;
+                deny all;
+            }
+
+            location / {
+                return 404;
+            }
+        }
+    }

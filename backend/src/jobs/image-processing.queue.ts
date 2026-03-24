@@ -1,5 +1,6 @@
 import { Queue } from 'bullmq';
 import { redis } from '../config/redis';
+import { injectTraceContext } from '../utils/trace-propagation';
 
 export const IMAGE_PROCESSING_QUEUE_NAME = 'image-processing-queue';
 
@@ -22,5 +23,8 @@ export interface ImageJobData {
 }
 
 export async function addImageJob(data: ImageJobData) {
-  return imageProcessingQueue.add('process-image', data);
+  return imageProcessingQueue.add('process-image', {
+    ...data,
+    _traceContext: injectTraceContext(),
+  });
 }

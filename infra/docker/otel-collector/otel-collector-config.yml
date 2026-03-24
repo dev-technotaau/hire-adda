@@ -8,6 +8,9 @@ receivers:
     protocols:
       http:
         endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins: ['https://hireadda.in', 'http://localhost:3000']
+          allowed_headers: ['*']
       grpc:
         endpoint: 0.0.0.0:4317
 
@@ -16,6 +19,10 @@ extensions:
     endpoint: 0.0.0.0:13133
 
 processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 200
+    spike_limit_mib: 50
   batch:
     timeout: 5s
     send_batch_size: 1024
@@ -36,7 +43,7 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
+      processors: [memory_limiter, batch]
       exporters: [otlphttp/tempo, otlphttp/honeycomb]
 
   telemetry:

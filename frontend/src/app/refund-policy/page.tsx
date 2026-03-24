@@ -4,19 +4,19 @@ import PublicLayout from '@/components/layout/PublicLayout';
 export const metadata: Metadata = {
   title: 'Refund Policy',
   description:
-    'Understand the TalentBridge refund and cancellation policy for premium plans and paid services.',
+    'Understand the HireAdda refund and cancellation policy for premium plans and paid services.',
 };
 
 const sections = [
   {
     title: 'Overview',
     content:
-      'TalentBridge is committed to providing a fair and transparent refund process for all paid services on our platform. This Refund Policy applies to all premium subscriptions, paid job postings, featured listings, and any other paid services purchased through TalentBridge. Job seekers who use our free services are not affected by this policy. By purchasing any paid service, you agree to the terms outlined in this policy.',
+      'HireAdda is committed to providing a fair and transparent refund process for all paid services on our platform. This Refund Policy applies to all premium subscriptions, paid job postings, featured listings, and any other paid services purchased through HireAdda. Job seekers who use our free services are not affected by this policy. By purchasing any paid service, you agree to the terms outlined in this policy.',
   },
   {
     title: 'Free Services for Job Seekers',
     content:
-      'TalentBridge is completely free for job seekers. All candidate features including profile creation, job search, job applications, AI-powered recommendations, and messaging are provided at no cost. Since no payment is collected from job seekers, this refund policy does not apply to candidate accounts. If you have been charged for any candidate service, please contact our support team immediately at support@talentbridge.com for a full refund.',
+      'HireAdda is completely free for job seekers. All candidate features including profile creation, job search, job applications, AI-powered recommendations, and messaging are provided at no cost. Since no payment is collected from job seekers, this refund policy does not apply to candidate accounts. If you have been charged for any candidate service, please contact our support team immediately at support@hireadda.in for a full refund.',
   },
   {
     title: 'Employer Subscription Plans',
@@ -31,7 +31,7 @@ const sections = [
   {
     title: 'Refund Process',
     content:
-      'To request a refund, contact our support team at billing@talentbridge.com or submit a support ticket through your dashboard with the subject line "Refund Request." Please include your account email, the transaction ID or invoice number, and the reason for your refund request. Our billing team will review your request within 3-5 business days. Approved refunds will be processed to the original payment method within 7-10 business days. You will receive an email confirmation once the refund has been initiated.',
+      'To request a refund, contact our support team at billing@hireadda.in or submit a support ticket through your dashboard with the subject line "Refund Request." Please include your account email, the transaction ID or invoice number, and the reason for your refund request. Our billing team will review your request within 3-5 business days. Approved refunds will be processed to the original payment method within 7-10 business days. You will receive an email confirmation once the refund has been initiated.',
   },
   {
     title: 'Non-Refundable Items',
@@ -46,12 +46,12 @@ const sections = [
   {
     title: 'Changes to This Policy',
     content:
-      'TalentBridge reserves the right to modify this Refund Policy at any time. Changes will be posted on this page with an updated "Last updated" date. Material changes will be communicated to active subscribers via email. The revised policy will apply to all purchases made after the effective date of the change. Purchases made before the change will be governed by the policy in effect at the time of purchase.',
+      'HireAdda reserves the right to modify this Refund Policy at any time. Changes will be posted on this page with an updated "Last updated" date. Material changes will be communicated to active subscribers via email. The revised policy will apply to all purchases made after the effective date of the change. Purchases made before the change will be governed by the policy in effect at the time of purchase.',
   },
   {
     title: 'Contact Us',
     content:
-      'For billing inquiries and refund requests, email us at billing@talentbridge.com. For general support, contact support@talentbridge.com or call +91 1800-123-4567 (Mon-Fri, 9 AM - 6 PM IST). You may also write to us at TalentBridge Technologies Pvt. Ltd., 4th Floor, Tower B, Koramangala 4th Block, Bangalore, Karnataka 560034, India.',
+      'For billing inquiries and refund requests, email us at billing@hireadda.in. For general support, contact support@hireadda.in or call +91 1800-123-4567 (Mon-Fri, 9 AM - 6 PM IST). You may also write to us at HireAdda Technologies Pvt. Ltd., 4th Floor, Tower B, Koramangala 4th Block, Bangalore, Karnataka 560034, India.',
   },
 ];
 
@@ -75,9 +75,9 @@ export default function RefundPolicyPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-xl border border-[var(--border)] bg-white p-6 sm:p-10">
             <p className="leading-relaxed text-[var(--text-secondary)]">
-              This Refund Policy governs all paid services offered by TalentBridge Technologies Pvt.
-              Ltd. (&quot;TalentBridge,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;).
-              We aim to be fair and transparent in all billing matters. Please read this policy
+              This Refund Policy governs all paid services offered by HireAdda Technologies Pvt.
+              Ltd. (&quot;HireAdda,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). We
+              aim to be fair and transparent in all billing matters. Please read this policy
               carefully before making any purchase on our platform.
             </p>
 
@@ -96,10 +96,10 @@ export default function RefundPolicyPage() {
 
             <div className="mt-10 border-t border-[var(--border)] pt-6">
               <p className="text-sm text-[var(--text-muted)]">
-                This Refund Policy is effective as of February 1, 2026. TalentBridge Technologies
-                Pvt. Ltd. is registered under the laws of India with its registered office in
-                Bangalore, Karnataka. All refund decisions are at the sole discretion of
-                TalentBridge and are final.
+                This Refund Policy is effective as of February 1, 2026. HireAdda Technologies Pvt.
+                Ltd. is registered under the laws of India with its registered office in Bangalore,
+                Karnataka. All refund decisions are at the sole discretion of HireAdda and are
+                final.
               </p>
             </div>
           </div>

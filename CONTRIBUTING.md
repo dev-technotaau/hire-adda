@@ -1,14 +1,14 @@
-# Contributing to Talent Bridge
+# Contributing to Hire Adda
 
-Thank you for your interest in contributing to Talent Bridge! We welcome contributions from the community to help us enable blue-collar workers to find better opportunities.
+Thank you for your interest in contributing to Hire Adda! We welcome contributions from the community to help us enable blue-collar workers to find better opportunities.
 
 ## Getting Started
 
 1.  **Fork the repository** on GitHub.
 2.  **Clone your fork** locally:
     ```bash
-    git clone https://github.com/your-username/talent-bridge.git
-    cd talent-bridge
+    git clone https://github.com/your-username/hire-adda.git
+    cd hire-adda
     ```
 3.  **Install dependencies**:
     ```bash
@@ -21,18 +21,19 @@ Thank you for your interest in contributing to Talent Bridge! We welcome contrib
 
 ## Development Workflow
 
--   run `npm run dev` to start both frontend and backend servers.
--   Ensure your code follows the existing style (Prettier/ESLint are configured).
--   Write tests for new features where possible.
+- run `npm run dev` to start both frontend and backend servers.
+- Ensure your code follows the existing style (Prettier/ESLint are configured).
+- Write tests for new features where possible.
 
 ## Commit Guidelines
 
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
--   `feat: add new search filter`
--   `fix: resolve login redirect loop`
--   `docs: update readme`
--   `style: format code`
--   `refactor: simplify auth logic`
+
+- `feat: add new search filter`
+- `fix: resolve login redirect loop`
+- `docs: update readme`
+- `style: format code`
+- `refactor: simplify auth logic`
 
 ## Pull Request Process
 

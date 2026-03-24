@@ -5,7 +5,7 @@
 # The SMTP/IMAP mailserver runs in Docker (outside K3s) and
 # binds ports directly to the host. This headless Service +
 # Endpoints pair lets K8s pods reach it via DNS:
-#   mailserver-external.talent-bridge.svc.cluster.local
+#   mailserver-external.hire-adda.svc.cluster.local
 #
 # Update the IP in Endpoints if the host IP changes.
 # ============================================================
@@ -13,12 +13,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mailserver-external
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: mailserver-external
     app.kubernetes.io/name: mailserver
     app.kubernetes.io/component: mail
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
 spec:
   # No selector — manually managed Endpoints
   type: ClusterIP
@@ -40,7 +40,7 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   name: mailserver-external
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: mailserver-external
 subsets:

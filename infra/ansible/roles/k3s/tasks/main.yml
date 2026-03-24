@@ -98,13 +98,13 @@
     block: |
       # K3s / Kubernetes aliases
       alias k='kubectl'
-      alias kgp='kubectl get pods -n talent-bridge'
-      alias kgs='kubectl get svc -n talent-bridge'
-      alias kgd='kubectl get deploy -n talent-bridge'
-      alias kga='kubectl get all -n talent-bridge'
-      alias klb='kubectl logs -f deploy/backend -n talent-bridge'
-      alias klf='kubectl logs -f deploy/frontend -n talent-bridge'
-      alias kex='kubectl exec -it -n talent-bridge'
+      alias kgp='kubectl get pods -n hire-adda'
+      alias kgs='kubectl get svc -n hire-adda'
+      alias kgd='kubectl get deploy -n hire-adda'
+      alias kga='kubectl get all -n hire-adda'
+      alias klb='kubectl logs -f deploy/backend -n hire-adda'
+      alias klf='kubectl logs -f deploy/frontend -n hire-adda'
+      alias kex='kubectl exec -it -n hire-adda'
       alias h='helm'
       export KUBECONFIG=/home/{{ deploy_user }}/.kube/config
     marker: '# {mark} ANSIBLE MANAGED — K3s aliases'

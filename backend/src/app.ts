@@ -54,12 +54,7 @@ app.use(
         scriptSrc: ["'self'", "'unsafe-eval'", 'https://challenges.cloudflare.com'], // Allow Cloudflare Turnstile
         frameSrc: ["'self'", 'https://challenges.cloudflare.com'], // Allow Turnstile iframe
         frameAncestors: ["'none'"], // Modern CSP3 replacement for X-Frame-Options: DENY
-        imgSrc: [
-          "'self'",
-          'data:',
-          'https://res.cloudinary.com',
-          'https://assets.talentbridge.com',
-        ], // Allow Cloudinary & R2
+        imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://assets.hireadda.in'], // Allow Cloudinary & R2
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
         reportUri: ['/api/csp-report'],
@@ -165,7 +160,7 @@ if (env.NODE_ENV === 'development') {
 // Swagger API docs (protected in production)
 const swaggerSetup = swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Talent Bridge API Docs',
+  customSiteTitle: 'Hire Adda API Docs',
 });
 if (env.NODE_ENV === 'production') {
   app.use(
@@ -306,6 +301,7 @@ import analyticsRoutes from './routes/analytics.routes';
 import contactRoutes from './routes/contact.routes';
 import publicRoutes from './routes/public.routes';
 import ticketRoutes from './routes/ticket.routes';
+import alertmanagerRoutes from './routes/alertmanager.routes';
 
 apiV1Router.use('/auth', authRoutes);
 apiV1Router.use('/candidates', candidateRoutes);
@@ -331,13 +327,14 @@ apiV1Router.use('/analytics', analyticsRoutes);
 apiV1Router.use('/contact', contactRoutes);
 apiV1Router.use('/public', publicRoutes);
 apiV1Router.use('/tickets', ticketRoutes);
+apiV1Router.use('/internal/alertmanager', alertmanagerRoutes);
 
 app.use('/api/v1', apiV1Router);
 
 // Root route
 app.get('/', (_req: Request, res: Response) => {
   res.json({
-    message: 'Welcome to Talent Bridge API',
+    message: 'Welcome to Hire Adda API',
     docs: '/api-docs',
   });
 });

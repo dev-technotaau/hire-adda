@@ -7,7 +7,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: chaos-redis-kill
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: chaos-engineering
 spec:
@@ -40,25 +40,25 @@ spec:
                   echo "Testing backend graceful degradation without Redis"
 
                   # Delete Redis pod
-                  kubectl delete pod redis-0 -n talent-bridge --grace-period=5
+                  kubectl delete pod redis-0 -n hire-adda --grace-period=5
                   echo "Redis pod deleted at $(date -u)"
 
                   # Wait for backend health check to report degraded
                   sleep 10
                   echo "Checking backend health (should be degraded but alive)..."
-                  kubectl exec deploy/backend -n talent-bridge -- \
+                  kubectl exec deploy/backend -n hire-adda -- \
                     wget -qO- http://localhost:5000/health/live || echo "Backend liveness: FAILED"
-                  kubectl exec deploy/backend -n talent-bridge -- \
+                  kubectl exec deploy/backend -n hire-adda -- \
                     wget -qO- http://localhost:5000/health/ready || echo "Backend readiness: NOT READY (expected)"
 
                   # Wait for Redis to auto-restart
                   echo "Waiting for Redis to auto-restart..."
-                  kubectl wait --for=condition=ready pod/redis-0 -n talent-bridge --timeout=120s
+                  kubectl wait --for=condition=ready pod/redis-0 -n hire-adda --timeout=120s
 
                   # Verify recovery
                   sleep 5
                   echo "Checking backend recovery..."
-                  kubectl exec deploy/backend -n talent-bridge -- \
+                  kubectl exec deploy/backend -n hire-adda -- \
                     wget -qO- http://localhost:5000/health/ready && echo "Backend recovered!" || echo "Backend still not ready"
 
                   echo "=== Experiment Complete ==="

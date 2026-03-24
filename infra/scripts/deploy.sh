@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# Talent Bridge — Blue-Green / Canary / Rolling Deploy Script
+# Hire Adda — Blue-Green / Canary / Rolling Deploy Script
 # Manages zero-downtime deployments on VPS via Docker Compose
 # with nginx upstream weight switching.
 #
@@ -36,7 +36,7 @@ SCRIPTS_DIR="${SCRIPTS_DIR:-$_SCRIPT_DIR}"
 ENV_FILE="${COMPOSE_DIR}/.env"
 STATE_FILE="${COMPOSE_DIR}/.deploy-state"
 UPSTREAM_DIR="${COMPOSE_DIR}/nginx/upstreams"
-LOG_FILE="/var/log/talent-bridge-deploy.log"
+LOG_FILE="/var/log/hire-adda-deploy.log"
 LOCK_FILE="/tmp/tb-deploy.lock"
 MAX_HEALTH_RETRIES=15
 HEALTH_CHECK_INTERVAL=10
@@ -1101,7 +1101,7 @@ do_status() {
 
   echo ""
   echo -e "${CYAN}═══════════════════════════════════════════${NC}"
-  echo -e "${CYAN}  Talent Bridge — Deployment Status${NC}"
+  echo -e "${CYAN}  Hire Adda — Deployment Status${NC}"
   echo -e "${CYAN}═══════════════════════════════════════════${NC}"
   echo ""
   echo -e "  Active Color:    ${GREEN}${ACTIVE_COLOR}${NC}"
@@ -1169,7 +1169,7 @@ case "$ACTION" in
     read_state
 
     log "============================================"
-    log "  Talent Bridge — Deploy Starting"
+    log "  Hire Adda — Deploy Starting"
     log "  Strategy: ${STRATEGY}"
     log "  Active Color: ${ACTIVE_COLOR}"
     log "============================================"

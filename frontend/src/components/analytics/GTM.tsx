@@ -10,7 +10,7 @@ function useAnalyticsConsent() {
   const [consent, setConsent] = useState(false);
 
   useEffect(() => {
-    const raw = Cookies.get('tb_cookie_consent');
+    const raw = Cookies.get('ha_cookie_consent');
     if (raw) {
       try {
         const prefs = JSON.parse(raw);

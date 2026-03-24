@@ -44,7 +44,7 @@ try {
   logger.info(`✅ Kafka client initialized with brokers: ${brokers.join(', ')}`);
 
   producer = kafka.producer();
-  consumer = kafka.consumer({ groupId: 'talent-bridge-backend-group' });
+  consumer = kafka.consumer({ groupId: 'hire-adda-backend-group' });
 } catch (error) {
   logger.error('❌ Kafka initialization failed:', error);
 }
@@ -66,4 +66,3 @@ export const connectKafka = async () => {
 };
 
 export { consumer, kafka, producer };
-

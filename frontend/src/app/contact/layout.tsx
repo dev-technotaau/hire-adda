@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Contact Us | Talent Bridge',
+  title: 'Contact Us | Hire Adda',
   description:
-    "Get in touch with the Talent Bridge team. We're here to help with your job search or hiring needs.",
-  keywords: ['contact talent bridge', 'support', 'help', 'customer service'],
+    "Get in touch with the Hire Adda team. We're here to help with your job search or hiring needs.",
+  keywords: ['contact hire adda', 'support', 'help', 'customer service'],
 };
 
 export default function ContactLayout({ children }: { children: React.ReactNode }) {

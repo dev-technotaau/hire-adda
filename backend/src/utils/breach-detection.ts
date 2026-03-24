@@ -32,7 +32,7 @@ export const checkPasswordBreach = async (
     const response = await axios.get(`${HIBP_API_URL}/${prefix}`, {
       timeout: 5000,
       headers: {
-        'User-Agent': 'TalentBridge-PasswordCheck',
+        'User-Agent': 'HireAdda-PasswordCheck',
       },
     });
 

@@ -29,7 +29,7 @@ fi
 OPENSEARCH_URL="${ELASTICSEARCH_URL:-http://localhost:9200}"
 OPENSEARCH_USER="${ELASTICSEARCH_USERNAME:-}"
 OPENSEARCH_PASS="${ELASTICSEARCH_PASSWORD:-}"
-REPO_NAME="${OPENSEARCH_SNAPSHOT_REPO:-talent_bridge_repo}"
+REPO_NAME="${OPENSEARCH_SNAPSHOT_REPO:-hire_adda_repo}"
 SNAPSHOT_LOCATION="${SNAPSHOT_LOCATION:-/usr/share/opensearch/snapshots}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 
@@ -71,7 +71,7 @@ show_help() {
   echo ""
   echo "Environment:"
   echo "  ELASTICSEARCH_URL             OpenSearch URL (default: http://localhost:9200)"
-  echo "  OPENSEARCH_SNAPSHOT_REPO      Repository name (default: talent_bridge_repo)"
+  echo "  OPENSEARCH_SNAPSHOT_REPO      Repository name (default: hire_adda_repo)"
   echo "  BACKUP_RETENTION_DAYS         Snapshot retention days (default: 30)"
 }
 

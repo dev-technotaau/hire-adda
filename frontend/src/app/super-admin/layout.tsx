@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | Super Admin — Talent Bridge',
-    default: 'Super Admin Dashboard | Talent Bridge',
+    template: '%s | Super Admin — Hire Adda',
+    default: 'Super Admin Dashboard | Hire Adda',
   },
   robots: { index: false, follow: false },
 };

@@ -25,23 +25,23 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   title: {
-    default: 'TalentBridge - Find Your Dream Job',
-    template: '%s | TalentBridge',
+    default: 'HireAdda - Find Your Dream Job',
+    template: '%s | HireAdda',
   },
   description:
-    "India's leading job portal and recruitment platform. Find top jobs, hire the best talent, and build your career with TalentBridge.",
+    "India's leading job portal and recruitment platform. Find top jobs, hire the best talent, and build your career with HireAdda.",
   keywords: ['jobs', 'recruitment', 'hiring', 'career', 'job portal', 'talent', 'India'],
-  authors: [{ name: 'TalentBridge' }],
+  authors: [{ name: 'HireAdda' }],
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    siteName: 'TalentBridge',
-    title: 'TalentBridge - Find Your Dream Job',
+    siteName: 'HireAdda',
+    title: 'HireAdda - Find Your Dream Job',
     description: "India's leading job portal and recruitment platform.",
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TalentBridge - Find Your Dream Job',
+    title: 'HireAdda - Find Your Dream Job',
     description: "India's leading job portal and recruitment platform.",
   },
   robots: {

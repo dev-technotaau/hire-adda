@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq';
 import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { injectTraceContext } from '../utils/trace-propagation';
 
 export const SMS_QUEUE_NAME = 'sms-queue';
 
@@ -24,5 +25,9 @@ smsQueue.on('error', (err) => {
 logger.info(`SMS Queue initialized: ${SMS_QUEUE_NAME}`);
 
 export async function addSMSJob(data: { to: string; message: string }, priority?: number) {
-  return smsQueue.add('send-sms', data, priority ? { priority } : {});
+  return smsQueue.add(
+    'send-sms',
+    { ...data, _traceContext: injectTraceContext() },
+    priority ? { priority } : {}
+  );
 }

@@ -203,7 +203,7 @@ export default function CandidateDashboard() {
   const needsOnboarding =
     !compLoading &&
     completeness?.data?.score === 0 &&
-    !wasOnboardingSkipped('tb_candidate_onboarding');
+    !wasOnboardingSkipped('ha_candidate_onboarding');
 
   useEffect(() => {
     if (needsOnboarding) {
@@ -446,8 +446,14 @@ export default function CandidateDashboard() {
                   </div>
                 )}
               </div>
-              <Link href={ROUTES.CANDIDATE.PROFILE} className="shrink-0 self-start" title="Go to your profile to complete missing sections">
-                <Button size="sm" tooltip="Update your profile">Update Profile</Button>
+              <Link
+                href={ROUTES.CANDIDATE.PROFILE}
+                className="shrink-0 self-start"
+                title="Go to your profile to complete missing sections"
+              >
+                <Button size="sm" tooltip="Update your profile">
+                  Update Profile
+                </Button>
               </Link>
             </div>
           </Card>
@@ -746,7 +752,10 @@ export default function CandidateDashboard() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-3">
-            <Link href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=upload-resume`} title="Upload or replace your resume file">
+            <Link
+              href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=upload-resume`}
+              title="Upload or replace your resume file"
+            >
               <div className="group hover:border-primary/30 flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--border)] p-4 transition-all hover:shadow-sm">
                 <div className="bg-primary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
                   <Upload className="text-primary h-5 w-5" />
@@ -761,7 +770,10 @@ export default function CandidateDashboard() {
                 </div>
               </div>
             </Link>
-            <Link href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=generate-resume`} title="Create a professional resume from your profile">
+            <Link
+              href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=generate-resume`}
+              title="Create a professional resume from your profile"
+            >
               <div className="group hover:border-primary/30 flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--border)] p-4 transition-all hover:shadow-sm">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--success-light)]">
                   <FileText className="h-5 w-5 text-[var(--success)]" />
@@ -776,7 +788,10 @@ export default function CandidateDashboard() {
                 </div>
               </div>
             </Link>
-            <Link href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=parse-resume`} title="Extract skills and experience with AI">
+            <Link
+              href={`${ROUTES.CANDIDATE.PROFILE}?section=resume&focus=parse-resume`}
+              title="Extract skills and experience with AI"
+            >
               <div className="group border-primary/20 bg-primary-50/20 hover:border-primary/40 flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-all hover:shadow-sm">
                 <div className="bg-primary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
                   <Brain className="text-primary h-5 w-5" />
@@ -819,7 +834,10 @@ export default function CandidateDashboard() {
                   <h2 className="text-lg font-semibold text-[var(--text)]">AI Recommended Jobs</h2>
                 </div>
                 <Tooltip content="View all AI recommended jobs">
-                  <Link href={ROUTES.CANDIDATE.JOBS} className="text-primary text-sm hover:underline">
+                  <Link
+                    href={ROUTES.CANDIDATE.JOBS}
+                    className="text-primary text-sm hover:underline"
+                  >
                     View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
                   </Link>
                 </Tooltip>
@@ -828,7 +846,11 @@ export default function CandidateDashboard() {
           >
             <div className="grid gap-4 sm:grid-cols-2">
               {aiRecommendedJobs.slice(0, 4).map((job) => (
-                <Link key={job.id} href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)} title={`View ${job.title} at ${job.company?.companyName || 'company'}`}>
+                <Link
+                  key={job.id}
+                  href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
+                  title={`View ${job.title} at ${job.company?.companyName || 'company'}`}
+                >
                   <div className="border-primary/20 bg-primary-50/20 hover:border-primary/40 cursor-pointer rounded-lg border p-4 transition-all hover:shadow-sm">
                     <div className="flex items-start gap-3">
                       <div className="bg-primary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
@@ -869,7 +891,10 @@ export default function CandidateDashboard() {
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-[var(--text)]">Recommended For You</h2>
                 <Tooltip content="View all recommended jobs">
-                  <Link href={ROUTES.CANDIDATE.JOBS} className="text-primary text-sm hover:underline">
+                  <Link
+                    href={ROUTES.CANDIDATE.JOBS}
+                    className="text-primary text-sm hover:underline"
+                  >
                     View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
                   </Link>
                 </Tooltip>
@@ -878,7 +903,11 @@ export default function CandidateDashboard() {
           >
             <div className="grid gap-4 sm:grid-cols-2">
               {recommendedJobs.map((job) => (
-                <Link key={job.id} href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)} title={`View ${job.title} at ${job.company?.companyName || 'company'}`}>
+                <Link
+                  key={job.id}
+                  href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
+                  title={`View ${job.title} at ${job.company?.companyName || 'company'}`}
+                >
                   <div className="hover:border-primary/30 cursor-pointer rounded-lg border border-[var(--border)] p-4 transition-all hover:shadow-sm">
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
@@ -976,7 +1005,9 @@ export default function CandidateDashboard() {
               description="Start applying to jobs to see your activity here."
               action={
                 <Link href={ROUTES.CANDIDATE.JOBS} title="Browse available job listings">
-                  <Button size="sm" tooltip="Browse available jobs">Browse Jobs</Button>
+                  <Button size="sm" tooltip="Browse available jobs">
+                    Browse Jobs
+                  </Button>
                 </Link>
               }
             />
@@ -1042,7 +1073,10 @@ export default function CandidateDashboard() {
                   <h2 className="text-lg font-semibold text-[var(--text)]">Notifications</h2>
                 </div>
                 <Tooltip content="View all notifications">
-                  <Link href={ROUTES.NOTIFICATIONS} className="text-primary text-sm hover:underline">
+                  <Link
+                    href={ROUTES.NOTIFICATIONS}
+                    className="text-primary text-sm hover:underline"
+                  >
                     View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
                   </Link>
                 </Tooltip>

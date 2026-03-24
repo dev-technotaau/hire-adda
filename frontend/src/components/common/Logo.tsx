@@ -19,7 +19,7 @@ export default function Logo({ href = '/', className, size = 'md' }: LogoProps) 
   const img = (
     <Image
       src="/icons/logo.svg"
-      alt="TalentBridge"
+      alt="HireAdda"
       width={205}
       height={48}
       className={cn(sizeStyles[size], 'w-auto', className)}

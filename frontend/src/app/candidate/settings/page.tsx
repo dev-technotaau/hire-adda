@@ -2375,7 +2375,7 @@ function PrivacyTab() {
           <div>
             <h2 className="text-lg font-semibold text-[var(--text)]">Download My Data</h2>
             <p className="text-sm text-[var(--text-secondary)]">
-              Export a copy of all your personal data stored on TalentBridge
+              Export a copy of all your personal data stored on HireAdda
             </p>
           </div>
         </div>
@@ -2427,7 +2427,7 @@ function PrivacyTab() {
 const legalLinks = [
   {
     label: 'Terms of Service',
-    description: 'Rules and guidelines for using TalentBridge',
+    description: 'Rules and guidelines for using HireAdda',
     href: ROUTES.PUBLIC.TERMS,
     icon: FileText,
   },

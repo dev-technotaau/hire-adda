@@ -54,7 +54,7 @@ const FAQS: FaqItem[] = [
   {
     question: 'How does billing and subscription work?',
     answer:
-      'Talent Bridge offers flexible plans for employers. Visit your account settings to view your current plan, usage, and upgrade options. You can manage payment methods, download invoices, and set up auto-renewal. Contact our support team if you need a custom enterprise plan.',
+      'Hire Adda offers flexible plans for employers. Visit your account settings to view your current plan, usage, and upgrade options. You can manage payment methods, download invoices, and set up auto-renewal. Contact our support team if you need a custom enterprise plan.',
   },
   {
     question: 'How do I use webhooks and the API?',

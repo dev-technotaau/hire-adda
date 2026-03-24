@@ -1,5 +1,5 @@
 # ============================================================
-# Talent Bridge — Local Development Overrides
+# Hire Adda — Local Development Overrides
 # Automatically loaded by `docker compose up` when present.
 # Restores build: directives for backend & frontend (blue) so
 # that local source changes are picked up without GHCR images.

@@ -1,6 +1,6 @@
 # ============================================================
 # OpenSearch Dashboards — Ingress
-# dashboards.hireadda.in with basic auth
+# logs.hireadda.in with basic auth (matches Docker nginx)
 # ============================================================
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -10,18 +10,28 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
-    # Basic auth for access control
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/hsts: 'true'
+    nginx.ingress.kubernetes.io/hsts-max-age: '63072000'
+    # Basic auth (matches Docker nginx htpasswd for logs.hireadda.in)
     nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: dashboards-basic-auth
-    nginx.ingress.kubernetes.io/auth-realm: 'OpenSearch Dashboards'
+    nginx.ingress.kubernetes.io/auth-secret: logs-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: 'HireAdda Logs'
+    # Security headers (matches Docker nginx)
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-Frame-Options: DENY";
+    # Proxy buffer settings (matches Docker nginx for OpenSearch Dashboards)
+    nginx.ingress.kubernetes.io/proxy-buffer-size: '128k'
+    nginx.ingress.kubernetes.io/proxy-buffers-number: '4'
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - dashboards.hireadda.in
-      secretName: dashboards-tls
+        - logs.hireadda.in
+      secretName: logs-hireadda-tls
   rules:
-    - host: dashboards.hireadda.in
+    - host: logs.hireadda.in
       http:
         paths:
           - path: /
@@ -31,3 +41,21 @@ spec:
                 name: opensearch-dashboards
                 port:
                   number: 5601
+---
+# ============================================================
+# Basic Auth Secret for logs.hireadda.in
+# Matches Docker's infra/docker/nginx/htpasswd
+# Credentials: admin / (same as Grafana admin password)
+# Regenerate: htpasswd -nbB admin 'PASSWORD' | base64
+# ============================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: logs-basic-auth
+  namespace: logging
+  labels:
+    app: opensearch-dashboards
+type: Opaque
+stringData:
+  auth: |
+    admin:$2y$05$SpnyvRNLTvB0NiIXGgVSzOOzqOUzxivXuxHMsd6oxjlFqwXcNXXoa

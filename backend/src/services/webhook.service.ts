@@ -192,7 +192,7 @@ export const webhookService = {
       payload: {
         event: 'test',
         timestamp: new Date().toISOString(),
-        message: 'This is a test webhook delivery from Talent Bridge.',
+        message: 'This is a test webhook delivery from Hire Adda.',
       },
     });
 

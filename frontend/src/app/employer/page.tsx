@@ -155,7 +155,7 @@ export default function EmployerDashboard() {
 
   const needsOnboarding =
     !companyLoading &&
-    !wasOnboardingSkipped('tb_employer_onboarding') &&
+    !wasOnboardingSkipped('ha_employer_onboarding') &&
     (companyError ||
       (companyData?.data && !companyData.data.description && !companyData.data.industry));
 
@@ -424,7 +424,9 @@ export default function EmployerDashboard() {
               </div>
               <Tooltip content="Go to your company profile settings">
                 <Link href={ROUTES.EMPLOYER.PROFILE} className="shrink-0 self-start">
-                  <Button size="sm" tooltip="Edit your company profile">Update Profile</Button>
+                  <Button size="sm" tooltip="Edit your company profile">
+                    Update Profile
+                  </Button>
                 </Link>
               </Tooltip>
             </div>
@@ -1165,7 +1167,10 @@ export default function EmployerDashboard() {
                   <h2 className="text-lg font-semibold text-[var(--text)]">Notifications</h2>
                 </div>
                 <Tooltip content="View all notifications">
-                  <Link href={ROUTES.NOTIFICATIONS} className="text-primary text-sm hover:underline">
+                  <Link
+                    href={ROUTES.NOTIFICATIONS}
+                    className="text-primary text-sm hover:underline"
+                  >
                     View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
                   </Link>
                 </Tooltip>

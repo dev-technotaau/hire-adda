@@ -1,5 +1,5 @@
 # ============================================================
-# Talent Bridge — Production Docker Compose
+# Hire Adda — Production Docker Compose
 # Canonical deployment for VPS (hireadda.in)
 # ============================================================
 # Blue-Green / Canary deployment:
@@ -96,7 +96,7 @@ services:
   # ===========================================
   frontend-blue:
     container_name: hireadda_frontend_blue
-    image: ghcr.io/${GHCR_OWNER:-chandreshkkhatri}/talent-bridge-frontend:${BLUE_FRONTEND_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-chandreshkkhatri}/hire-adda-frontend:${BLUE_FRONTEND_TAG:-latest}
     restart: unless-stopped
     deploy:
       resources:
@@ -109,7 +109,8 @@ services:
       - BFF_SECRET=${BFF_SECRET}
       - COOKIE_ACCESS_MAX_AGE_DAYS=${COOKIE_ACCESS_MAX_AGE_DAYS:-7}
       - COOKIE_REFRESH_MAX_AGE_DAYS=${COOKIE_REFRESH_MAX_AGE_DAYS:-30}
-      - OTEL_SERVICE_NAME=talent-bridge-frontend
+      - OTEL_ENABLED=true
+      - OTEL_SERVICE_NAME=hire-adda-frontend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
     networks:
       - hireadda_network
@@ -136,7 +137,7 @@ services:
   # ===========================================
   frontend-green:
     container_name: hireadda_frontend_green
-    image: ghcr.io/${GHCR_OWNER:-chandreshkkhatri}/talent-bridge-frontend:${GREEN_FRONTEND_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-chandreshkkhatri}/hire-adda-frontend:${GREEN_FRONTEND_TAG:-latest}
     restart: unless-stopped
     deploy:
       resources:
@@ -149,7 +150,8 @@ services:
       - BFF_SECRET=${BFF_SECRET}
       - COOKIE_ACCESS_MAX_AGE_DAYS=${COOKIE_ACCESS_MAX_AGE_DAYS:-7}
       - COOKIE_REFRESH_MAX_AGE_DAYS=${COOKIE_REFRESH_MAX_AGE_DAYS:-30}
-      - OTEL_SERVICE_NAME=talent-bridge-frontend
+      - OTEL_ENABLED=true
+      - OTEL_SERVICE_NAME=hire-adda-frontend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
     networks:
       - hireadda_network
@@ -176,7 +178,7 @@ services:
   # ===========================================
   backend-blue:
     container_name: hireadda_backend_blue
-    image: ghcr.io/${GHCR_OWNER:-chandreshkkhatri}/talent-bridge-backend:${BLUE_BACKEND_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-chandreshkkhatri}/hire-adda-backend:${BLUE_BACKEND_TAG:-latest}
     restart: unless-stopped
     stop_grace_period: 30s
     sysctls:
@@ -205,7 +207,7 @@ services:
       - WEBAUTHN_RP_NAME=HireAdda
       - WEBAUTHN_ORIGIN=https://hireadda.in
       - OTEL_ENABLED=true
-      - OTEL_SERVICE_NAME=talent-bridge-api-blue
+      - OTEL_SERVICE_NAME=hire-adda-api-blue
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
     volumes:
       - uploads_data:/app/uploads
@@ -245,7 +247,7 @@ services:
   # ===========================================
   backend-green:
     container_name: hireadda_backend_green
-    image: ghcr.io/${GHCR_OWNER:-chandreshkkhatri}/talent-bridge-backend:${GREEN_BACKEND_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-chandreshkkhatri}/hire-adda-backend:${GREEN_BACKEND_TAG:-latest}
     restart: unless-stopped
     stop_grace_period: 30s
     sysctls:
@@ -274,7 +276,7 @@ services:
       - WEBAUTHN_RP_NAME=HireAdda
       - WEBAUTHN_ORIGIN=https://hireadda.in
       - OTEL_ENABLED=true
-      - OTEL_SERVICE_NAME=talent-bridge-api-green
+      - OTEL_SERVICE_NAME=hire-adda-api-green
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
     volumes:
       - uploads_data:/app/uploads
@@ -327,13 +329,13 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=talentbridge
+      - POSTGRES_DB=hireadda
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - hireadda_network
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d talentbridge']
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d hireadda']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -387,7 +389,7 @@ services:
           memory: 2G
           cpus: '1.0'
     environment:
-      - cluster.name=talentbridge
+      - cluster.name=hireadda
       - node.name=opensearch-node1
       - discovery.type=single-node
       - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
@@ -687,7 +689,7 @@ services:
           cpus: '0.1'
     command:
       - '--kafka.server=kafka:9092'
-      - '--topic.filter=tb\..*|talent-bridge\..*'
+      - '--topic.filter=tb\..*|hire-adda\..*'
     depends_on:
       kafka:
         condition: service_healthy

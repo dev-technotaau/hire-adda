@@ -8,7 +8,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: chaos-network-delay
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: chaos-engineering
 spec:
@@ -44,7 +44,7 @@ spec:
                   # Step 1: Measure baseline latency
                   echo ""
                   echo "--- Step 1: Baseline Health Check ---"
-                  kubectl exec deploy/backend -n talent-bridge -- \
+                  kubectl exec deploy/backend -n hire-adda -- \
                     wget -qO- http://localhost:5000/health/ready 2>&1 || echo "Health check failed"
 
                   # Step 2: Apply NetworkPolicy to temporarily block postgres
@@ -56,7 +56,7 @@ spec:
                   kind: NetworkPolicy
                   metadata:
                     name: chaos-block-postgres
-                    namespace: talent-bridge
+                    namespace: hire-adda
                   spec:
                     podSelector:
                       matchLabels:
@@ -94,16 +94,16 @@ spec:
                   for i in 1 2 3 4 5 6; do
                     sleep 5
                     echo "Check $i ($(date -u)):"
-                    kubectl exec deploy/backend -n talent-bridge -- \
+                    kubectl exec deploy/backend -n hire-adda -- \
                       wget -qO- http://localhost:5000/health/live 2>&1 && echo "  Liveness: OK" || echo "  Liveness: FAILED"
-                    kubectl exec deploy/backend -n talent-bridge -- \
+                    kubectl exec deploy/backend -n hire-adda -- \
                       wget -qO- http://localhost:5000/health/ready 2>&1 && echo "  Readiness: OK" || echo "  Readiness: NOT READY (expected)"
                   done
 
                   # Step 4: Remove the blocking policy
                   echo ""
                   echo "--- Step 4: Restoring PostgreSQL access ---"
-                  kubectl delete networkpolicy chaos-block-postgres -n talent-bridge --ignore-not-found
+                  kubectl delete networkpolicy chaos-block-postgres -n hire-adda --ignore-not-found
                   echo "NetworkPolicy removed at $(date -u)"
 
                   # Step 5: Verify recovery
@@ -113,7 +113,7 @@ spec:
                   for i in 1 2 3; do
                     sleep 5
                     echo "Recovery check $i:"
-                    kubectl exec deploy/backend -n talent-bridge -- \
+                    kubectl exec deploy/backend -n hire-adda -- \
                       wget -qO- http://localhost:5000/health/ready 2>&1 && echo "  Backend recovered!" || echo "  Still recovering..."
                   done
 

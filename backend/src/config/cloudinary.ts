@@ -13,7 +13,7 @@ cloudinary.config({
 // Upload options for different use cases
 export const uploadOptions = {
   profileImage: {
-    folder: 'talent_bridge/profiles',
+    folder: 'hire_adda/profiles',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
     transformation: [
       { width: 400, height: 400, crop: 'fill', gravity: 'face' },
@@ -22,7 +22,7 @@ export const uploadOptions = {
   } as UploadApiOptions,
 
   companyLogo: {
-    folder: 'talent_bridge/companies',
+    folder: 'hire_adda/companies',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'svg'],
     transformation: [
       { width: 400, height: 400, crop: 'fit' },
@@ -31,7 +31,7 @@ export const uploadOptions = {
   } as UploadApiOptions,
 
   companyCover: {
-    folder: 'talent_bridge/companies/covers',
+    folder: 'hire_adda/companies/covers',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
     transformation: [
       { width: 1920, height: 640, crop: 'fill' },
@@ -40,7 +40,7 @@ export const uploadOptions = {
   } as UploadApiOptions,
 
   resume: {
-    folder: 'talent_bridge/resumes',
+    folder: 'hire_adda/resumes',
     allowed_formats: ['pdf'],
     resource_type: 'raw',
   } as UploadApiOptions,
@@ -75,8 +75,8 @@ export const deleteImage = async (publicId: string): Promise<void> => {
 
 /**
  * Extracts the Cloudinary public ID from a secure_url.
- * e.g. "https://res.cloudinary.com/xxx/image/upload/v123/talent_bridge/profiles/abc.jpg"
- *    → "talent_bridge/profiles/abc"
+ * e.g. "https://res.cloudinary.com/xxx/image/upload/v123/hire_adda/profiles/abc.jpg"
+ *    → "hire_adda/profiles/abc"
  * Returns null if the URL doesn't look like a Cloudinary URL.
  */
 export const extractPublicId = (url: string): string | null => {

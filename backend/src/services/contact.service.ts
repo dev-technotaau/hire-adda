@@ -21,10 +21,16 @@ class ContactService {
       );
 
     // Notify admins via email queue (rate-limited, fire-and-forget)
-    const contactEmail = contactFormSubmission(data.name, data.email, data.subject, data.message, contact.id);
+    const contactEmail = contactFormSubmission(
+      data.name,
+      data.email,
+      data.subject,
+      data.message,
+      contact.id
+    );
     emailQueue
       .add('send-email', {
-        to: 'support@talentbridge.com',
+        to: 'support@hireadda.in',
         subject: contactEmail.subject,
         html: contactEmail.html,
       })

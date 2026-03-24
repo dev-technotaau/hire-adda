@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'res.cloudinary.com' },
-      { protocol: 'https', hostname: 'assets.talentbridge.com' },
+      { protocol: 'https', hostname: 'assets.hireadda.in' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
     formats: ['image/avif', 'image/webp'],
@@ -40,7 +40,7 @@ export default withSentryConfig(nextConfig, {
 
   org: "technotaau-rn",
 
-  project: "talent-bridge-web",
+  project: "hire-adda-web",
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,

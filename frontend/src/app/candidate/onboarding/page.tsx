@@ -77,10 +77,7 @@ import {
   SPECIFIC_DEGREE_LABELS,
   DRIVING_LICENSE_TYPE_LABELS,
 } from '@/constants/enums';
-import {
-  INDIAN_STATES,
-  VISA_STATUS_OPTIONS,
-} from '@/constants/suggestions';
+import { INDIAN_STATES, VISA_STATUS_OPTIONS } from '@/constants/suggestions';
 import { useAuth } from '@/hooks/use-auth';
 import type {
   UpdateCandidateRequest,
@@ -534,7 +531,7 @@ export default function CandidateOnboardingPage() {
     skipOnboarding,
     clearSavedData,
   } = useOnboarding<CandidateOnboardingData>({
-    storageKey: 'tb_candidate_onboarding',
+    storageKey: 'ha_candidate_onboarding',
     totalSteps: STEPS.length,
     initialData: INITIAL_DATA,
   });
@@ -829,9 +826,9 @@ export default function CandidateOnboardingPage() {
           await avatarMutation.mutateAsync(avatarFile);
         }
 
-        markOnboardingComplete('tb_candidate_onboarding');
+        markOnboardingComplete('ha_candidate_onboarding');
         clearSavedData();
-        showToast.success('Profile setup complete! Welcome to TalentBridge.');
+        showToast.success('Profile setup complete! Welcome to HireAdda.');
         router.push(ROUTES.CANDIDATE.DASHBOARD);
       } catch (err) {
         const apiError = err as unknown as ApiError;
@@ -857,7 +854,7 @@ export default function CandidateOnboardingPage() {
   ]);
 
   const handleSkip = () => {
-    markOnboardingComplete('tb_candidate_onboarding');
+    markOnboardingComplete('ha_candidate_onboarding');
     clearSavedData();
     router.push(ROUTES.CANDIDATE.DASHBOARD);
   };
@@ -1051,7 +1048,6 @@ export default function CandidateOnboardingPage() {
     }
     setHobbyInput('');
   }
-
 
   function addInterest(value: string) {
     const trimmed = value.trim();
@@ -1418,7 +1414,11 @@ export default function CandidateOnboardingPage() {
 
               {/* Parse with AI (only if not already parsing/parsed) */}
               {!resumeParsing && !parsedResumeData && !resumeParseApplied && (
-                <Button variant="secondary" onClick={handleParseOnly} tooltip="Extract resume details">
+                <Button
+                  variant="secondary"
+                  onClick={handleParseOnly}
+                  tooltip="Extract resume details"
+                >
                   <Sparkles className="mr-1.5 h-4 w-4" />
                   Parse with AI
                 </Button>
@@ -2241,7 +2241,7 @@ export default function CandidateOnboardingPage() {
                 <button
                   type="button"
                   onClick={() => addSkill(skillInput)}
-                  className="cursor-pointer text-primary text-xs hover:underline"
+                  className="text-primary cursor-pointer text-xs hover:underline"
                   title="Add custom skill"
                 >
                   + Add &ldquo;{skillInput.trim()}&rdquo;
@@ -3443,7 +3443,7 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addPreferredLocation(locationInput)}
-                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                className="text-primary mt-1 cursor-pointer text-xs hover:underline"
                 title="Add custom location"
               >
                 + Add &ldquo;{locationInput.trim()}&rdquo;
@@ -3481,7 +3481,7 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addPreferredIndustry(industryInput)}
-                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                className="text-primary mt-1 cursor-pointer text-xs hover:underline"
                 title="Add custom industry"
               >
                 + Add &ldquo;{industryInput.trim()}&rdquo;
@@ -3521,7 +3521,7 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addPreferredRoleCategory(roleCatInput)}
-                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                className="text-primary mt-1 cursor-pointer text-xs hover:underline"
                 title="Add custom role category"
               >
                 + Add &ldquo;{roleCatInput.trim()}&rdquo;
@@ -3744,7 +3744,7 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addBlockedCompany(blockedCompanyInput)}
-                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                className="text-primary mt-1 cursor-pointer text-xs hover:underline"
                 title="Add blocked company"
               >
                 + Add &ldquo;{blockedCompanyInput.trim()}&rdquo;
@@ -3802,7 +3802,7 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addHobby(hobbyInput)}
-                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                className="text-primary mt-1 cursor-pointer text-xs hover:underline"
                 title="Add custom hobby"
               >
                 + Add &ldquo;{hobbyInput.trim()}&rdquo;
@@ -3839,7 +3839,7 @@ export default function CandidateOnboardingPage() {
               <button
                 type="button"
                 onClick={() => addInterest(interestInput)}
-                className="cursor-pointer text-primary mt-1 text-xs hover:underline"
+                className="text-primary mt-1 cursor-pointer text-xs hover:underline"
                 title="Add custom interest"
               >
                 + Add &ldquo;{interestInput.trim()}&rdquo;
@@ -3990,7 +3990,12 @@ export default function CandidateOnboardingPage() {
           {/* Profile Photo */}
           {avatarPreview && (
             <div className={sectionClass}>
-              <button type="button" onClick={() => goToStep(1)} className={sectionTitle} title="Edit profile photo">
+              <button
+                type="button"
+                onClick={() => goToStep(1)}
+                className={sectionTitle}
+                title="Edit profile photo"
+              >
                 Profile Photo
               </button>
               <div className="mt-2 flex items-center gap-3">
@@ -4012,7 +4017,12 @@ export default function CandidateOnboardingPage() {
               const reviewBadge = reviewFile ? getFileTypeBadge(reviewFile) : null;
               return (
                 <div className={sectionClass}>
-                  <button type="button" onClick={() => goToStep(2)} className={sectionTitle} title="Edit resume">
+                  <button
+                    type="button"
+                    onClick={() => goToStep(2)}
+                    className={sectionTitle}
+                    title="Edit resume"
+                  >
                     Resume
                   </button>
                   <div className="mt-2 space-y-3">
@@ -4045,7 +4055,7 @@ export default function CandidateOnboardingPage() {
                         <button
                           type="button"
                           onClick={() => setShowReviewResumePreview((prev) => !prev)}
-                          className="cursor-pointer text-primary inline-flex items-center gap-1.5 text-xs hover:underline"
+                          className="text-primary inline-flex cursor-pointer items-center gap-1.5 text-xs hover:underline"
                           title="Toggle resume preview"
                         >
                           <Eye className="h-3.5 w-3.5" />
@@ -4070,7 +4080,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Profile Basics */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(3)} className={sectionTitle} title="Edit profile basics">
+            <button
+              type="button"
+              onClick={() => goToStep(3)}
+              className={sectionTitle}
+              title="Edit profile basics"
+            >
               Profile Basics
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4097,7 +4112,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Personal Details */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(4)} className={sectionTitle} title="Edit personal details">
+            <button
+              type="button"
+              onClick={() => goToStep(4)}
+              className={sectionTitle}
+              title="Edit personal details"
+            >
               Personal Details
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -4164,7 +4184,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Professional Summary */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(5)} className={sectionTitle} title="Edit professional summary">
+            <button
+              type="button"
+              onClick={() => goToStep(5)}
+              className={sectionTitle}
+              title="Edit professional summary"
+            >
               Professional Summary
             </button>
             <div className="mt-2 space-y-2">
@@ -4219,7 +4244,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Current Employment */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(6)} className={sectionTitle} title="Edit current employment">
+            <button
+              type="button"
+              onClick={() => goToStep(6)}
+              className={sectionTitle}
+              title="Edit current employment"
+            >
               Current Employment
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4263,7 +4293,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Experience */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(7)} className={sectionTitle} title="Edit work experience">
+            <button
+              type="button"
+              onClick={() => goToStep(7)}
+              className={sectionTitle}
+              title="Edit work experience"
+            >
               Work Experience
             </button>
             <p className="mt-2 text-sm text-[var(--text)]">
@@ -4285,7 +4320,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Education */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(8)} className={sectionTitle} title="Edit education">
+            <button
+              type="button"
+              onClick={() => goToStep(8)}
+              className={sectionTitle}
+              title="Edit education"
+            >
               Education
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4325,7 +4365,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Skills */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(9)} className={sectionTitle} title="Edit skills">
+            <button
+              type="button"
+              onClick={() => goToStep(9)}
+              className={sectionTitle}
+              title="Edit skills"
+            >
               Skills
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -4361,7 +4406,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Certifications */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(10)} className={sectionTitle} title="Edit certifications">
+            <button
+              type="button"
+              onClick={() => goToStep(10)}
+              className={sectionTitle}
+              title="Edit certifications"
+            >
               Certifications, Courses & Tests
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -4394,7 +4444,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Publications & Memberships */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(11)} className={sectionTitle} title="Edit publications">
+            <button
+              type="button"
+              onClick={() => goToStep(11)}
+              className={sectionTitle}
+              title="Edit publications"
+            >
               Publications & Memberships
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -4415,7 +4470,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Volunteering & References */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(12)} className={sectionTitle} title="Edit volunteering">
+            <button
+              type="button"
+              onClick={() => goToStep(12)}
+              className={sectionTitle}
+              title="Edit volunteering"
+            >
               Volunteering & References
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4432,7 +4492,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Preferences */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(13)} className={sectionTitle} title="Edit job preferences">
+            <button
+              type="button"
+              onClick={() => goToStep(13)}
+              className={sectionTitle}
+              title="Edit job preferences"
+            >
               Job Preferences
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4509,7 +4574,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Documents */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(14)} className={sectionTitle} title="Edit documents">
+            <button
+              type="button"
+              onClick={() => goToStep(14)}
+              className={sectionTitle}
+              title="Edit documents"
+            >
               Documents & Miscellaneous
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -4570,7 +4640,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Interests */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(15)} className={sectionTitle} title="Edit interests">
+            <button
+              type="button"
+              onClick={() => goToStep(15)}
+              className={sectionTitle}
+              title="Edit interests"
+            >
               Interests & Hobbies
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -4591,7 +4666,12 @@ export default function CandidateOnboardingPage() {
 
           {/* Social Links */}
           <div className={sectionClass}>
-            <button type="button" onClick={() => goToStep(16)} className={sectionTitle} title="Edit social links">
+            <button
+              type="button"
+              onClick={() => goToStep(16)}
+              className={sectionTitle}
+              title="Edit social links"
+            >
               Social Links
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">

@@ -7,13 +7,13 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: opensearch
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: opensearch
     tier: search
     app.kubernetes.io/name: opensearch
     app.kubernetes.io/component: search
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
 spec:
   serviceName: opensearch
   replicas: 1
@@ -58,7 +58,7 @@ spec:
               protocol: TCP
           env:
             - name: cluster.name
-              value: 'talentbridge'
+              value: 'hireadda'
             - name: node.name
               value: 'opensearch-node1'
             - name: discovery.type

@@ -25,7 +25,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
-          "expr": "sum(kafka_consumergroup_lag{consumergroup=\"talent-bridge-backend-group\"}) by (topic)",
+          "expr": "sum(kafka_consumergroup_lag{consumergroup=\"hire-adda-backend-group\"}) by (topic)",
           "legendFormat": "{{topic}}"
         }
       ]
@@ -47,7 +47,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kafka_consumergroup_lag{consumergroup=\"talent-bridge-backend-group\"})",
+          "expr": "sum(kafka_consumergroup_lag{consumergroup=\"hire-adda-backend-group\"})",
           "legendFormat": "Total Lag"
         }
       ]
@@ -58,7 +58,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
       "targets": [
         {
-          "expr": "kafka_topic_partitions{topic=~\"tb\\\\..*|talent-bridge\\\\..*\"}",
+          "expr": "kafka_topic_partitions{topic=~\"tb\\\\..*|hire-adda\\\\..*\"}",
           "legendFormat": "{{topic}}"
         }
       ]
@@ -79,7 +79,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kafka_topic_partition_under_replicated_partition{topic=~\"tb\\\\..*|talent-bridge\\\\..*\"})",
+          "expr": "sum(kafka_topic_partition_under_replicated_partition{topic=~\"tb\\\\..*|hire-adda\\\\..*\"})",
           "legendFormat": "Under-Replicated"
         }
       ]
@@ -90,7 +90,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
       "targets": [
         {
-          "expr": "kafka_consumergroup_members{consumergroup=\"talent-bridge-backend-group\"}",
+          "expr": "kafka_consumergroup_members{consumergroup=\"hire-adda-backend-group\"}",
           "legendFormat": "Members"
         }
       ]
@@ -137,11 +137,11 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(kafka_topic_partition_current_offset{topic=\"talent-bridge.dlq\"}[5m]))",
+          "expr": "sum(rate(kafka_topic_partition_current_offset{topic=\"hire-adda.dlq\"}[5m]))",
           "legendFormat": "DLQ msgs/s"
         },
         {
-          "expr": "sum(kafka_topic_partition_current_offset{topic=\"talent-bridge.dlq\"})",
+          "expr": "sum(kafka_topic_partition_current_offset{topic=\"hire-adda.dlq\"})",
           "legendFormat": "DLQ total offset"
         }
       ]
@@ -152,7 +152,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
       "targets": [
         {
-          "expr": "kafka_consumergroup_lag{consumergroup=\"talent-bridge-backend-group\"}",
+          "expr": "kafka_consumergroup_lag{consumergroup=\"hire-adda-backend-group\"}",
           "legendFormat": "{{topic}}-{{partition}}"
         }
       ]
@@ -170,7 +170,7 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["kafka", "messaging", "talent-bridge"],
+  "tags": ["kafka", "messaging", "hire-adda"],
   "templating": { "list": [] },
   "time": { "from": "now-1h", "to": "now" },
   "title": "Kafka",

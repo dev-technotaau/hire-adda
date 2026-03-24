@@ -12,7 +12,7 @@ export const newDeviceLoginEmail = (
   location: string,
   time: string
 ): EmailTemplate => ({
-  subject: 'New Device Login Detected - Talent Bridge',
+  subject: 'New Device Login Detected - Hire Adda',
   html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #333;">New Device Login</h2>
@@ -35,7 +35,7 @@ export const newDeviceLoginEmail = (
             <p>If this was you, no action is needed.</p>
             <p style="color: #c0392b;"><strong>If you don't recognize this login, please change your password immediately and enable MFA.</strong></p>
             <hr style="margin: 24px 0; border: none; border-top: 1px solid #eee;" />
-            <p style="color: #999; font-size: 12px;">Talent Bridge Security Team</p>
+            <p style="color: #999; font-size: 12px;">Hire Adda Security Team</p>
         </div>
     `,
 });

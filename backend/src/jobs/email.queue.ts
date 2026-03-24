@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq';
 import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { injectTraceContext } from '../utils/trace-propagation';
 
 export const EMAIL_QUEUE_NAME = 'email-queue';
 
@@ -34,5 +35,9 @@ export async function addEmailJob(
   },
   priority?: number
 ) {
-  return emailQueue.add('send-email', data, priority ? { priority } : {});
+  return emailQueue.add(
+    'send-email',
+    { ...data, _traceContext: injectTraceContext() },
+    priority ? { priority } : {}
+  );
 }

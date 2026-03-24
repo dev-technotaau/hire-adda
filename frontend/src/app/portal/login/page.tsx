@@ -323,7 +323,13 @@ export default function AdminLoginPage() {
                       onExpire={() => setTurnstileToken('')}
                     />
 
-                    <Button type="submit" fullWidth className="mt-4" isLoading={isLoading} tooltip="Sign in to admin portal">
+                    <Button
+                      type="submit"
+                      fullWidth
+                      className="mt-4"
+                      isLoading={isLoading}
+                      tooltip="Sign in to admin portal"
+                    >
                       Sign In
                     </Button>
                   </motion.div>
@@ -508,7 +514,7 @@ export default function AdminLoginPage() {
 
       {/* Minimal footer */}
       <footer className="py-4 text-center text-sm text-[var(--text-muted)]">
-        &copy; {new Date().getFullYear()} TalentBridge. All rights reserved.
+        &copy; {new Date().getFullYear()} HireAdda. All rights reserved.
       </footer>
     </div>
   );

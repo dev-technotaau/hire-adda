@@ -2,7 +2,7 @@ import { prisma } from '../config/prisma';
 import { AppError } from '../middleware/error';
 import { VerificationStatus, VerificationType, Role } from '@prisma/client';
 import { uploadFileToR2 } from './storage.service';
-import {  } from '../kafka/producer';
+import {} from '../kafka/producer';
 import { publishEvent } from '../kafka/producer';
 import { KafkaTopics } from '../kafka/topics';
 
@@ -175,9 +175,10 @@ export class VerificationService {
     }
 
     // Publish Kafka event
-    const kafkaEvent = status === VerificationStatus.APPROVED
-      ? KafkaTopics.VERIFICATION_APPROVED
-      : KafkaTopics.VERIFICATION_REJECTED;
+    const kafkaEvent =
+      status === VerificationStatus.APPROVED
+        ? KafkaTopics.VERIFICATION_APPROVED
+        : KafkaTopics.VERIFICATION_REJECTED;
     publishEvent(kafkaEvent, request.userId, {
       userId: request.userId,
       requestId,
@@ -305,7 +306,7 @@ export class VerificationService {
     const { randomBytes } = await import('crypto');
     const token = randomBytes(32).toString('hex');
 
-    const frontendUrl = process.env.FRONTEND_URL || 'https://talentbridge.com';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://hireadda.in';
     const confirmUrl = `${frontendUrl}/verify-employment/${token}?action=confirm`;
     const denyUrl = `${frontendUrl}/verify-employment/${token}?action=deny`;
 

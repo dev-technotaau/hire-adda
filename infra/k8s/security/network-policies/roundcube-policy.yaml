@@ -7,7 +7,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: roundcube-netpol
-  namespace: talent-bridge
+  namespace: hire-adda
 spec:
   podSelector:
     matchLabels:

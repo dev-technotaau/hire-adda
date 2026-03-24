@@ -10,7 +10,7 @@ let lastFetchTime = 0;
 const CACHE_TTL_MS = 10_000; // 10 seconds
 
 /**
- * Get consumer lag for the talent-bridge backend consumer group.
+ * Get consumer lag for the hire-adda backend consumer group.
  * Caches for 10s to avoid hammering the Kafka broker.
  *
  * @returns Record of topic → total lag count, or null if unavailable
@@ -28,7 +28,7 @@ export async function getConsumerLag(): Promise<LagInfo | null> {
     admin = kafka.admin();
     await admin.connect();
 
-    const groupId = 'talent-bridge-backend-group';
+    const groupId = 'hire-adda-backend-group';
     const offsets = await admin.fetchOffsets({ groupId });
 
     // Get the latest offsets for each topic-partition

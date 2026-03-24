@@ -60,10 +60,10 @@ export const profileCompletionReminder = (name: string, progress: number): Email
             </table>
             ${button('Complete Your Profile', `${BRAND.url}/profile`)}
             ${divider()}
-            ${smallText('You\'re receiving this because your Talent Bridge profile is incomplete. <a href="' + BRAND.url + '/settings/notifications" style="color:' + BRAND.textSecondary + ';text-decoration:underline;">Manage email preferences</a>')}
+            ${smallText('You\'re receiving this because your Hire Adda profile is incomplete. <a href="' + BRAND.url + '/settings/notifications" style="color:' + BRAND.textSecondary + ';text-decoration:underline;">Manage email preferences</a>')}
             ${signature()}
         `,
-      `Your Talent Bridge profile is ${progress}% complete. Finish it to get 5x more interviews.`
+      `Your Hire Adda profile is ${progress}% complete. Finish it to get 5x more interviews.`
     ),
     text: `Hi ${name}, your profile is ${progress}% complete. Candidates with complete profiles get 5x more interview calls. Complete it now: ${BRAND.url}/profile`,
   };
@@ -159,9 +159,9 @@ export const onboardingWelcomeEmployer = (name: string, companyName: string): Em
     `
         ${iconCircle('&#127970;', '#eef2ff')}
         ${heading('Welcome, Employer!')}
-        ${subtitle(`Let's set up ${companyName} on Talent Bridge.`)}
+        ${subtitle(`Let's set up ${companyName} on Hire Adda.`)}
         ${greeting(name)}
-        ${paragraph(`Thanks for registering <strong>${companyName}</strong> on Talent Bridge. To start attracting top talent, we recommend completing these steps:`)}
+        ${paragraph(`Thanks for registering <strong>${companyName}</strong> on Hire Adda. To start attracting top talent, we recommend completing these steps:`)}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 24px 0;">
           <tr>
             <td style="padding:8px 0;font-size:15px;color:#374151;line-height:1.8;">
@@ -176,7 +176,7 @@ export const onboardingWelcomeEmployer = (name: string, companyName: string): Em
         ${button('Set Up Company Profile', `${BRAND.url}/employer/onboarding`)}
         ${signature()}
     `,
-    `Set up ${companyName} on Talent Bridge to start hiring.`
+    `Set up ${companyName} on Hire Adda to start hiring.`
   ),
-  text: `Hi ${name}, set up ${companyName} on Talent Bridge to start attracting talent: ${BRAND.url}/employer/onboarding`,
+  text: `Hi ${name}, set up ${companyName} on Hire Adda to start attracting talent: ${BRAND.url}/employer/onboarding`,
 });

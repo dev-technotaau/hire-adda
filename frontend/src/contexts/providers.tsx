@@ -38,7 +38,7 @@ function AuthHydrator({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-const BYPASS_STORAGE_KEY = 'tb_maintenance_bypass';
+const BYPASS_STORAGE_KEY = 'ha_maintenance_bypass';
 
 function MaintenanceGate({ children }: { children: ReactNode }) {
   const queryClient = getQueryClient();

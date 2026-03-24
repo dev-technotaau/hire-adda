@@ -6,16 +6,17 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: postgres
     tier: database
     app.kubernetes.io/name: postgres
     app.kubernetes.io/component: database
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
 spec:
   serviceName: postgres
-  replicas: 1
+  # Phase 2: Cloud Neon — scale to 1 for Phase 4 (local)
+  replicas: 0
   selector:
     matchLabels:
       app: postgres
@@ -43,7 +44,7 @@ spec:
             - name: POSTGRES_USER
               value: 'postgres'
             - name: POSTGRES_DB
-              value: 'talentbridge'
+              value: 'hireadda'
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -83,7 +84,7 @@ spec:
                 - -U
                 - postgres
                 - -d
-                - talentbridge
+                - hireadda
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 5
@@ -95,7 +96,7 @@ spec:
                 - -U
                 - postgres
                 - -d
-                - talentbridge
+                - hireadda
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 3

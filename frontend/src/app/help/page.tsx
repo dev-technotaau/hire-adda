@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/auth.store';
 const faqs = [
   {
     id: 1,
-    question: 'How do I create an account on TalentBridge?',
+    question: 'How do I create an account on HireAdda?',
     answer:
       'Creating an account is simple and free. Click the "Get Started" or "Sign Up" button on the homepage. You can register using your email address and password, or sign up quickly using your Google or LinkedIn account. Once registered, you will be guided through completing your profile with your skills, experience, and job preferences.',
   },
@@ -49,25 +49,25 @@ const faqs = [
     id: 7,
     question: 'How do I contact customer support?',
     answer:
-      'You can reach our support team through multiple channels. Email us at support@talentbridge.com, call our toll-free number at +91 1800-123-4567 (Mon-Fri, 9 AM - 6 PM IST), or visit our Contact page to send a message directly. We also offer in-app chat support for logged-in users. Our team typically responds within 24 hours.',
+      'You can reach our support team through multiple channels. Email us at support@hireadda.in, call our toll-free number at +91 1800-123-4567 (Mon-Fri, 9 AM - 6 PM IST), or visit our Contact page to send a message directly. We also offer in-app chat support for logged-in users. Our team typically responds within 24 hours.',
   },
   {
     id: 8,
     question: 'How do I report a suspicious or fraudulent job posting?',
     answer:
-      'If you encounter a job listing that appears fraudulent, misleading, or suspicious, click the "Report" button on the job detail page. Select the reason for reporting and provide any additional details. Our moderation team reviews all reports within 24-48 hours. You can also email reports directly to safety@talentbridge.com for urgent concerns.',
+      'If you encounter a job listing that appears fraudulent, misleading, or suspicious, click the "Report" button on the job detail page. Select the reason for reporting and provide any additional details. Our moderation team reviews all reports within 24-48 hours. You can also email reports directly to safety@hireadda.in for urgent concerns.',
   },
   {
     id: 9,
-    question: 'Is TalentBridge free to use? What are the pricing plans?',
+    question: 'Is HireAdda free to use? What are the pricing plans?',
     answer:
-      'TalentBridge is completely free for job seekers. You can create a profile, search for jobs, and apply to unlimited positions at no cost. For employers, we offer a free plan that allows up to 3 active job postings. Premium plans start at INR 2,999/month and include features like unlimited postings, advanced candidate search, analytics dashboard, and priority support.',
+      'HireAdda is completely free for job seekers. You can create a profile, search for jobs, and apply to unlimited positions at no cost. For employers, we offer a free plan that allows up to 3 active job postings. Premium plans start at INR 2,999/month and include features like unlimited postings, advanced candidate search, analytics dashboard, and priority support.',
   },
   {
     id: 10,
-    question: 'Is there a TalentBridge mobile app available?',
+    question: 'Is there a HireAdda mobile app available?',
     answer:
-      'We are currently developing native mobile apps for both Android and iOS, expected to launch in Q3 2026. In the meantime, our website is fully responsive and works seamlessly on mobile browsers. You can add TalentBridge to your home screen for an app-like experience. We also support push notifications through your browser to keep you updated on new matches and application status.',
+      'We are currently developing native mobile apps for both Android and iOS, expected to launch in Q3 2026. In the meantime, our website is fully responsive and works seamlessly on mobile browsers. You can add HireAdda to your home screen for an app-like experience. We also support push notifications through your browser to keep you updated on new matches and application status.',
   },
 ];
 
@@ -104,7 +104,7 @@ export default function HelpPage() {
               Help <span className="text-primary">Center</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-[var(--text-secondary)]">
-              Find answers to common questions about using TalentBridge. Can&apos;t find what
+              Find answers to common questions about using HireAdda. Can&apos;t find what
               you&apos;re looking for? Contact our support team.
             </p>
 
@@ -209,7 +209,7 @@ export default function HelpPage() {
                 <Mail className="text-primary h-6 w-6" />
               </div>
               <h3 className="font-semibold text-[var(--text)]">Email Support</h3>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">support@talentbridge.com</p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">support@hireadda.in</p>
               <p className="mt-1 text-xs text-[var(--text-muted)]">Response within 24 hours</p>
             </div>
             <div className="rounded-xl border border-[var(--border)] bg-white p-6 text-center">

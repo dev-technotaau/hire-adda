@@ -4,7 +4,7 @@ import type { User } from '@/types/auth';
 
 type AuthMessage = { type: 'logout' } | { type: 'login'; user: User } | { type: 'session_expired' };
 
-const CHANNEL_NAME = 'tb_auth_channel';
+const CHANNEL_NAME = 'ha_auth_channel';
 
 let channel: BroadcastChannel | null = null;
 

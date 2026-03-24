@@ -239,7 +239,7 @@ class ReportService {
       doc.on('error', reject);
 
       // Title
-      doc.fontSize(20).text('Talent Bridge - Analytics Report', { align: 'center' });
+      doc.fontSize(20).text('Hire Adda - Analytics Report', { align: 'center' });
       doc.moveDown();
       doc.fontSize(10).text(`Generated: ${summary.generatedAt}`, { align: 'center' });
       doc.moveDown(2);

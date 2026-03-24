@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq';
 import { redis } from '../config/redis';
 import logger from '../config/logger';
+import { injectTraceContext } from '../utils/trace-propagation';
 
 export const WHATSAPP_QUEUE_NAME = 'whatsapp-queue';
 
@@ -33,5 +34,9 @@ export async function addWhatsAppJob(
   },
   priority?: number
 ) {
-  return whatsappQueue.add('send-whatsapp', data, priority ? { priority } : {});
+  return whatsappQueue.add(
+    'send-whatsapp',
+    { ...data, _traceContext: injectTraceContext() },
+    priority ? { priority } : {}
+  );
 }

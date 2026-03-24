@@ -30,7 +30,7 @@ export const employmentVerificationRequest = (
         ${heading('Employment Verification Request')}
         ${subtitle(`We need your help verifying a former employee's work history.`)}
         ${greeting(contactName)}
-        ${paragraph(`<strong>${candidateName}</strong> has listed employment at <strong>${companyName}</strong> on their profile at Talent Bridge. We would appreciate your help in confirming the following details:`)}
+        ${paragraph(`<strong>${candidateName}</strong> has listed employment at <strong>${companyName}</strong> on their profile at Hire Adda. We would appreciate your help in confirming the following details:`)}
         ${infoBox([
           { label: 'Candidate', value: candidateName },
           { label: 'Company', value: companyName },
@@ -43,7 +43,7 @@ export const employmentVerificationRequest = (
             <a href="${denyUrl}" style="color: ${BRAND.error}; text-decoration: underline; font-size: 14px;">Deny / Report Inaccuracy</a>
         </div>
         ${divider()}
-        ${smallText('This verification request was sent by Talent Bridge on behalf of an employer. If you did not expect this email or believe it was sent in error, please ignore it or contact us at ' + BRAND.supportEmail + '.')}
+        ${smallText('This verification request was sent by Hire Adda on behalf of an employer. If you did not expect this email or believe it was sent in error, please ignore it or contact us at ' + BRAND.supportEmail + '.')}
         ${signature()}
     `,
     `Employment verification request for ${candidateName} at ${companyName}`

@@ -30,7 +30,7 @@ import type { ApiError } from '@/types/api';
 
 type Step = 'email' | 'password' | 'mfa' | 'mfa-recovery';
 
-const TRUSTED_DEVICE_COOKIE = 'tb_mfa_trust';
+const TRUSTED_DEVICE_COOKIE = 'ha_mfa_trust';
 const TRUSTED_DEVICE_DAYS = 30;
 
 function getTrustedDeviceToken(): string | undefined {
@@ -310,7 +310,12 @@ export default function LoginPage() {
                   autoFocus
                   {...register('email')}
                 />
-                <Button type="submit" fullWidth className="mt-4" tooltip="Continue to password step">
+                <Button
+                  type="submit"
+                  fullWidth
+                  className="mt-4"
+                  tooltip="Continue to password step"
+                >
                   Continue
                 </Button>
               </motion.div>
@@ -372,7 +377,13 @@ export default function LoginPage() {
 
                 <Turnstile onSuccess={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
 
-                <Button type="submit" fullWidth className="mt-4" isLoading={isLoading} tooltip="Sign in to your account">
+                <Button
+                  type="submit"
+                  fullWidth
+                  className="mt-4"
+                  isLoading={isLoading}
+                  tooltip="Sign in to your account"
+                >
                   Sign In
                 </Button>
               </motion.div>
@@ -435,7 +446,11 @@ export default function LoginPage() {
                 </Button>
 
                 <div className="mt-3 flex items-center justify-between">
-                  <Tooltip content={useBackupCode ? 'Switch to authenticator code' : 'Switch to backup code'}>
+                  <Tooltip
+                    content={
+                      useBackupCode ? 'Switch to authenticator code' : 'Switch to backup code'
+                    }
+                  >
                     <button
                       type="button"
                       onClick={() => {
@@ -495,9 +510,7 @@ export default function LoginPage() {
                 {recoveryStep === 'request' ? (
                   <>
                     <div className="mb-6 text-center">
-                      <h3 className="text-lg font-semibold text-[var(--text)]">
-                        Account Recovery
-                      </h3>
+                      <h3 className="text-lg font-semibold text-[var(--text)]">Account Recovery</h3>
                       <p className="mt-1 text-sm text-[var(--text-muted)]">
                         We&apos;ll send a 6-digit recovery code to{' '}
                         <strong className="text-[var(--text-secondary)]">
@@ -507,8 +520,8 @@ export default function LoginPage() {
                     </div>
 
                     <p className="mb-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-                      This will <strong>disable two-factor authentication</strong> on your
-                      account. You can re-enable it after signing in.
+                      This will <strong>disable two-factor authentication</strong> on your account.
+                      You can re-enable it after signing in.
                     </p>
 
                     <Button

@@ -13,13 +13,13 @@ export const BACKEND_URL =
 export const BFF_SECRET = process.env.BFF_SECRET || '';
 
 export const COOKIE_NAMES = {
-  ACCESS_TOKEN: 'tb_access_token',
-  REFRESH_TOKEN: 'tb_refresh_token',
+  ACCESS_TOKEN: 'ha_access_token',
+  REFRESH_TOKEN: 'ha_refresh_token',
   /** Non-httpOnly flag so client JS can detect auth state */
-  AUTH_SESSION: 'tb_auth_session',
-  REMEMBER_ME: 'tb_remember_me',
+  AUTH_SESSION: 'ha_auth_session',
+  REMEMBER_ME: 'ha_remember_me',
   /** Non-httpOnly session ID for "Current session" badge in UI */
-  SESSION_ID: 'tb_session_id',
+  SESSION_ID: 'ha_session_id',
 } as const;
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';

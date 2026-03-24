@@ -14,15 +14,15 @@
       },
       "targets": [
         {
-          "expr": "redis_memory_used_bytes{namespace=\"talent-bridge\"}",
+          "expr": "redis_memory_used_bytes{namespace=\"hire-adda\"}",
           "legendFormat": "Used Memory"
         },
         {
-          "expr": "redis_memory_max_bytes{namespace=\"talent-bridge\"}",
+          "expr": "redis_memory_max_bytes{namespace=\"hire-adda\"}",
           "legendFormat": "Max Memory"
         },
         {
-          "expr": "redis_memory_used_rss_bytes{namespace=\"talent-bridge\"}",
+          "expr": "redis_memory_used_rss_bytes{namespace=\"hire-adda\"}",
           "legendFormat": "RSS Memory"
         }
       ]
@@ -47,7 +47,7 @@
       },
       "targets": [
         {
-          "expr": "redis_keyspace_hits_total{namespace=\"talent-bridge\"} / (redis_keyspace_hits_total{namespace=\"talent-bridge\"} + redis_keyspace_misses_total{namespace=\"talent-bridge\"})",
+          "expr": "redis_keyspace_hits_total{namespace=\"hire-adda\"} / (redis_keyspace_hits_total{namespace=\"hire-adda\"} + redis_keyspace_misses_total{namespace=\"hire-adda\"})",
           "legendFormat": "Hit Rate"
         }
       ]
@@ -58,7 +58,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
       "targets": [
         {
-          "expr": "redis_connected_clients{namespace=\"talent-bridge\"}",
+          "expr": "redis_connected_clients{namespace=\"hire-adda\"}",
           "legendFormat": "Clients"
         }
       ]
@@ -72,7 +72,7 @@
       },
       "targets": [
         {
-          "expr": "redis_uptime_in_seconds{namespace=\"talent-bridge\"}",
+          "expr": "redis_uptime_in_seconds{namespace=\"hire-adda\"}",
           "legendFormat": "Uptime"
         }
       ]
@@ -86,11 +86,11 @@
       },
       "targets": [
         {
-          "expr": "rate(redis_commands_processed_total{namespace=\"talent-bridge\"}[5m])",
+          "expr": "rate(redis_commands_processed_total{namespace=\"hire-adda\"}[5m])",
           "legendFormat": "Commands/s"
         },
         {
-          "expr": "irate(redis_commands_processed_total{namespace=\"talent-bridge\"}[1m])",
+          "expr": "irate(redis_commands_processed_total{namespace=\"hire-adda\"}[1m])",
           "legendFormat": "Commands/s (instant)"
         }
       ]
@@ -104,11 +104,11 @@
       },
       "targets": [
         {
-          "expr": "rate(redis_keyspace_hits_total{namespace=\"talent-bridge\"}[5m])",
+          "expr": "rate(redis_keyspace_hits_total{namespace=\"hire-adda\"}[5m])",
           "legendFormat": "Hits/s"
         },
         {
-          "expr": "rate(redis_keyspace_misses_total{namespace=\"talent-bridge\"}[5m])",
+          "expr": "rate(redis_keyspace_misses_total{namespace=\"hire-adda\"}[5m])",
           "legendFormat": "Misses/s"
         }
       ]
@@ -119,7 +119,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "targets": [
         {
-          "expr": "redis_db_keys{namespace=\"talent-bridge\"}",
+          "expr": "redis_db_keys{namespace=\"hire-adda\"}",
           "legendFormat": "{{db}}"
         }
       ]
@@ -133,11 +133,11 @@
       },
       "targets": [
         {
-          "expr": "rate(redis_evicted_keys_total{namespace=\"talent-bridge\"}[5m])",
+          "expr": "rate(redis_evicted_keys_total{namespace=\"hire-adda\"}[5m])",
           "legendFormat": "Evictions/s"
         },
         {
-          "expr": "rate(redis_expired_keys_total{namespace=\"talent-bridge\"}[5m])",
+          "expr": "rate(redis_expired_keys_total{namespace=\"hire-adda\"}[5m])",
           "legendFormat": "Expirations/s"
         }
       ]
@@ -151,11 +151,11 @@
       },
       "targets": [
         {
-          "expr": "rate(redis_net_input_bytes_total{namespace=\"talent-bridge\"}[5m])",
+          "expr": "rate(redis_net_input_bytes_total{namespace=\"hire-adda\"}[5m])",
           "legendFormat": "Input"
         },
         {
-          "expr": "rate(redis_net_output_bytes_total{namespace=\"talent-bridge\"}[5m])",
+          "expr": "rate(redis_net_output_bytes_total{namespace=\"hire-adda\"}[5m])",
           "legendFormat": "Output"
         }
       ]
@@ -166,18 +166,18 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
       "targets": [
         {
-          "expr": "redis_blocked_clients{namespace=\"talent-bridge\"}",
+          "expr": "redis_blocked_clients{namespace=\"hire-adda\"}",
           "legendFormat": "Blocked Clients"
         },
         {
-          "expr": "redis_connected_clients{namespace=\"talent-bridge\"}",
+          "expr": "redis_connected_clients{namespace=\"hire-adda\"}",
           "legendFormat": "Connected Clients"
         }
       ]
     }
   ],
   "schemaVersion": 39,
-  "tags": ["redis", "cache", "talent-bridge"],
+  "tags": ["redis", "cache", "hire-adda"],
   "templating": { "list": [] },
   "time": { "from": "now-6h", "to": "now" },
   "title": "Redis",

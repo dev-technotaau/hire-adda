@@ -7,8 +7,8 @@ import Button from '@/components/ui/Button';
 import Switch from '@/components/ui/Switch';
 import Tooltip from '@/components/ui/Tooltip';
 
-export const CONSENT_COOKIE = 'tb_cookie_consent';
-const OPEN_EVENT = 'tb:open-cookie-settings';
+export const CONSENT_COOKIE = 'ha_cookie_consent';
+const OPEN_EVENT = 'ha:open-cookie-settings';
 
 interface CookiePreferences {
   necessary: boolean;
@@ -47,7 +47,9 @@ export default function CookieConsent() {
         try {
           const saved = JSON.parse(raw) as CookiePreferences;
           setPrefs({ necessary: true, analytics: !!saved.analytics, marketing: !!saved.marketing });
-        } catch { /* use defaults */ }
+        } catch {
+          /* use defaults */
+        }
       }
       setShowDetails(true);
       setDismissing(false);
@@ -145,11 +147,21 @@ export default function CookieConsent() {
               <Button size="sm" onClick={acceptAll} tooltip="Accept all cookie categories">
                 Accept All
               </Button>
-              <Button size="sm" variant="outline" onClick={rejectAll} tooltip="Reject all optional cookies">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={rejectAll}
+                tooltip="Reject all optional cookies"
+              >
                 Reject All
               </Button>
               {showDetails ? (
-                <Button size="sm" variant="outline" onClick={acceptSelected} tooltip="Save your cookie preferences">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={acceptSelected}
+                  tooltip="Save your cookie preferences"
+                >
                   Save Preferences
                 </Button>
               ) : (

@@ -5,11 +5,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kafka
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: kafka
     app.kubernetes.io/name: kafka
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
 spec:
   type: ClusterIP
   clusterIP: None

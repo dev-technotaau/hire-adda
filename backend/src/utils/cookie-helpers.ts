@@ -2,12 +2,12 @@ import type { Response } from 'express';
 import { env } from '../config/env';
 
 export const COOKIE_NAMES = {
-  ACCESS_TOKEN: 'tb_access_token',
-  REFRESH_TOKEN: 'tb_refresh_token',
+  ACCESS_TOKEN: 'ha_access_token',
+  REFRESH_TOKEN: 'ha_refresh_token',
   /** Non-httpOnly flag so client JS can detect auth state */
-  AUTH_SESSION: 'tb_auth_session',
+  AUTH_SESSION: 'ha_auth_session',
   /** Non-httpOnly session ID for "Current session" badge in UI */
-  SESSION_ID: 'tb_session_id',
+  SESSION_ID: 'ha_session_id',
 } as const;
 
 const isProduction = () => env.NODE_ENV === 'production';

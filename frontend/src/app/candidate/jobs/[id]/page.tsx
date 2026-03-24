@@ -60,7 +60,7 @@ import { formatSalaryAsLPA } from '@/utils/format';
 import type { ApiError } from '@/types/api';
 import type { Job, JobType, SalaryType, ScreeningAnswerInput } from '@/types/job';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://talentbridge.com';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://hireadda.in';
 
 const JOB_TYPE_TO_SCHEMA: Record<JobType, string> = {
   FULL_TIME: 'FULL_TIME',
@@ -381,23 +381,43 @@ export default function JobDetailPage() {
               >
                 <Bookmark className="mr-1.5 h-4 w-4" /> Save
               </Button>
-              <Button variant="outline" size="sm" onClick={handleShare} tooltip="Share this job listing">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                tooltip="Share this job listing"
+              >
                 <Share2 className="mr-1.5 h-4 w-4" /> Share
               </Button>
               {isApplied ? (
                 <Tooltip content="View your application">
                   <Link href={ROUTES.CANDIDATE.APPLICATIONS}>
-                    <Button size="sm" variant="outline" className="text-[var(--success)] border-[var(--success)]/30">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-[var(--success)]/30 text-[var(--success)]"
+                    >
                       <CheckCircle className="mr-1.5 h-4 w-4" /> Applied
                     </Button>
                   </Link>
                 </Tooltip>
               ) : isFullyFilled ? (
-                <Button size="sm" variant="outline" disabled className="opacity-60" tooltip="All openings for this position have been filled">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  className="opacity-60"
+                  tooltip="All openings for this position have been filled"
+                >
                   <Ban className="mr-1.5 h-4 w-4" /> Positions Filled
                 </Button>
               ) : job.applyMethod === 'EXTERNAL_URL' && job.externalApplyUrl ? (
-                <a href={job.externalApplyUrl} target="_blank" rel="noopener noreferrer" title="Apply on external website">
+                <a
+                  href={job.externalApplyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Apply on external website"
+                >
                   <Button size="sm" tooltip="Apply on external website">
                     <ExternalLink className="mr-1.5 h-4 w-4" /> Apply Externally
                   </Button>
@@ -412,7 +432,11 @@ export default function JobDetailPage() {
                   </Button>
                 </a>
               ) : (
-                <Button size="sm" onClick={() => setShowApplyModal(true)} tooltip="Submit your application">
+                <Button
+                  size="sm"
+                  onClick={() => setShowApplyModal(true)}
+                  tooltip="Submit your application"
+                >
                   Apply Now
                 </Button>
               )}
@@ -423,7 +447,13 @@ export default function JobDetailPage() {
         {/* Key Details */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: 'Openings', value: job.numberOfOpenings ? `${job._hiredCount ?? 0}/${job.numberOfOpenings} filled` : 'N/A', icon: Users },
+            {
+              label: 'Openings',
+              value: job.numberOfOpenings
+                ? `${job._hiredCount ?? 0}/${job.numberOfOpenings} filled`
+                : 'N/A',
+              icon: Users,
+            },
             {
               label: 'Education',
               value: job.educationRequired ? EDUCATION_LEVEL_LABELS[job.educationRequired] : 'Any',
@@ -926,16 +956,31 @@ export default function JobDetailPage() {
           <div className="fixed right-0 bottom-0 left-0 z-40 border-t border-[var(--border)] bg-white p-4 sm:hidden">
             {isApplied ? (
               <Link href={ROUTES.CANDIDATE.APPLICATIONS} title="View your applications">
-                <Button fullWidth variant="outline" className="text-[var(--success)] border-[var(--success)]/30" tooltip="View your applications">
+                <Button
+                  fullWidth
+                  variant="outline"
+                  className="border-[var(--success)]/30 text-[var(--success)]"
+                  tooltip="View your applications"
+                >
                   <CheckCircle className="mr-1.5 h-4 w-4" /> Applied — View Applications
                 </Button>
               </Link>
             ) : isFullyFilled ? (
-              <Button fullWidth variant="outline" disabled className="opacity-60" tooltip="All openings for this position have been filled">
+              <Button
+                fullWidth
+                variant="outline"
+                disabled
+                className="opacity-60"
+                tooltip="All openings for this position have been filled"
+              >
                 <Ban className="mr-1.5 h-4 w-4" /> Positions Filled
               </Button>
             ) : (
-              <Button fullWidth onClick={() => setShowApplyModal(true)} tooltip="Submit your application">
+              <Button
+                fullWidth
+                onClick={() => setShowApplyModal(true)}
+                tooltip="Submit your application"
+              >
                 Apply Now
               </Button>
             )}
@@ -950,10 +995,18 @@ export default function JobDetailPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowApplyModal(false)} tooltip="Cancel application">
+              <Button
+                variant="outline"
+                onClick={() => setShowApplyModal(false)}
+                tooltip="Cancel application"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleApply} isLoading={applyMutation.isPending} tooltip="Submit your application">
+              <Button
+                onClick={handleApply}
+                isLoading={applyMutation.isPending}
+                tooltip="Submit your application"
+              >
                 Submit Application
               </Button>
             </div>

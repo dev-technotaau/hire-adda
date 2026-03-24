@@ -4,20 +4,20 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: talent-bridge-app-alerts
+  name: hire-adda-app-alerts
   namespace: monitoring
   labels:
     release: kube-prometheus
-    app.kubernetes.io/part-of: talent-bridge
+    app.kubernetes.io/part-of: hire-adda
 spec:
   groups:
-    - name: talent-bridge.app
+    - name: hire-adda.app
       rules:
         # ── HTTP Errors ──
         - alert: HighErrorRate
           expr: |
-            sum(rate(http_requests_total{namespace="talent-bridge",status=~"5.."}[5m]))
-            / sum(rate(http_requests_total{namespace="talent-bridge"}[5m])) > 0.05
+            sum(rate(http_requests_total{namespace="hire-adda",status=~"5.."}[5m]))
+            / sum(rate(http_requests_total{namespace="hire-adda"}[5m])) > 0.05
           for: 5m
           labels:
             severity: critical
@@ -30,7 +30,7 @@ spec:
         - alert: HighLatency
           expr: |
             histogram_quantile(0.95,
-              sum(rate(http_request_duration_seconds_bucket{namespace="talent-bridge"}[5m])) by (le)
+              sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda"}[5m])) by (le)
             ) > 2
           for: 5m
           labels:
@@ -43,7 +43,7 @@ spec:
         # ── Pod Issues ──
         - alert: PodCrashLooping
           expr: |
-            rate(kube_pod_container_status_restarts_total{namespace="talent-bridge"}[15m]) > 0
+            rate(kube_pod_container_status_restarts_total{namespace="hire-adda"}[15m]) > 0
           for: 5m
           labels:
             severity: critical
@@ -54,7 +54,7 @@ spec:
 
         - alert: PodNotReady
           expr: |
-            kube_pod_status_ready{namespace="talent-bridge",condition="true"} == 0
+            kube_pod_status_ready{namespace="hire-adda",condition="true"} == 0
           for: 5m
           labels:
             severity: warning
@@ -65,7 +65,7 @@ spec:
         # ── Database ──
         - alert: DatabaseDown
           expr: |
-            kube_pod_container_status_ready{namespace="talent-bridge",container="postgres"} == 0
+            kube_pod_container_status_ready{namespace="hire-adda",container="postgres"} == 0
           for: 1m
           labels:
             severity: critical
@@ -76,7 +76,7 @@ spec:
         # ── Redis ──
         - alert: RedisDown
           expr: |
-            kube_pod_container_status_ready{namespace="talent-bridge",container="redis"} == 0
+            kube_pod_container_status_ready{namespace="hire-adda",container="redis"} == 0
           for: 1m
           labels:
             severity: critical
@@ -97,7 +97,7 @@ spec:
         # ── OpenSearch ──
         - alert: OpenSearchDown
           expr: |
-            kube_pod_container_status_ready{namespace="talent-bridge",container="opensearch"} == 0
+            kube_pod_container_status_ready{namespace="hire-adda",container="opensearch"} == 0
           for: 2m
           labels:
             severity: critical
@@ -108,7 +108,7 @@ spec:
         # ── BullMQ Queues ──
         - alert: BullMQQueueBacklog
           expr: |
-            bullmq_queue_waiting{namespace="talent-bridge"} > 1000
+            bullmq_queue_waiting{namespace="hire-adda"} > 1000
           for: 10m
           labels:
             severity: warning
@@ -119,8 +119,8 @@ spec:
         # ── Resource Pressure ──
         - alert: HighMemoryUsage
           expr: |
-            container_memory_working_set_bytes{namespace="talent-bridge"}
-            / container_spec_memory_limit_bytes{namespace="talent-bridge"} > 0.9
+            container_memory_working_set_bytes{namespace="hire-adda"}
+            / container_spec_memory_limit_bytes{namespace="hire-adda"} > 0.9
           for: 5m
           labels:
             severity: warning
@@ -131,7 +131,7 @@ spec:
         # ── Kafka ──
         - alert: KafkaDown
           expr: |
-            kube_pod_container_status_ready{namespace="talent-bridge",container="kafka"} == 0
+            kube_pod_container_status_ready{namespace="hire-adda",container="kafka"} == 0
           for: 2m
           labels:
             severity: critical
@@ -141,14 +141,14 @@ spec:
 
         - alert: KafkaConsumerLagHigh
           expr: |
-            sum(kafka_consumergroup_lag{consumergroup="talent-bridge-backend-group"}) > 10000
+            sum(kafka_consumergroup_lag{consumergroup="hire-adda-backend-group"}) > 10000
           for: 10m
           labels:
             severity: warning
             team: backend
           annotations:
             summary: 'Kafka consumer lag exceeds 10,000 messages'
-            description: 'Consumer group talent-bridge-backend-group has {{ $value }} messages of lag.'
+            description: 'Consumer group hire-adda-backend-group has {{ $value }} messages of lag.'
 
         - alert: KafkaUnderReplicatedPartitions
           expr: |

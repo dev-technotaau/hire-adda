@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://talentbridge.com';
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://hireadda.in';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 /**

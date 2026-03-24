@@ -237,7 +237,7 @@ export const talentMatchingService = {
           requestMetadata: {
             userId: 'recommendation-engine',
             sessionId: `rec-${Date.now()}`,
-            domain: 'talentbridge.com',
+            domain: 'hireadda.in',
           },
           jobQuery: {
             query: query.join(' '),

@@ -37,8 +37,8 @@ export const initTelemetry = () => {
 
   sdk = new NodeSDK({
     // Resource attributes are set via environment variables in newer versions
-    // OTEL_RESOURCE_ATTRIBUTES=service.name=talent-bridge-api
-    serviceName: process.env.OTEL_SERVICE_NAME || 'talent-bridge-api',
+    // OTEL_RESOURCE_ATTRIBUTES=service.name=hire-adda-api
+    serviceName: process.env.OTEL_SERVICE_NAME || 'hire-adda-api',
     traceExporter: exporter,
     instrumentations: [
       getNodeAutoInstrumentations({

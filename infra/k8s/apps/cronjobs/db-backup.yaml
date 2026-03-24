@@ -6,7 +6,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: backups-pvc
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: backups
 spec:
@@ -20,7 +20,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: uploads-pvc
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: uploads
 spec:
@@ -34,7 +34,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: db-backup
-  namespace: talent-bridge
+  namespace: hire-adda
   labels:
     app: db-backup
     tier: maintenance
@@ -65,10 +65,14 @@ spec:
               args:
                 - |
                   set -e
-                  BACKUP_FILE="/backups/db/talent_bridge_$(date +%Y%m%d_%H%M%S).sql.gz"
+                  BACKUP_FILE="/backups/db/hire_adda_$(date +%Y%m%d_%H%M%S).sql.gz"
                   mkdir -p /backups/db
                   echo "Starting database backup..."
-                  pg_dump "$DATABASE_URL" \
+                  pg_dump \
+                    -h "$PGHOST" \
+                    -p "$PGPORT" \
+                    -U "$PGUSER" \
+                    -d "$PGDATABASE" \
                     --no-owner \
                     --no-privileges \
                     --clean \
@@ -82,8 +86,14 @@ spec:
                     secretKeyRef:
                       name: postgres-secrets
                       key: POSTGRES_PASSWORD
-                - name: DATABASE_URL
-                  value: 'postgresql://postgres:$(PGPASSWORD)@postgres.talent-bridge.svc.cluster.local:5432/talentbridge'
+                - name: PGHOST
+                  value: 'postgres'
+                - name: PGPORT
+                  value: '5432'
+                - name: PGUSER
+                  value: 'postgres'
+                - name: PGDATABASE
+                  value: 'hireadda'
               resources:
                 requests:
                   memory: '64Mi'
