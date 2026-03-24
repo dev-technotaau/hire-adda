@@ -1198,6 +1198,17 @@ case "$ACTION" in
 
     read_state
 
+    # Regenerate upstream configs to match current container state.
+    # rsync may have copied stale static files; ensure nginx -t always
+    # succeeds even when only one service's containers are running.
+    if [[ "$ACTIVE_COLOR" == "blue" ]]; then
+      generate_backend_upstream 100 0
+      generate_frontend_upstream 100 0
+    else
+      generate_backend_upstream 0 100
+      generate_frontend_upstream 0 100
+    fi
+
     log "============================================"
     log "  Hire Adda — Deploy Starting"
     log "  Strategy: ${STRATEGY}"
