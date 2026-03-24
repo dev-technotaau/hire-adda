@@ -22,7 +22,7 @@ if command -v kubectl >/dev/null 2>&1; then
   KUBECTL="kubectl"
   KUBECTL_ARGO="kubectl-argo-rollouts"
   # Only set KUBECONFIG for standalone kubectl
-  if [[ -z "$KUBECONFIG" ]]; then
+  if [[ -z "${KUBECONFIG:-}" ]]; then
     export KUBECONFIG=~/.kube/config
   fi
 elif command -v k3s >/dev/null 2>&1; then
