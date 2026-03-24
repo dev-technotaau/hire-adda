@@ -219,8 +219,15 @@ set_upstream_weights() {
     return
   fi
 
-  generate_backend_upstream "$blue_weight" "$green_weight"
-  generate_frontend_upstream "$blue_weight" "$green_weight"
+  # Only generate upstreams for services that have running containers
+  if docker compose ps -q backend-blue backend-green 2>/dev/null | grep -q .; then
+    generate_backend_upstream "$blue_weight" "$green_weight"
+  fi
+
+  if docker compose ps -q frontend-blue frontend-green 2>/dev/null | grep -q .; then
+    generate_frontend_upstream "$blue_weight" "$green_weight"
+  fi
+
   log "Updated upstream weights: blue=${blue_weight}% green=${green_weight}%"
 }
 
