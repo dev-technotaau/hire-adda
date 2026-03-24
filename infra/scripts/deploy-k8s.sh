@@ -22,6 +22,9 @@ if command -v kubectl >/dev/null 2>&1; then
   KUBECTL="kubectl"
   KUBECTL_ARGO="kubectl-argo-rollouts"
 elif command -v k3s >/dev/null 2>&1; then
+  # K3s provides kubectl via 'k3s kubectl' with automatic kubeconfig
+  # Set KUBECONFIG explicitly to avoid localhost:8080 connection attempts
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
   KUBECTL="k3s kubectl"
   KUBECTL_ARGO="k3s kubectl-argo-rollouts"
 else
@@ -29,9 +32,10 @@ else
   exit 1
 fi
 
-# Test kubectl access
-if ! $KUBECTL version --client &>/dev/null; then
-  echo "ERROR: kubectl command failed. Check K8s cluster access."
+# Test kubectl server access (not just client version)
+if ! $KUBECTL version --short &>/dev/null; then
+  echo "ERROR: Cannot connect to Kubernetes API server."
+  echo "If using K3s, ensure it's running: systemctl status k3s"
   exit 1
 fi
 
