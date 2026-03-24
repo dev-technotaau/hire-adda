@@ -162,9 +162,11 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            sum(rate(http_requests_total{namespace="hire-adda",app="backend",status=~"5.."}[2m]))
-            /
-            sum(rate(http_requests_total{namespace="hire-adda",app="backend"}[2m]))
+            (
+              sum(rate(http_requests_total{namespace="hire-adda",app="backend",status=~"5.."}[2m]))
+              /
+              sum(rate(http_requests_total{namespace="hire-adda",app="backend"}[2m]))
+            ) or vector(0)
 
     # ── Per-Endpoint Error Rate (Business KPI proxy) ───────
     # Worst critical endpoint must stay below 10%
@@ -183,7 +185,7 @@ spec:
               sum by (route) (rate(http_requests_total{namespace="hire-adda",app="backend",route=~"/api/v1/auth/.*|/api/v1/jobs.*|/api/v1/applications.*",status=~"5.."}[2m]))
               /
               sum by (route) (rate(http_requests_total{namespace="hire-adda",app="backend",route=~"/api/v1/auth/.*|/api/v1/jobs.*|/api/v1/applications.*"}[2m]))
-            )
+            ) or vector(0)
 
     # ── Latency P95 ────────────────────────────────────────
     - name: latency-p95
@@ -195,7 +197,7 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",app="backend"}[2m])) by (le))
+            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",app="backend"}[2m])) by (le)) or vector(0)
 
     # ── Latency P99 (tail latency) ─────────────────────────
     - name: latency-p99
@@ -207,7 +209,7 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",app="backend"}[2m])) by (le))
+            histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",app="backend"}[2m])) by (le)) or vector(0)
 
     # ── CPU Saturation ─────────────────────────────────────
     # Must stay below 90% of resource limit
@@ -220,9 +222,11 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            max(rate(container_cpu_usage_seconds_total{namespace="hire-adda",container="backend"}[2m]))
-            /
-            max(kube_pod_container_resource_limits{namespace="hire-adda",container="backend",resource="cpu"})
+            (
+              max(rate(container_cpu_usage_seconds_total{namespace="hire-adda",container="backend"}[2m]))
+              /
+              max(kube_pod_container_resource_limits{namespace="hire-adda",container="backend",resource="cpu"})
+            ) or vector(0)
 
     # ── Memory Saturation ──────────────────────────────────
     # Must stay below 90% of resource limit
@@ -235,9 +239,11 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            max(container_memory_working_set_bytes{namespace="hire-adda",container="backend"})
-            /
-            max(kube_pod_container_resource_limits{namespace="hire-adda",container="backend",resource="memory"})
+            (
+              max(container_memory_working_set_bytes{namespace="hire-adda",container="backend"})
+              /
+              max(kube_pod_container_resource_limits{namespace="hire-adda",container="backend",resource="memory"})
+            ) or vector(0)
 ---
 # ============================================================
 # AnalysisTemplate — Canary vs Stable relative comparison
@@ -267,11 +273,11 @@ spec:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
             (
-              sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.canary-hash}}.*",status=~"5.."}[2m]))
-              / sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.canary-hash}}.*"}[2m]))
+              sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.canary-hash}}.*",status=~"5.."}[2m])) or vector(0)
+              / sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.canary-hash}}.*"}[2m])) or vector(0)
             ) / (
-              sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.stable-hash}}.*",status=~"5.."}[2m]))
-              / sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.stable-hash}}.*"}[2m]))
+              sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.stable-hash}}.*",status=~"5.."}[2m])) or vector(0)
+              / sum(rate(http_requests_total{namespace="hire-adda",pod=~"backend-{{args.stable-hash}}.*"}[2m])) or vector(0)
             )
 
     # ── Latency Ratio ──────────────────────────────────────
@@ -286,10 +292,12 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            histogram_quantile(0.95,
-              sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",pod=~"backend-{{args.canary-hash}}.*"}[2m])) by (le)
-            )
-            /
-            histogram_quantile(0.95,
-              sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",pod=~"backend-{{args.stable-hash}}.*"}[2m])) by (le)
-            )
+            (
+              histogram_quantile(0.95,
+                sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",pod=~"backend-{{args.canary-hash}}.*"}[2m])) by (le)
+              )
+              /
+              histogram_quantile(0.95,
+                sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",pod=~"backend-{{args.stable-hash}}.*"}[2m])) by (le)
+              )
+            ) or vector(1)
