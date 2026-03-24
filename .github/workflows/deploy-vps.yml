@@ -184,9 +184,15 @@ jobs:
             --exclude='.env' \
             --exclude='*.example' \
             --exclude='.deploy-state' \
-            --exclude='nginx/upstreams/' \
             --exclude='nginx/conf.d/dev.conf' \
-            --exclude='mail/' \
+            --exclude='mail/.env' \
+            --exclude='mail/docker-compose.yml' \
+            --exclude='mail/setup.sh' \
+            --exclude='mail/test.sh' \
+            --exclude='mail/DNS-RECORDS.md' \
+            --exclude='mail/.gitignore' \
+            --exclude='mail/roundcube-custom.php' \
+            --exclude='mail/webmail-nginx.conf' \
             -e "ssh -o StrictHostKeyChecking=no" \
             ./infra/ \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}/infra/
