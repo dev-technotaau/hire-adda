@@ -21,19 +21,22 @@ set -euo pipefail
 if command -v kubectl >/dev/null 2>&1; then
   KUBECTL="kubectl"
   KUBECTL_ARGO="kubectl-argo-rollouts"
+  # Only set KUBECONFIG for standalone kubectl
+  if [[ -z "$KUBECONFIG" ]]; then
+    export KUBECONFIG=~/.kube/config
+  fi
 elif command -v k3s >/dev/null 2>&1; then
-  # K3s provides kubectl via 'k3s kubectl' with automatic kubeconfig
-  # Set KUBECONFIG explicitly to avoid localhost:8080 connection attempts
-  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-  KUBECTL="k3s kubectl"
-  KUBECTL_ARGO="k3s kubectl-argo-rollouts"
+  # K3s provides kubectl via 'k3s kubectl' with automatic kubeconfig handling
+  # Use sudo for k3s commands (standard pattern for K3s)
+  KUBECTL="sudo k3s kubectl"
+  KUBECTL_ARGO="sudo k3s kubectl-argo-rollouts"
 else
   echo "ERROR: kubectl not found. Install kubectl or k3s."
   exit 1
 fi
 
 # Test kubectl server access (not just client version)
-if ! $KUBECTL version --short &>/dev/null; then
+if ! $KUBECTL version --short 2>/dev/null | grep -q "Server Version"; then
   echo "ERROR: Cannot connect to Kubernetes API server."
   echo "If using K3s, ensure it's running: systemctl status k3s"
   exit 1

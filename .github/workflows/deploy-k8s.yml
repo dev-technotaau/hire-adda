@@ -197,8 +197,8 @@ jobs:
         run: |
           ssh ${{ secrets.K8S_USER }}@${{ secrets.K8S_HOST }} bash -s << REMOTE_SCRIPT
             # Recreate ghcr-credentials to ensure the PAT is current
-            k3s kubectl delete secret ghcr-credentials -n hire-adda --ignore-not-found
-            k3s kubectl create secret docker-registry ghcr-credentials \
+            sudo k3s kubectl delete secret ghcr-credentials -n hire-adda --ignore-not-found
+            sudo k3s kubectl create secret docker-registry ghcr-credentials \
               --namespace=hire-adda \
               --docker-server=ghcr.io \
               --docker-username=${{ github.actor }} \
