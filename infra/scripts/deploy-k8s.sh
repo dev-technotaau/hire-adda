@@ -29,6 +29,12 @@ else
   exit 1
 fi
 
+# Test kubectl access
+if ! $KUBECTL version --client &>/dev/null; then
+  echo "ERROR: kubectl command failed. Check K8s cluster access."
+  exit 1
+fi
+
 # ── Configuration ──
 NAMESPACE="hire-adda"
 BACKEND_IMAGE="ghcr.io/dev-technotaau/hire-adda-backend"
@@ -764,6 +770,18 @@ do_status() {
 # ═══════════════════════════════════════════════════════
 main() {
   log_info "Hire Adda K8s Deploy — Action: ${ACTION}, Strategy: ${STRATEGY}"
+
+  # Ensure namespace exists
+  if ! $KUBECTL get namespace "$NAMESPACE" &>/dev/null; then
+    log_warn "Namespace $NAMESPACE does not exist"
+    if [[ "$DRY_RUN" != "true" ]]; then
+      log_info "Creating namespace $NAMESPACE..."
+      $KUBECTL create namespace "$NAMESPACE" || {
+        log_error "Failed to create namespace $NAMESPACE"
+        exit 1
+      }
+    fi
+  fi
 
   case "$ACTION" in
     status)

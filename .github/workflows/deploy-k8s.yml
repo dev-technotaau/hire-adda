@@ -192,11 +192,6 @@ jobs:
             ./infra/ \
             ${{ secrets.K8S_USER }}@${{ secrets.K8S_HOST }}:${{ secrets.K8S_DEPLOY_PATH }}/infra/
 
-      - name: Make deploy script executable
-        run: |
-          ssh ${{ secrets.K8S_USER }}@${{ secrets.K8S_HOST }} \
-            "chmod +x ${{ secrets.K8S_DEPLOY_PATH }}/infra/scripts/deploy-k8s.sh"
-
       - name: Ensure GHCR pull secret is current
         if: steps.plan.outputs.action == 'deploy'
         run: |
@@ -249,7 +244,7 @@ jobs:
           esac
 
           ssh ${{ secrets.K8S_USER }}@${{ secrets.K8S_HOST }} \
-            "${{ secrets.K8S_DEPLOY_PATH }}/infra/scripts/deploy-k8s.sh ${DEPLOY_ARGS}"
+            "bash ${{ secrets.K8S_DEPLOY_PATH }}/infra/scripts/deploy-k8s.sh ${DEPLOY_ARGS}"
 
       - name: Verify deployment externally
         if: steps.plan.outputs.dry_run != 'true' && steps.plan.outputs.action != 'status'

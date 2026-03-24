@@ -191,11 +191,6 @@ jobs:
             ./infra/ \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}/infra/
 
-      - name: Make deploy script executable
-        run: |
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-            "chmod +x ${{ secrets.VPS_DEPLOY_PATH }}/infra/scripts/deploy.sh"
-
       - name: Login to GHCR on VPS
         if: steps.plan.outputs.action == 'deploy'
         env:
@@ -243,7 +238,7 @@ jobs:
 
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             "cd ${{ secrets.VPS_DEPLOY_PATH }}/infra/docker && \
-             ${{ secrets.VPS_DEPLOY_PATH }}/infra/scripts/deploy.sh ${DEPLOY_ARGS}"
+             bash ${{ secrets.VPS_DEPLOY_PATH }}/infra/scripts/deploy.sh ${DEPLOY_ARGS}"
 
       - name: Verify deployment externally
         if: steps.plan.outputs.dry_run != 'true' && steps.plan.outputs.action != 'status'
