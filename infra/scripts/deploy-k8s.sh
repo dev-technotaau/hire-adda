@@ -17,6 +17,18 @@
 
 set -euo pipefail
 
+# ── Detect kubectl (standalone or k3s) ──
+if command -v kubectl >/dev/null 2>&1; then
+  KUBECTL="kubectl"
+  KUBECTL_ARGO="kubectl-argo-rollouts"
+elif command -v k3s >/dev/null 2>&1; then
+  KUBECTL="k3s kubectl"
+  KUBECTL_ARGO="k3s kubectl-argo-rollouts"
+else
+  echo "ERROR: kubectl not found. Install kubectl or k3s."
+  exit 1
+fi
+
 # ── Configuration ──
 NAMESPACE="hire-adda"
 BACKEND_IMAGE="ghcr.io/dev-technotaau/hire-adda-backend"
@@ -76,9 +88,9 @@ log_error()   { log "${RED}[ERROR]${NC} $1"; }
 
 # ── Locking ──
 acquire_lock() {
-  if kubectl get configmap "$LOCK_CM" -n "$NAMESPACE" &>/dev/null; then
+  if $KUBECTL get configmap "$LOCK_CM" -n "$NAMESPACE" &>/dev/null; then
     local lock_ts
-    lock_ts=$(kubectl get configmap "$LOCK_CM" -n "$NAMESPACE" -o jsonpath='{.data.timestamp}' 2>/dev/null || echo "")
+    lock_ts=$($KUBECTL get configmap "$LOCK_CM" -n "$NAMESPACE" -o jsonpath='{.data.timestamp}' 2>/dev/null || echo "")
     if [[ -n "$lock_ts" ]]; then
       local lock_epoch now_epoch
       lock_epoch=$(date -d "$lock_ts" +%s 2>/dev/null || echo 0)
@@ -86,10 +98,10 @@ acquire_lock() {
       # Stale lock: older than 30 minutes
       if (( now_epoch - lock_epoch > 1800 )); then
         log_warn "Removing stale deploy lock (from $lock_ts)"
-        kubectl delete configmap "$LOCK_CM" -n "$NAMESPACE" --ignore-not-found &>/dev/null
+        $KUBECTL delete configmap "$LOCK_CM" -n "$NAMESPACE" --ignore-not-found &>/dev/null
       else
         log_error "Another deployment is in progress (started at $lock_ts)"
-        log_error "If this is stale, delete it: kubectl delete configmap $LOCK_CM -n $NAMESPACE"
+        log_error "If this is stale, delete it: $KUBECTL delete configmap $LOCK_CM -n $NAMESPACE"
         exit 1
       fi
     fi
@@ -100,18 +112,18 @@ acquire_lock() {
     return 0
   fi
 
-  kubectl create configmap "$LOCK_CM" -n "$NAMESPACE" \
+  $KUBECTL create configmap "$LOCK_CM" -n "$NAMESPACE" \
     --from-literal=timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --from-literal=strategy="$STRATEGY" \
     --from-literal=pid="$$" \
-    --dry-run=client -o yaml | kubectl apply -f - &>/dev/null
+    --dry-run=client -o yaml | $KUBECTL apply -f - &>/dev/null
 
   log_info "Acquired deploy lock"
 }
 
 release_lock() {
   if [[ "$DRY_RUN" == "true" ]]; then return 0; fi
-  kubectl delete configmap "$LOCK_CM" -n "$NAMESPACE" --ignore-not-found &>/dev/null
+  $KUBECTL delete configmap "$LOCK_CM" -n "$NAMESPACE" --ignore-not-found &>/dev/null
 }
 
 cleanup() {
@@ -121,13 +133,13 @@ trap cleanup EXIT
 
 # ── State Management ──
 read_state() {
-  if kubectl get configmap "$STATE_CM" -n "$NAMESPACE" &>/dev/null; then
-    STATE_STRATEGY=$(kubectl get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.strategy}' 2>/dev/null || echo "none")
-    STATE_BACKEND_TAG=$(kubectl get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.backend_tag}' 2>/dev/null || echo "latest")
-    STATE_FRONTEND_TAG=$(kubectl get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.frontend_tag}' 2>/dev/null || echo "latest")
-    STATE_CANARY_WEIGHT=$(kubectl get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.canary_weight}' 2>/dev/null || echo "0")
-    STATE_LAST_DEPLOY=$(kubectl get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.last_deploy}' 2>/dev/null || echo "never")
-    STATE_ROLLOUT_MODE=$(kubectl get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.rollout_mode}' 2>/dev/null || echo "deployment")
+  if $KUBECTL get configmap "$STATE_CM" -n "$NAMESPACE" &>/dev/null; then
+    STATE_STRATEGY=$($KUBECTL get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.strategy}' 2>/dev/null || echo "none")
+    STATE_BACKEND_TAG=$($KUBECTL get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.backend_tag}' 2>/dev/null || echo "latest")
+    STATE_FRONTEND_TAG=$($KUBECTL get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.frontend_tag}' 2>/dev/null || echo "latest")
+    STATE_CANARY_WEIGHT=$($KUBECTL get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.canary_weight}' 2>/dev/null || echo "0")
+    STATE_LAST_DEPLOY=$($KUBECTL get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.last_deploy}' 2>/dev/null || echo "never")
+    STATE_ROLLOUT_MODE=$($KUBECTL get configmap "$STATE_CM" -n "$NAMESPACE" -o jsonpath='{.data.rollout_mode}' 2>/dev/null || echo "deployment")
   else
     STATE_STRATEGY="none"
     STATE_BACKEND_TAG="latest"
@@ -150,14 +162,14 @@ write_state() {
     return 0
   fi
 
-  kubectl create configmap "$STATE_CM" -n "$NAMESPACE" \
+  $KUBECTL create configmap "$STATE_CM" -n "$NAMESPACE" \
     --from-literal=strategy="$strategy" \
     --from-literal=backend_tag="$backend_tag" \
     --from-literal=frontend_tag="$frontend_tag" \
     --from-literal=canary_weight="$canary_weight" \
     --from-literal=last_deploy="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --from-literal=rollout_mode="$rollout_mode" \
-    --dry-run=client -o yaml | kubectl apply -f - &>/dev/null
+    --dry-run=client -o yaml | $KUBECTL apply -f - &>/dev/null
 }
 
 # ── Grafana Annotations ──
@@ -171,7 +183,7 @@ grafana_annotate() {
   fi
 
   # Best-effort: don't fail deploy if Grafana is unavailable
-  kubectl exec -n monitoring deploy/kube-prometheus-grafana -c grafana -- \
+  $KUBECTL exec -n monitoring deploy/kube-prometheus-grafana -c grafana -- \
     wget -q -O /dev/null --post-data="{\"text\":\"$text\",\"tags\":[$tags]}" \
     --header='Content-Type: application/json' \
     --header='Authorization: Basic YWRtaW46YWRtaW4=' \
@@ -197,7 +209,7 @@ run_migrations() {
   local job_name="prisma-migrate-$(date +%s)"
 
   # Security context required: hire-adda namespace enforces Restricted PSA
-  if kubectl run "$job_name" \
+  if $KUBECTL run "$job_name" \
     --image="$image" \
     --restart=Never \
     --rm -i \
@@ -273,14 +285,14 @@ ensure_rollout_active() {
 
   # Scale Deployment to 0 (ArgoCD ignores replicas — stable)
   log_info "Scaling Deployment/$service to 0 replicas..."
-  kubectl scale deployment/"$service" --replicas=0 -n "$NAMESPACE" 2>/dev/null || true
+  $KUBECTL scale deployment/"$service" --replicas=0 -n "$NAMESPACE" 2>/dev/null || true
 
   # Wait for Deployment pods to terminate
-  kubectl wait --for=delete pod -l app="$service" -n "$NAMESPACE" --timeout=60s 2>/dev/null || true
+  $KUBECTL wait --for=delete pod -l app="$service" -n "$NAMESPACE" --timeout=60s 2>/dev/null || true
 
   # Apply the Rollout
   log_info "Applying $variant Rollout for $service..."
-  kubectl apply -f "$rollout_file" -n "$NAMESPACE"
+  $KUBECTL apply -f "$rollout_file" -n "$NAMESPACE"
 }
 
 ensure_deployment_active() {
@@ -292,16 +304,16 @@ ensure_deployment_active() {
   fi
 
   # Delete Rollout if exists
-  if kubectl get rollout "$service" -n "$NAMESPACE" &>/dev/null; then
+  if $KUBECTL get rollout "$service" -n "$NAMESPACE" &>/dev/null; then
     log_info "Deleting Rollout/$service..."
-    kubectl delete rollout "$service" -n "$NAMESPACE" --ignore-not-found
+    $KUBECTL delete rollout "$service" -n "$NAMESPACE" --ignore-not-found
     # Wait for Rollout pods to terminate
-    kubectl wait --for=delete pod -l app="$service" -n "$NAMESPACE" --timeout=60s 2>/dev/null || true
+    $KUBECTL wait --for=delete pod -l app="$service" -n "$NAMESPACE" --timeout=60s 2>/dev/null || true
   fi
 
   # Scale Deployment back to 1
   log_info "Scaling Deployment/$service to 1 replica..."
-  kubectl scale deployment/"$service" --replicas=1 -n "$NAMESPACE"
+  $KUBECTL scale deployment/"$service" --replicas=1 -n "$NAMESPACE"
 }
 
 # ── Set Image on Rollout ──
@@ -322,7 +334,7 @@ set_rollout_image() {
   fi
 
   log_info "Setting Rollout/$service image to $image"
-  kubectl-argo-rollouts set image "$service" "$service=$image" -n "$NAMESPACE"
+  $KUBECTL_ARGO set image "$service" "$service=$image" -n "$NAMESPACE"
 }
 
 # ── Wait for Rollout ──
@@ -335,7 +347,7 @@ wait_for_rollout() {
   fi
 
   log_info "Watching Rollout/$service progress..."
-  kubectl-argo-rollouts status "$service" -n "$NAMESPACE" --watch --timeout="$ROLLOUT_TIMEOUT" || {
+  $KUBECTL_ARGO status "$service" -n "$NAMESPACE" --watch --timeout="$ROLLOUT_TIMEOUT" || {
     local status=$?
     log_error "Rollout/$service did not complete successfully"
     return $status
@@ -360,9 +372,9 @@ deploy_rolling() {
     if [[ "$DRY_RUN" == "true" ]]; then
       log_info "[DRY RUN] Would set backend image to ${BACKEND_IMAGE}:${BACKEND_TAG}"
     else
-      kubectl set image deployment/backend "backend=${BACKEND_IMAGE}:${BACKEND_TAG}" -n "$NAMESPACE"
+      $KUBECTL set image deployment/backend "backend=${BACKEND_IMAGE}:${BACKEND_TAG}" -n "$NAMESPACE"
       log_info "Waiting for backend rolling update..."
-      kubectl rollout status deployment/backend -n "$NAMESPACE" --timeout="$ROLLOUT_TIMEOUT"
+      $KUBECTL rollout status deployment/backend -n "$NAMESPACE" --timeout="$ROLLOUT_TIMEOUT"
       log_success "Backend rolling update completed"
     fi
   fi
@@ -376,9 +388,9 @@ deploy_rolling() {
     if [[ "$DRY_RUN" == "true" ]]; then
       log_info "[DRY RUN] Would set frontend image to ${FRONTEND_IMAGE}:${FRONTEND_TAG}"
     else
-      kubectl set image deployment/frontend "frontend=${FRONTEND_IMAGE}:${FRONTEND_TAG}" -n "$NAMESPACE"
+      $KUBECTL set image deployment/frontend "frontend=${FRONTEND_IMAGE}:${FRONTEND_TAG}" -n "$NAMESPACE"
       log_info "Waiting for frontend rolling update..."
-      kubectl rollout status deployment/frontend -n "$NAMESPACE" --timeout="$ROLLOUT_TIMEOUT"
+      $KUBECTL rollout status deployment/frontend -n "$NAMESPACE" --timeout="$ROLLOUT_TIMEOUT"
       log_success "Frontend rolling update completed"
     fi
   fi
@@ -411,7 +423,7 @@ deploy_canary() {
     # Patch initial weight if different from YAML default (20%)
     if [[ "$CANARY_WEIGHT" -ne 20 && "$DRY_RUN" != "true" ]]; then
       log_info "Patching backend canary weight to ${CANARY_WEIGHT}%..."
-      kubectl patch rollout backend -n "$NAMESPACE" --type=json \
+      $KUBECTL patch rollout backend -n "$NAMESPACE" --type=json \
         -p "[{\"op\":\"replace\",\"path\":\"/spec/strategy/canary/steps/0/setWeight\",\"value\":${CANARY_WEIGHT}}]"
     fi
 
@@ -421,7 +433,7 @@ deploy_canary() {
       # Wait for canary pods, then pause indefinitely (prevent auto-progression)
       log_info "Waiting for backend canary pods to start..."
       sleep 5
-      kubectl-argo-rollouts pause backend -n "$NAMESPACE"
+      $KUBECTL_ARGO pause backend -n "$NAMESPACE"
       log_info "Backend canary paused at ${CANARY_WEIGHT}% traffic"
     fi
   fi
@@ -434,7 +446,7 @@ deploy_canary() {
     # Patch initial weight if different from YAML default (20%)
     if [[ "$CANARY_WEIGHT" -ne 20 && "$DRY_RUN" != "true" ]]; then
       log_info "Patching frontend canary weight to ${CANARY_WEIGHT}%..."
-      kubectl patch rollout frontend -n "$NAMESPACE" --type=json \
+      $KUBECTL patch rollout frontend -n "$NAMESPACE" --type=json \
         -p "[{\"op\":\"replace\",\"path\":\"/spec/strategy/canary/steps/0/setWeight\",\"value\":${CANARY_WEIGHT}}]"
     fi
 
@@ -443,7 +455,7 @@ deploy_canary() {
     if [[ "$DRY_RUN" != "true" ]]; then
       log_info "Waiting for frontend canary pods to start..."
       sleep 5
-      kubectl-argo-rollouts pause frontend -n "$NAMESPACE"
+      $KUBECTL_ARGO pause frontend -n "$NAMESPACE"
       log_info "Frontend canary paused at ${CANARY_WEIGHT}% traffic"
     fi
   fi
@@ -494,9 +506,9 @@ deploy_progressive() {
 
       if [[ "$backend_completed" == "true" && "$DRY_RUN" != "true" ]]; then
         log_warn "Undoing backend phase — rolling back to previous version..."
-        kubectl-argo-rollouts undo backend -n "$NAMESPACE" || true
+        $KUBECTL_ARGO undo backend -n "$NAMESPACE" || true
         log_info "Waiting for backend rollback..."
-        kubectl-argo-rollouts status backend -n "$NAMESPACE" --watch --timeout="$ROLLOUT_TIMEOUT" 2>/dev/null || true
+        $KUBECTL_ARGO status backend -n "$NAMESPACE" --watch --timeout="$ROLLOUT_TIMEOUT" 2>/dev/null || true
         log_info "Backend rolled back to previous version"
 
         grafana_annotate \
@@ -543,7 +555,7 @@ deploy_blue_green() {
       log_info "Waiting for pre-promotion analysis..."
       # Blue-green with autoPromotionEnabled=false pauses after analysis
       sleep 10
-      kubectl-argo-rollouts status "backend" -n "$NAMESPACE" 2>/dev/null || true
+      $KUBECTL_ARGO status "backend" -n "$NAMESPACE" 2>/dev/null || true
     fi
   fi
 
@@ -556,7 +568,7 @@ deploy_blue_green() {
     if [[ "$DRY_RUN" != "true" ]]; then
       log_info "Frontend preview is available via frontend-preview service"
       sleep 10
-      kubectl-argo-rollouts status "frontend" -n "$NAMESPACE" 2>/dev/null || true
+      $KUBECTL_ARGO status "frontend" -n "$NAMESPACE" 2>/dev/null || true
     fi
   fi
 
@@ -596,25 +608,25 @@ do_promote() {
   fi
 
   # Promote backend rollout (if exists)
-  if kubectl get rollout backend -n "$NAMESPACE" &>/dev/null; then
+  if $KUBECTL get rollout backend -n "$NAMESPACE" &>/dev/null; then
     log_info "Promoting backend rollout..."
     if [[ "$STATE_STRATEGY" == "canary" ]]; then
       # Canary: skip remaining steps, go straight to 100% (matches Docker promote)
-      kubectl-argo-rollouts promote backend --full -n "$NAMESPACE"
+      $KUBECTL_ARGO promote backend --full -n "$NAMESPACE"
     else
       # Blue-green: standard promote (swap active ↔ preview)
-      kubectl-argo-rollouts promote backend -n "$NAMESPACE"
+      $KUBECTL_ARGO promote backend -n "$NAMESPACE"
     fi
     wait_for_rollout "backend"
   fi
 
   # Promote frontend rollout (if exists)
-  if kubectl get rollout frontend -n "$NAMESPACE" &>/dev/null; then
+  if $KUBECTL get rollout frontend -n "$NAMESPACE" &>/dev/null; then
     log_info "Promoting frontend rollout..."
     if [[ "$STATE_STRATEGY" == "canary" ]]; then
-      kubectl-argo-rollouts promote frontend --full -n "$NAMESPACE"
+      $KUBECTL_ARGO promote frontend --full -n "$NAMESPACE"
     else
-      kubectl-argo-rollouts promote frontend -n "$NAMESPACE"
+      $KUBECTL_ARGO promote frontend -n "$NAMESPACE"
     fi
     wait_for_rollout "frontend"
   fi
@@ -648,31 +660,31 @@ do_rollback() {
   local rolled_back=false
 
   # Rollback backend rollout (if exists)
-  if kubectl get rollout backend -n "$NAMESPACE" &>/dev/null; then
+  if $KUBECTL get rollout backend -n "$NAMESPACE" &>/dev/null; then
     local backend_status
-    backend_status=$(kubectl-argo-rollouts status backend -n "$NAMESPACE" 2>/dev/null | head -1 || echo "")
+    backend_status=$($KUBECTL_ARGO status backend -n "$NAMESPACE" 2>/dev/null | head -1 || echo "")
 
     if echo "$backend_status" | grep -qi "paused\|progressing"; then
       log_info "Aborting in-progress backend rollout..."
-      kubectl-argo-rollouts abort backend -n "$NAMESPACE"
+      $KUBECTL_ARGO abort backend -n "$NAMESPACE"
     else
       log_info "Undoing completed backend rollout..."
-      kubectl-argo-rollouts undo backend -n "$NAMESPACE"
+      $KUBECTL_ARGO undo backend -n "$NAMESPACE"
     fi
     rolled_back=true
   fi
 
   # Rollback frontend rollout (if exists)
-  if kubectl get rollout frontend -n "$NAMESPACE" &>/dev/null; then
+  if $KUBECTL get rollout frontend -n "$NAMESPACE" &>/dev/null; then
     local frontend_status
-    frontend_status=$(kubectl-argo-rollouts status frontend -n "$NAMESPACE" 2>/dev/null | head -1 || echo "")
+    frontend_status=$($KUBECTL_ARGO status frontend -n "$NAMESPACE" 2>/dev/null | head -1 || echo "")
 
     if echo "$frontend_status" | grep -qi "paused\|progressing"; then
       log_info "Aborting in-progress frontend rollout..."
-      kubectl-argo-rollouts abort frontend -n "$NAMESPACE"
+      $KUBECTL_ARGO abort frontend -n "$NAMESPACE"
     else
       log_info "Undoing completed frontend rollout..."
-      kubectl-argo-rollouts undo frontend -n "$NAMESPACE"
+      $KUBECTL_ARGO undo frontend -n "$NAMESPACE"
     fi
     rolled_back=true
   fi
@@ -680,8 +692,8 @@ do_rollback() {
   if [[ "$rolled_back" == "false" ]]; then
     # No rollouts — rollback Deployments
     log_info "No active rollouts — rolling back Deployments..."
-    kubectl rollout undo deployment/backend -n "$NAMESPACE" 2>/dev/null || true
-    kubectl rollout undo deployment/frontend -n "$NAMESPACE" 2>/dev/null || true
+    $KUBECTL rollout undo deployment/backend -n "$NAMESPACE" 2>/dev/null || true
+    $KUBECTL rollout undo deployment/frontend -n "$NAMESPACE" 2>/dev/null || true
   fi
 
   write_state "rollback" \
@@ -717,29 +729,29 @@ do_status() {
   echo ""
 
   # Backend Rollout status
-  if kubectl get rollout backend -n "$NAMESPACE" &>/dev/null; then
+  if $KUBECTL get rollout backend -n "$NAMESPACE" &>/dev/null; then
     echo -e "  ${BLUE}Backend Rollout:${NC}"
-    kubectl-argo-rollouts status backend -n "$NAMESPACE" --no-color 2>/dev/null | sed 's/^/    /'
+    $KUBECTL_ARGO status backend -n "$NAMESPACE" --no-color 2>/dev/null | sed 's/^/    /'
     echo ""
   fi
 
   # Frontend Rollout status
-  if kubectl get rollout frontend -n "$NAMESPACE" &>/dev/null; then
+  if $KUBECTL get rollout frontend -n "$NAMESPACE" &>/dev/null; then
     echo -e "  ${BLUE}Frontend Rollout:${NC}"
-    kubectl-argo-rollouts status frontend -n "$NAMESPACE" --no-color 2>/dev/null | sed 's/^/    /'
+    $KUBECTL_ARGO status frontend -n "$NAMESPACE" --no-color 2>/dev/null | sed 's/^/    /'
     echo ""
   fi
 
   # Pod status
   echo -e "  ${BLUE}Pods:${NC}"
-  kubectl get pods -n "$NAMESPACE" -l 'app in (backend,frontend)' \
+  $KUBECTL get pods -n "$NAMESPACE" -l 'app in (backend,frontend)' \
     -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,RESTARTS:.status.containerStatuses[0].restartCount,AGE:.metadata.creationTimestamp,IMAGE:.spec.containers[0].image' \
     --no-headers 2>/dev/null | sed 's/^/    /'
   echo ""
 
   # Deployment replicas
   echo -e "  ${BLUE}Deployments:${NC}"
-  kubectl get deployments -n "$NAMESPACE" -l 'app in (backend,frontend)' \
+  $KUBECTL get deployments -n "$NAMESPACE" -l 'app in (backend,frontend)' \
     -o custom-columns='NAME:.metadata.name,READY:.status.readyReplicas,REPLICAS:.spec.replicas' \
     --no-headers 2>/dev/null | sed 's/^/    /'
   echo ""
