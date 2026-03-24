@@ -360,11 +360,44 @@ wait_for_rollout() {
   fi
 
   log_info "Watching Rollout/$service progress..."
-  $KUBECTL_ARGO status "$service" -n "$NAMESPACE" --watch --timeout="$ROLLOUT_TIMEOUT" || {
-    local status=$?
+
+  # Run rollout watch in background so we can poll for CrashLoopBackOff
+  $KUBECTL_ARGO status "$service" -n "$NAMESPACE" --watch --timeout="$ROLLOUT_TIMEOUT" &
+  local watch_pid=$!
+
+  # Poll for CrashLoopBackOff every 15s while the watch is running
+  while kill -0 "$watch_pid" 2>/dev/null; do
+    sleep 15
+    local crash_pods
+    crash_pods=$($KUBECTL get pods -n "$NAMESPACE" -l "app=$service" \
+      --field-selector=status.phase!=Succeeded \
+      -o jsonpath='{range .items[*]}{.status.containerStatuses[0].state.waiting.reason}{"\n"}{end}' 2>/dev/null | grep -c "CrashLoopBackOff" || true)
+
+    if [[ "$crash_pods" -gt 0 ]]; then
+      log_error "Detected $crash_pods pod(s) in CrashLoopBackOff for $service — aborting early"
+      # Show pod logs for debugging
+      local crash_pod
+      crash_pod=$($KUBECTL get pods -n "$NAMESPACE" -l "app=$service" \
+        -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+      if [[ -n "$crash_pod" ]]; then
+        log_error "Last 20 lines from $crash_pod:"
+        $KUBECTL logs "$crash_pod" -n "$NAMESPACE" --tail=20 2>&1 | while IFS= read -r line; do
+          log_error "  $line"
+        done
+      fi
+      kill "$watch_pid" 2>/dev/null || true
+      wait "$watch_pid" 2>/dev/null || true
+      return 1
+    fi
+  done
+
+  # Collect the exit status of the watch process
+  wait "$watch_pid"
+  local status=$?
+  if [[ $status -ne 0 ]]; then
     log_error "Rollout/$service did not complete successfully"
     return $status
-  }
+  fi
   log_success "Rollout/$service completed"
 }
 
