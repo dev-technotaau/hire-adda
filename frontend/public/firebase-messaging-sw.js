@@ -9,8 +9,8 @@ function handleBackgroundMessage(payload) {
     const title = payload.notification?.title || 'Hire Adda';
     const options = {
         body: payload.notification?.body || '',
-        icon: '/icon-192.png',
-        badge: '/icon-72.png',
+        icon: '/icon-192x192.png',
+        badge: '/icon-72x72.png',
         data: payload.data,
         tag: payload.data?.tag || 'default',
     };
