@@ -352,7 +352,7 @@ export default function JobDetailPage() {
                       {URGENCY_LEVEL_LABELS[job.urgencyLevel]}
                     </Badge>
                   )}
-                  {job.isFeatured && <Badge variant="success">Featured</Badge>}
+                  {job.isFeatured && <Badge variant="secondary">Featured</Badge>}
                   {job.isPwdFriendly && <Badge variant="success">PwD Friendly</Badge>}
                   {job.visaSponsorshipAvailable && <Badge variant="info">Visa Sponsorship</Badge>}
                   {job.functionalArea && (

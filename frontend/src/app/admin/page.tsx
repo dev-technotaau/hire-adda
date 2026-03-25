@@ -242,17 +242,17 @@ export default function AdminDashboard() {
       label: 'Total Candidates',
       value: stats?.totalCandidates ?? 0,
       icon: Users,
-      color: 'text-[var(--info)] bg-[var(--info-light)]',
+      color: 'text-accent bg-accent-light',
       sparkData: dauItems.map((d) => ({ v: d.candidates })),
-      sparkColor: '#3B82F6',
+      sparkColor: '#0EA5E9',
     },
     {
       label: 'Total Employers',
       value: stats?.totalEmployers ?? 0,
       icon: Briefcase,
-      color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      color: 'text-secondary bg-secondary-light',
       sparkData: dauItems.map((d) => ({ v: d.employers })),
-      sparkColor: '#F59E0B',
+      sparkColor: '#F5880A',
     },
     {
       label: 'Active Jobs',
@@ -266,9 +266,9 @@ export default function AdminDashboard() {
       label: 'Total Applications',
       value: stats?.totalApplications ?? 0,
       icon: FileText,
-      color: 'text-[var(--info)] bg-[var(--info-light)]',
+      color: 'text-accent bg-accent-light',
       sparkData: appStats?.dailyTrend?.map((d) => ({ v: d.count })),
-      sparkColor: '#3B82F6',
+      sparkColor: '#0EA5E9',
     },
     {
       label: 'New Today',
@@ -293,9 +293,9 @@ export default function AdminDashboard() {
       label: 'New This Month',
       value: stats?.newUsersThisMonth ?? 0,
       icon: TrendingUp,
-      color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      color: 'text-secondary bg-secondary-light',
       sparkData: stats?.registrationTrends?.map((d) => ({ v: d.count })),
-      sparkColor: '#F59E0B',
+      sparkColor: '#F5880A',
     },
     {
       label: 'Pending Verifications',
@@ -359,7 +359,7 @@ export default function AdminDashboard() {
       description: 'Review and moderate job listings',
       icon: Briefcase,
       href: ROUTES.ADMIN.JOBS,
-      color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      color: 'text-secondary bg-secondary-light',
     },
     {
       label: 'View Analytics',
@@ -373,7 +373,7 @@ export default function AdminDashboard() {
       description: 'Track all admin actions and events',
       icon: Shield,
       href: ROUTES.ADMIN.AUDIT_LOGS,
-      color: 'text-[var(--info)] bg-[var(--info-light)]',
+      color: 'text-accent bg-accent-light',
     },
     {
       label: 'Verifications',
@@ -401,7 +401,7 @@ export default function AdminDashboard() {
       description: 'Export users, jobs, analytics data',
       icon: FileBarChart,
       href: ROUTES.ADMIN.REPORTS,
-      color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      color: 'text-secondary bg-secondary-light',
     },
     {
       label: 'Email Templates',
@@ -415,7 +415,7 @@ export default function AdminDashboard() {
       description: 'Keyword filters and content rules',
       icon: Shield,
       href: ROUTES.ADMIN.MODERATION,
-      color: 'text-[var(--info)] bg-[var(--info-light)]',
+      color: 'text-accent bg-accent-light',
     },
   ];
 
@@ -626,8 +626,8 @@ export default function AdminDashboard() {
             </Card>
             <Card padding="sm">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--warning-light)]">
-                  <BarChart3 className="h-5 w-5 text-[var(--warning)]" />
+                <div className="bg-secondary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                  <BarChart3 className="text-secondary h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-xl font-bold text-[var(--text)]">

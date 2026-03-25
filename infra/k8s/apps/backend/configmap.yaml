@@ -80,9 +80,9 @@ data:
   # ── Email (SMTP via Docker Mailserver on host) ──
   # SMTP_USER, SMTP_PASS are in SealedSecret
   SMTP_HOST: 'mail.hireadda.in'
-  SMTP_PORT: '587'
-  SMTP_SECURE: 'false'
-  SMTP_FROM_NAME: 'HireAdda'
+  SMTP_PORT: '465'
+  SMTP_SECURE: 'true'
+  SMTP_FROM_NAME: 'Hire Adda'
   EMAIL_FROM: 'noreply@hireadda.in'
   EMAIL_REPLY_TO: 'support@hireadda.in'
   EMAIL_MAX_SEND_PER_HOUR: '25000'

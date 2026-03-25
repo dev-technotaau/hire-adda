@@ -234,14 +234,14 @@ export default function EmployerDashboard() {
       label: 'Shortlisted',
       value: stats?.shortlistedCount ?? 0,
       icon: UserCheck,
-      color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      color: 'text-secondary bg-secondary-light',
       href: ROUTES.EMPLOYER.MY_JOBS,
     },
     {
       label: 'Profile Views',
       value: stats?.profileViews ?? 0,
       icon: Eye,
-      color: 'text-[var(--info)] bg-[var(--info-light)]',
+      color: 'text-accent bg-accent-light',
       href: ROUTES.EMPLOYER.PROFILE,
       deltaKey: 'profileViews' as const,
     },
@@ -278,7 +278,7 @@ export default function EmployerDashboard() {
             ? `${analytics.summary.avgTimeToHireDays}d`
             : '—',
         icon: Clock,
-        color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+        color: 'text-secondary bg-secondary-light',
         description: 'average days from post to hire',
       },
       {
@@ -292,7 +292,7 @@ export default function EmployerDashboard() {
         label: 'Hiring Velocity',
         value: `${analytics.summary.hiringVelocity ?? 0}/mo`,
         icon: Zap,
-        color: 'text-[var(--info)] bg-[var(--info-light)]',
+        color: 'text-accent bg-accent-light',
         description: 'hires per month',
       },
     ];
@@ -369,7 +369,7 @@ export default function EmployerDashboard() {
           </div>
           <Tooltip content="Create a new job listing">
             <Link href={ROUTES.EMPLOYER.POST_JOB}>
-              <Button tooltip="Create a new job listing">
+              <Button variant="highlight" tooltip="Create a new job listing">
                 <Plus className="mr-1.5 h-4 w-4" /> Post a Job
               </Button>
             </Link>
@@ -734,8 +734,8 @@ export default function EmployerDashboard() {
             </Link>
             <Link href={ROUTES.EMPLOYER.SAVED_CANDIDATES} title="View your saved candidates">
               <div className="group hover:border-primary/30 flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--border)] p-4 transition-all hover:shadow-sm">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
-                  <Bookmark className="h-5 w-5 text-[var(--warning)]" />
+                <div className="bg-secondary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                  <Bookmark className="text-secondary h-5 w-5" />
                 </div>
                 <div className="min-w-0">
                   <p className="group-hover:text-primary text-sm font-medium text-[var(--text)] transition-colors">
@@ -1241,8 +1241,8 @@ export default function EmployerDashboard() {
             <Link href={ROUTES.EMPLOYER.SAVED_CANDIDATES} title="Review your shortlisted talent">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">
-                    <Bookmark className="h-5 w-5 text-[var(--warning)]" />
+                  <div className="bg-secondary-light flex h-10 w-10 items-center justify-center rounded-lg">
+                    <Bookmark className="text-secondary h-5 w-5" />
                   </div>
                   <div>
                     <p className="group-hover:text-primary font-medium text-[var(--text)] transition-colors">
@@ -1258,8 +1258,8 @@ export default function EmployerDashboard() {
             <Link href={ROUTES.EMPLOYER.ANALYTICS} title="Track your hiring performance analytics">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--info-light)]">
-                    <BarChart3 className="h-5 w-5 text-[var(--info)]" />
+                  <div className="bg-accent-light flex h-10 w-10 items-center justify-center rounded-lg">
+                    <BarChart3 className="text-accent h-5 w-5" />
                   </div>
                   <div>
                     <p className="group-hover:text-primary font-medium text-[var(--text)] transition-colors">
@@ -1292,8 +1292,8 @@ export default function EmployerDashboard() {
             <Link href={ROUTES.EMPLOYER.HELP} title="Get help with FAQs and support tickets">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">
-                    <HelpCircle className="h-5 w-5 text-[var(--warning)]" />
+                  <div className="bg-accent-light flex h-10 w-10 items-center justify-center rounded-lg">
+                    <HelpCircle className="text-accent h-5 w-5" />
                   </div>
                   <div>
                     <p className="group-hover:text-primary font-medium text-[var(--text)] transition-colors">

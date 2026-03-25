@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils';
 
 type ProgressSize = 'sm' | 'md' | 'lg';
-type ProgressColor = 'primary' | 'success' | 'warning' | 'error';
+type ProgressColor = 'primary' | 'success' | 'warning' | 'error' | 'secondary' | 'accent';
 
 interface ProgressBarProps {
   value: number;
@@ -24,6 +24,8 @@ const colorStyles: Record<ProgressColor, string> = {
   success: 'bg-[var(--success)]',
   warning: 'bg-[var(--warning)]',
   error: 'bg-[var(--error)]',
+  secondary: 'bg-secondary',
+  accent: 'bg-accent',
 };
 
 function ProgressBar({

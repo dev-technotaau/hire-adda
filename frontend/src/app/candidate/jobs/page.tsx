@@ -49,10 +49,20 @@ import AdvancedFilters, {
   type FacetBucket,
 } from '@/components/ui/AdvancedFilters';
 import { showToast } from '@/components/ui/Toast';
-import { useJobSearch, useToggleSaveJob, useSavedJobs, useApplyJob, useAppliedJobs } from '@/hooks/use-jobs';
+import {
+  useJobSearch,
+  useToggleSaveJob,
+  useSavedJobs,
+  useApplyJob,
+  useAppliedJobs,
+} from '@/hooks/use-jobs';
 import { useSuggestLocations, useDidYouMean } from '@/hooks/use-search';
 import { useSuggest, useStaticSuggestions } from '@/hooks/use-suggestions';
-import { useFieldHistory, useAddToFieldHistory, useClearFieldHistory } from '@/hooks/use-field-history';
+import {
+  useFieldHistory,
+  useAddToFieldHistory,
+  useClearFieldHistory,
+} from '@/hooks/use-field-history';
 import { useAuthStore } from '@/store/auth.store';
 import { savedSearchService } from '@/services/saved-search.service';
 import { candidateService } from '@/services/candidate.service';
@@ -140,7 +150,10 @@ const SALARY_BUCKET_MAP: Record<string, { min: string; max?: string }> = {
 
 /** Experience range bucket key → { min, max } filter values (for sidebar). */
 const EXPERIENCE_BUCKET_MAP: Record<string, { min: string; max?: string }> = Object.fromEntries(
-  EXPERIENCE_BUCKETS.map((b) => [b.label, { min: String(b.min), max: b.max != null ? String(b.max) : undefined }]),
+  EXPERIENCE_BUCKETS.map((b) => [
+    b.label,
+    { min: String(b.min), max: b.max != null ? String(b.max) : undefined },
+  ]),
 );
 
 /** Build dynamic options map from facet buckets (e.g. industry, locations). */
@@ -706,8 +719,10 @@ export default function JobSearchPage() {
   const { data: locationHistory } = useFieldHistory('location');
   const addLocationHistory = useAddToFieldHistory('location');
   const clearLocationHistory = useClearFieldHistory('location');
-  const { suggestions: popularLocations, isLoading: isLoadingPopular } =
-    useStaticSuggestions('location', 8);
+  const { suggestions: popularLocations, isLoading: isLoadingPopular } = useStaticSuggestions(
+    'location',
+    8,
+  );
 
   const locationFocusSections = useMemo(() => {
     const sections: import('@/components/ui/AutoSuggest').AdditionalSuggestSection[] = [];
@@ -1017,7 +1032,7 @@ export default function JobSearchPage() {
                 <button
                   type="button"
                   onClick={() => handleKeywordSearch(didYouMean)}
-                  className="cursor-pointer text-primary font-medium hover:underline"
+                  className="text-primary cursor-pointer font-medium hover:underline"
                 >
                   {didYouMean}
                 </button>
@@ -1095,7 +1110,12 @@ export default function JobSearchPage() {
                 {/* Save search / Create alert */}
                 {activeFilterCount > 0 && (
                   <>
-                    <Button variant="ghost" size="sm" onClick={() => setShowSaveSearch(true)} tooltip="Save this search for later">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowSaveSearch(true)}
+                      tooltip="Save this search for later"
+                    >
                       <Star className="mr-1.5 h-4 w-4" />
                       <span className="hidden sm:inline">Save Search</span>
                     </Button>
@@ -1400,7 +1420,12 @@ export default function JobSearchPage() {
                       title="No jobs found"
                       description="Try adjusting your search or filters to find more jobs."
                       action={
-                        <Button variant="outline" size="sm" onClick={clearFilters} tooltip="Reset all filters">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={clearFilters}
+                          tooltip="Reset all filters"
+                        >
                           Clear Filters
                         </Button>
                       }
@@ -1414,9 +1439,10 @@ export default function JobSearchPage() {
                         <button
                           type="button"
                           onClick={handleShowAllDismissed}
-                          className="cursor-pointer hover:text-primary text-xs text-[var(--text-muted)] transition-colors"
+                          className="hover:text-primary cursor-pointer text-xs text-[var(--text-muted)] transition-colors"
                         >
-                          {dismissedCount} job{dismissedCount > 1 ? 's' : ''} hidden &mdash; Show all
+                          {dismissedCount} job{dismissedCount > 1 ? 's' : ''} hidden &mdash; Show
+                          all
                         </button>
                       </Tooltip>
                     </div>
@@ -1513,7 +1539,11 @@ export default function JobSearchPage() {
               className="rounded-none border-0"
             />
             <div className="sticky bottom-0 border-t border-[var(--border)] bg-white p-4">
-              <Button className="w-full" onClick={() => setShowSidebar(false)} tooltip="Apply filters and show results">
+              <Button
+                className="w-full"
+                onClick={() => setShowSidebar(false)}
+                tooltip="Apply filters and show results"
+              >
                 Show Results {pagination ? `(${pagination.total.toLocaleString()})` : ''}
               </Button>
             </div>
@@ -1631,7 +1661,7 @@ function JobCard({
                 </span>
               )}
               {isHot && (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold text-orange-600">
+                <span className="bg-secondary-50 text-secondary inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold">
                   <Flame className="h-2.5 w-2.5" />
                   Hot
                 </span>
@@ -1731,7 +1761,7 @@ function JobCard({
                 </Badge>
               )}
               {job.isFeatured && (
-                <Badge variant="success" size="sm">
+                <Badge variant="secondary" size="sm">
                   Featured
                 </Badge>
               )}
@@ -1826,7 +1856,13 @@ function JobCard({
                 </Link>
               </Tooltip>
             ) : canQuickApply && onQuickApply ? (
-              <Button size="sm" onClick={onQuickApply} isLoading={isApplying} className="text-xs" tooltip="Apply instantly without screening questions">
+              <Button
+                size="sm"
+                onClick={onQuickApply}
+                isLoading={isApplying}
+                className="text-xs"
+                tooltip="Apply instantly without screening questions"
+              >
                 <Send className="mr-1 h-3 w-3" />
                 Quick Apply
               </Button>

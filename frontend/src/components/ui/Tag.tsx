@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 import Tooltip from './Tooltip';
 
-type TagVariant = 'default' | 'primary' | 'outline' | 'success';
+type TagVariant = 'default' | 'primary' | 'outline' | 'success' | 'secondary' | 'accent';
 type TagSize = 'sm' | 'md';
 
 interface TagProps {
@@ -20,6 +20,8 @@ const variantStyles: Record<TagVariant, string> = {
   primary: 'bg-[var(--primary-light)] text-primary',
   outline: 'border border-[var(--border)] bg-transparent text-[var(--text-secondary)]',
   success: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200',
+  secondary: 'bg-[var(--secondary-light)] text-[var(--secondary-dark)]',
+  accent: 'bg-[var(--accent-light)] text-[var(--accent-dark)]',
 };
 
 const sizeStyles: Record<TagSize, string> = {

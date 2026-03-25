@@ -20,6 +20,8 @@ const buttonVariants = cva(
           'bg-transparent text-[var(--text)] hover:bg-[var(--bg-secondary)] active:bg-[var(--bg-tertiary)]',
         destructive: 'bg-error text-white hover:bg-error-dark active:bg-[#B91C1C] shadow-sm',
         link: 'bg-transparent text-primary hover:text-primary-hover underline-offset-4 hover:underline p-0 h-auto',
+        highlight:
+          'bg-secondary text-white hover:bg-secondary-hover active:bg-secondary-dark shadow-sm',
       },
       size: {
         sm: 'h-8 px-3 text-sm gap-1.5 rounded-md',

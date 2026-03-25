@@ -22,14 +22,21 @@ import AutoSuggest from '@/components/ui/AutoSuggest';
 import ExperienceSelect, { type ExperienceValue } from '@/components/ui/ExperienceSelect';
 import { useSuggestLocations } from '@/hooks/use-search';
 import { useSuggest, useStaticSuggestions } from '@/hooks/use-suggestions';
-import { useFieldHistory, useAddToFieldHistory, useClearFieldHistory } from '@/hooks/use-field-history';
+import {
+  useFieldHistory,
+  useAddToFieldHistory,
+  useClearFieldHistory,
+} from '@/hooks/use-field-history';
 import type { Role } from '@/types/auth';
 import type { AutocompleteResult } from '@/types/search';
 
-const ROLE_BADGE_VARIANT: Record<string, 'info' | 'success' | 'warning' | 'error'> = {
+const ROLE_BADGE_VARIANT: Record<
+  string,
+  'info' | 'success' | 'warning' | 'error' | 'secondary' | 'accent'
+> = {
   CANDIDATE: 'info',
-  EMPLOYER: 'success',
-  ADMIN: 'warning',
+  EMPLOYER: 'accent',
+  ADMIN: 'secondary',
   SUPER_ADMIN: 'error',
 };
 
@@ -100,8 +107,10 @@ export default function DashboardHeader() {
   const { data: locationHistory } = useFieldHistory('location');
   const addLocationHistory = useAddToFieldHistory('location');
   const clearLocationHistory = useClearFieldHistory('location');
-  const { suggestions: popularLocations, isLoading: isLoadingPopular } =
-    useStaticSuggestions('location', 8);
+  const { suggestions: popularLocations, isLoading: isLoadingPopular } = useStaticSuggestions(
+    'location',
+    8,
+  );
 
   const locationFocusSections = useMemo(() => {
     const sections: import('@/components/ui/AutoSuggest').AdditionalSuggestSection[] = [];
@@ -151,7 +160,10 @@ export default function DashboardHeader() {
       if (experience) {
         if (user.role === 'CANDIDATE') {
           // Job search uses single "experience" string like "3-5" or "12+"
-          params.set('experience', experience.max != null ? `${experience.min}-${experience.max}` : `${experience.min}+`);
+          params.set(
+            'experience',
+            experience.max != null ? `${experience.min}-${experience.max}` : `${experience.min}+`,
+          );
         } else {
           // Candidate search uses separate experienceMin/experienceMax
           params.set('experienceMin', String(experience.min));

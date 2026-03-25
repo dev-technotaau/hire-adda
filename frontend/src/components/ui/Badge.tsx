@@ -3,7 +3,7 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
+type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'secondary' | 'accent';
 type BadgeSize = 'sm' | 'md';
 
 interface BadgeProps {
@@ -19,6 +19,8 @@ const variantStyles: Record<BadgeVariant, string> = {
   error: 'bg-[var(--error-light)] text-[var(--error-dark)]',
   info: 'bg-[var(--info-light)] text-primary',
   neutral: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]',
+  secondary: 'bg-[var(--secondary-light)] text-[var(--secondary-dark)]',
+  accent: 'bg-[var(--accent-light)] text-[var(--accent-dark)]',
 };
 
 const sizeStyles: Record<BadgeSize, string> = {

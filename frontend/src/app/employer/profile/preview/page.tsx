@@ -62,7 +62,12 @@ export default function CompanyProfilePreviewPage() {
         {/* Top Bar */}
         <div className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] p-4">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => router.push(ROUTES.EMPLOYER.PROFILE)} tooltip="Back to edit profile">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(ROUTES.EMPLOYER.PROFILE)}
+              tooltip="Back to edit profile"
+            >
               <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to Edit
             </Button>
             <span className="text-sm font-medium text-[var(--text-secondary)]">
@@ -274,7 +279,7 @@ export default function CompanyProfilePreviewPage() {
                   <Card
                     header={
                       <div className="flex items-center gap-2">
-                        <Eye className="h-5 w-5 text-[var(--info)]" />
+                        <Eye className="text-accent h-5 w-5" />
                         <h2 className="text-lg font-semibold text-[var(--text)]">Vision</h2>
                       </div>
                     }
@@ -438,7 +443,7 @@ export default function CompanyProfilePreviewPage() {
               <Card
                 header={
                   <div className="flex items-center gap-2">
-                    <Rocket className="h-5 w-5 text-[var(--warning)]" />
+                    <Rocket className="text-secondary h-5 w-5" />
                     <h2 className="text-lg font-semibold text-[var(--text)]">
                       Products & Services
                     </h2>
@@ -496,7 +501,7 @@ export default function CompanyProfilePreviewPage() {
               <Card
                 header={
                   <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-[var(--info)]" />
+                    <Users className="text-accent h-5 w-5" />
                     <h2 className="text-lg font-semibold text-[var(--text)]">Leadership Team</h2>
                   </div>
                 }
@@ -524,7 +529,12 @@ export default function CompanyProfilePreviewPage() {
                             {leader.name}
                           </h3>
                           {leader.linkedinUrl && (
-                            <a href={leader.linkedinUrl} target="_blank" rel="noopener noreferrer" title="View LinkedIn profile">
+                            <a
+                              href={leader.linkedinUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="View LinkedIn profile"
+                            >
                               <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
                             </a>
                           )}
@@ -594,7 +604,7 @@ export default function CompanyProfilePreviewPage() {
               <Card
                 header={
                   <div className="flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-[var(--warning)]" />
+                    <Trophy className="text-secondary h-5 w-5" />
                     <h2 className="text-lg font-semibold text-[var(--text)]">
                       Awards & Recognitions
                     </h2>
@@ -697,7 +707,7 @@ export default function CompanyProfilePreviewPage() {
               <Card
                 header={
                   <div className="flex items-center gap-2">
-                    <Camera className="h-5 w-5 text-[var(--info)]" />
+                    <Camera className="text-accent h-5 w-5" />
                     <h2 className="text-lg font-semibold text-[var(--text)]">Office Photos</h2>
                   </div>
                 }
@@ -874,7 +884,7 @@ export default function CompanyProfilePreviewPage() {
                       title="Visit company blog"
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                     >
-                      <BookOpen className="h-4 w-4 text-[var(--warning)]" /> Blog
+                      <BookOpen className="text-secondary h-4 w-4" /> Blog
                     </a>
                   )}
                 </div>
@@ -886,7 +896,7 @@ export default function CompanyProfilePreviewPage() {
               <Card
                 header={
                   <div className="flex items-center gap-2">
-                    <Mail className="h-5 w-5 text-[var(--info)]" />
+                    <Mail className="text-accent h-5 w-5" />
                     <h2 className="text-lg font-semibold text-[var(--text)]">
                       Contact Information
                     </h2>

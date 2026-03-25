@@ -22,19 +22,31 @@
   --color-secondary: #F5880A;
   --color-secondary-hover: #D67708;
   --color-secondary-light: #FEF3E1;
+  --color-secondary-dark: #A85806;
+  --color-secondary-50: #FFF8ED;
+  --color-secondary-100: #FEF0D6;
+  --color-secondary-600: #F5880A;
+  --color-secondary-700: #D67708;
+  --color-secondary-800: #A85806;
 
-  /* Colors — Accent */
+  /* Colors — Accent (Sky Blue) */
   --color-accent: #0EA5E9;
   --color-accent-hover: #0284C7;
   --color-accent-light: #E0F2FE;
+  --color-accent-dark: #0369A1;
+  --color-accent-50: #F0F9FF;
+  --color-accent-100: #E0F2FE;
+  --color-accent-600: #0EA5E9;
+  --color-accent-700: #0284C7;
+  --color-accent-800: #0369A1;
 
   /* Colors — Semantic */
   --color-success: #22C55E;
   --color-success-light: #DCFCE7;
   --color-success-dark: #16A34A;
-  --color-warning: #F59E0B;
-  --color-warning-light: #FEF3C7;
-  --color-warning-dark: #D97706;
+  --color-warning: #EAB308;
+  --color-warning-light: #FEF9C3;
+  --color-warning-dark: #CA8A04;
   --color-error: #EF4444;
   --color-error-light: #FEE2E2;
   --color-error-dark: #DC2626;
@@ -89,19 +101,31 @@
   --secondary: #F5880A;
   --secondary-hover: #D67708;
   --secondary-light: #FEF3E1;
+  --secondary-dark: #A85806;
+  --secondary-50: #FFF8ED;
+  --secondary-100: #FEF0D6;
+  --secondary-600: #F5880A;
+  --secondary-700: #D67708;
+  --secondary-800: #A85806;
 
   /* Accent */
   --accent: #0EA5E9;
   --accent-hover: #0284C7;
   --accent-light: #E0F2FE;
+  --accent-dark: #0369A1;
+  --accent-50: #F0F9FF;
+  --accent-100: #E0F2FE;
+  --accent-600: #0EA5E9;
+  --accent-700: #0284C7;
+  --accent-800: #0369A1;
 
   /* Semantic */
   --success: #22C55E;
   --success-light: #DCFCE7;
   --success-dark: #16A34A;
-  --warning: #F59E0B;
-  --warning-light: #FEF3C7;
-  --warning-dark: #D97706;
+  --warning: #EAB308;
+  --warning-light: #FEF9C3;
+  --warning-dark: #CA8A04;
   --error: #EF4444;
   --error-light: #FEE2E2;
   --error-dark: #DC2626;

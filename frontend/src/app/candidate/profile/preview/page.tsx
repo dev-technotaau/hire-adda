@@ -99,7 +99,12 @@ export default function ProfilePreviewPage() {
         {/* Top Bar */}
         <div className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] p-4">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => router.push(ROUTES.CANDIDATE.PROFILE)} tooltip="Back to edit profile">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(ROUTES.CANDIDATE.PROFILE)}
+              tooltip="Back to edit profile"
+            >
               <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to Edit
             </Button>
             <span className="text-sm font-medium text-[var(--text-secondary)]">
@@ -248,9 +253,7 @@ export default function ProfilePreviewPage() {
                         {profile.disabilityType &&
                           profile.disabilityType !== 'NONE' &&
                           ` — ${DISABILITY_TYPE_LABELS[profile.disabilityType]}`}
-                        {profile.disabilityPercentage
-                          ? ` (${profile.disabilityPercentage}%)`
-                          : ''}
+                        {profile.disabilityPercentage ? ` (${profile.disabilityPercentage}%)` : ''}
                       </Badge>
                     )}
                     {profile.hasCareerBreak && (
@@ -311,7 +314,7 @@ export default function ProfilePreviewPage() {
                 {profile.experience && profile.experience.length > 0 && (
                   <Card>
                     <div className="mb-4 flex items-center gap-2">
-                      <Briefcase className="h-5 w-5 text-[var(--info)]" />
+                      <Briefcase className="text-accent h-5 w-5" />
                       <h2 className="text-lg font-semibold text-[var(--text)]">Experience</h2>
                     </div>
                     <div className="space-y-6">
@@ -357,14 +360,14 @@ export default function ProfilePreviewPage() {
                 {profile.education && profile.education.length > 0 && (
                   <Card>
                     <div className="mb-4 flex items-center gap-2">
-                      <GraduationCap className="h-5 w-5 text-[var(--warning)]" />
+                      <GraduationCap className="text-secondary h-5 w-5" />
                       <h2 className="text-lg font-semibold text-[var(--text)]">Education</h2>
                     </div>
                     <div className="space-y-4">
                       {profile.education.map((edu, i) => (
                         <div key={i} className="flex gap-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
-                            <GraduationCap className="h-5 w-5 text-[var(--warning)]" />
+                          <div className="bg-secondary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                            <GraduationCap className="text-secondary h-5 w-5" />
                           </div>
                           <div>
                             <h3 className="font-semibold text-[var(--text)]">
@@ -587,7 +590,7 @@ export default function ProfilePreviewPage() {
                 {profile.awards && profile.awards.length > 0 && (
                   <Card>
                     <div className="mb-4 flex items-center gap-2">
-                      <Trophy className="h-5 w-5 text-[var(--warning)]" />
+                      <Trophy className="text-secondary h-5 w-5" />
                       <h2 className="text-lg font-semibold text-[var(--text)]">Awards</h2>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -726,7 +729,7 @@ export default function ProfilePreviewPage() {
                 {profile.professionalMemberships && profile.professionalMemberships.length > 0 && (
                   <Card>
                     <div className="mb-4 flex items-center gap-2">
-                      <Users className="h-5 w-5 text-[var(--info)]" />
+                      <Users className="text-accent h-5 w-5" />
                       <h2 className="text-lg font-semibold text-[var(--text)]">
                         Professional Memberships
                       </h2>
@@ -770,7 +773,7 @@ export default function ProfilePreviewPage() {
                 {profile.languages && profile.languages.length > 0 && (
                   <Card>
                     <div className="mb-3 flex items-center gap-2">
-                      <Languages className="h-5 w-5 text-[var(--info)]" />
+                      <Languages className="text-accent h-5 w-5" />
                       <h2 className="text-base font-semibold text-[var(--text)]">Languages</h2>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -969,7 +972,7 @@ export default function ProfilePreviewPage() {
                 {profile.languages && profile.languages.length > 0 && (
                   <Card>
                     <div className="mb-3 flex items-center gap-2">
-                      <Languages className="h-5 w-5 text-[var(--info)]" />
+                      <Languages className="text-accent h-5 w-5" />
                       <h2 className="text-base font-semibold text-[var(--text)]">Languages</h2>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -986,7 +989,7 @@ export default function ProfilePreviewPage() {
                 {profile.languageProficiency && profile.languageProficiency.length > 0 && (
                   <Card>
                     <div className="mb-3 flex items-center gap-2">
-                      <Languages className="h-5 w-5 text-[var(--info)]" />
+                      <Languages className="text-accent h-5 w-5" />
                       <h2 className="text-base font-semibold text-[var(--text)]">
                         Language Proficiency
                       </h2>
@@ -1008,7 +1011,7 @@ export default function ProfilePreviewPage() {
                 {(profile.interests.length > 0 || profile.hobbies.length > 0) && (
                   <Card>
                     <div className="mb-3 flex items-center gap-2">
-                      <Palette className="h-5 w-5 text-[var(--warning)]" />
+                      <Palette className="text-secondary h-5 w-5" />
                       <h2 className="text-base font-semibold text-[var(--text)]">
                         Interests & Hobbies
                       </h2>

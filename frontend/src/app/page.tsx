@@ -192,52 +192,66 @@ const howItWorks = [
   },
 ];
 
+const featureColorMap = {
+  primary: { bg: 'bg-primary-light', text: 'text-primary' },
+  secondary: { bg: 'bg-secondary-light', text: 'text-secondary' },
+  accent: { bg: 'bg-accent-light', text: 'text-accent' },
+} as const;
+
 const features = [
   {
     icon: Target,
     title: 'AI-Powered Matching',
+    color: 'primary' as const,
     description:
       'Our machine learning engine analyzes your profile to recommend the most relevant opportunities with precision.',
   },
   {
     icon: BadgeCheck,
     title: 'Verified Employers',
+    color: 'primary' as const,
     description:
       'Every company undergoes a thorough verification process to ensure a safe and trustworthy platform.',
   },
   {
     icon: Zap,
     title: 'Quick Apply',
+    color: 'secondary' as const,
     description:
       'Apply to multiple jobs with a single click using your saved profile and parsed resume.',
   },
   {
     icon: FileText,
     title: 'AI Resume Parsing',
+    color: 'accent' as const,
     description:
       'Upload your resume and our Document AI extracts skills, experience, and qualifications automatically.',
   },
   {
     icon: Bell,
     title: 'Smart Job Alerts',
+    color: 'secondary' as const,
     description:
       'Get notified instantly when new jobs match your criteria via email, push, or WhatsApp.',
   },
   {
     icon: BarChart3,
     title: 'Career Analytics',
+    color: 'accent' as const,
     description:
       'Track profile views, application status, and compare salaries with detailed insights.',
   },
   {
     icon: Lock,
     title: 'Privacy & Security',
+    color: 'primary' as const,
     description:
       'Enterprise-grade security with CSRF protection, encrypted data, and full GDPR compliance.',
   },
   {
     icon: MessageSquare,
     title: 'Real-Time Chat',
+    color: 'accent' as const,
     description:
       'Connect instantly with employers and candidates through our built-in messaging platform.',
   },
@@ -415,7 +429,7 @@ export default async function Home() {
                 </Tooltip>
                 <Tooltip content="Register as an employer and post job listings">
                   <Link href="/auth/register?role=employer">
-                    <Button variant="outline" size="lg">
+                    <Button variant="highlight" size="lg">
                       Post a Job
                     </Button>
                   </Link>
@@ -514,7 +528,7 @@ export default async function Home() {
       <section className="bg-[var(--bg-secondary)] py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <span className="bg-primary-light text-primary inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold">
+            <span className="bg-secondary-light text-secondary inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold">
               Platform Features
             </span>
             <h2 className="mt-4 text-3xl font-bold text-[var(--text)] sm:text-4xl">
@@ -525,20 +539,25 @@ export default async function Home() {
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="hover:border-primary/30 rounded-xl border border-[var(--border)] bg-white p-6 transition-all hover:shadow-md"
-              >
-                <div className="bg-primary-light mb-4 flex h-12 w-12 items-center justify-center rounded-xl">
-                  <feature.icon className="text-primary h-6 w-6" />
+            {features.map((feature) => {
+              const fc = featureColorMap[feature.color];
+              return (
+                <div
+                  key={feature.title}
+                  className="hover:border-primary/30 rounded-xl border border-[var(--border)] bg-white p-6 transition-all hover:shadow-md"
+                >
+                  <div
+                    className={`${fc.bg} mb-4 flex h-12 w-12 items-center justify-center rounded-xl`}
+                  >
+                    <feature.icon className={`${fc.text} h-6 w-6`} />
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold text-[var(--text)]">{feature.title}</h3>
+                  <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                    {feature.description}
+                  </p>
                 </div>
-                <h3 className="mb-2 text-lg font-semibold text-[var(--text)]">{feature.title}</h3>
-                <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

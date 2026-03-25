@@ -5,12 +5,16 @@
 
 const BRAND = {
   name: 'Hire Adda',
-  primary: '#4F46E5',
-  primaryDark: '#4338CA',
+  primary: '#2563EB',
+  primaryDark: '#1D4ED8',
+  secondary: '#F5880A',
+  secondaryDark: '#D97706',
+  accent: '#0EA5E9',
+  accentDark: '#0284C7',
   success: '#059669',
   successLight: '#ecfdf5',
-  warning: '#D97706',
-  warningLight: '#fffbeb',
+  warning: '#F5880A',
+  warningLight: '#fff7ed',
   error: '#DC2626',
   errorLight: '#fef2f2',
   text: '#1f2937',
@@ -21,6 +25,9 @@ const BRAND = {
   bgCard: '#ffffff',
   bgMuted: '#f9fafb',
   url: process.env.FRONTEND_URL || 'https://hireadda.in',
+  get logoUrl() {
+    return `${this.url}/icons/logo.png`;
+  },
   supportEmail: 'support@hireadda.in',
   year: new Date().getFullYear(),
 };
@@ -62,7 +69,7 @@ export const emailLayout = (content: string, preheader?: string): string => `<!D
           <tr>
             <td style="text-align:center;padding:0 0 32px 0;">
               <a href="${BRAND.url}" style="text-decoration:none;display:inline-block;">
-                <span style="font-size:28px;font-weight:800;color:${BRAND.primary};letter-spacing:-0.5px;">Hire</span><span style="font-size:28px;font-weight:800;color:${BRAND.text};letter-spacing:-0.5px;">Adda</span>
+                <img src="${BRAND.logoUrl}" alt="${BRAND.name}" width="180" height="52" style="display:block;border:0;outline:none;height:auto;max-width:180px;" />
               </a>
             </td>
           </tr>

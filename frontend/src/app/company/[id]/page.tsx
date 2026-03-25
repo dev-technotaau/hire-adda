@@ -55,10 +55,7 @@ function PublicPageShell({ children }: { children: React.ReactNode }) {
             </Link>
           </Tooltip>
           <Tooltip content="Return to the home page">
-            <Link
-              href="/"
-              className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-            >
+            <Link href="/" className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]">
               Back to Home
             </Link>
           </Tooltip>
@@ -171,9 +168,7 @@ export default function PublicCompanyProfilePage() {
                 {company.companySize && (
                   <span className="flex items-center gap-1">
                     <Users className="h-4 w-4" /> {company.companySize}
-                    {company.employeeCount
-                      ? ` (${company.employeeCount.toLocaleString()})`
-                      : ''}
+                    {company.employeeCount ? ` (${company.employeeCount.toLocaleString()})` : ''}
                   </span>
                 )}
                 {(company.headquarters || company.city) && (
@@ -222,8 +217,7 @@ export default function PublicCompanyProfilePage() {
                     rel="noopener noreferrer"
                     className="text-primary inline-flex items-center gap-1 text-sm hover:underline"
                   >
-                    <Globe className="h-3.5 w-3.5" />{' '}
-                    {company.website.replace(/^https?:\/\//, '')}
+                    <Globe className="h-3.5 w-3.5" /> {company.website.replace(/^https?:\/\//, '')}
                   </a>
                 </Tooltip>
               )}
@@ -299,7 +293,7 @@ export default function PublicCompanyProfilePage() {
               <Card
                 header={
                   <div className="flex items-center gap-2">
-                    <Eye className="h-5 w-5 text-[var(--info)]" />
+                    <Eye className="text-accent h-5 w-5" />
                     <h2 className="text-lg font-semibold text-[var(--text)]">Vision</h2>
                   </div>
                 }
@@ -462,7 +456,7 @@ export default function PublicCompanyProfilePage() {
           <Card
             header={
               <div className="flex items-center gap-2">
-                <Rocket className="h-5 w-5 text-[var(--warning)]" />
+                <Rocket className="text-secondary h-5 w-5" />
                 <h2 className="text-lg font-semibold text-[var(--text)]">Products & Services</h2>
               </div>
             }
@@ -503,9 +497,7 @@ export default function PublicCompanyProfilePage() {
         {/* Interview Process */}
         {company.interviewProcess && (
           <Card
-            header={
-              <h2 className="text-lg font-semibold text-[var(--text)]">Interview Process</h2>
-            }
+            header={<h2 className="text-lg font-semibold text-[var(--text)]">Interview Process</h2>}
           >
             <p className="text-sm leading-relaxed whitespace-pre-line text-[var(--text-secondary)]">
               {company.interviewProcess}
@@ -518,17 +510,14 @@ export default function PublicCompanyProfilePage() {
           <Card
             header={
               <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-[var(--info)]" />
+                <Users className="text-accent h-5 w-5" />
                 <h2 className="text-lg font-semibold text-[var(--text)]">Leadership Team</h2>
               </div>
             }
           >
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {company.leadershipTeam.map((leader, i) => (
-                <div
-                  key={i}
-                  className="flex gap-3 rounded-lg border border-[var(--border)] p-4"
-                >
+                <div key={i} className="flex gap-3 rounded-lg border border-[var(--border)] p-4">
                   {leader.imageUrl ? (
                     <img
                       src={leader.imageUrl}
@@ -570,9 +559,7 @@ export default function PublicCompanyProfilePage() {
             header={
               <div className="flex items-center gap-2">
                 <Quote className="h-5 w-5 text-[#8B5CF6]" />
-                <h2 className="text-lg font-semibold text-[var(--text)]">
-                  Employee Testimonials
-                </h2>
+                <h2 className="text-lg font-semibold text-[var(--text)]">Employee Testimonials</h2>
               </div>
             }
           >
@@ -614,10 +601,8 @@ export default function PublicCompanyProfilePage() {
           <Card
             header={
               <div className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-[var(--warning)]" />
-                <h2 className="text-lg font-semibold text-[var(--text)]">
-                  Awards & Recognitions
-                </h2>
+                <Trophy className="text-secondary h-5 w-5" />
+                <h2 className="text-lg font-semibold text-[var(--text)]">Awards & Recognitions</h2>
               </div>
             }
           >
@@ -715,17 +700,14 @@ export default function PublicCompanyProfilePage() {
           <Card
             header={
               <div className="flex items-center gap-2">
-                <Camera className="h-5 w-5 text-[var(--info)]" />
+                <Camera className="text-accent h-5 w-5" />
                 <h2 className="text-lg font-semibold text-[var(--text)]">Office Photos</h2>
               </div>
             }
           >
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {company.officePhotos.map((photo, i) => (
-                <div
-                  key={i}
-                  className="overflow-hidden rounded-lg border border-[var(--border)]"
-                >
+                <div key={i} className="overflow-hidden rounded-lg border border-[var(--border)]">
                   <img
                     src={photo.url}
                     alt={photo.caption || 'Office photo'}
@@ -766,9 +748,7 @@ export default function PublicCompanyProfilePage() {
                   <h3 className="mb-1 text-sm font-semibold text-[var(--text)]">
                     Primary Location
                   </h3>
-                  <p>
-                    {[company.city, company.state, company.country].filter(Boolean).join(', ')}
-                  </p>
+                  <p>{[company.city, company.state, company.country].filter(Boolean).join(', ')}</p>
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
@@ -888,7 +868,7 @@ export default function PublicCompanyProfilePage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                   >
-                    <BookOpen className="h-4 w-4 text-[var(--warning)]" /> Blog
+                    <BookOpen className="text-secondary h-4 w-4" /> Blog
                   </a>
                 </Tooltip>
               )}
@@ -899,9 +879,7 @@ export default function PublicCompanyProfilePage() {
         {/* CSR Initiatives */}
         {company.csrInitiatives && (
           <Card
-            header={
-              <h2 className="text-lg font-semibold text-[var(--text)]">CSR Initiatives</h2>
-            }
+            header={<h2 className="text-lg font-semibold text-[var(--text)]">CSR Initiatives</h2>}
           >
             <p className="text-sm leading-relaxed whitespace-pre-line text-[var(--text-secondary)]">
               {company.csrInitiatives}
@@ -911,9 +889,7 @@ export default function PublicCompanyProfilePage() {
 
         {/* Specialties */}
         {company.specialties && company.specialties.length > 0 && (
-          <Card
-            header={<h2 className="text-lg font-semibold text-[var(--text)]">Specialties</h2>}
-          >
+          <Card header={<h2 className="text-lg font-semibold text-[var(--text)]">Specialties</h2>}>
             <div className="flex flex-wrap gap-2">
               {company.specialties.map((spec) => (
                 <Badge key={spec} variant="neutral" size="sm">

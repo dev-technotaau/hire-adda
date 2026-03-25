@@ -2,7 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Bookmark, Building2, MapPin, Briefcase, Clock, BookmarkX, CheckCircle } from 'lucide-react';
+import {
+  Bookmark,
+  Building2,
+  MapPin,
+  Briefcase,
+  Clock,
+  BookmarkX,
+  CheckCircle,
+} from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -130,7 +138,7 @@ export default function SavedJobsPage() {
                           </Badge>
                         )}
                         {job.isFeatured && (
-                          <Badge variant="success" size="sm">
+                          <Badge variant="secondary" size="sm">
                             Featured
                           </Badge>
                         )}
@@ -170,7 +178,9 @@ export default function SavedJobsPage() {
                       </Tooltip>
                     )}
                     <Link href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)} title="View job details">
-                      <Button size="sm" tooltip="View job details">View</Button>
+                      <Button size="sm" tooltip="View job details">
+                        View
+                      </Button>
                     </Link>
                     <Button
                       variant="ghost"
@@ -193,7 +203,9 @@ export default function SavedJobsPage() {
               description="Save jobs you're interested in to review them later."
               action={
                 <Link href={ROUTES.CANDIDATE.JOBS} title="Browse available job listings">
-                  <Button size="sm" tooltip="Browse available jobs">Browse Jobs</Button>
+                  <Button size="sm" tooltip="Browse available jobs">
+                    Browse Jobs
+                  </Button>
                 </Link>
               }
             />

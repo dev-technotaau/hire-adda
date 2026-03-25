@@ -94,7 +94,7 @@ export default function Footer() {
                   <Tooltip content={`Go to ${link.label}`}>
                     <Link
                       href={link.href}
-                      className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
+                      className="hover:text-secondary text-sm text-[var(--text-secondary)] transition-colors"
                     >
                       {link.label}
                     </Link>

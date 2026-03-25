@@ -3,7 +3,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Bell, ChevronDown, LogOut, User, Settings, LayoutDashboard, Briefcase } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Bell,
+  ChevronDown,
+  LogOut,
+  User,
+  Settings,
+  LayoutDashboard,
+  Briefcase,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useUnreadCount } from '@/hooks/use-notifications';
@@ -202,11 +212,13 @@ export default function Header() {
                 </Button>
               </Link>
               <Link href={ROUTES.AUTH.REGISTER}>
-                <Button size="sm" tooltip="Create a new account">Register</Button>
+                <Button size="sm" tooltip="Create a new account">
+                  Register
+                </Button>
               </Link>
               <div className="mx-1 h-6 w-px bg-[var(--border)]" />
               <Link href={`${ROUTES.AUTH.LOGIN}?tab=employer`}>
-                <Button variant="outline" size="sm" tooltip="Sign in as an employer">
+                <Button variant="highlight" size="sm" tooltip="Sign in as an employer">
                   <Briefcase className="mr-1.5 h-3.5 w-3.5" />
                   Employer Login
                 </Button>

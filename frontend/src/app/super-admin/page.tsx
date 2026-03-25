@@ -364,19 +364,19 @@ export default function SuperAdminDashboard() {
       label: 'Total Candidates',
       value: stats?.totalCandidates ?? 0,
       icon: Users,
-      color: 'text-[var(--info)] bg-[var(--info-light)]',
+      color: 'text-accent bg-accent-light',
       sparkData: dauItems.map((d) => ({ v: d.candidates })),
       sparkKey: 'v',
-      sparkColor: '#3B82F6',
+      sparkColor: '#0EA5E9',
     },
     {
       label: 'Total Employers',
       value: stats?.totalEmployers ?? 0,
       icon: Briefcase,
-      color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      color: 'text-secondary bg-secondary-light',
       sparkData: dauItems.map((d) => ({ v: d.employers })),
       sparkKey: 'v',
-      sparkColor: '#F59E0B',
+      sparkColor: '#F5880A',
     },
     {
       label: 'Total Jobs',
@@ -400,10 +400,10 @@ export default function SuperAdminDashboard() {
       label: 'Total Applications',
       value: stats?.totalApplications ?? 0,
       icon: FileText,
-      color: 'text-[var(--info)] bg-[var(--info-light)]',
+      color: 'text-accent bg-accent-light',
       sparkData: appStats?.dailyTrend?.map((d) => ({ v: d.count })),
       sparkKey: 'v',
-      sparkColor: '#3B82F6',
+      sparkColor: '#0EA5E9',
       delta: appDelta,
     },
     {
@@ -428,10 +428,10 @@ export default function SuperAdminDashboard() {
       label: 'New This Month',
       value: stats?.newUsersThisMonth ?? 0,
       icon: TrendingUp,
-      color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      color: 'text-secondary bg-secondary-light',
       sparkData: stats?.registrationTrends?.map((d) => ({ v: d.count })),
       sparkKey: 'v',
-      sparkColor: '#F59E0B',
+      sparkColor: '#F5880A',
     },
     {
       label: 'Pending Verifications',
@@ -457,14 +457,14 @@ export default function SuperAdminDashboard() {
       value: stats?.expiredJobs ?? 0,
       icon: Clock,
       desc: 'Jobs past their deadline',
-      color: 'text-[var(--warning)]',
+      color: 'text-secondary',
     },
     {
       label: 'Admin Users',
       value: stats?.totalAdmins ?? 0,
       icon: Shield,
       desc: 'Admin & super-admin accounts',
-      color: 'text-[var(--info)]',
+      color: 'text-accent',
     },
     {
       label: 'Apps/Job Ratio',
@@ -489,7 +489,7 @@ export default function SuperAdminDashboard() {
       desc: 'Manage system-wide settings',
       icon: Settings,
       href: ROUTES.SUPER_ADMIN.CONFIG,
-      color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      color: 'text-secondary bg-secondary-light',
     },
     {
       label: 'User Management',
@@ -503,7 +503,7 @@ export default function SuperAdminDashboard() {
       desc: 'Deep analytics with BigQuery insights',
       icon: BarChart3,
       href: ROUTES.SUPER_ADMIN.ANALYTICS,
-      color: 'text-[var(--info)] bg-[var(--info-light)]',
+      color: 'text-accent bg-accent-light',
     },
     {
       label: 'Feature Flags',
@@ -524,7 +524,7 @@ export default function SuperAdminDashboard() {
       desc: 'Track all system activity',
       icon: Activity,
       href: ROUTES.ADMIN.AUDIT_LOGS,
-      color: 'text-[var(--info)] bg-[var(--info-light)]',
+      color: 'text-accent bg-accent-light',
     },
     {
       label: 'Security Settings',
@@ -538,7 +538,7 @@ export default function SuperAdminDashboard() {
       desc: 'Preview and test email templates',
       icon: Mail,
       href: '/admin/email-templates',
-      color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      color: 'text-secondary bg-secondary-light',
     },
     {
       label: 'View Reports',
@@ -785,8 +785,8 @@ export default function SuperAdminDashboard() {
             </Card>
             <Card padding="sm">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--warning-light)]">
-                  <BarChart3 className="h-5 w-5 text-[var(--warning)]" />
+                <div className="bg-secondary-light flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                  <BarChart3 className="text-secondary h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-xl font-bold text-[var(--text)]">

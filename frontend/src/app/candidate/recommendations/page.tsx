@@ -224,7 +224,10 @@ export default function RecommendationsPage() {
               title="No recommendations yet"
               description="Update your profile with skills, experience, and preferences to get better job matches."
               action={
-                <Button onClick={() => router.push(ROUTES.CANDIDATE.PROFILE)} tooltip="Go to profile settings">
+                <Button
+                  onClick={() => router.push(ROUTES.CANDIDATE.PROFILE)}
+                  tooltip="Go to profile settings"
+                >
                   Update Profile
                 </Button>
               }
@@ -318,7 +321,7 @@ export default function RecommendationsPage() {
                     {(job.isFeatured || job.isPwdFriendly || job.visaSponsorshipAvailable) && (
                       <div className="flex flex-wrap gap-1.5">
                         {job.isFeatured && (
-                          <Badge variant="success" size="sm">
+                          <Badge variant="secondary" size="sm">
                             Featured
                           </Badge>
                         )}

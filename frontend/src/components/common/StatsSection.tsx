@@ -34,12 +34,13 @@ export default function StatsSection({ variant = 'inline' }: { variant?: 'inline
   }, []);
 
   const items = [
-    { label: 'Active Jobs', value: formatNumber(stats.activeJobs) },
-    { label: 'Companies', value: formatNumber(stats.companies) },
-    { label: 'Candidates', value: formatNumber(stats.candidates) },
+    { label: 'Active Jobs', value: formatNumber(stats.activeJobs), color: 'text-primary' },
+    { label: 'Companies', value: formatNumber(stats.companies), color: 'text-secondary' },
+    { label: 'Candidates', value: formatNumber(stats.candidates), color: 'text-accent' },
     {
       label: variant === 'card' ? 'Successful Placements' : 'Placements',
       value: formatNumber(stats.placements),
+      color: 'text-primary',
     },
   ];
 
@@ -51,7 +52,7 @@ export default function StatsSection({ variant = 'inline' }: { variant?: 'inline
             key={stat.label}
             className="rounded-xl border border-[var(--border)] bg-white p-6 text-center"
           >
-            <div className="text-primary text-3xl font-bold sm:text-4xl">{stat.value}</div>
+            <div className={`${stat.color} text-3xl font-bold sm:text-4xl`}>{stat.value}</div>
             <div className="mt-2 text-sm font-medium text-[var(--text-muted)]">{stat.label}</div>
           </div>
         ))}
@@ -63,7 +64,7 @@ export default function StatsSection({ variant = 'inline' }: { variant?: 'inline
     <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-8 px-4 sm:gap-16">
       {items.map((stat) => (
         <div key={stat.label} className="text-center">
-          <div className="text-primary text-2xl font-bold sm:text-3xl">{stat.value}</div>
+          <div className={`${stat.color} text-2xl font-bold sm:text-3xl`}>{stat.value}</div>
           <div className="mt-1 text-sm text-[var(--text-muted)]">{stat.label}</div>
         </div>
       ))}

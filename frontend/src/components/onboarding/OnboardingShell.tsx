@@ -107,7 +107,7 @@ export default function OnboardingShell({
                   disabled={!isClickable}
                   className={cn(
                     'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium whitespace-nowrap transition-all',
-                    isCurrent && 'bg-primary text-white shadow-sm',
+                    isCurrent && 'bg-secondary text-white shadow-sm',
                     isCompleted &&
                       'bg-success-light hover:bg-success/20 cursor-pointer text-[var(--success-dark)]',
                     !isCurrent &&
@@ -152,7 +152,12 @@ export default function OnboardingShell({
         <div className="mt-6 flex items-center justify-between">
           <div>
             {!isFirstStep && (
-              <Button variant="ghost" onClick={onPrev} disabled={isSubmitting} tooltip="Go to previous step">
+              <Button
+                variant="ghost"
+                onClick={onPrev}
+                disabled={isSubmitting}
+                tooltip="Go to previous step"
+              >
                 <ArrowLeft className="mr-1.5 h-4 w-4" />
                 Back
               </Button>
@@ -160,7 +165,12 @@ export default function OnboardingShell({
           </div>
           <div className="flex items-center gap-3">
             {steps[currentStep]?.optional && (
-              <Button variant="ghost" onClick={onNext} disabled={isSubmitting} tooltip="Skip this optional step">
+              <Button
+                variant="ghost"
+                onClick={onNext}
+                disabled={isSubmitting}
+                tooltip="Skip this optional step"
+              >
                 Skip this step
               </Button>
             )}

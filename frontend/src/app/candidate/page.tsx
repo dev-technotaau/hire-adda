@@ -233,7 +233,7 @@ export default function CandidateDashboard() {
       label: 'Saved Jobs',
       value: stats?.savedJobsCount ?? 0,
       icon: Bookmark,
-      color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+      color: 'text-secondary bg-secondary-light',
       href: ROUTES.CANDIDATE.SAVED_JOBS,
     },
     {
@@ -248,7 +248,7 @@ export default function CandidateDashboard() {
       label: 'Profile Score',
       value: `${stats?.profileCompleteness ?? 0}%`,
       icon: UserCheck,
-      color: 'text-[var(--info)] bg-[var(--info-light)]',
+      color: 'text-accent bg-accent-light',
       href: ROUTES.CANDIDATE.PROFILE,
     },
   ];
@@ -309,14 +309,14 @@ export default function CandidateDashboard() {
         value:
           analytics.summary.avgResponseDays != null ? `${analytics.summary.avgResponseDays}d` : '—',
         icon: Clock,
-        color: 'text-[var(--warning)] bg-[var(--warning-light)]',
+        color: 'text-secondary bg-secondary-light',
         description: 'average employer response time',
       },
       {
         label: 'Profile Score',
         value: `${analytics.summary.profileScore ?? 0}%`,
         icon: Target,
-        color: 'text-[var(--info)] bg-[var(--info-light)]',
+        color: 'text-accent bg-accent-light',
         description: 'profile strength score',
       },
     ];
@@ -478,8 +478,8 @@ export default function CandidateDashboard() {
                       title={tip.tip}
                     >
                       <div className="group hover:border-primary/30 flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4 transition-all hover:shadow-sm">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
-                          <TipIcon className="h-4 w-4 text-[var(--warning)]" />
+                        <div className="bg-secondary-light flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                          <TipIcon className="text-secondary h-4 w-4" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="group-hover:text-primary text-sm font-medium text-[var(--text)] transition-colors">
@@ -1147,8 +1147,8 @@ export default function CandidateDashboard() {
             <Link href={ROUTES.CANDIDATE.JOB_ALERTS} title="Manage your job alert preferences">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--info-light)]">
-                    <Bell className="h-5 w-5 text-[var(--info)]" />
+                  <div className="bg-accent-light flex h-10 w-10 items-center justify-center rounded-lg">
+                    <Bell className="text-accent h-5 w-5" />
                   </div>
                   <div>
                     <p className="group-hover:text-primary font-medium text-[var(--text)] transition-colors">
@@ -1164,8 +1164,8 @@ export default function CandidateDashboard() {
             <Link href={ROUTES.CANDIDATE.ANALYTICS} title="Track your job search analytics">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">
-                    <BarChart3 className="h-5 w-5 text-[var(--warning)]" />
+                  <div className="bg-secondary-light flex h-10 w-10 items-center justify-center rounded-lg">
+                    <BarChart3 className="text-secondary h-5 w-5" />
                   </div>
                   <div>
                     <p className="group-hover:text-primary font-medium text-[var(--text)] transition-colors">
@@ -1198,8 +1198,8 @@ export default function CandidateDashboard() {
             <Link href={ROUTES.CANDIDATE.HELP} title="FAQs and support tickets">
               <Card className="group hover:border-primary/30 cursor-pointer transition-all hover:shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning-light)]">
-                    <HelpCircle className="h-5 w-5 text-[var(--warning)]" />
+                  <div className="bg-accent-light flex h-10 w-10 items-center justify-center rounded-lg">
+                    <HelpCircle className="text-accent h-5 w-5" />
                   </div>
                   <div>
                     <p className="group-hover:text-primary font-medium text-[var(--text)] transition-colors">
