@@ -126,7 +126,7 @@ export default function Sidebar() {
   return (
     <aside
       className={cn(
-        'sticky top-16 hidden h-[calc(100vh-4rem)] flex-col border-r border-[var(--border)] bg-white transition-all duration-300 lg:flex',
+        'sticky top-18 hidden h-[calc(100vh-4.5rem)] flex-col border-r border-[var(--border)] bg-white transition-all duration-300 lg:flex',
         sidebarCollapsed ? 'w-16' : 'w-64',
       )}
     >
@@ -167,7 +167,10 @@ export default function Sidebar() {
 
       {/* Collapse toggle */}
       <div className="border-t border-[var(--border)] p-3">
-        <Tooltip content={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} position="right">
+        <Tooltip
+          content={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          position="right"
+        >
           <button
             onClick={toggleSidebarCollapsed}
             className="flex w-full items-center justify-center rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"

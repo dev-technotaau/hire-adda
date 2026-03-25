@@ -1,8 +1,8 @@
-import Link from 'next/link';
-import { ROUTES } from '@/constants/routes';
 import Logo from '@/components/common/Logo';
-import Tooltip from '@/components/ui/Tooltip';
 import ManageCookiesButton from '@/components/common/ManageCookiesButton';
+import Tooltip from '@/components/ui/Tooltip';
+import { ROUTES } from '@/constants/routes';
+import Link from 'next/link';
 
 const footerLinks = {
   company: [
@@ -152,9 +152,9 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)] pt-8 sm:flex-row">
-          <Logo size="sm" />
+          <Logo size="md" />
           <p className="text-sm text-[var(--text-muted)]">
-            &copy; {new Date().getFullYear()} HireAdda. All rights reserved.
+            &copy; {new Date().getFullYear()} Hire Adda. All rights reserved.
           </p>
         </div>
       </div>

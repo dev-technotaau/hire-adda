@@ -209,7 +209,7 @@ export default function DashboardHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--border)] bg-white">
-      <div className="flex h-16 items-center gap-3 px-4">
+      <div className="flex h-18 items-center gap-3 px-4">
         {/* Left section */}
         <div className="flex shrink-0 items-center gap-2">
           {/* Mobile sidebar toggle */}

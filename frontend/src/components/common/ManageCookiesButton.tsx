@@ -9,7 +9,7 @@ export default function ManageCookiesButton() {
       <button
         type="button"
         onClick={openCookieSettings}
-        className="hover:text-primary text-sm text-[var(--text-secondary)] transition-colors"
+        className="hover:text-primary text-left text-sm text-[var(--text-secondary)] transition-colors"
       >
         Manage Cookies
       </button>

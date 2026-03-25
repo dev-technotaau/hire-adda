@@ -1,6 +1,14 @@
 'use client';
 
-import { useState, useRef, useLayoutEffect, useCallback, type ReactNode } from 'react';
+import {
+  useState,
+  useRef,
+  useLayoutEffect,
+  useCallback,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+  type FocusEvent as ReactFocusEvent,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
@@ -107,7 +115,7 @@ function getCoords(
   return { top, left };
 }
 
-const SHOW_DELAY = 400;
+const SHOW_DELAY = 600;
 
 function Tooltip({ content, children, position = 'auto', className }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -134,32 +142,33 @@ function Tooltip({ content, children, position = 'auto', className }: TooltipPro
     if (arrow) arrow.className = `absolute border-4 ${arrowStyles[resolved]}`;
   }, [isVisible, position]);
 
-  const touchRef = useRef(false);
-
   const show = useCallback(() => {
-    if (touchRef.current) return; // suppress hover triggered by touch
     timerRef.current = setTimeout(() => setIsVisible(true), SHOW_DELAY);
   }, []);
   const hide = useCallback(() => {
     clearTimeout(timerRef.current);
     setIsVisible(false);
   }, []);
-  const onTouch = useCallback(() => {
-    touchRef.current = true;
-    hide();
-  }, [hide]);
+  const onPointerEnter = useCallback(
+    (e: ReactPointerEvent) => {
+      if (e.pointerType === 'mouse') show();
+    },
+    [show],
+  );
+  const onFocusIn = useCallback(
+    (e: ReactFocusEvent) => {
+      if ((e.target as HTMLElement).matches?.(':focus-visible')) show();
+    },
+    [show],
+  );
 
   return (
     <div
       ref={wrapperRef}
       className="flex min-w-0 flex-col"
-      onTouchStart={onTouch}
-      onMouseMove={() => {
-        touchRef.current = false;
-      }}
-      onMouseEnter={show}
-      onMouseLeave={hide}
-      onFocus={show}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={hide}
+      onFocus={onFocusIn}
       onBlur={hide}
     >
       {children}

@@ -15,7 +15,7 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     const checkboxId = id || label?.toLowerCase().replace(/\s+/g, '-');
 
     return (
-      <div className={cn('w-full', className)}>
+      <div className={cn(className)}>
         <label
           htmlFor={checkboxId}
           className={cn(

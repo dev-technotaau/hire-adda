@@ -643,7 +643,7 @@ export default function SuperAdminUsersPage() {
 
         {/* Bulk Actions Bar */}
         {selectedUserIds.size > 0 && (
-          <Card className="border-primary bg-primary/5 sticky top-16 z-10">
+          <Card className="border-primary bg-primary/5 sticky top-18 z-10">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <span className="font-medium text-[var(--text)]">
