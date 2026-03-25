@@ -22,7 +22,7 @@ export default function manifest(): MetadataRoute.Manifest {
 
     // Colors
     background_color: '#ffffff',
-    theme_color: '#2563EB',
+    theme_color: '#1E5CAF',
 
     // Categories for app stores
     categories: ['business', 'productivity', 'lifestyle'],

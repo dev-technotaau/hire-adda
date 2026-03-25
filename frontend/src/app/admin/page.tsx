@@ -236,7 +236,7 @@ export default function AdminDashboard() {
       icon: Users,
       color: 'text-primary bg-primary-light',
       sparkData: dauItems.map((d) => ({ v: d.total })),
-      sparkColor: '#2563EB',
+      sparkColor: '#1E5CAF',
     },
     {
       label: 'Total Candidates',
@@ -276,7 +276,7 @@ export default function AdminDashboard() {
       icon: UserPlus,
       color: 'text-primary bg-primary-light',
       sparkData: stats?.registrationTrends?.map((d) => ({ v: d.count })),
-      sparkColor: '#2563EB',
+      sparkColor: '#1E5CAF',
       delta: stats?.newUsersThisWeek
         ? Math.round(((stats.newUsersToday ?? 0) / (stats.newUsersThisWeek / 7)) * 100 - 100)
         : null,
@@ -320,7 +320,7 @@ export default function AdminDashboard() {
       desc: 'Users active in last 7 days',
       color: 'text-primary',
       sparkData: dauItems.slice(-7).map((d) => ({ v: d.total })),
-      sparkColor: '#2563EB',
+      sparkColor: '#1E5CAF',
     },
     {
       label: 'Expired Jobs',
@@ -728,7 +728,7 @@ export default function AdminDashboard() {
                   }))}
                   xKey="date"
                   yKey="Registrations"
-                  color="#2563EB"
+                  color="#1E5CAF"
                   height={280}
                 />
               ) : (
@@ -778,7 +778,7 @@ export default function AdminDashboard() {
             >
               <PieChart
                 data={[
-                  { name: 'Candidates', value: stats.totalCandidates, color: '#2563EB' },
+                  { name: 'Candidates', value: stats.totalCandidates, color: '#1E5CAF' },
                   { name: 'Employers', value: stats.totalEmployers, color: '#F59E0B' },
                 ]}
                 height={280}
@@ -818,7 +818,7 @@ export default function AdminDashboard() {
                     .slice(0, 10)
                     .map((s) => ({ skill: s.skill, count: s.count }))}
                   xKey="skill"
-                  bars={[{ key: 'count', color: '#2563EB', name: 'Candidates' }]}
+                  bars={[{ key: 'count', color: '#1E5CAF', name: 'Candidates' }]}
                   height={280}
                 />
               </Card>
@@ -864,7 +864,7 @@ export default function AdminDashboard() {
                   { metric: 'Applications', count: stats.totalApplications },
                 ]}
                 xKey="metric"
-                bars={[{ key: 'count', color: '#2563EB', name: 'Count' }]}
+                bars={[{ key: 'count', color: '#1E5CAF', name: 'Count' }]}
                 height={280}
               />
             </Card>

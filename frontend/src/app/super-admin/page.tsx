@@ -51,7 +51,14 @@ import { useAuth } from '@/hooks/use-auth';
 import Tooltip from '@/components/ui/Tooltip';
 import api from '@/lib/api';
 import { API } from '@/constants/api';
-import type { RecentActivity, KafkaDlqMessage, TrendingData, OnlineStats, HealthReadyResponse, KafkaLagInfo } from '@/types/admin';
+import type {
+  RecentActivity,
+  KafkaDlqMessage,
+  TrendingData,
+  OnlineStats,
+  HealthReadyResponse,
+  KafkaLagInfo,
+} from '@/types/admin';
 
 interface KafkaEvent {
   eventType: string;
@@ -241,7 +248,8 @@ export default function SuperAdminDashboard() {
   const healthStatus = healthData?.data ?? healthData;
   const onlineStats = onlineStatsData?.data as OnlineStats | undefined;
   const trending = trendingData?.data as TrendingData | undefined;
-  const dlqMessages = (dlqData as unknown as { data?: { items?: KafkaDlqMessage[] } })?.data?.items ?? [];
+  const dlqMessages =
+    (dlqData as unknown as { data?: { items?: KafkaDlqMessage[] } })?.data?.items ?? [];
   const dlqTotal = (dlqData as unknown as { data?: { total?: number } })?.data?.total ?? 0;
   const healthReady = healthReadyData as HealthReadyResponse | undefined;
   const kafkaLag = healthReady?.checks?.kafka as KafkaLagInfo | undefined;
@@ -349,7 +357,7 @@ export default function SuperAdminDashboard() {
       color: 'text-primary bg-primary-light',
       sparkData: dauItems.map((d) => ({ v: d.total })),
       sparkKey: 'v',
-      sparkColor: '#2563EB',
+      sparkColor: '#1E5CAF',
       delta: regDelta,
     },
     {
@@ -405,7 +413,7 @@ export default function SuperAdminDashboard() {
       color: 'text-primary bg-primary-light',
       sparkData: stats?.registrationTrends?.map((d) => ({ v: d.count })),
       sparkKey: 'v',
-      sparkColor: '#2563EB',
+      sparkColor: '#1E5CAF',
     },
     {
       label: 'New This Week',
@@ -442,7 +450,7 @@ export default function SuperAdminDashboard() {
       desc: 'Users active in last 7 days',
       color: 'text-primary',
       sparkData: dauItems.slice(-7).map((d) => ({ v: d.total })),
-      sparkColor: '#2563EB',
+      sparkColor: '#1E5CAF',
     },
     {
       label: 'Expired Jobs',
@@ -593,7 +601,7 @@ export default function SuperAdminDashboard() {
               <Tooltip content="View pending verifications">
                 <Link
                   href={ROUTES.ADMIN.VERIFICATIONS}
-                  className="flex items-center gap-1.5 rounded-lg bg-[var(--warning-light)] px-3 py-1.5 text-sm font-medium text-[var(--warning)] transition-colors hover:bg-[var(--warning)]/20 cursor-pointer"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-[var(--warning-light)] px-3 py-1.5 text-sm font-medium text-[var(--warning)] transition-colors hover:bg-[var(--warning)]/20"
                 >
                   <AlertTriangle className="h-4 w-4" />
                   {stats!.pendingVerifications} pending
@@ -859,74 +867,81 @@ export default function SuperAdminDashboard() {
         )}
 
         {/* ── Trending Jobs & Searches ── */}
-        {trending && (trending.trendingJobs?.length > 0 || trending.trendingSearches?.length > 0) && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {trending.trendingJobs?.length > 0 && (
-              <Card
-                header={
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-[var(--warning)]" />
-                    <h2 className="text-lg font-semibold text-[var(--text)]">Trending Jobs</h2>
-                    <span className="ml-auto text-xs text-[var(--text-muted)]">Last 24h</span>
-                  </div>
-                }
-              >
-                <div className="space-y-2">
-                  {trending.trendingJobs.slice(0, 8).map((job, i) => (
-                    <div
-                      key={job.id}
-                      className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] px-3 py-2"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xs font-bold text-[var(--text-muted)]">#{i + 1}</span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-[var(--text)]">
-                            {job.title}
-                          </p>
-                          <p className="text-xs text-[var(--text-muted)]">
-                            {job.company.companyName} · {job.location}
-                          </p>
+        {trending &&
+          (trending.trendingJobs?.length > 0 || trending.trendingSearches?.length > 0) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {trending.trendingJobs?.length > 0 && (
+                <Card
+                  header={
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-[var(--warning)]" />
+                      <h2 className="text-lg font-semibold text-[var(--text)]">Trending Jobs</h2>
+                      <span className="ml-auto text-xs text-[var(--text-muted)]">Last 24h</span>
+                    </div>
+                  }
+                >
+                  <div className="space-y-2">
+                    {trending.trendingJobs.slice(0, 8).map((job, i) => (
+                      <div
+                        key={job.id}
+                        className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] px-3 py-2"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="text-xs font-bold text-[var(--text-muted)]">
+                            #{i + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-[var(--text)]">
+                              {job.title}
+                            </p>
+                            <p className="text-xs text-[var(--text-muted)]">
+                              {job.company.companyName} · {job.location}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                          <Eye className="h-3.5 w-3.5" />
+                          {job.viewCount}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
-                        <Eye className="h-3.5 w-3.5" />
-                        {job.viewCount}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-            {trending.trendingSearches?.length > 0 && (
-              <Card
-                header={
-                  <div className="flex items-center gap-2">
-                    <Search className="h-5 w-5 text-[var(--info)]" />
-                    <h2 className="text-lg font-semibold text-[var(--text)]">Trending Searches</h2>
-                    <span className="ml-auto text-xs text-[var(--text-muted)]">Last 24h</span>
+                    ))}
                   </div>
-                }
-              >
-                <div className="space-y-2">
-                  {trending.trendingSearches.slice(0, 10).map((s, i) => (
-                    <div
-                      key={s.query}
-                      className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] px-3 py-2"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-[var(--text-muted)]">#{i + 1}</span>
-                        <span className="text-sm font-medium text-[var(--text)]">{s.query}</span>
-                      </div>
-                      <span className="text-xs text-[var(--text-muted)]">
-                        {Math.round(s.score)} searches
-                      </span>
+                </Card>
+              )}
+              {trending.trendingSearches?.length > 0 && (
+                <Card
+                  header={
+                    <div className="flex items-center gap-2">
+                      <Search className="h-5 w-5 text-[var(--info)]" />
+                      <h2 className="text-lg font-semibold text-[var(--text)]">
+                        Trending Searches
+                      </h2>
+                      <span className="ml-auto text-xs text-[var(--text-muted)]">Last 24h</span>
                     </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-          </div>
-        )}
+                  }
+                >
+                  <div className="space-y-2">
+                    {trending.trendingSearches.slice(0, 10).map((s, i) => (
+                      <div
+                        key={s.query}
+                        className="flex items-center justify-between rounded-lg bg-[var(--bg-secondary)] px-3 py-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-[var(--text-muted)]">
+                            #{i + 1}
+                          </span>
+                          <span className="text-sm font-medium text-[var(--text)]">{s.query}</span>
+                        </div>
+                        <span className="text-xs text-[var(--text-muted)]">
+                          {Math.round(s.score)} searches
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
+          )}
 
         {/* ── Charts Row: Platform Trend + Application Volume ── */}
         {stats && (
@@ -948,7 +963,7 @@ export default function SuperAdminDashboard() {
                   xKey="period"
                   yKey="Registrations"
                   yKey2="Applications"
-                  color="#2563EB"
+                  color="#1E5CAF"
                   color2="#10B981"
                   height={280}
                 />
@@ -999,7 +1014,7 @@ export default function SuperAdminDashboard() {
             >
               <PieChart
                 data={[
-                  { name: 'Candidates', value: stats.totalCandidates, color: '#2563EB' },
+                  { name: 'Candidates', value: stats.totalCandidates, color: '#1E5CAF' },
                   { name: 'Employers', value: stats.totalEmployers, color: '#F59E0B' },
                 ]}
                 height={280}
@@ -1044,7 +1059,7 @@ export default function SuperAdminDashboard() {
                     .slice(0, 10)
                     .map((s) => ({ skill: s.skill, count: s.count }))}
                   xKey="skill"
-                  bars={[{ key: 'count', color: '#2563EB', name: 'Candidates' }]}
+                  bars={[{ key: 'count', color: '#1E5CAF', name: 'Candidates' }]}
                   height={280}
                 />
               </Card>
@@ -1094,7 +1109,7 @@ export default function SuperAdminDashboard() {
                   }))}
                   xKey="date"
                   yKey="Registrations"
-                  color="#2563EB"
+                  color="#1E5CAF"
                   height={280}
                 />
               </Card>
@@ -1185,7 +1200,7 @@ export default function SuperAdminDashboard() {
                   { metric: 'Applications', count: stats.totalApplications },
                 ]}
                 xKey="metric"
-                bars={[{ key: 'count', color: '#2563EB', name: 'Count' }]}
+                bars={[{ key: 'count', color: '#1E5CAF', name: 'Count' }]}
                 height={280}
               />
             </Card>
@@ -1210,7 +1225,7 @@ export default function SuperAdminDashboard() {
                   xKey="date"
                   yKey="Total"
                   yKey2="Candidates"
-                  color="#2563EB"
+                  color="#1E5CAF"
                   color2="#10B981"
                   height={280}
                 />
@@ -1451,9 +1466,7 @@ export default function SuperAdminDashboard() {
           header={
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-[var(--error)]" />
-              <h2 className="text-lg font-semibold text-[var(--text)]">
-                Dead Letter Queue
-              </h2>
+              <h2 className="text-lg font-semibold text-[var(--text)]">Dead Letter Queue</h2>
               {dlqTotal > 0 && (
                 <span className="ml-2 rounded-full bg-[var(--error-light)] px-2 py-0.5 text-xs font-medium text-[var(--error)]">
                   {dlqTotal} messages
@@ -1463,7 +1476,10 @@ export default function SuperAdminDashboard() {
                 {(['all', 'pending', 'replayed'] as const).map((f) => (
                   <button
                     key={f}
-                    onClick={() => { setDlqFilter(f); setDlqPage(1); }}
+                    onClick={() => {
+                      setDlqFilter(f);
+                      setDlqPage(1);
+                    }}
                     className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                       dlqFilter === f
                         ? 'bg-primary text-white'
@@ -1491,7 +1507,7 @@ export default function SuperAdminDashboard() {
                   className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-3"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex min-w-0 items-center gap-3">
                       <span className="rounded-md bg-[var(--error-light)] px-2 py-0.5 text-xs font-medium text-[var(--error)]">
                         {msg.originalTopic}
                       </span>
@@ -1518,7 +1534,7 @@ export default function SuperAdminDashboard() {
                         <button
                           onClick={() => replayDlqMutation.mutate(msg.id)}
                           disabled={replayDlqMutation.isPending}
-                          className="flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                          className="bg-primary hover:bg-primary/90 flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-white transition-colors disabled:opacity-50"
                         >
                           <RotateCcw className="h-3 w-3" />
                           Replay

@@ -66,12 +66,20 @@ data:
         # Hide nginx version
         server_tokens off;
 
+        # Use real client IP from ingress-nginx (X-Real-IP header)
+        # Behind ingress-nginx, $binary_remote_addr is the ingress pod IP,
+        # so we use $http_x_real_ip to rate-limit by actual client IP.
+        map $http_x_real_ip $rate_limit_key {
+            default $http_x_real_ip;
+            ''      $binary_remote_addr;
+        }
+
         # Rate limiting zones (matches Docker nginx)
-        limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
-        limit_req_zone $binary_remote_addr zone=login:10m rate=30r/m;
+        limit_req_zone $rate_limit_key zone=api:10m rate=10r/s;
+        limit_req_zone $rate_limit_key zone=login:10m rate=30r/m;
 
         # Connection limiting
-        limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+        limit_conn_zone $rate_limit_key zone=conn_limit:10m;
 
         # ── Upstreams (K8s service DNS) ──
         upstream backend_api {

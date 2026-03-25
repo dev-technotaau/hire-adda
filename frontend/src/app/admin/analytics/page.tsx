@@ -434,7 +434,7 @@ export default function AdminAnalyticsPage() {
           icon: Users,
           color: 'text-primary bg-primary-light',
           sparkData: dailyActiveUsers.map((d) => ({ v: d.total })),
-          sparkColor: '#2563EB',
+          sparkColor: '#1E5CAF',
           delta: deltas?.registrations,
         },
         {
@@ -545,7 +545,7 @@ export default function AdminAnalyticsPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
-                className={`cursor-pointer flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex-1 cursor-pointer rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === tab.key
                     ? 'bg-white text-[var(--text)] shadow-sm'
                     : 'text-[var(--text-muted)] hover:text-[var(--text)]'
@@ -775,7 +775,7 @@ export default function AdminAnalyticsPage() {
                     xKey="period"
                     yKey="registrations"
                     yKey2="applications"
-                    color="#2563EB"
+                    color="#1E5CAF"
                     color2="#10B981"
                     height={280}
                   />
@@ -794,7 +794,7 @@ export default function AdminAnalyticsPage() {
                     data={analytics as unknown as Record<string, unknown>[]}
                     xKey="period"
                     bars={[
-                      { key: 'registrations', color: '#2563EB', name: 'Registrations' },
+                      { key: 'registrations', color: '#1E5CAF', name: 'Registrations' },
                       { key: 'jobPostings', color: '#10B981', name: 'Job Postings' },
                       { key: 'applications', color: '#F59E0B', name: 'Applications' },
                     ]}
@@ -877,7 +877,7 @@ export default function AdminAnalyticsPage() {
                         .slice(0, 10)
                         .map((s) => ({ skill: s.skill, count: s.count }))}
                       xKey="skill"
-                      bars={[{ key: 'count', color: '#2563EB', name: 'Candidates' }]}
+                      bars={[{ key: 'count', color: '#1E5CAF', name: 'Candidates' }]}
                       height={280}
                     />
                   </Card>
@@ -926,7 +926,7 @@ export default function AdminAnalyticsPage() {
                     }))}
                     xKey="date"
                     yKey="Registrations"
-                    color="#2563EB"
+                    color="#1E5CAF"
                     height={280}
                   />
                 </Card>
@@ -1087,7 +1087,7 @@ export default function AdminAnalyticsPage() {
                     xKey="date"
                     yKey="total"
                     yKey2="candidates"
-                    color="#2563EB"
+                    color="#1E5CAF"
                     color2="#10B981"
                     height={280}
                   />
@@ -1202,7 +1202,7 @@ export default function AdminAnalyticsPage() {
                     <BarChart
                       data={regDayOfWeekData}
                       xKey="day"
-                      bars={[{ key: 'avg', color: '#2563EB', name: 'Avg Registrations' }]}
+                      bars={[{ key: 'avg', color: '#1E5CAF', name: 'Avg Registrations' }]}
                       height={220}
                     />
                   </Card>
@@ -1621,7 +1621,7 @@ export default function AdminAnalyticsPage() {
                   <BarChart
                     data={popularSkills as unknown as Record<string, unknown>[]}
                     xKey="skill"
-                    bars={[{ key: 'demand_count', color: '#2563EB', name: 'Demand' }]}
+                    bars={[{ key: 'demand_count', color: '#1E5CAF', name: 'Demand' }]}
                     height={280}
                   />
                 ) : (
@@ -1679,7 +1679,7 @@ export default function AdminAnalyticsPage() {
                     data={userGrowth as unknown as Record<string, unknown>[]}
                     xKey="date"
                     yKey="registrations"
-                    color="#2563EB"
+                    color="#1E5CAF"
                     height={280}
                   />
                 ) : (

@@ -34,7 +34,7 @@ function createMarkerIcon(urgency: string | null | undefined, isSelected: boolea
       ? '#EF4444'
       : urgency === 'IMMEDIATE'
         ? '#F97316'
-        : '#2563EB';
+        : '#1E5CAF';
   const size = isSelected ? 28 : 22;
   return L.divIcon({
     className: '',

@@ -26,7 +26,7 @@ export default function AreaChart({
   xKey,
   yKey,
   yKey2,
-  color = '#2563EB',
+  color = '#1E5CAF',
   color2 = '#10B981',
   height = 300,
   showGrid = true,

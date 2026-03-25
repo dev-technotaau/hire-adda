@@ -883,7 +883,7 @@ export default function EmployerDashboard() {
               xKey="name"
               bars={[
                 { key: 'views', color: '#6366F1', name: 'Views' },
-                { key: 'applications', color: '#2563EB', name: 'Applications' },
+                { key: 'applications', color: '#1E5CAF', name: 'Applications' },
               ]}
               height={300}
             />

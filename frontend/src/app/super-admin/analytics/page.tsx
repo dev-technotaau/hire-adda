@@ -526,7 +526,7 @@ export default function SuperAdminAnalyticsPage() {
           icon: Users,
           color: 'text-primary bg-primary-light',
           sparkData: dailyActiveUsers.map((d) => ({ v: d.total })),
-          sparkColor: '#2563EB',
+          sparkColor: '#1E5CAF',
           delta: deltas?.registrations,
         },
         {
@@ -636,7 +636,7 @@ export default function SuperAdminAnalyticsPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
-                className={`cursor-pointer flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex-1 cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                   activeTab === tab.key
                     ? 'bg-white text-[var(--text)] shadow-sm'
                     : 'text-[var(--text-muted)] hover:text-[var(--text)]'
@@ -866,7 +866,7 @@ export default function SuperAdminAnalyticsPage() {
                     xKey="period"
                     yKey="registrations"
                     yKey2="applications"
-                    color="#2563EB"
+                    color="#1E5CAF"
                     color2="#10B981"
                     height={280}
                   />
@@ -885,7 +885,7 @@ export default function SuperAdminAnalyticsPage() {
                     data={analytics as unknown as Record<string, unknown>[]}
                     xKey="period"
                     bars={[
-                      { key: 'registrations', color: '#2563EB', name: 'Registrations' },
+                      { key: 'registrations', color: '#1E5CAF', name: 'Registrations' },
                       { key: 'jobPostings', color: '#10B981', name: 'Job Postings' },
                       { key: 'applications', color: '#F59E0B', name: 'Applications' },
                     ]}
@@ -968,7 +968,7 @@ export default function SuperAdminAnalyticsPage() {
                         .slice(0, 10)
                         .map((s) => ({ skill: s.skill, count: s.count }))}
                       xKey="skill"
-                      bars={[{ key: 'count', color: '#2563EB', name: 'Candidates' }]}
+                      bars={[{ key: 'count', color: '#1E5CAF', name: 'Candidates' }]}
                       height={280}
                     />
                   </Card>
@@ -1017,7 +1017,7 @@ export default function SuperAdminAnalyticsPage() {
                     }))}
                     xKey="date"
                     yKey="Registrations"
-                    color="#2563EB"
+                    color="#1E5CAF"
                     height={280}
                   />
                 </Card>
@@ -1178,7 +1178,7 @@ export default function SuperAdminAnalyticsPage() {
                     xKey="date"
                     yKey="total"
                     yKey2="candidates"
-                    color="#2563EB"
+                    color="#1E5CAF"
                     color2="#10B981"
                     height={280}
                   />
@@ -1293,7 +1293,7 @@ export default function SuperAdminAnalyticsPage() {
                     <BarChart
                       data={regDayOfWeekData}
                       xKey="day"
-                      bars={[{ key: 'avg', color: '#2563EB', name: 'Avg Registrations' }]}
+                      bars={[{ key: 'avg', color: '#1E5CAF', name: 'Avg Registrations' }]}
                       height={220}
                     />
                   </Card>
@@ -1715,7 +1715,7 @@ export default function SuperAdminAnalyticsPage() {
                   <BarChart
                     data={popularSkills as unknown as Record<string, unknown>[]}
                     xKey="skill"
-                    bars={[{ key: 'demand_count', color: '#2563EB', name: 'Demand' }]}
+                    bars={[{ key: 'demand_count', color: '#1E5CAF', name: 'Demand' }]}
                     height={280}
                   />
                 ) : (
@@ -1773,7 +1773,7 @@ export default function SuperAdminAnalyticsPage() {
                     data={userGrowth as unknown as Record<string, unknown>[]}
                     xKey="date"
                     yKey="registrations"
-                    color="#2563EB"
+                    color="#1E5CAF"
                     height={280}
                   />
                 ) : (
@@ -1905,8 +1905,7 @@ export default function SuperAdminAnalyticsPage() {
             </Card>
 
             {/* Verification Stats */}
-            {verificationStats &&
-              (verificationStats.byStatus || verificationStats.byType) && (
+            {verificationStats && (verificationStats.byStatus || verificationStats.byType) && (
               <Card
                 header={
                   <div className="flex items-center gap-2">
@@ -1921,7 +1920,7 @@ export default function SuperAdminAnalyticsPage() {
                 {verificationStats.byStatus &&
                   Object.keys(verificationStats.byStatus).length > 0 && (
                     <div className="mb-4">
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                      <p className="mb-2 text-xs font-medium tracking-wider text-[var(--text-muted)] uppercase">
                         By Status
                       </p>
                       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1942,29 +1941,28 @@ export default function SuperAdminAnalyticsPage() {
                     </div>
                   )}
                 {/* By Type */}
-                {verificationStats.byType &&
-                  Object.keys(verificationStats.byType).length > 0 && (
-                    <div>
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
-                        By Type
-                      </p>
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {Object.entries(verificationStats.byType).map(([key, value]) => (
-                          <div
-                            key={`type-${key}`}
-                            className="rounded-lg bg-[var(--bg-secondary)] p-4 text-center"
-                          >
-                            <p className="text-2xl font-bold text-[var(--text)]">
-                              {formatNumber(value)}
-                            </p>
-                            <p className="mt-1 text-xs text-[var(--text-muted)] capitalize">
-                              {key.replace(/_/g, ' ').toLowerCase()}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                {verificationStats.byType && Object.keys(verificationStats.byType).length > 0 && (
+                  <div>
+                    <p className="mb-2 text-xs font-medium tracking-wider text-[var(--text-muted)] uppercase">
+                      By Type
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {Object.entries(verificationStats.byType).map(([key, value]) => (
+                        <div
+                          key={`type-${key}`}
+                          className="rounded-lg bg-[var(--bg-secondary)] p-4 text-center"
+                        >
+                          <p className="text-2xl font-bold text-[var(--text)]">
+                            {formatNumber(value)}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)] capitalize">
+                            {key.replace(/_/g, ' ').toLowerCase()}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
               </Card>
             )}
 

@@ -254,7 +254,7 @@ export default function CandidateDashboard() {
   ];
 
   const statusColors: Record<string, string> = {
-    APPLIED: '#2563EB',
+    APPLIED: '#1E5CAF',
     VIEWED: '#6366F1',
     SHORTLISTED: '#10B981',
     INTERVIEW_SCHEDULED: '#F59E0B',

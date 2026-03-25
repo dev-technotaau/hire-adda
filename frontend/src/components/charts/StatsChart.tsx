@@ -12,7 +12,7 @@ interface StatsChartProps {
 export default function StatsChart({
   data,
   dataKey,
-  color = '#2563EB',
+  color = '#1E5CAF',
   height = 60,
 }: StatsChartProps) {
   return (

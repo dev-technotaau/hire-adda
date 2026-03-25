@@ -69,9 +69,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: backend
+                name: nginx
                 port:
-                  number: 5000
+                  number: 80
 ---
 # ── Auth Rate Limiting Ingress (stricter for login/register) ──
 apiVersion: networking.k8s.io/v1
@@ -103,16 +103,16 @@ spec:
             pathType: Exact
             backend:
               service:
-                name: backend
+                name: nginx
                 port:
-                  number: 5000
+                  number: 80
           - path: /api/v1/auth/register
             pathType: Exact
             backend:
               service:
-                name: backend
+                name: nginx
                 port:
-                  number: 5000
+                  number: 80
 ---
 # ── Frontend Ingress (hireadda.in) ──
 apiVersion: networking.k8s.io/v1
@@ -151,9 +151,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: frontend
+                name: nginx
                 port:
-                  number: 3000
+                  number: 80
     - host: www.hireadda.in
       http:
         paths:
@@ -161,9 +161,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: frontend
+                name: nginx
                 port:
-                  number: 3000
+                  number: 80
 ---
 # ── Mail Webmail Ingress (mail.hireadda.in) ──
 apiVersion: networking.k8s.io/v1
@@ -198,7 +198,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: roundcube
+                name: nginx
                 port:
                   number: 80
 ---
@@ -207,7 +207,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: grafana-ingress
-  namespace: monitoring
+  namespace: hire-adda
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
@@ -236,7 +236,41 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: kube-prometheus-stack-grafana
+                name: nginx
+                port:
+                  number: 80
+---
+# ── Logs Ingress (logs.hireadda.in) ──
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: logs-ingress
+  namespace: hire-adda
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/hsts: 'true'
+    nginx.ingress.kubernetes.io/hsts-max-age: '63072000'
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-Frame-Options: DENY";
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - logs.hireadda.in
+      secretName: logs-hireadda-tls
+  rules:
+    - host: logs.hireadda.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx
                 port:
                   number: 80
 ---

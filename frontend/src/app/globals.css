@@ -7,21 +7,21 @@
    =================================== */
 
 @theme {
-  /* Colors — Primary */
-  --color-primary: #2563EB;
-  --color-primary-hover: #1D4ED8;
-  --color-primary-light: #DBEAFE;
-  --color-primary-dark: #1E40AF;
-  --color-primary-50: #EFF6FF;
-  --color-primary-100: #DBEAFE;
-  --color-primary-600: #2563EB;
-  --color-primary-700: #1D4ED8;
-  --color-primary-800: #1E40AF;
+  /* Colors — Primary (Deep Blue) */
+  --color-primary: #1E5CAF;
+  --color-primary-hover: #184D96;
+  --color-primary-light: #DCE8F6;
+  --color-primary-dark: #133D7A;
+  --color-primary-50: #F0F5FC;
+  --color-primary-100: #DCE8F6;
+  --color-primary-600: #1E5CAF;
+  --color-primary-700: #184D96;
+  --color-primary-800: #133D7A;
 
-  /* Colors — Secondary */
-  --color-secondary: #64748B;
-  --color-secondary-hover: #475569;
-  --color-secondary-light: #F1F5F9;
+  /* Colors — Secondary (Orange) */
+  --color-secondary: #F5880A;
+  --color-secondary-hover: #D67708;
+  --color-secondary-light: #FEF3E1;
 
   /* Colors — Accent */
   --color-accent: #0EA5E9;
@@ -74,21 +74,21 @@
    =================================== */
 
 :root {
-  /* Primary */
-  --primary: #2563EB;
-  --primary-hover: #1D4ED8;
-  --primary-light: #DBEAFE;
-  --primary-dark: #1E40AF;
-  --primary-50: #EFF6FF;
-  --primary-100: #DBEAFE;
-  --primary-600: #2563EB;
-  --primary-700: #1D4ED8;
-  --primary-800: #1E40AF;
+  /* Primary (Deep Blue) */
+  --primary: #1E5CAF;
+  --primary-hover: #184D96;
+  --primary-light: #DCE8F6;
+  --primary-dark: #133D7A;
+  --primary-50: #F0F5FC;
+  --primary-100: #DCE8F6;
+  --primary-600: #1E5CAF;
+  --primary-700: #184D96;
+  --primary-800: #133D7A;
 
-  /* Secondary */
-  --secondary: #64748B;
-  --secondary-hover: #475569;
-  --secondary-light: #F1F5F9;
+  /* Secondary (Orange) */
+  --secondary: #F5880A;
+  --secondary-hover: #D67708;
+  --secondary-light: #FEF3E1;
 
   /* Accent */
   --accent: #0EA5E9;
@@ -122,7 +122,7 @@
   /* Borders */
   --border: #CBD5E1;
   --border-hover: #94A3B8;
-  --border-focus: #2563EB;
+  --border-focus: #1E5CAF;
 
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
