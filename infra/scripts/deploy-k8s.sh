@@ -884,6 +884,10 @@ ensure_required_resources() {
       log_info "Applying OTel Collector..."
       $KUBECTL apply -f "${monitoring_dir}/otel-collector/deployment.yaml" 2>&1 | sed 's/^/  /'
     fi
+    if [[ -d "${monitoring_dir}/servicemonitors" ]]; then
+      log_info "Applying Prometheus ServiceMonitors..."
+      $KUBECTL apply -f "${monitoring_dir}/servicemonitors/" 2>&1 | sed 's/^/  /'
+    fi
   fi
 
   # Apply/update Argo Rollout resources (ensures AnalysisTemplates are current)

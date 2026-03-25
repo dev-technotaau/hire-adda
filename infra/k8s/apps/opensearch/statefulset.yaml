@@ -54,6 +54,14 @@ spec:
       containers:
         - name: opensearch
           image: opensearchproject/opensearch:2.18.0
+          command:
+            - sh
+            - -c
+            - |
+              if ! bin/opensearch-plugin list | grep -q prometheus-exporter; then
+                bin/opensearch-plugin install --batch https://github.com/Aiven-Open/prometheus-exporter-plugin-for-opensearch/releases/download/2.18.0.0/prometheus-exporter-2.18.0.0.zip
+              fi
+              exec ./opensearch-docker-entrypoint.sh opensearch
           ports:
             - name: http
               containerPort: 9200
