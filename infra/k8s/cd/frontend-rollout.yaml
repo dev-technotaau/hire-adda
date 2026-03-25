@@ -161,7 +161,10 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in"}[2m])) by (le)) or vector(0)
+            (
+              (count(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in"}[2m])) > bool 0)
+              * on() histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in"}[2m])) by (le))
+            ) or vector(0)
 
     # ── Latency P99 (tail latency) ─────────────────────────
     - name: latency-p99
@@ -173,7 +176,10 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            histogram_quantile(0.99, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in"}[2m])) by (le)) or vector(0)
+            (
+              (count(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in"}[2m])) > bool 0)
+              * on() histogram_quantile(0.99, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{host="hireadda.in"}[2m])) by (le))
+            ) or vector(0)
 
     # ── CPU Saturation ─────────────────────────────────────
     - name: cpu-saturation

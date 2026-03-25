@@ -197,7 +197,10 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",app="backend"}[2m])) by (le)) or vector(0)
+            (
+              (count(rate(http_request_duration_seconds_bucket{namespace="hire-adda",app="backend"}[2m])) > bool 0)
+              * on() histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",app="backend"}[2m])) by (le))
+            ) or vector(0)
 
     # ── Latency P99 (tail latency) ─────────────────────────
     - name: latency-p99
@@ -209,7 +212,10 @@ spec:
         prometheus:
           address: http://kube-prometheus-stack-prometheus.monitoring:9090
           query: |
-            histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",app="backend"}[2m])) by (le)) or vector(0)
+            (
+              (count(rate(http_request_duration_seconds_bucket{namespace="hire-adda",app="backend"}[2m])) > bool 0)
+              * on() histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace="hire-adda",app="backend"}[2m])) by (le))
+            ) or vector(0)
 
     # ── CPU Saturation ─────────────────────────────────────
     # Must stay below 90% of resource limit
