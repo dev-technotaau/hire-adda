@@ -1,8 +1,8 @@
 # ============================================================
 # Continuous Deployment Pipeline
 # Builds Docker images, pushes to GHCR, then:
-#   1. Updates K8s manifests (ArgoCD auto-sync)
-#   2. Deploys to VPS via SSH (Docker Compose pull)
+#   1. Updates K8s manifests (image tags)
+#   2. Deploys to K8s via Argo Rollouts (progressive canary)
 # ============================================================
 name: CD
 
@@ -193,24 +193,6 @@ jobs:
           # Pull any commits pushed since checkout (e.g. by concurrent CD runs)
           git pull --rebase
           git push
-
-  # ── Deploy to VPS via Docker Compose (Blue-Green) ──
-  deploy-vps:
-    needs: [changes, build-backend, build-frontend]
-    if: always() && (needs.build-backend.result == 'success' || needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true')
-    uses: ./.github/workflows/deploy-vps.yml
-    with:
-      backend_tag: ${{ needs.build-backend.result == 'success' && github.sha || 'latest' }}
-      frontend_tag: ${{ needs.build-frontend.result == 'success' && github.sha || 'latest' }}
-      deploy_backend: ${{ needs.build-backend.result == 'success' || needs.changes.outputs.infra == 'true' }}
-      deploy_frontend: ${{ needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true' }}
-      strategy: progressive
-    secrets:
-      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-      VPS_HOST: ${{ secrets.VPS_HOST }}
-      VPS_USER: ${{ secrets.VPS_USER }}
-      VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
-      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ── Deploy to K8s via Argo Rollouts (Progressive) ──
   deploy-k8s:
