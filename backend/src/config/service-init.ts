@@ -427,9 +427,11 @@ export const initializeServices = async (): Promise<void> => {
   }
 
   // Grafana Loki (Log Aggregation)
-  // In Docker, logs are shipped to Loki via Promtail (container log driver)
+  // In Docker/K8s, logs are shipped to Loki via Promtail (container log driver)
   const isContainerized =
-    (await import('fs')).existsSync('/.dockerenv') || process.env.CONTAINER === 'true';
+    (await import('fs')).existsSync('/.dockerenv') ||
+    process.env.CONTAINER === 'true' ||
+    !!process.env.KUBERNETES_SERVICE_HOST;
   if (env.LOG_AGGREGATION_URL) {
     registerService(
       'Grafana Loki',
@@ -941,12 +943,17 @@ export const initializeServices = async (): Promise<void> => {
   // INFRASTRUCTURE
   // ═══════════════════════════════════════════════════════════════
 
-  // Docker
+  // Docker / Kubernetes runtime detection
   const fs = await import('fs');
   const path = await import('path');
   const rootDir = path.resolve(__dirname, '../..');
   const isDocker = fs.existsSync('/.dockerenv') || process.env.CONTAINER === 'true';
-  if (isDocker) {
+  const isKubernetes = !!process.env.KUBERNETES_SERVICE_HOST;
+  const isContainerRuntime = isDocker || isKubernetes;
+
+  if (isKubernetes) {
+    registerService('Docker', 'ready', 'Running in K8s pod');
+  } else if (isDocker) {
     registerService('Docker', 'ready', 'Running in container');
   } else if (
     fs.existsSync(path.join(rootDir, 'Dockerfile')) ||
@@ -958,7 +965,26 @@ export const initializeServices = async (): Promise<void> => {
   }
 
   // Nginx
-  if (isDocker) {
+  if (isKubernetes) {
+    // In K8s, nginx runs as a separate pod/service — probe it
+    try {
+      const http = await import('http');
+      await new Promise<void>((resolve, reject) => {
+        const req = http.get('http://nginx:80/', { timeout: 3000 }, (res) => {
+          res.resume();
+          resolve();
+        });
+        req.on('error', reject);
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error('timeout'));
+        });
+      });
+      registerService('Nginx', 'connected', 'K8s service (nginx:80)');
+    } catch {
+      registerService('Nginx', 'ready', 'K8s nginx-ingress');
+    }
+  } else if (isDocker) {
     registerService('Nginx', 'ready', 'Reverse proxy (separate container)');
   } else if (fs.existsSync(path.join(rootDir, 'nginx', 'nginx.conf'))) {
     registerService('Nginx', 'ready', 'Reverse proxy config');
@@ -967,7 +993,7 @@ export const initializeServices = async (): Promise<void> => {
   }
 
   // Husky Git Hooks
-  if (isDocker) {
+  if (isContainerRuntime) {
     registerService('Husky Git Hooks', 'ready', 'Dev-only (CI enforced)');
   } else if (fs.existsSync(path.join(rootDir, '.husky'))) {
     registerService('Husky Git Hooks', 'ready', 'Pre-commit hooks');
