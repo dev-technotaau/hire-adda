@@ -307,7 +307,6 @@
     - name: Apply OpenSearch Dashboards
       ansible.builtin.shell: |
         k3s kubectl apply -f /root/hire_adda/infra/k8s/logging/opensearch-dashboards-deployment.yaml
-        k3s kubectl apply -f /root/hire_adda/infra/k8s/logging/opensearch-dashboards-ingress.yaml
       register: logging_apply
       changed_when: "'configured' in logging_apply.stdout or 'created' in logging_apply.stdout"
       failed_when: false

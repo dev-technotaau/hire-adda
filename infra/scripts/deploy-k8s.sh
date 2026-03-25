@@ -868,9 +868,8 @@ ensure_required_resources() {
       log_info "Applying OpenSearch Dashboards..."
       $KUBECTL apply -f "${logging_dir}/opensearch-dashboards-deployment.yaml" 2>&1 | sed 's/^/  /'
     fi
-    if [[ -f "${logging_dir}/opensearch-dashboards-ingress.yaml" ]]; then
-      $KUBECTL apply -f "${logging_dir}/opensearch-dashboards-ingress.yaml" 2>&1 | sed 's/^/  /'
-    fi
+    # opensearch-dashboards ingress removed — logs.hireadda.in is now
+    # handled by hire-adda/logs-ingress (routes through nginx proxy)
   fi
 
   # ── Tracing infrastructure (Tempo + OTel Collector) ──
