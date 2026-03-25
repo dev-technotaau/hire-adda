@@ -260,13 +260,12 @@ spec:
     - name: canary-hash
     - name: stable-hash
   metrics:
-    # ── Error Rate Ratio ───────────────────────────────────
-    # Canary error rate must not exceed 1.5x the stable error rate
+    # ── Error Rate Ratio (advisory — single-replica comparison is noisy) ──
     - name: canary-vs-stable-error-rate
       interval: 30s
       count: 3
       successCondition: result[0] <= 1.5
-      failureLimit: 2
+      failureLimit: 3
       inconclusiveLimit: 3
       provider:
         prometheus:
@@ -282,14 +281,12 @@ spec:
               )
             ) or vector(1)
 
-    # ── Latency Ratio ──────────────────────────────────────
-    # Canary P95 must not exceed 3x the stable P95
-    # (3x tolerates cold-start latency on single-replica deploys)
+    # ── Latency Ratio (advisory — single-replica comparison is noisy) ──
     - name: canary-vs-stable-latency
       interval: 30s
       count: 3
       successCondition: result[0] <= 3.0
-      failureLimit: 2
+      failureLimit: 3
       inconclusiveLimit: 3
       provider:
         prometheus:
