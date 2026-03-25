@@ -37,7 +37,7 @@ kubectl get nodes -o wide || fail "K3s not accessible"
 log "  K3s cluster: OK"
 
 # Verify all K3s app pods are Running
-PODS_NOT_READY=$(kubectl get pods -n hire-adda --no-headers 2>/dev/null | grep -v "Running\|Completed" | wc -l)
+PODS_NOT_READY=$(kubectl get pods -n hire-adda --no-headers 2>/dev/null | grep -cv "Running\|Completed" || true)
 if [[ "$PODS_NOT_READY" -gt 0 ]]; then
   kubectl get pods -n hire-adda
   fail "Not all pods are Running in hire-adda namespace"
