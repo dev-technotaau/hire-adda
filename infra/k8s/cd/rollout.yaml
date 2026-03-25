@@ -20,7 +20,7 @@ metadata:
     app: backend
     tier: app
 spec:
-  replicas: 1
+  replicas: 2
   revisionHistoryLimit: 5
   selector:
     matchLabels:
@@ -260,12 +260,13 @@ spec:
     - name: canary-hash
     - name: stable-hash
   metrics:
-    # ── Error Rate Ratio (advisory — single-replica comparison is noisy) ──
+    # ── Error Rate Ratio ───────────────────────────────────
+    # Canary error rate must not exceed 1.5x the stable error rate
     - name: canary-vs-stable-error-rate
       interval: 30s
       count: 3
       successCondition: result[0] <= 1.5
-      failureLimit: 3
+      failureLimit: 2
       inconclusiveLimit: 3
       provider:
         prometheus:
@@ -281,12 +282,13 @@ spec:
               )
             ) or vector(1)
 
-    # ── Latency Ratio (advisory — single-replica comparison is noisy) ──
+    # ── Latency Ratio ──────────────────────────────────────
+    # Canary P95 must not exceed 3x the stable P95
     - name: canary-vs-stable-latency
       interval: 30s
       count: 3
       successCondition: result[0] <= 3.0
-      failureLimit: 3
+      failureLimit: 2
       inconclusiveLimit: 3
       provider:
         prometheus:
