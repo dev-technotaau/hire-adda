@@ -848,7 +848,7 @@ ensure_required_resources() {
     $KUBECTL apply -f "${resources_dir}/configmap.yaml" 2>&1 | sed 's/^/  /'
   fi
 
-  # ── Logging infrastructure (Loki + Fluent Bit) ──
+  # ── Logging infrastructure (Loki + Fluent Bit + OpenSearch Dashboards) ──
   local logging_dir="${SCRIPT_DIR}/../k8s/logging"
   if [[ -d "$logging_dir" ]]; then
     $KUBECTL create namespace logging 2>/dev/null || true
@@ -863,6 +863,26 @@ ensure_required_resources() {
         --namespace logging \
         -f "${logging_dir}/fluent-bit-values.yaml" \
         --wait --timeout 120s 2>&1 | sed 's/^/  /'
+    fi
+    if [[ -f "${logging_dir}/opensearch-dashboards-deployment.yaml" ]]; then
+      log_info "Applying OpenSearch Dashboards..."
+      $KUBECTL apply -f "${logging_dir}/opensearch-dashboards-deployment.yaml" 2>&1 | sed 's/^/  /'
+    fi
+    if [[ -f "${logging_dir}/opensearch-dashboards-ingress.yaml" ]]; then
+      $KUBECTL apply -f "${logging_dir}/opensearch-dashboards-ingress.yaml" 2>&1 | sed 's/^/  /'
+    fi
+  fi
+
+  # ── Tracing infrastructure (Tempo + OTel Collector) ──
+  local monitoring_dir="${SCRIPT_DIR}/../k8s/monitoring"
+  if [[ -d "$monitoring_dir" ]]; then
+    if [[ -f "${monitoring_dir}/tempo/statefulset.yaml" ]]; then
+      log_info "Applying Grafana Tempo tracing backend..."
+      $KUBECTL apply -f "${monitoring_dir}/tempo/statefulset.yaml" 2>&1 | sed 's/^/  /'
+    fi
+    if [[ -f "${monitoring_dir}/otel-collector/deployment.yaml" ]]; then
+      log_info "Applying OTel Collector..."
+      $KUBECTL apply -f "${monitoring_dir}/otel-collector/deployment.yaml" 2>&1 | sed 's/^/  /'
     fi
   fi
 

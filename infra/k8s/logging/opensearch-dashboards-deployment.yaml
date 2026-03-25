@@ -29,10 +29,6 @@ spec:
               value: '["http://opensearch.hire-adda.svc.cluster.local:9200"]'
             - name: DISABLE_SECURITY_DASHBOARDS_PLUGIN
               value: 'true'
-            - name: SERVER_BASEPATH
-              value: ''
-            - name: SERVER_REWRITEBASEPATH
-              value: 'true'
           resources:
             requests:
               memory: '256Mi'
