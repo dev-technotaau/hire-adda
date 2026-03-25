@@ -92,6 +92,10 @@ spec:
               mountPath: /etc/nginx/mail/autodiscover.xml
               subPath: autodiscover.xml
               readOnly: true
+            - name: htpasswd
+              mountPath: /etc/nginx/.htpasswd
+              subPath: htpasswd
+              readOnly: true
             - name: tmp
               mountPath: /tmp
             - name: cache
@@ -105,6 +109,9 @@ spec:
         - name: mail-autoconfig
           configMap:
             name: mail-autoconfig
+        - name: htpasswd
+          secret:
+            secretName: nginx-htpasswd
         - name: tmp
           emptyDir:
             sizeLimit: 64Mi
