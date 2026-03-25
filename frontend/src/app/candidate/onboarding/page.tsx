@@ -245,19 +245,14 @@ const STEPS: OnboardingStep[] = [
   { key: 'welcome', label: 'Welcome' },
   { key: 'avatar', label: 'Profile Photo', optional: true },
   { key: 'resume', label: 'Resume Upload', optional: true },
-  { key: 'basics', label: 'Profile Basics' },
   { key: 'personal', label: 'Personal Details', optional: true },
   { key: 'professional', label: 'Professional Summary' },
   { key: 'employment', label: 'Current Employment', optional: true },
   { key: 'experience', label: 'Work Experience', optional: true },
   { key: 'education', label: 'Education' },
   { key: 'skills', label: 'Skills' },
-  { key: 'certifications', label: 'Certifications', optional: true },
-  { key: 'publications', label: 'Publications', optional: true },
-  { key: 'volunteering', label: 'Volunteering', optional: true },
   { key: 'preferences', label: 'Job Preferences' },
   { key: 'documents', label: 'Documents', optional: true },
-  { key: 'interests', label: 'Interests', optional: true },
   { key: 'social', label: 'Social Links', optional: true },
   { key: 'review', label: 'Review' },
 ];
@@ -1585,22 +1580,7 @@ export default function CandidateOnboardingPage() {
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <PhoneInput
-              label="Alternate Phone"
-              placeholder="9876543210"
-              value={data.alternatePhone}
-              onValueChange={(val) => updateData({ alternatePhone: val })}
-            />
-            <Input
-              label="Alternate Email"
-              placeholder="e.g. alternate@example.com"
-              value={data.alternateEmail}
-              onChange={(e) => updateData({ alternateEmail: e.target.value })}
-              type="email"
-              leftIcon={<Mail className="h-4 w-4" />}
-            />
-          </div>
+          {/* Alternate phone/email hidden from onboarding — available in profile settings */}
 
           {/* Address Section */}
           <div className="border-t border-[var(--border)] pt-4">
@@ -3547,62 +3527,7 @@ export default function CandidateOnboardingPage() {
             )}
           </div>
 
-          {/* Relocation & Travel */}
-          <div className="border-t border-[var(--border)] pt-4">
-            <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
-              Availability & Relocation
-            </h3>
-
-            <label className="mb-4 flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={data.willingToRelocate}
-                onChange={(e) => updateData({ willingToRelocate: e.target.checked })}
-                className="text-primary focus:ring-primary/20 h-4 w-4 rounded border-[var(--border)]"
-              />
-              <span className="text-sm text-[var(--text)]">Willing to relocate</span>
-            </label>
-
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Travel Willingness: {data.travelWillingnessPercent}%
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={data.travelWillingnessPercent}
-                  onChange={(e) => updateData({ travelWillingnessPercent: Number(e.target.value) })}
-                  className="accent-primary w-full"
-                />
-                <div className="flex justify-between text-xs text-[var(--text-muted)]">
-                  <span>0%</span>
-                  <span>50%</span>
-                  <span>100%</span>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <DatePicker
-                  label="Date of Availability"
-                  value={data.dateOfAvailability}
-                  onChange={(val) => updateData({ dateOfAvailability: val })}
-                  leftIcon={<Calendar className="h-4 w-4" />}
-                  minDate={new Date()}
-                />
-                <Select
-                  label="Visa Status"
-                  options={VISA_OPTIONS}
-                  value={data.visaStatus}
-                  onChange={(val) => updateData({ visaStatus: val })}
-                  placeholder="Select visa status"
-                  searchable
-                />
-              </div>
-            </div>
-          </div>
+          {/* Availability & relocation hidden from onboarding — available in profile settings */}
         </div>
       );
     }
@@ -3621,34 +3546,11 @@ export default function CandidateOnboardingPage() {
               <h2 className="text-lg font-semibold text-[var(--text)]">
                 Documents & Miscellaneous
               </h2>
-              <p className="text-sm text-[var(--text-muted)]">
-                Passport, driving license, and other details
-              </p>
+              <p className="text-sm text-[var(--text-muted)]">Driving license and other details</p>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="Passport Number"
-              placeholder="e.g. A1234567"
-              value={data.passportNumber}
-              onChange={(e) => updateData({ passportNumber: e.target.value })}
-              leftIcon={<Plane className="h-4 w-4" />}
-            />
-            <DatePicker
-              label="Passport Expiry Date"
-              value={data.passportExpiryDate}
-              onChange={(val) => updateData({ passportExpiryDate: val })}
-              leftIcon={<Calendar className="h-4 w-4" />}
-            />
-          </div>
-
-          <Input
-            label="Work Permit Status"
-            placeholder="e.g. H1B, Work Visa"
-            value={data.workPermitStatus}
-            onChange={(e) => updateData({ workPermitStatus: e.target.value })}
-          />
+          {/* Passport section hidden from onboarding — available in profile settings */}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Select
@@ -3718,14 +3620,7 @@ export default function CandidateOnboardingPage() {
             </div>
           </div>
 
-          <Input
-            label="Video Resume URL"
-            placeholder="https://youtube.com/watch?v=..."
-            value={data.videoResumeUrl}
-            onChange={(e) => updateData({ videoResumeUrl: e.target.value })}
-            leftIcon={<Globe className="h-4 w-4" />}
-            helperText="Link to your video resume on YouTube, Loom, etc."
-          />
+          {/* Video resume URL hidden from onboarding — available in profile settings */}
 
           {/* Blocked Companies */}
           <div className="border-t border-[var(--border)] pt-4">
@@ -4078,43 +3973,11 @@ export default function CandidateOnboardingPage() {
               );
             })()}
 
-          {/* Profile Basics */}
-          <div className={sectionClass}>
-            <button
-              type="button"
-              onClick={() => goToStep(3)}
-              className={sectionTitle}
-              title="Edit profile basics"
-            >
-              Profile Basics
-            </button>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <div>
-                <p className={fieldLabel}>Headline</p>
-                <p className={fieldValue}>{data.headline || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Pronouns</p>
-                <p className={fieldValue}>
-                  {data.pronouns ? PRONOUN_OPTIONS[data.pronouns] || data.pronouns : '--'}
-                </p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Phone</p>
-                <p className={fieldValue}>{data.phone || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Location</p>
-                <p className={fieldValue}>{data.currentLocation || '--'}</p>
-              </div>
-            </div>
-          </div>
-
           {/* Personal Details */}
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(4)}
+              onClick={() => goToStep(3)}
               className={sectionTitle}
               title="Edit personal details"
             >
@@ -4156,14 +4019,6 @@ export default function CandidateOnboardingPage() {
                 </p>
               </div>
               <div>
-                <p className={fieldLabel}>Alternate Phone</p>
-                <p className={fieldValue}>{data.alternatePhone || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Alternate Email</p>
-                <p className={fieldValue}>{data.alternateEmail || '--'}</p>
-              </div>
-              <div>
                 <p className={fieldLabel}>City</p>
                 <p className={fieldValue}>{data.city || '--'}</p>
               </div>
@@ -4186,7 +4041,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(5)}
+              onClick={() => goToStep(4)}
               className={sectionTitle}
               title="Edit professional summary"
             >
@@ -4246,7 +4101,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(6)}
+              onClick={() => goToStep(5)}
               className={sectionTitle}
               title="Edit current employment"
             >
@@ -4295,7 +4150,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(7)}
+              onClick={() => goToStep(6)}
               className={sectionTitle}
               title="Edit work experience"
             >
@@ -4322,7 +4177,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(8)}
+              onClick={() => goToStep(7)}
               className={sectionTitle}
               title="Edit education"
             >
@@ -4367,7 +4222,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(9)}
+              onClick={() => goToStep(8)}
               className={sectionTitle}
               title="Edit skills"
             >
@@ -4404,97 +4259,11 @@ export default function CandidateOnboardingPage() {
             )}
           </div>
 
-          {/* Certifications */}
-          <div className={sectionClass}>
-            <button
-              type="button"
-              onClick={() => goToStep(10)}
-              className={sectionTitle}
-              title="Edit certifications"
-            >
-              Certifications, Courses & Tests
-            </button>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <p className={fieldLabel}>Certifications</p>
-                <p className={fieldValue}>{data.certifications.length} added</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Awards</p>
-                <p className={fieldValue}>{data.awards.length} added</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Courses</p>
-                <p className={fieldValue}>{data.courses.length} added</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Test Scores</p>
-                <p className={fieldValue}>{data.testScores.length} added</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Languages (Quick List)</p>
-                <p className={fieldValue}>{data.languages.length} added</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Language Proficiency (Detailed)</p>
-                <p className={fieldValue}>{data.languageProficiency.length} added</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Publications & Memberships */}
-          <div className={sectionClass}>
-            <button
-              type="button"
-              onClick={() => goToStep(11)}
-              className={sectionTitle}
-              title="Edit publications"
-            >
-              Publications & Memberships
-            </button>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              <div>
-                <p className={fieldLabel}>Publications</p>
-                <p className={fieldValue}>{data.publications.length} added</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Patents</p>
-                <p className={fieldValue}>{data.patents.length} added</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Memberships</p>
-                <p className={fieldValue}>{data.professionalMemberships.length} added</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Volunteering & References */}
-          <div className={sectionClass}>
-            <button
-              type="button"
-              onClick={() => goToStep(12)}
-              className={sectionTitle}
-              title="Edit volunteering"
-            >
-              Volunteering & References
-            </button>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <div>
-                <p className={fieldLabel}>Volunteer Experience</p>
-                <p className={fieldValue}>{data.volunteerExperience.length} added</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>References</p>
-                <p className={fieldValue}>{data.references.length} added</p>
-              </div>
-            </div>
-          </div>
-
           {/* Preferences */}
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(13)}
+              onClick={() => goToStep(9)}
               className={sectionTitle}
               title="Edit job preferences"
             >
@@ -4553,22 +4322,6 @@ export default function CandidateOnboardingPage() {
                     : '--'}
                 </p>
               </div>
-              <div>
-                <p className={fieldLabel}>Relocate</p>
-                <p className={fieldValue}>{data.willingToRelocate ? 'Yes' : 'No'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Travel Willingness</p>
-                <p className={fieldValue}>{data.travelWillingnessPercent}%</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Availability</p>
-                <p className={fieldValue}>{data.dateOfAvailability || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Visa Status</p>
-                <p className={fieldValue}>{data.visaStatus || '--'}</p>
-              </div>
             </div>
           </div>
 
@@ -4576,25 +4329,13 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(14)}
+              onClick={() => goToStep(10)}
               className={sectionTitle}
               title="Edit documents"
             >
               Documents & Miscellaneous
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              <div>
-                <p className={fieldLabel}>Passport</p>
-                <p className={fieldValue}>{data.passportNumber || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Passport Expiry</p>
-                <p className={fieldValue}>{data.passportExpiryDate || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Work Permit</p>
-                <p className={fieldValue}>{data.workPermitStatus || '--'}</p>
-              </div>
               <div>
                 <p className={fieldLabel}>Driving License</p>
                 <p className={fieldValue}>
@@ -4623,12 +4364,6 @@ export default function CandidateOnboardingPage() {
                   </p>
                 </div>
               )}
-              {data.videoResumeUrl && (
-                <div>
-                  <p className={fieldLabel}>Video Resume</p>
-                  <p className={`${fieldValue} truncate`}>{data.videoResumeUrl}</p>
-                </div>
-              )}
               {data.blockedCompanies.length > 0 && (
                 <div className="col-span-3">
                   <p className={fieldLabel}>Blocked Companies</p>
@@ -4638,37 +4373,11 @@ export default function CandidateOnboardingPage() {
             </div>
           </div>
 
-          {/* Interests */}
-          <div className={sectionClass}>
-            <button
-              type="button"
-              onClick={() => goToStep(15)}
-              className={sectionTitle}
-              title="Edit interests"
-            >
-              Interests & Hobbies
-            </button>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <div>
-                <p className={fieldLabel}>Hobbies</p>
-                <p className={fieldValue}>
-                  {data.hobbies.length > 0 ? data.hobbies.join(', ') : '--'}
-                </p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Interests</p>
-                <p className={fieldValue}>
-                  {data.interests.length > 0 ? data.interests.join(', ') : '--'}
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Social Links */}
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(16)}
+              onClick={() => goToStep(11)}
               className={sectionTitle}
               title="Edit social links"
             >
