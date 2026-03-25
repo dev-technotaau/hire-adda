@@ -842,6 +842,22 @@ ensure_required_resources() {
     exit 1
   fi
 
+  # Apply/update backend ConfigMap (picks up new env vars)
+  if [[ -f "${resources_dir}/configmap.yaml" ]]; then
+    log_info "Applying backend ConfigMap..."
+    $KUBECTL apply -f "${resources_dir}/configmap.yaml" 2>&1 | sed 's/^/  /'
+  fi
+
+  # ── Logging infrastructure (Loki) ──
+  local logging_dir="${SCRIPT_DIR}/../k8s/logging"
+  if [[ -d "$logging_dir" ]]; then
+    $KUBECTL create namespace logging 2>/dev/null || true
+    if [[ -f "${logging_dir}/loki/statefulset.yaml" ]]; then
+      log_info "Applying Loki logging stack..."
+      $KUBECTL apply -f "${logging_dir}/loki/statefulset.yaml" 2>&1 | sed 's/^/  /'
+    fi
+  fi
+
   # Apply/update Argo Rollout resources (ensures AnalysisTemplates are current)
   local cd_dir="${SCRIPT_DIR}/../k8s/cd"
   if [[ -f "${cd_dir}/rollout.yaml" ]]; then

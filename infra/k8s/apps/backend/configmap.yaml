@@ -182,3 +182,4 @@ data:
 
   # ── Logging ──
   LOG_LEVEL: 'info'
+  LOG_AGGREGATION_URL: 'http://loki.logging.svc.cluster.local:3100/loki/api/v1/push'
