@@ -39,11 +39,11 @@ controller:
   enableStatefulSet: false # HA mode disabled (single node)
   resources:
     requests:
-      memory: '128Mi'
+      memory: '256Mi'
       cpu: '50m'
     limits:
-      memory: '256Mi'
-      cpu: '250m'
+      memory: '1Gi'
+      cpu: '500m'
 
 # ── Repo Server ──
 repoServer:

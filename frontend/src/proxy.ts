@@ -20,17 +20,21 @@ function nextWithCsp(): NextResponse {
   // Derive WebSocket URL from API URL (http→ws, https→wss)
   const wsUrl = apiUrl.replace(/^http/, 'ws');
 
-  // Specific Firebase RTDB domain instead of *.firebaseio.com wildcard
+  // Firebase RTDB uses dynamic server hostnames for long-polling (e.g.
+  // s-gke-apse1-nssi2-0.asia-southeast1.firebasedatabase.app), so we need a
+  // wildcard on the regional subdomain, not just the specific DB hostname.
   const firebaseDbUrl = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || '';
-  const firebaseDbOrigin = firebaseDbUrl ? new URL(firebaseDbUrl).origin : '';
+  const firebaseDbWildcard = firebaseDbUrl
+    ? `https://*.${new URL(firebaseDbUrl).hostname.split('.').slice(1).join('.')}`
+    : '';
 
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://challenges.cloudflare.com https://vercel.live${firebaseDbOrigin ? ` ${firebaseDbOrigin}` : ''}`,
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://challenges.cloudflare.com https://vercel.live${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live",
     "img-src 'self' data: blob: https://res.cloudinary.com https://assets.hireadda.in https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com https://vercel.live https://vercel.com",
     "font-src 'self' https://fonts.gstatic.com https://vercel.live",
-    `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com https://challenges.cloudflare.com https://vercel.live https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com${firebaseDbOrigin ? ` ${firebaseDbOrigin}` : ''}`,
+    `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com https://challenges.cloudflare.com https://vercel.live https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
     "frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com https://vercel.live",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
