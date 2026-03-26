@@ -195,15 +195,19 @@ jobs:
           git push
 
   # ── Deploy to K8s via Argo Rollouts (Progressive) ──
+  # NOTE: Only deploy a service if it actually built a new image.
+  # Infra-only changes are synced via rsync and applied by ensure_required_resources()
+  # in deploy-k8s.sh — no image tag override needed. Deploying with 'latest' tag
+  # causes build-ID mismatches across pods (chunk 404 errors for Next.js frontends).
   deploy-k8s:
     needs: [changes, build-backend, build-frontend, update-manifests]
     if: always() && (needs.build-backend.result == 'success' || needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true')
     uses: ./.github/workflows/deploy-k8s.yml
     with:
-      backend_tag: ${{ needs.build-backend.result == 'success' && github.sha || 'latest' }}
-      frontend_tag: ${{ needs.build-frontend.result == 'success' && github.sha || 'latest' }}
-      deploy_backend: ${{ needs.build-backend.result == 'success' || needs.changes.outputs.infra == 'true' }}
-      deploy_frontend: ${{ needs.build-frontend.result == 'success' || needs.changes.outputs.infra == 'true' }}
+      backend_tag: ${{ needs.build-backend.result == 'success' && github.sha || '' }}
+      frontend_tag: ${{ needs.build-frontend.result == 'success' && github.sha || '' }}
+      deploy_backend: ${{ needs.build-backend.result == 'success' }}
+      deploy_frontend: ${{ needs.build-frontend.result == 'success' }}
       strategy: progressive
     secrets:
       K8S_SSH_KEY: ${{ secrets.K8S_SSH_KEY }}

@@ -946,14 +946,15 @@ main() {
       ;;
 
     deploy)
-      if [[ -z "$BACKEND_TAG" && -z "$FRONTEND_TAG" ]]; then
-        log_error "At least one of --backend-tag or --frontend-tag is required"
-        exit 1
-      fi
-
       acquire_lock
       read_state
       ensure_required_resources
+
+      if [[ -z "$BACKEND_TAG" && -z "$FRONTEND_TAG" ]]; then
+        log_info "No image tags specified — infrastructure configs applied only"
+        log_success "Done (infra-only)"
+        exit 0
+      fi
 
       case "$STRATEGY" in
         progressive) deploy_progressive ;;

@@ -8,8 +8,8 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     // Basic metadata
-    name: 'HireAdda - Job Portal & Recruitment Platform',
-    short_name: 'HireAdda',
+    name: 'Hire Adda - Job Portal & Recruitment Platform',
+    short_name: 'Hire Adda',
     description:
       "India's leading job portal. Find jobs, post openings, hire top talent, and build your career with HireAdda.",
 
