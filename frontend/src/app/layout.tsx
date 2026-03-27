@@ -1,17 +1,17 @@
 // Trigger CI/CD rebuild again
+import FacebookPixel from '@/components/analytics/FacebookPixel';
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
+import { GTMBody, GTMHead } from '@/components/analytics/GTM';
+import BackToTop from '@/components/common/BackToTop';
+import CookieConsent from '@/components/common/CookieConsent';
+import KeyboardShortcuts from '@/components/common/KeyboardShortcuts';
+import OfflineBanner from '@/components/common/OfflineBanner';
+import TopLoadingBar from '@/components/common/TopLoadingBar';
+import WebVitals from '@/components/common/WebVitals';
+import Providers from '@/contexts/providers';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { headers } from 'next/headers';
-import Providers from '@/contexts/providers';
-import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
-import { GTMHead, GTMBody } from '@/components/analytics/GTM';
-import FacebookPixel from '@/components/analytics/FacebookPixel';
-import CookieConsent from '@/components/common/CookieConsent';
-import OfflineBanner from '@/components/common/OfflineBanner';
-import BackToTop from '@/components/common/BackToTop';
-import TopLoadingBar from '@/components/common/TopLoadingBar';
-import WebVitals from '@/components/common/WebVitals';
-import KeyboardShortcuts from '@/components/common/KeyboardShortcuts';
 import './globals.css';
 
 const inter = Inter({
@@ -26,23 +26,23 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   title: {
-    default: 'HireAdda - Find Your Dream Job',
-    template: '%s | HireAdda',
+    default: 'Hire Adda - Find Your Dream Job',
+    template: '%s | Hire Adda',
   },
   description:
-    "India's leading job portal and recruitment platform. Find top jobs, hire the best talent, and build your career with HireAdda.",
+    "India's leading job portal and recruitment platform. Find top jobs, hire the best talent, and build your career with Hire Adda.",
   keywords: ['jobs', 'recruitment', 'hiring', 'career', 'job portal', 'talent', 'India'],
-  authors: [{ name: 'HireAdda' }],
+  authors: [{ name: 'Hire Adda' }],
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    siteName: 'HireAdda',
-    title: 'HireAdda - Find Your Dream Job',
+    siteName: 'Hire Adda',
+    title: 'Hire Adda - Find Your Dream Job',
     description: "India's leading job portal and recruitment platform.",
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HireAdda - Find Your Dream Job',
+    title: 'Hire Adda - Find Your Dream Job',
     description: "India's leading job portal and recruitment platform.",
   },
   robots: {

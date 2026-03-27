@@ -1,42 +1,32 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Eye,
-  EyeOff,
-  Mail,
-  Lock,
-  User,
-  Building2,
-  Phone,
-  ArrowLeft,
-  CheckCircle,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import AuthLayout from '@/components/layout/AuthLayout';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import PhoneInput from '@/components/ui/PhoneInput';
 import OtpInput from '@/components/auth/OtpInput';
 import PasswordStrength from '@/components/auth/PasswordStrength';
 import Turnstile from '@/components/auth/Turnstile';
 import LegalModal from '@/components/common/LegalModal';
+import AuthLayout from '@/components/layout/AuthLayout';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
+import { ROLE_DASHBOARDS, ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/use-auth';
-import { useAuthStore } from '@/store/auth.store';
-import { authService } from '@/services/auth.service';
-import { createRegisterSchema, type RegisterFormData } from '@/validators/auth';
-import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
 import { useOtpConfig } from '@/hooks/use-otp-config';
 import { usePasswordRules } from '@/hooks/use-security-config';
-import Tooltip from '@/components/ui/Tooltip';
 import { cn } from '@/lib/utils';
-import type { Role } from '@/types/auth';
+import { authService } from '@/services/auth.service';
+import { useAuthStore } from '@/store/auth.store';
 import type { ApiError } from '@/types/api';
+import type { Role } from '@/types/auth';
+import { createRegisterSchema, type RegisterFormData } from '@/validators/auth';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, Building2, CheckCircle, Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 type Step = 'info' | 'password' | 'verify' | 'success';
 
@@ -201,7 +191,7 @@ export default function RegisterPage() {
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-[var(--text)]">Create Account</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Join HireAdda to find your perfect match
+            Join Hire Adda to find your perfect match
           </p>
         </div>
 

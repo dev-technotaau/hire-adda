@@ -1,17 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Search, ChevronDown, Mail, Phone, MessageCircle, TicketCheck } from 'lucide-react';
 import PublicLayout from '@/components/layout/PublicLayout';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
 import { useAuthStore } from '@/store/auth.store';
+import { ChevronDown, Mail, MessageCircle, Phone, Search, TicketCheck } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
 
 const faqs = [
   {
     id: 1,
-    question: 'How do I create an account on HireAdda?',
+    question: 'How do I create an account on Hire Adda?',
     answer:
       'Creating an account is simple and free. Click the "Get Started" or "Sign Up" button on the homepage. You can register using your email address and password, or sign up quickly using your Google or LinkedIn account. Once registered, you will be guided through completing your profile with your skills, experience, and job preferences.',
   },
@@ -59,15 +59,15 @@ const faqs = [
   },
   {
     id: 9,
-    question: 'Is HireAdda free to use? What are the pricing plans?',
+    question: 'Is Hire Adda free to use? What are the pricing plans?',
     answer:
-      'HireAdda is completely free for job seekers. You can create a profile, search for jobs, and apply to unlimited positions at no cost. For employers, we offer a free plan that allows up to 3 active job postings. Premium plans start at INR 2,999/month and include features like unlimited postings, advanced candidate search, analytics dashboard, and priority support.',
+      'Hire Adda is completely free for job seekers. You can create a profile, search for jobs, and apply to unlimited positions at no cost. For employers, we offer a free plan that allows up to 3 active job postings. Premium plans start at INR 2,999/month and include features like unlimited postings, advanced candidate search, analytics dashboard, and priority support.',
   },
   {
     id: 10,
-    question: 'Is there a HireAdda mobile app available?',
+    question: 'Is there a Hire Adda mobile app available?',
     answer:
-      'We are currently developing native mobile apps for both Android and iOS, expected to launch in Q3 2026. In the meantime, our website is fully responsive and works seamlessly on mobile browsers. You can add HireAdda to your home screen for an app-like experience. We also support push notifications through your browser to keep you updated on new matches and application status.',
+      'We are currently developing native mobile apps for both Android and iOS, expected to launch in Q3 2026. In the meantime, our website is fully responsive and works seamlessly on mobile browsers. You can add Hire Adda to your home screen for an app-like experience. We also support push notifications through your browser to keep you updated on new matches and application status.',
   },
 ];
 
@@ -104,7 +104,7 @@ export default function HelpPage() {
               Help <span className="text-primary">Center</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-[var(--text-secondary)]">
-              Find answers to common questions about using HireAdda. Can&apos;t find what
+              Find answers to common questions about using Hire Adda. Can&apos;t find what
               you&apos;re looking for? Contact our support team.
             </p>
 

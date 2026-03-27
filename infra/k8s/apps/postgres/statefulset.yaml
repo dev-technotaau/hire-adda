@@ -15,8 +15,8 @@ metadata:
     app.kubernetes.io/part-of: hire-adda
 spec:
   serviceName: postgres
-  # Phase 2: Cloud Neon — scale to 1 for Phase 4 (local)
-  replicas: 0
+  # Local PostgreSQL — migrated from Cloud Neon
+  replicas: 1
   selector:
     matchLabels:
       app: postgres

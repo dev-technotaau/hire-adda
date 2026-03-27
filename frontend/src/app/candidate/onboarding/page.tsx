@@ -1,120 +1,111 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  User,
-  Briefcase,
-  GraduationCap,
-  Code,
-  FileText,
-  MapPin,
-  Globe,
-  Award,
-  Languages,
-  Settings,
-  Sparkles,
-  Plus,
-  Trash2,
-  Upload,
-  Lock,
-  Eye,
-  EyeOff,
-  Camera,
-  Building2,
-  Calendar,
-  Phone,
-  Mail,
-  Heart,
-  BookOpen,
-  FlaskConical,
-  Users,
-  TestTube,
-  FileCheck,
-  Car,
-  Plane,
-} from 'lucide-react';
+import ResumeParseReview from '@/components/common/ResumeParseReview';
 import OnboardingShell, { type OnboardingStep } from '@/components/onboarding/OnboardingShell';
-import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
-import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
-import { useOnboarding, markOnboardingComplete } from '@/hooks/use-onboarding';
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import PhoneInput from '@/components/ui/PhoneInput';
-import Textarea from '@/components/ui/Textarea';
-import Select, { type SelectOption } from '@/components/ui/Select';
-import Tag from '@/components/ui/Tag';
 import DatePicker from '@/components/ui/DatePicker';
 import FileUpload from '@/components/ui/FileUpload';
 import ImageCropper from '@/components/ui/ImageCropper';
+import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
+import Select, { type SelectOption } from '@/components/ui/Select';
+import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
+import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
+import Tag from '@/components/ui/Tag';
+import Textarea from '@/components/ui/Textarea';
 import { showToast } from '@/components/ui/Toast';
 import Tooltip from '@/components/ui/Tooltip';
-import ResumeParseReview from '@/components/common/ResumeParseReview';
-import { candidateService } from '@/services/candidate.service';
-import { formatFileSize } from '@/lib/utils';
-import { getFileTypeBadge } from '@/utils/format';
-import { ROUTES } from '@/constants/routes';
-import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
+import { FILE_LIMITS, QUERY_KEYS } from '@/constants/config';
 import {
-  GENDER_LABELS,
-  MARITAL_STATUS_LABELS,
-  WORK_STATUS_LABELS,
-  NOTICE_PERIOD_LABELS,
-  DISABILITY_TYPE_LABELS,
-  JOB_TYPE_LABELS,
-  WORK_MODE_LABELS,
-  SHIFT_TYPE_LABELS,
   CAREER_BREAK_TYPE_LABELS,
-  RESERVATION_CATEGORY_LABELS,
   COURSE_TYPE_LABELS,
+  DISABILITY_TYPE_LABELS,
+  DRIVING_LICENSE_TYPE_LABELS,
+  EDUCATION_LEVEL_LABELS,
+  EXPERIENCE_LEVEL_LABELS,
+  GENDER_LABELS,
+  GRADE_TYPE_LABELS,
+  JOB_TYPE_LABELS,
+  MARITAL_STATUS_LABELS,
+  NOTICE_PERIOD_LABELS,
   OPEN_TO_WORK_LABELS,
   PATENT_STATUS_LABELS,
-  GRADE_TYPE_LABELS,
   PRONOUN_OPTIONS,
-  EXPERIENCE_LEVEL_LABELS,
-  EDUCATION_LEVEL_LABELS,
+  RESERVATION_CATEGORY_LABELS,
+  SHIFT_TYPE_LABELS,
   SPECIFIC_DEGREE_LABELS,
-  DRIVING_LICENSE_TYPE_LABELS,
+  WORK_MODE_LABELS,
+  WORK_STATUS_LABELS,
 } from '@/constants/enums';
+import { ROUTES } from '@/constants/routes';
 import { INDIAN_STATES, VISA_STATUS_OPTIONS } from '@/constants/suggestions';
 import { useAuth } from '@/hooks/use-auth';
+import { markOnboardingComplete, useOnboarding } from '@/hooks/use-onboarding';
+import { formatFileSize } from '@/lib/utils';
+import { candidateService } from '@/services/candidate.service';
+import type { ApiError } from '@/types/api';
 import type {
-  UpdateCandidateRequest,
-  ExperienceEntry,
-  EducationEntry,
-  CertificationEntry,
   AwardEntry,
-  LanguageEntry,
-  SkillWithProficiency,
-  ITSkillEntry,
-  PublicationEntry,
-  PatentEntry,
-  VolunteerEntry,
-  MembershipEntry,
-  CourseCompletionEntry,
-  TestScoreEntry,
-  ReferenceEntry,
-  Gender,
-  MaritalStatus,
-  ReservationCategory,
-  WorkStatus,
   CareerBreakType,
-  OpenToWorkStatus,
-  NoticePeriod,
+  CertificationEntry,
+  CourseCompletionEntry,
   DisabilityType,
+  EducationEntry,
+  ExperienceEntry,
+  Gender,
+  ITSkillEntry,
+  LanguageEntry,
+  MaritalStatus,
+  MembershipEntry,
+  NoticePeriod,
+  OpenToWorkStatus,
+  PatentEntry,
+  PublicationEntry,
+  ReferenceEntry,
+  ReservationCategory,
+  SkillWithProficiency,
+  TestScoreEntry,
+  UpdateCandidateRequest,
+  VolunteerEntry,
+  WorkStatus,
 } from '@/types/candidate';
 import type {
-  ExperienceLevel,
-  EducationLevel,
-  SpecificDegree,
   DrivingLicenseType,
+  EducationLevel,
+  ExperienceLevel,
   JobType,
-  WorkMode,
   ShiftType,
+  SpecificDegree,
+  WorkMode,
 } from '@/types/job';
-import type { ApiError } from '@/types/api';
-import type { ParsedResumeData, ApplyableResumeFields } from '@/types/resume-parse';
+import type { ApplyableResumeFields, ParsedResumeData } from '@/types/resume-parse';
+import { getFileTypeBadge } from '@/utils/format';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Award,
+  BookOpen,
+  Briefcase,
+  Building2,
+  Calendar,
+  Camera,
+  Code,
+  Eye,
+  FileCheck,
+  FileText,
+  Globe,
+  GraduationCap,
+  Heart,
+  Mail,
+  MapPin,
+  Plus,
+  Settings,
+  Sparkles,
+  Trash2,
+  Upload,
+  User,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -823,7 +814,7 @@ export default function CandidateOnboardingPage() {
 
         markOnboardingComplete('ha_candidate_onboarding');
         clearSavedData();
-        showToast.success('Profile setup complete! Welcome to HireAdda.');
+        showToast.success('Profile setup complete! Welcome to Hire Adda.');
         router.push(ROUTES.CANDIDATE.DASHBOARD);
       } catch (err) {
         const apiError = err as unknown as ApiError;

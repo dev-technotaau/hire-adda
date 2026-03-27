@@ -1,10 +1,10 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import { ArrowRight, Lightbulb, ShieldCheck, Heart, Award, Linkedin, Twitter } from 'lucide-react';
+import StatsSection from '@/components/common/StatsSection';
 import PublicLayout from '@/components/layout/PublicLayout';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
-import StatsSection from '@/components/common/StatsSection';
+import { ArrowRight, Award, Heart, Lightbulb, Linkedin, ShieldCheck, Twitter } from 'lucide-react';
+import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'About Us',
@@ -36,7 +36,7 @@ const values = [
     icon: Award,
     title: 'Excellence',
     description:
-      'From the quality of our job listings to the responsiveness of our support team, we strive for excellence in every aspect of the HireAdda experience.',
+      'From the quality of our job listings to the responsiveness of our support team, we strive for excellence in every aspect of the Hire Adda experience.',
   },
 ];
 
@@ -71,7 +71,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-4xl font-bold tracking-tight text-[var(--text)] sm:text-5xl lg:text-6xl">
-              About <span className="text-primary">HireAdda</span>
+              About <span className="text-primary">Hire Adda</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-[var(--text-secondary)] sm:text-xl">
               We are on a mission to transform how India hires. By bridging the gap between
@@ -89,8 +89,8 @@ export default function AboutPage() {
             <div>
               <h2 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">Our Mission</h2>
               <p className="mt-6 text-lg leading-relaxed text-[var(--text-secondary)]">
-                At HireAdda, we believe that the right job can change a life, and the right hire can
-                transform a business. Our mission is to connect talent with opportunity across
+                At Hire Adda, we believe that the right job can change a life, and the right hire
+                can transform a business. Our mission is to connect talent with opportunity across
                 India, making the recruitment process smarter, faster, and more equitable for
                 everyone involved.
               </p>
@@ -101,19 +101,19 @@ export default function AboutPage() {
               </p>
               <p className="mt-4 text-lg leading-relaxed text-[var(--text-secondary)]">
                 Whether you are a fresh graduate looking for your first opportunity or a seasoned
-                professional seeking your next challenge, HireAdda is here to help you take the next
-                step in your career journey.
+                professional seeking your next challenge, Hire Adda is here to help you take the
+                next step in your career journey.
               </p>
             </div>
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-8 sm:p-12">
               <blockquote className="text-lg leading-relaxed text-[var(--text-secondary)] italic">
                 &ldquo;We envision an India where geography, background, and connections no longer
-                determine career outcomes. HireAdda exists to level the playing field and let merit
+                determine career outcomes. Hire Adda exists to level the playing field and let merit
                 shine.&rdquo;
               </blockquote>
               <div className="mt-6">
                 <p className="font-semibold text-[var(--text)]">Arjun Mehta</p>
-                <p className="text-sm text-[var(--text-muted)]">CEO & Co-Founder, HireAdda</p>
+                <p className="text-sm text-[var(--text-muted)]">CEO & Co-Founder, Hire Adda</p>
               </div>
             </div>
           </div>
@@ -128,7 +128,7 @@ export default function AboutPage() {
               Our Impact in Numbers
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-[var(--text-secondary)]">
-              Growing every day as more professionals and companies trust HireAdda
+              Growing every day as more professionals and companies trust Hire Adda
             </p>
           </div>
           <StatsSection variant="card" />
@@ -141,7 +141,7 @@ export default function AboutPage() {
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">Our Values</h2>
             <p className="mx-auto mt-4 max-w-2xl text-[var(--text-secondary)]">
-              The principles that guide everything we do at HireAdda
+              The principles that guide everything we do at Hire Adda
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -169,7 +169,7 @@ export default function AboutPage() {
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">Meet Our Team</h2>
             <p className="mx-auto mt-4 max-w-2xl text-[var(--text-secondary)]">
-              The people behind HireAdda, working to reshape hiring in India
+              The people behind Hire Adda, working to reshape hiring in India
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -211,10 +211,10 @@ export default function AboutPage() {
           <h2 className="text-3xl font-bold text-white sm:text-4xl">Join Our Growing Community</h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-white/80">
             Be part of India&apos;s fastest-growing talent platform. Whether you are looking for
-            your next role or your next hire, HireAdda is the place to start.
+            your next role or your next hire, Hire Adda is the place to start.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Tooltip content="Create your free HireAdda account">
+            <Tooltip content="Create your free Hire Adda account">
               <Link href="/auth/register">
                 <Button
                   size="lg"

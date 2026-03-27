@@ -17,22 +17,21 @@ metadata:
     app.kubernetes.io/part-of: hire-adda
 data:
   # ══════════════════════════════════════════════════════════════
-  # Infrastructure Profile: Phase 2 (k8s-redis)
+  # Infrastructure Profile: Local PG + Local Redis + Cloud Kafka
   # ══════════════════════════════════════════════════════════════
-  # Switch profiles: infra/scripts/k8s-infra-profile.sh --phase N
-  # Phase 1: all cloud       | Phase 2: Redis local (CURRENT)
-  # Phase 3: Redis+Kafka     | Phase 4: all local
+  # PostgreSQL: local K8s (migrated from Neon)
+  # Redis: local K8s | Kafka: Aiven cloud
   # ══════════════════════════════════════════════════════════════
 
   # ── Server ──
   NODE_ENV: 'production'
   PORT: '5000'
 
-  # ── Database (Cloud Neon — Phase 2) ──
-  # DATABASE_URL and DIRECT_URL are in backend-secrets SealedSecret (contain password)
-  DATABASE_POOL_SIZE: '5'
-  DATABASE_POOL_TIMEOUT: '30'
-  DATABASE_SSL_MODE: 'verify-full'
+  # ── Database (Local K8s PostgreSQL) ──
+  # DATABASE_URL and DIRECT_URL are in backend-secrets (contain password)
+  DATABASE_POOL_SIZE: '10'
+  DATABASE_POOL_TIMEOUT: '10'
+  DATABASE_SSL_MODE: 'disable'
 
   # ── Redis (LOCAL — Phase 2 override, shadows SealedSecret cloud values) ──
   REDIS_HOST: 'redis'

@@ -1,5 +1,5 @@
-import type { Metadata } from 'next';
 import PublicLayout from '@/components/layout/PublicLayout';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -21,7 +21,7 @@ const sections = [
   {
     title: 'Information Sharing',
     content:
-      'When you apply for a job, your profile information and resume are shared with the employer who posted the listing. Employers who post jobs may have their company information visible to all platform users. We do not sell your personal information to third parties. We may share your information with trusted service providers who assist us in operating our platform, such as cloud hosting providers, email delivery services, payment processors, and analytics tools. These providers are bound by contractual obligations to keep your information confidential and use it only for the purposes we specify. We may also disclose your information if required by law, in response to legal process, or to protect the rights, property, or safety of HireAdda, our users, or the public.',
+      'When you apply for a job, your profile information and resume are shared with the employer who posted the listing. Employers who post jobs may have their company information visible to all platform users. We do not sell your personal information to third parties. We may share your information with trusted service providers who assist us in operating our platform, such as cloud hosting providers, email delivery services, payment processors, and analytics tools. These providers are bound by contractual obligations to keep your information confidential and use it only for the purposes we specify. We may also disclose your information if required by law, in response to legal process, or to protect the rights, property, or safety of Hire Adda, our users, or the public.',
   },
   {
     title: 'Data Security',
@@ -31,7 +31,7 @@ const sections = [
   {
     title: 'Cookies',
     content:
-      'HireAdda uses cookies and similar tracking technologies to enhance your browsing experience, analyze platform usage, and deliver personalized content. Essential cookies are required for the platform to function properly, including session management, authentication, and security features. Analytics cookies help us understand how users interact with our platform, which pages are most popular, and where users encounter issues. Preference cookies remember your settings and choices, such as language preference and notification settings. You can manage your cookie preferences through your browser settings. Please note that disabling certain cookies may affect the functionality of our platform.',
+      'Hire Adda uses cookies and similar tracking technologies to enhance your browsing experience, analyze platform usage, and deliver personalized content. Essential cookies are required for the platform to function properly, including session management, authentication, and security features. Analytics cookies help us understand how users interact with our platform, which pages are most popular, and where users encounter issues. Preference cookies remember your settings and choices, such as language preference and notification settings. You can manage your cookie preferences through your browser settings. Please note that disabling certain cookies may affect the functionality of our platform.',
   },
   {
     title: 'Your Rights',
@@ -46,17 +46,17 @@ const sections = [
   {
     title: "Children's Privacy",
     content:
-      'HireAdda is not intended for use by individuals under the age of 18. We do not knowingly collect personal information from children under 18 years of age. If we discover that we have inadvertently collected information from a child under 18, we will take immediate steps to delete that information from our servers. If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately at privacy@hireadda.in so we can take appropriate action.',
+      'Hire Adda is not intended for use by individuals under the age of 18. We do not knowingly collect personal information from children under 18 years of age. If we discover that we have inadvertently collected information from a child under 18, we will take immediate steps to delete that information from our servers. If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately at privacy@hireadda.in so we can take appropriate action.',
   },
   {
     title: 'Changes to This Policy',
     content:
-      'We may update this Privacy Policy from time to time to reflect changes in our practices, technologies, legal requirements, or other factors. When we make material changes, we will notify you through a prominent notice on our platform, via email to the address associated with your account, or through other appropriate communication channels. We encourage you to review this Privacy Policy periodically to stay informed about how we protect your information. Your continued use of HireAdda after the effective date of any changes constitutes your acceptance of the updated policy.',
+      'We may update this Privacy Policy from time to time to reflect changes in our practices, technologies, legal requirements, or other factors. When we make material changes, we will notify you through a prominent notice on our platform, via email to the address associated with your account, or through other appropriate communication channels. We encourage you to review this Privacy Policy periodically to stay informed about how we protect your information. Your continued use of Hire Adda after the effective date of any changes constitutes your acceptance of the updated policy.',
   },
   {
     title: 'Contact Us',
     content:
-      'If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact our Data Protection Officer at privacy@hireadda.in. You can also reach us by mail at HireAdda Technologies Pvt. Ltd., 4th Floor, Tower B, Koramangala 4th Block, Bangalore, Karnataka 560034, India. For general support inquiries, contact support@hireadda.in or call our toll-free number at +91 1800-123-4567. We aim to respond to all privacy-related inquiries within 7 business days.',
+      'If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact our Data Protection Officer at privacy@hireadda.in. You can also reach us by mail at Hire Adda Technologies Pvt. Ltd., 4th Floor, Tower B, Koramangala 4th Block, Bangalore, Karnataka 560034, India. For general support inquiries, contact support@hireadda.in or call our toll-free number at +91 1800-123-4567. We aim to respond to all privacy-related inquiries within 7 business days.',
   },
 ];
 
@@ -80,11 +80,11 @@ export default function PrivacyPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-xl border border-[var(--border)] bg-white p-6 sm:p-10">
             <p className="leading-relaxed text-[var(--text-secondary)]">
-              At HireAdda Technologies Pvt. Ltd. (&quot;HireAdda,&quot; &quot;we,&quot;
+              At Hire Adda Technologies Pvt. Ltd. (&quot;Hire Adda,&quot; &quot;we,&quot;
               &quot;us,&quot; or &quot;our&quot;), we are committed to protecting the privacy and
               security of your personal information. This Privacy Policy describes how we collect,
               use, share, and protect information when you use our website, mobile applications, and
-              related services (collectively, the &quot;Platform&quot;). By using HireAdda, you
+              related services (collectively, the &quot;Platform&quot;). By using Hire Adda, you
               agree to the collection and use of information in accordance with this policy.
             </p>
 
@@ -103,7 +103,7 @@ export default function PrivacyPage() {
 
             <div className="mt-10 border-t border-[var(--border)] pt-6">
               <p className="text-sm text-[var(--text-muted)]">
-                This Privacy Policy is effective as of February 1, 2026. HireAdda Technologies Pvt.
+                This Privacy Policy is effective as of February 1, 2026. Hire Adda Technologies Pvt.
                 Ltd. is registered under the laws of India with its registered office in Bangalore,
                 Karnataka.
               </p>

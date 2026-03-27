@@ -1,41 +1,41 @@
-import type { Metadata } from 'next';
-import Image from 'next/image';
-import Link from 'next/link';
-import {
-  ArrowRight,
-  Users,
-  Building2,
-  Shield,
-  Search,
-  Star,
-  Zap,
-  Target,
-  Bell,
-  FileText,
-  CheckCircle,
-  Lock,
-  Eye,
-  Award,
-  ChevronDown,
-  Code,
-  PenTool,
-  BarChart3,
-  Headphones,
-  GraduationCap,
-  Stethoscope,
-  Megaphone,
-  Truck,
-  BadgeCheck,
-  UserCheck,
-  MessageSquare,
-  Globe,
-} from 'lucide-react';
+import AuthHomeRedirect from '@/components/common/AuthHomeRedirect';
+import StatsSection from '@/components/common/StatsSection';
 import PublicLayout from '@/components/layout/PublicLayout';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
-import StatsSection from '@/components/common/StatsSection';
-import AuthHomeRedirect from '@/components/common/AuthHomeRedirect';
 import { cn } from '@/lib/utils';
+import {
+  ArrowRight,
+  Award,
+  BadgeCheck,
+  BarChart3,
+  Bell,
+  Building2,
+  CheckCircle,
+  ChevronDown,
+  Code,
+  Eye,
+  FileText,
+  Globe,
+  GraduationCap,
+  Headphones,
+  Lock,
+  Megaphone,
+  MessageSquare,
+  PenTool,
+  Search,
+  Shield,
+  Star,
+  Stethoscope,
+  Target,
+  Truck,
+  UserCheck,
+  Users,
+  Zap,
+} from 'lucide-react';
+import type { Metadata } from 'next';
+import Image from 'next/image';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: "Hire Adda — India's Leading Job Portal & Recruitment Platform",
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     description:
       'Connect with top companies and discover opportunities that match your skills. AI-powered matching, verified employers, quick apply.',
     type: 'website',
-    images: [{ url: '/images/og-home.png', width: 1200, height: 630, alt: 'HireAdda Home' }],
+    images: [{ url: '/images/og-home.png', width: 1200, height: 630, alt: 'Hire Adda Home' }],
   },
 };
 
@@ -68,7 +68,7 @@ const jsonLd = [
   {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'HireAdda',
+    name: 'Hire Adda',
     url: APP_URL,
     description: "India's leading job portal and recruitment platform.",
     potentialAction: {
@@ -83,7 +83,7 @@ const jsonLd = [
   {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'HireAdda',
+    name: 'Hire Adda',
     url: APP_URL,
     logo: `${APP_URL}/icons/logo.svg`,
     description:
@@ -289,7 +289,7 @@ const jobCategories = [
 const testimonials = [
   {
     quote:
-      "HireAdda's AI matching found me a role that perfectly aligned with my skills. I got 3 interview calls within the first week of signing up!",
+      "Hire Adda's AI matching found me a role that perfectly aligned with my skills. I got 3 interview calls within the first week of signing up!",
     name: 'Kavitha Nair',
     role: 'Software Engineer',
     company: 'Now at Razorpay',
@@ -297,7 +297,7 @@ const testimonials = [
   },
   {
     quote:
-      "As an HR head, I've tried many platforms. HireAdda stands out with verified candidates, smart search, and real-time analytics. Our time-to-hire dropped by 40%.",
+      "As an HR head, I've tried many platforms. Hire Adda stands out with verified candidates, smart search, and real-time analytics. Our time-to-hire dropped by 40%.",
     name: 'Rajesh Iyer',
     role: 'Head of HR',
     company: 'Freshworks',
@@ -345,9 +345,9 @@ const trustBadges = [
 
 const faqs = [
   {
-    question: 'Is HireAdda free for job seekers?',
+    question: 'Is Hire Adda free for job seekers?',
     answer:
-      'Yes, HireAdda is completely free for job seekers. You can create a profile, search for jobs, apply to unlimited positions, and access career insights at no cost whatsoever.',
+      'Yes, Hire Adda is completely free for job seekers. You can create a profile, search for jobs, apply to unlimited positions, and access career insights at no cost whatsoever.',
   },
   {
     question: 'How does the AI-powered job matching work?',
@@ -357,7 +357,7 @@ const faqs = [
   {
     question: 'Are all employers verified on the platform?',
     answer:
-      'Yes, every employer on HireAdda undergoes a verification process that includes document checks and business validation. Verified employers display a blue badge on their profile, giving you confidence that the job listings are legitimate.',
+      'Yes, every employer on Hire Adda undergoes a verification process that includes document checks and business validation. Verified employers display a blue badge on their profile, giving you confidence that the job listings are legitimate.',
   },
   {
     question: 'How can I post a job as an employer?',
@@ -365,9 +365,9 @@ const faqs = [
       'Register as an employer, complete your company profile, and submit it for verification. Once verified, you can post jobs from your dashboard. We offer a free plan with up to 3 active job postings, and premium plans for unlimited access and advanced features.',
   },
   {
-    question: 'What makes HireAdda different from other job portals?',
+    question: 'What makes Hire Adda different from other job portals?',
     answer:
-      'HireAdda combines AI-powered matching, verified employers, real-time analytics, and multi-channel notifications (email, push, WhatsApp) in one platform. Our focus on trust, technology, and user experience sets us apart from traditional job boards.',
+      'Hire Adda combines AI-powered matching, verified employers, real-time analytics, and multi-channel notifications (email, push, WhatsApp) in one platform. Our focus on trust, technology, and user experience sets us apart from traditional job boards.',
   },
   {
     question: 'Can I track my application status in real-time?',
@@ -416,7 +416,7 @@ export default async function Home() {
 
               <p className="mt-6 max-w-xl text-lg text-[var(--text-secondary)] sm:text-xl">
                 Connect with top companies and discover opportunities that match your skills.
-                Whether you&apos;re hiring or looking for your next role, HireAdda has you covered.
+                Whether you&apos;re hiring or looking for your next role, Hire Adda has you covered.
               </p>
 
               <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row">
@@ -456,7 +456,7 @@ export default async function Home() {
             <div className="hidden lg:block">
               <Image
                 src="/images/hero-illustration.svg"
-                alt="HireAdda platform preview"
+                alt="Hire Adda platform preview"
                 width={600}
                 height={500}
                 className="w-full"
@@ -478,7 +478,7 @@ export default async function Home() {
               Platform at a Glance
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-[var(--text-secondary)]">
-              Growing every day as more professionals and companies choose HireAdda
+              Growing every day as more professionals and companies choose Hire Adda
             </p>
           </div>
           <StatsSection variant="card" />
@@ -495,7 +495,7 @@ export default async function Home() {
               Simple Process
             </span>
             <h2 className="mt-4 text-3xl font-bold text-[var(--text)] sm:text-4xl">
-              How HireAdda Works
+              How Hire Adda Works
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-[var(--text-secondary)]">
               Get started in just three simple steps &mdash; whether you&apos;re looking for a job
@@ -532,7 +532,7 @@ export default async function Home() {
               Platform Features
             </span>
             <h2 className="mt-4 text-3xl font-bold text-[var(--text)] sm:text-4xl">
-              Why Choose HireAdda?
+              Why Choose Hire Adda?
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-[var(--text-secondary)]">
               Enterprise-grade tools and features for a seamless hiring experience
@@ -697,7 +697,7 @@ export default async function Home() {
               What Our Users Say
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-[var(--text-secondary)]">
-              Hear from professionals and employers who found success on HireAdda
+              Hear from professionals and employers who found success on Hire Adda
             </p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
@@ -752,8 +752,8 @@ export default async function Home() {
                 Your Data is Safe With Us
               </h2>
               <p className="mt-4 text-lg text-[var(--text-secondary)]">
-                HireAdda is built with enterprise-level security from the ground up. We protect your
-                personal information and career data with industry-leading practices.
+                Hire Adda is built with enterprise-level security from the ground up. We protect
+                your personal information and career data with industry-leading practices.
               </p>
               <ul className="mt-8 space-y-4">
                 {securityPoints.map((point) => (
@@ -838,11 +838,11 @@ export default async function Home() {
             Ready to Take the Next Step?
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-white/80">
-            Join thousands of professionals and companies who trust HireAdda for smarter hiring and
+            Join thousands of professionals and companies who trust Hire Adda for smarter hiring and
             career growth.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Tooltip content="Sign up for a free HireAdda account">
+            <Tooltip content="Sign up for a free Hire Adda account">
               <Link href="/auth/register">
                 <Button
                   size="lg"

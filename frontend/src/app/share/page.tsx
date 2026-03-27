@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2, Share2, CheckCircle } from 'lucide-react';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import { CheckCircle, Loader2, Share2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 /**
  * PWA Share Target Handler
- * Receives shared content from other apps when user shares to HireAdda
+ * Receives shared content from other apps when user shares to Hire Adda
  * @see https://web.dev/web-share-target/
  */
 export default function SharePage() {
@@ -73,7 +73,7 @@ export default function SharePage() {
               <h1 className="text-xl font-semibold text-[var(--text)]">
                 Processing Shared Content
               </h1>
-              <p className="text-sm text-[var(--text-secondary)]">Opening in HireAdda...</p>
+              <p className="text-sm text-[var(--text-secondary)]">Opening in Hire Adda...</p>
             </>
           )}
 

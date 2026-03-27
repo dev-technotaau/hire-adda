@@ -1,17 +1,17 @@
-import type { Metadata } from 'next';
 import PublicLayout from '@/components/layout/PublicLayout';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Accessibility Statement',
   description:
-    'HireAdda is committed to making our platform accessible to all users, including people with disabilities.',
+    'Hire Adda is committed to making our platform accessible to all users, including people with disabilities.',
 };
 
 const sections = [
   {
     title: 'Our Commitment',
     content:
-      'HireAdda is committed to ensuring digital accessibility for people with disabilities. We are continuously improving the user experience for everyone and applying the relevant accessibility standards to ensure we provide equal access to all users. We believe that every person, regardless of ability, should be able to search for jobs, apply to opportunities, and manage their career or hiring needs through our platform without barriers.',
+      'Hire Adda is committed to ensuring digital accessibility for people with disabilities. We are continuously improving the user experience for everyone and applying the relevant accessibility standards to ensure we provide equal access to all users. We believe that every person, regardless of ability, should be able to search for jobs, apply to opportunities, and manage their career or hiring needs through our platform without barriers.',
   },
   {
     title: 'Accessibility Standards',
@@ -26,7 +26,7 @@ const sections = [
   {
     title: 'Assistive Technology Compatibility',
     content:
-      'HireAdda is designed to be compatible with common assistive technologies. We test our platform with popular screen readers including NVDA, JAWS, and VoiceOver. Our platform supports browser zoom up to 200% without loss of content or functionality. We ensure compatibility with voice recognition software and alternative input devices. We also support high-contrast mode and respect system-level preferences for reduced motion and color scheme.',
+      'Hire Adda is designed to be compatible with common assistive technologies. We test our platform with popular screen readers including NVDA, JAWS, and VoiceOver. Our platform supports browser zoom up to 200% without loss of content or functionality. We ensure compatibility with voice recognition software and alternative input devices. We also support high-contrast mode and respect system-level preferences for reduced motion and color scheme.',
   },
   {
     title: 'Known Limitations',
@@ -36,7 +36,7 @@ const sections = [
   {
     title: 'Feedback and Assistance',
     content:
-      'We welcome your feedback on the accessibility of HireAdda. If you encounter accessibility barriers or have suggestions for improvement, please contact us through any of the following channels: email accessibility@hireadda.in, call +91 1800-123-4567 (Mon-Fri, 9 AM - 6 PM IST), or use the contact form on our website. When reporting an accessibility issue, please include the URL of the page, a description of the issue, the assistive technology and browser you were using, and any other relevant details. We aim to acknowledge all accessibility feedback within 2 business days and resolve issues within 15 business days.',
+      'We welcome your feedback on the accessibility of Hire Adda. If you encounter accessibility barriers or have suggestions for improvement, please contact us through any of the following channels: email accessibility@hireadda.in, call +91 1800-123-4567 (Mon-Fri, 9 AM - 6 PM IST), or use the contact form on our website. When reporting an accessibility issue, please include the URL of the page, a description of the issue, the assistive technology and browser you were using, and any other relevant details. We aim to acknowledge all accessibility feedback within 2 business days and resolve issues within 15 business days.',
   },
   {
     title: 'Continuous Improvement',
@@ -51,7 +51,7 @@ const sections = [
   {
     title: 'Legal Compliance',
     content:
-      'This accessibility statement is in accordance with the Rights of Persons with Disabilities Act, 2016 (India), the Information Technology Act, 2000 and its amendments, the Guidelines for Indian Government Websites (GIGW) as applicable best practices, and the Web Content Accessibility Guidelines (WCAG) 2.1 Level AA. HireAdda Technologies Pvt. Ltd. takes its accessibility obligations seriously and is committed to meeting or exceeding all applicable requirements.',
+      'This accessibility statement is in accordance with the Rights of Persons with Disabilities Act, 2016 (India), the Information Technology Act, 2000 and its amendments, the Guidelines for Indian Government Websites (GIGW) as applicable best practices, and the Web Content Accessibility Guidelines (WCAG) 2.1 Level AA. Hire Adda Technologies Pvt. Ltd. takes its accessibility obligations seriously and is committed to meeting or exceeding all applicable requirements.',
   },
 ];
 
@@ -75,10 +75,11 @@ export default function AccessibilityPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-xl border border-[var(--border)] bg-white p-6 sm:p-10">
             <p className="leading-relaxed text-[var(--text-secondary)]">
-              HireAdda Technologies Pvt. Ltd. (&quot;HireAdda,&quot; &quot;we,&quot; &quot;us,&quot;
-              or &quot;our&quot;) is committed to providing a platform that is accessible to the
-              widest possible audience, regardless of technology or ability. This accessibility
-              statement outlines our efforts to ensure an inclusive experience for all users.
+              Hire Adda Technologies Pvt. Ltd. (&quot;Hire Adda,&quot; &quot;we,&quot;
+              &quot;us,&quot; or &quot;our&quot;) is committed to providing a platform that is
+              accessible to the widest possible audience, regardless of technology or ability. This
+              accessibility statement outlines our efforts to ensure an inclusive experience for all
+              users.
             </p>
 
             <div className="mt-10 space-y-10">
@@ -97,7 +98,7 @@ export default function AccessibilityPage() {
             <div className="mt-10 border-t border-[var(--border)] pt-6">
               <p className="text-sm text-[var(--text-muted)]">
                 This Accessibility Statement is effective as of February 1, 2026 and was last
-                reviewed on February 1, 2026. HireAdda Technologies Pvt. Ltd. is registered under
+                reviewed on February 1, 2026. Hire Adda Technologies Pvt. Ltd. is registered under
                 the laws of India with its registered office in Bangalore, Karnataka. We are
                 committed to making our platform accessible to everyone.
               </p>

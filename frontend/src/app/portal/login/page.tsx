@@ -1,29 +1,29 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Mail, Lock, Shield, Fingerprint } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useQueryClient } from '@tanstack/react-query';
+import OtpInput from '@/components/auth/OtpInput';
+import Turnstile from '@/components/auth/Turnstile';
 import Logo from '@/components/common/Logo';
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
 import Checkbox from '@/components/ui/Checkbox';
-import OtpInput from '@/components/auth/OtpInput';
 import Divider from '@/components/ui/Divider';
-import Turnstile from '@/components/auth/Turnstile';
+import Input from '@/components/ui/Input';
 import { showToast } from '@/components/ui/Toast';
+import { ROLE_DASHBOARDS } from '@/constants/routes';
 import { useAuth } from '@/hooks/use-auth';
-import { useAuthStore } from '@/store/auth.store';
 import { authService } from '@/services/auth.service';
 import { webauthnService } from '@/services/webauthn.service';
-import { startAuthentication } from '@simplewebauthn/browser';
-import { loginSchema, type LoginFormData } from '@/validators/auth';
-import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
-import type { Role } from '@/types/auth';
+import { useAuthStore } from '@/store/auth.store';
 import type { ApiError } from '@/types/api';
+import type { Role } from '@/types/auth';
+import { loginSchema, type LoginFormData } from '@/validators/auth';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { startAuthentication } from '@simplewebauthn/browser';
+import { useQueryClient } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Eye, EyeOff, Fingerprint, Lock, Mail, Shield } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 const ADMIN_ROLES: Role[] = ['ADMIN', 'SUPER_ADMIN'];
 
@@ -514,7 +514,7 @@ export default function AdminLoginPage() {
 
       {/* Minimal footer */}
       <footer className="py-4 text-center text-sm text-[var(--text-muted)]">
-        &copy; {new Date().getFullYear()} HireAdda. All rights reserved.
+        &copy; {new Date().getFullYear()} Hire Adda. All rights reserved.
       </footer>
     </div>
   );

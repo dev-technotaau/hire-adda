@@ -1,72 +1,69 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  User,
-  Shield,
-  Bell,
-  Eye,
-  Save,
-  Trash2,
-  Key,
-  Smartphone,
-  Monitor,
-  AlertTriangle,
-  Lock,
-  KeyRound,
-  LogOut,
-  QrCode,
-  Copy,
-  Check,
-  Mail,
-  Fingerprint,
-  Plus,
-  Webhook,
-  Send,
-  ToggleLeft,
-  ToggleRight,
-  ChevronDown,
-  ChevronUp,
-  FileText,
-  Globe,
-  Scale,
-  Phone,
-  CheckCircle,
-  MessageCircle,
-  Download,
-} from 'lucide-react';
-import Link from 'next/link';
-import Tooltip from '@/components/ui/Tooltip';
+import OtpInput from '@/components/auth/OtpInput';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import Card from '@/components/ui/Card';
+import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Input from '@/components/ui/Input';
+import Modal from '@/components/ui/Modal';
 import PhoneInput from '@/components/ui/PhoneInput';
 import Tabs from '@/components/ui/Tabs';
-import Modal from '@/components/ui/Modal';
-import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import Badge from '@/components/ui/Badge';
 import { showToast } from '@/components/ui/Toast';
+import Tooltip from '@/components/ui/Tooltip';
+import { QUERY_KEYS } from '@/constants/config';
+import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/use-auth';
+import { useOtpConfig } from '@/hooks/use-otp-config';
+import { usePasswordRules } from '@/hooks/use-security-config';
+import { formatRelativeDate } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
 import { employerService } from '@/services/employer.service';
 import { sessionService } from '@/services/session.service';
 import { webauthnService } from '@/services/webauthn.service';
 import { webhookService } from '@/services/webhook.service';
-import { startRegistration } from '@simplewebauthn/browser';
-import type { WebAuthnCredential } from '@/types/webauthn';
-import type { WebhookEndpoint, WebhookDelivery, CreateWebhookRequest } from '@/types/webhook';
-import { WEBHOOK_EVENTS } from '@/types/webhook';
-import OtpInput from '@/components/auth/OtpInput';
-import { QUERY_KEYS } from '@/constants/config';
-import { useOtpConfig } from '@/hooks/use-otp-config';
-import { usePasswordRules } from '@/hooks/use-security-config';
-import { ROUTES } from '@/constants/routes';
-import { formatRelativeDate } from '@/lib/utils';
 import type { ApiError } from '@/types/api';
 import type { MfaSetupResponse, Session } from '@/types/auth';
+import type { WebAuthnCredential } from '@/types/webauthn';
+import type { WebhookDelivery, WebhookEndpoint } from '@/types/webhook';
+import { WEBHOOK_EVENTS } from '@/types/webhook';
+import { startRegistration } from '@simplewebauthn/browser';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  AlertTriangle,
+  Bell,
+  Check,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Download,
+  Eye,
+  FileText,
+  Fingerprint,
+  Globe,
+  KeyRound,
+  Lock,
+  LogOut,
+  Mail,
+  MessageCircle,
+  Monitor,
+  Phone,
+  Plus,
+  Scale,
+  Send,
+  Shield,
+  Smartphone,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  User,
+  Webhook,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const TABS = [
   { key: 'account', label: 'Account' },
@@ -2738,7 +2735,7 @@ function PrivacyTab() {
           <div>
             <h2 className="text-lg font-semibold text-[var(--text)]">Download My Data</h2>
             <p className="text-sm text-[var(--text-secondary)]">
-              Export a copy of all your personal data stored on HireAdda
+              Export a copy of all your personal data stored on Hire Adda
             </p>
           </div>
         </div>
@@ -2789,7 +2786,7 @@ function PrivacyTab() {
 const legalLinks = [
   {
     label: 'Terms of Service',
-    description: 'Rules and guidelines for using HireAdda',
+    description: 'Rules and guidelines for using Hire Adda',
     href: ROUTES.PUBLIC.TERMS,
     icon: FileText,
   },

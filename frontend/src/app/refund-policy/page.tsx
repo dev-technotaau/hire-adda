@@ -1,22 +1,22 @@
-import type { Metadata } from 'next';
 import PublicLayout from '@/components/layout/PublicLayout';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Refund Policy',
   description:
-    'Understand the HireAdda refund and cancellation policy for premium plans and paid services.',
+    'Understand the Hire Adda refund and cancellation policy for premium plans and paid services.',
 };
 
 const sections = [
   {
     title: 'Overview',
     content:
-      'HireAdda is committed to providing a fair and transparent refund process for all paid services on our platform. This Refund Policy applies to all premium subscriptions, paid job postings, featured listings, and any other paid services purchased through HireAdda. Job seekers who use our free services are not affected by this policy. By purchasing any paid service, you agree to the terms outlined in this policy.',
+      'Hire Adda is committed to providing a fair and transparent refund process for all paid services on our platform. This Refund Policy applies to all premium subscriptions, paid job postings, featured listings, and any other paid services purchased through Hire Adda. Job seekers who use our free services are not affected by this policy. By purchasing any paid service, you agree to the terms outlined in this policy.',
   },
   {
     title: 'Free Services for Job Seekers',
     content:
-      'HireAdda is completely free for job seekers. All candidate features including profile creation, job search, job applications, AI-powered recommendations, and messaging are provided at no cost. Since no payment is collected from job seekers, this refund policy does not apply to candidate accounts. If you have been charged for any candidate service, please contact our support team immediately at support@hireadda.in for a full refund.',
+      'Hire Adda is completely free for job seekers. All candidate features including profile creation, job search, job applications, AI-powered recommendations, and messaging are provided at no cost. Since no payment is collected from job seekers, this refund policy does not apply to candidate accounts. If you have been charged for any candidate service, please contact our support team immediately at support@Hire Adda.in for a full refund.',
   },
   {
     title: 'Employer Subscription Plans',
@@ -46,12 +46,12 @@ const sections = [
   {
     title: 'Changes to This Policy',
     content:
-      'HireAdda reserves the right to modify this Refund Policy at any time. Changes will be posted on this page with an updated "Last updated" date. Material changes will be communicated to active subscribers via email. The revised policy will apply to all purchases made after the effective date of the change. Purchases made before the change will be governed by the policy in effect at the time of purchase.',
+      'Hire Adda reserves the right to modify this Refund Policy at any time. Changes will be posted on this page with an updated "Last updated" date. Material changes will be communicated to active subscribers via email. The revised policy will apply to all purchases made after the effective date of the change. Purchases made before the change will be governed by the policy in effect at the time of purchase.',
   },
   {
     title: 'Contact Us',
     content:
-      'For billing inquiries and refund requests, email us at billing@hireadda.in. For general support, contact support@hireadda.in or call +91 1800-123-4567 (Mon-Fri, 9 AM - 6 PM IST). You may also write to us at HireAdda Technologies Pvt. Ltd., 4th Floor, Tower B, Koramangala 4th Block, Bangalore, Karnataka 560034, India.',
+      'For billing inquiries and refund requests, email us at billing@hireadda.in. For general support, contact support@hireadda.in or call +91 1800-123-4567 (Mon-Fri, 9 AM - 6 PM IST). You may also write to us at Hire Adda Technologies Pvt. Ltd., 4th Floor, Tower B, Koramangala 4th Block, Bangalore, Karnataka 560034, India.',
   },
 ];
 
@@ -75,8 +75,8 @@ export default function RefundPolicyPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-xl border border-[var(--border)] bg-white p-6 sm:p-10">
             <p className="leading-relaxed text-[var(--text-secondary)]">
-              This Refund Policy governs all paid services offered by HireAdda Technologies Pvt.
-              Ltd. (&quot;HireAdda,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). We
+              This Refund Policy governs all paid services offered by Hire Adda Technologies Pvt.
+              Ltd. (&quot;Hire Adda,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). We
               aim to be fair and transparent in all billing matters. Please read this policy
               carefully before making any purchase on our platform.
             </p>
@@ -96,9 +96,9 @@ export default function RefundPolicyPage() {
 
             <div className="mt-10 border-t border-[var(--border)] pt-6">
               <p className="text-sm text-[var(--text-muted)]">
-                This Refund Policy is effective as of February 1, 2026. HireAdda Technologies Pvt.
+                This Refund Policy is effective as of February 1, 2026. Hire Adda Technologies Pvt.
                 Ltd. is registered under the laws of India with its registered office in Bangalore,
-                Karnataka. All refund decisions are at the sole discretion of HireAdda and are
+                Karnataka. All refund decisions are at the sole discretion of Hire Adda and are
                 final.
               </p>
             </div>
