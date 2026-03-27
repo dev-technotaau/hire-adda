@@ -149,7 +149,8 @@ spec:
               sum(rate(nginx_ingress_controller_requests{host="hireadda.in",status=~"5.."}[2m]))
               /
               sum(rate(nginx_ingress_controller_requests{host="hireadda.in"}[2m]))
-            ) or vector(0)
+            ) >= 0
+            or vector(0)
 
     # ── Latency P95 ────────────────────────────────────────
     - name: latency-p95

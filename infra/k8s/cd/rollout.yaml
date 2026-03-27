@@ -166,7 +166,8 @@ spec:
               sum(rate(http_requests_total{namespace="hire-adda",app="backend",status=~"5.."}[2m]))
               /
               sum(rate(http_requests_total{namespace="hire-adda",app="backend"}[2m]))
-            ) or vector(0)
+            ) >= 0
+            or vector(0)
 
     # ── Per-Endpoint Error Rate (Business KPI proxy) ───────
     # Worst critical endpoint must stay below 10%
@@ -185,7 +186,8 @@ spec:
               sum by (route) (rate(http_requests_total{namespace="hire-adda",app="backend",route=~"/api/v1/auth/.*|/api/v1/jobs.*|/api/v1/applications.*",status=~"5.."}[2m]))
               /
               sum by (route) (rate(http_requests_total{namespace="hire-adda",app="backend",route=~"/api/v1/auth/.*|/api/v1/jobs.*|/api/v1/applications.*"}[2m]))
-            ) or vector(0)
+            ) >= 0
+            or vector(0)
 
     # ── Latency P95 ────────────────────────────────────────
     - name: latency-p95
