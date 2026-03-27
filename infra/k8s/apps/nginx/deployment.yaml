@@ -32,6 +32,8 @@ spec:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '8080'
         prometheus.io/path: '/stub_status'
+        # Bump this value whenever nginx configmap changes to trigger pod rollout
+        configmap/nginx-config-version: '2'
     spec:
       securityContext:
         seccompProfile:

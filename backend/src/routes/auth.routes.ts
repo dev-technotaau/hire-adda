@@ -40,7 +40,23 @@ import {
 
 const router = Router();
 
-// Apply strict rate limiting to all auth routes
+// ===============================
+// High-frequency protected routes (exempt from strict auth limiter)
+// These are called on every page load, so the 10 req/5 min auth limiter
+// is too strict. They're behind `protect` so abuse is already mitigated.
+// ===============================
+
+router.get('/me', protect, authController.getMe);
+router.patch(
+  '/me/profile',
+  protect,
+  validate(updateProfileSchema),
+  audit('PROFILE_UPDATE', 'User'),
+  authController.updateProfile
+);
+router.get('/firebase-token', protect, authController.getFirebaseToken);
+
+// Apply strict rate limiting to auth routes below (login, register, etc.)
 router.use(authLimiter);
 
 // ===============================
@@ -155,32 +171,6 @@ router.post('/logout', authController.logout);
 // ===============================
 // Protected Routes
 // ===============================
-
-/**
- * @openapi
- * /api/v1/auth/me:
- *   get:
- *     tags: [Auth]
- *     summary: Get current user profile
- *     security: [{ bearerAuth: [] }]
- */
-router.get('/me', protect, authController.getMe);
-
-/**
- * @openapi
- * /api/v1/auth/me/profile:
- *   patch:
- *     tags: [Auth]
- *     summary: Update user profile (firstName, lastName)
- *     security: [{ bearerAuth: [] }]
- */
-router.patch(
-  '/me/profile',
-  protect,
-  validate(updateProfileSchema),
-  audit('PROFILE_UPDATE', 'User'),
-  authController.updateProfile
-);
 
 /**
  * @openapi
@@ -333,9 +323,6 @@ router.delete('/whatsapp-number', protect, authController.removeWhatsappNumber);
 // Firebase Auth Login
 // ===============================
 router.post('/firebase-login', validate(firebaseLoginSchema), firebaseAuthController.firebaseLogin);
-
-// Firebase custom token (for browser RTDB auth — presence, etc.)
-router.get('/firebase-token', protect, authController.getFirebaseToken);
 
 // ===============================
 // Social Auth Routes

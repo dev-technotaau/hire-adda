@@ -31,9 +31,20 @@ export default function AreaChart({
   height = 300,
   showGrid = true,
 }: AreaChartProps) {
+  // Sanitize data — replace undefined/NaN with 0 to prevent SVG polyline errors
+  const safeData = data.map((d) => {
+    const row: Record<string, unknown> = { ...d };
+    for (const key of [yKey, yKey2]) {
+      if (key) {
+        row[key] = typeof d[key] === 'number' && !isNaN(d[key] as number) ? d[key] : 0;
+      }
+    }
+    return row;
+  });
+
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <RechartsArea data={data}>
+      <RechartsArea data={safeData}>
         {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />}
         <XAxis
           dataKey={xKey}

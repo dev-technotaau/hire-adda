@@ -35,11 +35,11 @@ function nextWithCsp(): NextResponse {
 
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://challenges.cloudflare.com https://vercel.live${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://apis.google.com https://challenges.cloudflare.com https://vercel.live${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live",
     "img-src 'self' data: blob: https://res.cloudinary.com https://assets.hireadda.in https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com https://vercel.live https://vercel.com",
     "font-src 'self' https://fonts.gstatic.com https://vercel.live",
-    `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com https://challenges.cloudflare.com https://vercel.live https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
+    `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com https://challenges.cloudflare.com https://vercel.live https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
     `frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com https://vercel.live${firebaseDbRegion ? ` https://*.${firebaseDbRegion}` : ''}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
