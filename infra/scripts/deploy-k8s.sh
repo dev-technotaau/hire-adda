@@ -219,50 +219,85 @@ run_migrations() {
   fi
 
   log_info "Running Prisma migrations..."
-  local job_name="prisma-migrate-$(date +%s)"
 
-  # Security context required: hire-adda namespace enforces Restricted PSA
-  if $KUBECTL run "$job_name" \
-    --image="$image" \
-    --restart=Never \
-    --rm -i \
-    --namespace="$NAMESPACE" \
-    --image-pull-policy=Always \
-    --overrides='{
-      "spec": {
-        "securityContext": {
-          "runAsUser": 1001,
-          "runAsGroup": 1001,
-          "fsGroup": 1001,
-          "runAsNonRoot": true,
-          "seccompProfile": {"type": "RuntimeDefault"}
-        },
-        "containers": [{
-          "name": "migrate",
-          "image": "'"$image"'",
-          "command": ["npx", "prisma", "migrate", "deploy"],
-          "envFrom": [
-            {"secretRef": {"name": "backend-secrets"}},
-            {"configMapRef": {"name": "backend-config"}}
-          ],
-          "securityContext": {
-            "allowPrivilegeEscalation": false,
-            "readOnlyRootFilesystem": false,
-            "capabilities": {"drop": ["ALL"]}
-          }
-        }],
-        "imagePullSecrets": [{"name": "ghcr-credentials"}],
-        "restartPolicy": "Never"
-      }
-    }' \
-    --timeout="$MIGRATION_TIMEOUT" 2>&1 | while IFS= read -r line; do
-      log_info "  [migrate] $line"
-    done; then
-    log_success "Prisma migrations completed"
-  else
-    log_error "Migration failed! Aborting deploy."
-    exit 1
+  # Wake up Neon serverless compute before running migrations.
+  # Neon suspends after inactivity; the proxy accepts TCP immediately (for SNI
+  # routing) but the compute takes 5-10s to start. Without this pre-warm, Prisma
+  # hits its internal 5s handshake timeout before Neon is ready.
+  local direct_url
+  direct_url=$($KUBECTL get secret backend-secrets -n "$NAMESPACE" \
+    -o jsonpath='{.data.DIRECT_URL}' | base64 -d 2>/dev/null)
+  if [[ -n "$direct_url" ]]; then
+    local db_host db_port
+    db_host=$(echo "$direct_url" | sed -n 's|.*@\([^:/]*\).*|\1|p')
+    db_port=$(echo "$direct_url" | sed -n 's|.*:\([0-9]*\)/.*|\1|p')
+    db_port="${db_port:-5432}"
+    log_info "Waking Neon compute ($db_host:$db_port)..."
+    for i in 1 2 3; do
+      if $KUBECTL run "neon-wake-$RANDOM" --rm -i --restart=Never \
+        --image=busybox:1.36 --namespace="$NAMESPACE" \
+        --overrides='{"spec":{"securityContext":{"runAsUser":1001,"runAsNonRoot":true,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"wake","image":"busybox:1.36","command":["nc","-zv","-w","15","'"$db_host"'","'"$db_port"'"],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}],"restartPolicy":"Never"}}' \
+        --timeout=30s 2>&1 | grep -q "open"; then
+        log_info "Neon compute is awake"
+        break
+      fi
+      [[ $i -lt 3 ]] && log_info "Neon wake attempt $i failed, retrying..." && sleep 5
+    done
   fi
+
+  local max_attempts=3
+  for attempt in $(seq 1 $max_attempts); do
+    local job_name="prisma-migrate-$(date +%s)"
+
+    # Security context required: hire-adda namespace enforces Restricted PSA
+    if $KUBECTL run "$job_name" \
+      --image="$image" \
+      --restart=Never \
+      --rm -i \
+      --namespace="$NAMESPACE" \
+      --image-pull-policy=Always \
+      --overrides='{
+        "spec": {
+          "securityContext": {
+            "runAsUser": 1001,
+            "runAsGroup": 1001,
+            "fsGroup": 1001,
+            "runAsNonRoot": true,
+            "seccompProfile": {"type": "RuntimeDefault"}
+          },
+          "containers": [{
+            "name": "migrate",
+            "image": "'"$image"'",
+            "command": ["npx", "prisma", "migrate", "deploy"],
+            "envFrom": [
+              {"secretRef": {"name": "backend-secrets"}},
+              {"configMapRef": {"name": "backend-config"}}
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": false,
+              "capabilities": {"drop": ["ALL"]}
+            }
+          }],
+          "imagePullSecrets": [{"name": "ghcr-credentials"}],
+          "restartPolicy": "Never"
+        }
+      }' \
+      --timeout="$MIGRATION_TIMEOUT" 2>&1 | while IFS= read -r line; do
+        log_info "  [migrate] $line"
+      done; then
+      log_success "Prisma migrations completed"
+      return 0
+    fi
+
+    if [[ $attempt -lt $max_attempts ]]; then
+      log_info "Migration attempt $attempt/$max_attempts failed, retrying in 10s..."
+      sleep 10
+    fi
+  done
+
+  log_error "Migration failed after $max_attempts attempts! Aborting deploy."
+  exit 1
 }
 
 # ── Deployment ↔ Rollout Transition ──
