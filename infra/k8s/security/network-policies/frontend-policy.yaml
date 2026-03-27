@@ -1,7 +1,7 @@
 # ============================================================
 # Frontend — Network Policy
 # Allows: ingress from ingress-nginx
-# Allows: egress to backend (BFF), DNS, external CDN
+# Allows: egress to nginx (BFF), DNS, external CDN
 # ============================================================
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -24,13 +24,13 @@ spec:
         - port: 3000
           protocol: TCP
   egress:
-    # To backend (BFF calls via BACKEND_INTERNAL_URL)
+    # To nginx (BFF calls via BACKEND_INTERNAL_URL http://nginx:80/api/v1)
     - to:
         - podSelector:
             matchLabels:
-              app: backend
+              app: nginx
       ports:
-        - port: 5000
+        - port: 80
           protocol: TCP
     # DNS
     - to: []

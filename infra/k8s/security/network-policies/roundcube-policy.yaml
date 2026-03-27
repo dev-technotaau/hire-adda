@@ -1,6 +1,6 @@
 # ============================================================
 # Roundcube Webmail — Network Policy
-# Ingress from nginx-ingress only.
+# Ingress from nginx reverse proxy.
 # Egress to Docker mailserver (external) + DNS.
 # ============================================================
 apiVersion: networking.k8s.io/v1
@@ -16,11 +16,11 @@ spec:
     - Ingress
     - Egress
   ingress:
-    # From nginx-ingress controller
+    # From nginx reverse proxy (all traffic routes through nginx pod)
     - from:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: ingress-nginx
+              app: nginx
       ports:
         - port: 80
           protocol: TCP

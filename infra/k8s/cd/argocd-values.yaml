@@ -7,6 +7,10 @@
 #     --namespace argocd -f argocd-values.yaml
 # ============================================================
 
+# ── Global ──
+global:
+  domain: argocd.hireadda.in
+
 # ── Server ──
 server:
   replicas: 1
@@ -24,14 +28,12 @@ server:
       cert-manager.io/cluster-issuer: letsencrypt-prod
       nginx.ingress.kubernetes.io/ssl-redirect: 'true'
       nginx.ingress.kubernetes.io/backend-protocol: 'HTTPS'
-    hosts:
-      - argocd.hireadda.in
-    tls:
+    hostname: argocd.hireadda.in
+    tls: true
+    extraTls:
       - secretName: argocd-tls
         hosts:
           - argocd.hireadda.in
-  extraArgs:
-    - --insecure # TLS terminated at ingress
 
 # ── Controller ──
 controller:

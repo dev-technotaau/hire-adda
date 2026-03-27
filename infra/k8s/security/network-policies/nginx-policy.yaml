@@ -1,7 +1,7 @@
 # ============================================================
 # Nginx Reverse Proxy — Network Policy
 # Allows: ingress from ingress-nginx controller
-# Allows: egress to backend, frontend, DNS
+# Allows: egress to backend, frontend, roundcube, Grafana, OpenSearch Dashboards, DNS
 # ============================================================
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -41,6 +41,32 @@ spec:
               app: frontend
       ports:
         - port: 3000
+          protocol: TCP
+    # To roundcube (mail.hireadda.in)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: roundcube
+      ports:
+        - port: 80
+          protocol: TCP
+    # To Grafana (grafana.hireadda.in) — monitoring namespace
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 80
+          protocol: TCP
+        - port: 3000
+          protocol: TCP
+    # To OpenSearch Dashboards (logs.hireadda.in) — logging namespace
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: logging
+      ports:
+        - port: 5601
           protocol: TCP
     # DNS
     - to: []

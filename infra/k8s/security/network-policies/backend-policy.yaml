@@ -1,7 +1,7 @@
 # ============================================================
 # Backend — Network Policy
 # Allows: ingress from ingress-nginx + frontend (BFF)
-# Allows: egress to postgres, redis, opensearch, DNS, external APIs
+# Allows: egress to postgres, redis, opensearch, OTel, Loki, DNS, external APIs
 # ============================================================
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -80,6 +80,26 @@ spec:
               app: kafka
       ports:
         - port: 9092
+          protocol: TCP
+    # To OTel Collector + Prometheus (monitoring namespace)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 4318
+          protocol: TCP
+        - port: 4317
+          protocol: TCP
+        - port: 9090
+          protocol: TCP
+    # To Loki (logging namespace)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: logging
+      ports:
+        - port: 3100
           protocol: TCP
     # DNS resolution
     - to: []
