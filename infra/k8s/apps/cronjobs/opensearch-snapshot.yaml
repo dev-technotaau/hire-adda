@@ -1,8 +1,7 @@
 # ============================================================
 # OpenSearch Snapshot — CronJob (Daily 3AM UTC)
-# SUSPENDED: Filesystem snapshots incompatible with multi-node
-# cluster (separate PVCs per node). Re-enable after S3/R2
-# snapshot repository migration.
+# S3-compatible snapshots to Cloudflare R2
+# All 3 cluster nodes share the same R2 bucket
 # ============================================================
 apiVersion: batch/v1
 kind: CronJob
@@ -13,7 +12,6 @@ metadata:
     app: opensearch-snapshot
     tier: maintenance
 spec:
-  suspend: true
   schedule: '0 3 * * *'
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
@@ -44,13 +42,14 @@ spec:
                   REPO="hireadda_snapshots"
                   SNAPSHOT="snapshot_$(date +%Y%m%d_%H%M%S)"
 
-                  # Ensure snapshot repository exists
+                  # Ensure S3 snapshot repository exists (Cloudflare R2)
                   curl -sf -X PUT "$OS_URL/_snapshot/$REPO" \
                     -H 'Content-Type: application/json' \
                     -d '{
-                      "type": "fs",
+                      "type": "s3",
                       "settings": {
-                        "location": "/usr/share/opensearch/snapshots",
+                        "bucket": "hire-adda-velero-backups",
+                        "base_path": "backups/opensearch",
                         "compress": true
                       }
                     }' || true

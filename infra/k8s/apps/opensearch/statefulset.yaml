@@ -51,6 +51,39 @@ spec:
             capabilities:
               drop:
                 - ALL
+        # Inject S3/R2 credentials into OpenSearch keystore for snapshot repository
+        - name: keystore-init
+          image: opensearchproject/opensearch:2.18.0
+          command: ['sh', '-c']
+          args:
+            - |
+              bin/opensearch-keystore create
+              echo "$AWS_ACCESS_KEY_ID" | bin/opensearch-keystore add --stdin s3.client.default.access_key
+              echo "$AWS_SECRET_ACCESS_KEY" | bin/opensearch-keystore add --stdin s3.client.default.secret_key
+              echo "c6027029a4faaf83fb46084c06d9762b.r2.cloudflarestorage.com" | bin/opensearch-keystore add --stdin s3.client.default.endpoint
+              cp config/opensearch.keystore /keystore-init/opensearch.keystore
+              echo "Keystore created with S3 credentials"
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: backup-r2-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backup-r2-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+          volumeMounts:
+            - name: keystore-init
+              mountPath: /keystore-init
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
       containers:
         - name: opensearch
           image: opensearchproject/opensearch:2.18.0
@@ -58,6 +91,10 @@ spec:
             - sh
             - -c
             - |
+              # Copy S3 keystore from init container
+              if [ -f /keystore-init/opensearch.keystore ]; then
+                cp /keystore-init/opensearch.keystore config/opensearch.keystore
+              fi
               if ! bin/opensearch-plugin list | grep -q prometheus-exporter; then
                 bin/opensearch-plugin install --batch https://github.com/Aiven-Open/prometheus-exporter-plugin-for-opensearch/releases/download/2.18.0.0/prometheus-exporter-2.18.0.0.zip
               fi
@@ -117,6 +154,13 @@ spec:
           volumeMounts:
             - name: opensearch-data
               mountPath: /usr/share/opensearch/data
+            - name: keystore-init
+              mountPath: /keystore-init
+              readOnly: true
+      volumes:
+        - name: keystore-init
+          emptyDir:
+            sizeLimit: 1Mi
   volumeClaimTemplates:
     - metadata:
         name: opensearch-data
