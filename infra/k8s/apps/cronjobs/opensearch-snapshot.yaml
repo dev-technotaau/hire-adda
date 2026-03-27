@@ -1,5 +1,6 @@
 # ============================================================
 # OpenSearch Snapshot — CronJob (Daily 3AM UTC)
+# Filesystem snapshots (PV backed up to R2 via Velero daily)
 # ============================================================
 apiVersion: batch/v1
 kind: CronJob
