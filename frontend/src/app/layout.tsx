@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild again after postgres migration
+// Trigger CI/CD rebuild again after postgres migration and backend tag fix in migration
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';

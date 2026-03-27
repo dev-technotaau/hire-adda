@@ -220,10 +220,8 @@ run_migrations() {
 
   log_info "Running Prisma migrations..."
 
-  # Wake up Neon serverless compute before running migrations.
-  # Neon suspends after inactivity; the proxy accepts TCP immediately (for SNI
-  # routing) but the compute takes 5-10s to start. Without this pre-warm, Prisma
-  # hits its internal 5s handshake timeout before Neon is ready.
+  # Pre-flight: verify PostgreSQL is reachable before running migrations.
+  # Prevents wasting time on migration pod startup if the DB is down or restarting.
   local direct_url
   direct_url=$($KUBECTL get secret backend-secrets -n "$NAMESPACE" \
     -o jsonpath='{.data.DIRECT_URL}' | base64 -d 2>/dev/null)
@@ -232,16 +230,22 @@ run_migrations() {
     db_host=$(echo "$direct_url" | sed -n 's|.*@\([^:/]*\).*|\1|p')
     db_port=$(echo "$direct_url" | sed -n 's|.*:\([0-9]*\)/.*|\1|p')
     db_port="${db_port:-5432}"
-    log_info "Waking Neon compute ($db_host:$db_port)..."
+    log_info "Checking PostgreSQL connectivity ($db_host:$db_port)..."
     for i in 1 2 3; do
-      if $KUBECTL run "neon-wake-$RANDOM" --rm -i --restart=Never \
+      if $KUBECTL run "pg-check-$RANDOM" --rm -i --restart=Never \
         --image=busybox:1.36 --namespace="$NAMESPACE" \
-        --overrides='{"spec":{"securityContext":{"runAsUser":1001,"runAsNonRoot":true,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"wake","image":"busybox:1.36","command":["nc","-zv","-w","15","'"$db_host"'","'"$db_port"'"],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}],"restartPolicy":"Never"}}' \
+        --labels="app=backend" \
+        --overrides='{"spec":{"securityContext":{"runAsUser":1001,"runAsNonRoot":true,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"check","image":"busybox:1.36","command":["nc","-zv","-w","10","'"$db_host"'","'"$db_port"'"],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}],"restartPolicy":"Never"}}' \
         --timeout=30s 2>&1 | grep -q "open"; then
-        log_info "Neon compute is awake"
+        log_success "PostgreSQL is reachable"
         break
       fi
-      [[ $i -lt 3 ]] && log_info "Neon wake attempt $i failed, retrying..." && sleep 5
+      if [[ $i -lt 3 ]]; then
+        log_warn "PostgreSQL not reachable (attempt $i/3), retrying in 5s..."
+        sleep 5
+      else
+        log_warn "PostgreSQL connectivity check failed after 3 attempts — proceeding with migration anyway"
+      fi
     done
   fi
 
@@ -256,6 +260,7 @@ run_migrations() {
       --rm -i \
       --namespace="$NAMESPACE" \
       --image-pull-policy=Always \
+      --labels="app=backend" \
       --overrides='{
         "spec": {
           "securityContext": {
