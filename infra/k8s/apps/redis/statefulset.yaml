@@ -61,11 +61,11 @@ spec:
               protocol: TCP
           resources:
             requests:
-              memory: '256Mi'
-              cpu: '100m'
+              memory: '384Mi'
+              cpu: '200m'
             limits:
-              memory: '512Mi'
-              cpu: '500m'
+              memory: '768Mi'
+              cpu: '750m'
           livenessProbe:
             exec:
               command:

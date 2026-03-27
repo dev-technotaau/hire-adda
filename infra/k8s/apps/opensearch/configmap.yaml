@@ -1,5 +1,5 @@
 # ============================================================
-# OpenSearch ConfigMap — Single-node configuration
+# OpenSearch ConfigMap — 3-node cluster configuration
 # Dual-purpose: application search + log storage
 # ============================================================
 apiVersion: v1
@@ -14,29 +14,34 @@ metadata:
     app.kubernetes.io/component: search
     app.kubernetes.io/part-of: hire-adda
 data:
-  # Cluster settings
+  # Cluster settings (env vars set directly on StatefulSet)
   CLUSTER_NAME: 'hireadda'
-  NODE_NAME: 'opensearch-node1'
-  DISCOVERY_TYPE: 'single-node'
-  OPENSEARCH_JAVA_OPTS: '-Xms1g -Xmx1g'
+  OPENSEARCH_JAVA_OPTS: '-Xms1536m -Xmx1536m'
   DISABLE_SECURITY_PLUGIN: 'true'
   DISABLE_INSTALL_DEMO_CONFIG: 'true'
-  SNAPSHOT_REPO_PATH: '/usr/share/opensearch/snapshots'
 
-  # Custom opensearch.yml (can be mounted at /usr/share/opensearch/config/opensearch.yml)
+  # Reference opensearch.yml (can be mounted at /usr/share/opensearch/config/opensearch.yml)
   opensearch.yml: |
     cluster.name: hireadda
-    node.name: opensearch-node1
-    discovery.type: single-node
+    # node.name set via downward API (metadata.name → opensearch-0, opensearch-1, opensearch-2)
 
     # Paths
     path.data: /usr/share/opensearch/data
-    path.repo: ["/usr/share/opensearch/snapshots"]
 
     # Network
     network.host: 0.0.0.0
     http.port: 9200
     transport.port: 9300
+
+    # Cluster discovery (3-node)
+    discovery.seed_hosts:
+      - opensearch-0.opensearch
+      - opensearch-1.opensearch
+      - opensearch-2.opensearch
+    cluster.initial_cluster_manager_nodes:
+      - opensearch-0
+      - opensearch-1
+      - opensearch-2
 
     # Security (disabled — internal network only, protected by NetworkPolicy)
     plugins.security.disabled: true

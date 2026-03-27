@@ -1,6 +1,6 @@
 # ============================================================
-# OpenSearch — Network Policy
-# Backend + Fluent Bit + Dashboards can connect.
+# OpenSearch — Network Policy (3-node cluster)
+# Backend + Fluent Bit + Dashboards + inter-node transport
 # ============================================================
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -15,6 +15,16 @@ spec:
     - Ingress
     - Egress
   ingress:
+    # Inter-node communication (cluster formation + replication)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: opensearch
+      ports:
+        - port: 9200
+          protocol: TCP
+        - port: 9300
+          protocol: TCP
     # From backend (search queries)
     - from:
         - podSelector:
@@ -56,3 +66,13 @@ spec:
       ports:
         - port: 53
           protocol: UDP
+    # Inter-node communication (cluster formation + replication)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: opensearch
+      ports:
+        - port: 9200
+          protocol: TCP
+        - port: 9300
+          protocol: TCP

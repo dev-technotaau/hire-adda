@@ -72,11 +72,11 @@ spec:
             - 'log_min_duration_statement=1000'
           resources:
             requests:
-              memory: '512Mi'
-              cpu: '250m'
+              memory: '768Mi'
+              cpu: '500m'
             limits:
-              memory: '1Gi'
-              cpu: '1000m'
+              memory: '2Gi'
+              cpu: '1500m'
           livenessProbe:
             exec:
               command:

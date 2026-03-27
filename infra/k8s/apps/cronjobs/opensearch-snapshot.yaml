@@ -1,6 +1,8 @@
 # ============================================================
 # OpenSearch Snapshot — CronJob (Daily 3AM UTC)
-# Filesystem snapshots (PV backed up to R2 via Velero daily)
+# SUSPENDED: Filesystem snapshots incompatible with multi-node
+# cluster (separate PVCs per node). Re-enable after S3/R2
+# snapshot repository migration.
 # ============================================================
 apiVersion: batch/v1
 kind: CronJob
@@ -11,6 +13,7 @@ metadata:
     app: opensearch-snapshot
     tier: maintenance
 spec:
+  suspend: true
   schedule: '0 3 * * *'
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3

@@ -1,7 +1,7 @@
 # ============================================================
-# OpenSearch 2.18 — StatefulSet
+# OpenSearch 2.18 — StatefulSet (3-node cluster)
 # Dual-purpose: application search + log storage
-# Matches existing docker-compose (single-node, security off)
+# Quorum-based HA: 3 cluster_manager-eligible data nodes
 # ============================================================
 apiVersion: apps/v1
 kind: StatefulSet
@@ -16,7 +16,7 @@ metadata:
     app.kubernetes.io/part-of: hire-adda
 spec:
   serviceName: opensearch
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: opensearch
@@ -73,24 +73,26 @@ spec:
             - name: cluster.name
               value: 'hireadda'
             - name: node.name
-              value: 'opensearch-node1'
-            - name: discovery.type
-              value: 'single-node'
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: discovery.seed_hosts
+              value: 'opensearch-0.opensearch,opensearch-1.opensearch,opensearch-2.opensearch'
+            - name: cluster.initial_cluster_manager_nodes
+              value: 'opensearch-0,opensearch-1,opensearch-2'
             - name: OPENSEARCH_JAVA_OPTS
-              value: '-Xms1g -Xmx1g'
+              value: '-Xms1536m -Xmx1536m'
             - name: DISABLE_SECURITY_PLUGIN
               value: 'true'
             - name: DISABLE_INSTALL_DEMO_CONFIG
               value: 'true'
-            - name: path.repo
-              value: '/usr/share/opensearch/snapshots'
           resources:
             requests:
-              memory: '1Gi'
-              cpu: '250m'
+              memory: '1536Mi'
+              cpu: '500m'
             limits:
-              memory: '2Gi'
-              cpu: '1000m'
+              memory: '3Gi'
+              cpu: '1500m'
           livenessProbe:
             httpGet:
               path: /_cluster/health
@@ -115,8 +117,6 @@ spec:
           volumeMounts:
             - name: opensearch-data
               mountPath: /usr/share/opensearch/data
-            - name: opensearch-snapshots
-              mountPath: /usr/share/opensearch/snapshots
   volumeClaimTemplates:
     - metadata:
         name: opensearch-data
@@ -128,13 +128,3 @@ spec:
         resources:
           requests:
             storage: 50Gi
-    - metadata:
-        name: opensearch-snapshots
-        labels:
-          app: opensearch
-      spec:
-        accessModes: ['ReadWriteOnce']
-        storageClassName: local-path
-        resources:
-          requests:
-            storage: 20Gi
