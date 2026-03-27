@@ -100,7 +100,7 @@ spec:
     blueGreen:
       activeService: backend
       previewService: backend-preview
-      autoPromotionEnabled: false
+      autoPromotionEnabled: true
       prePromotionAnalysis:
         templates:
           - templateName: backend-success-rate

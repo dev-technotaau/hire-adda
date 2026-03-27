@@ -103,7 +103,7 @@ spec:
     blueGreen:
       activeService: frontend
       previewService: frontend-preview
-      autoPromotionEnabled: false
+      autoPromotionEnabled: true
       prePromotionAnalysis:
         templates:
           - templateName: frontend-success-rate
