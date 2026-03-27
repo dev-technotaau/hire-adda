@@ -1,6 +1,6 @@
 # ============================================================
 # Nginx Reverse Proxy — Network Policy
-# Allows: ingress from ingress-nginx controller
+# Allows: ingress from ingress-nginx controller + frontend (BFF)
 # Allows: egress to backend, frontend, roundcube, Grafana, OpenSearch Dashboards, DNS
 # ============================================================
 apiVersion: networking.k8s.io/v1
@@ -16,6 +16,7 @@ spec:
     - Ingress
     - Egress
   ingress:
+    # From ingress-nginx controller (external traffic)
     - from:
         - namespaceSelector:
             matchLabels:
@@ -24,6 +25,14 @@ spec:
         - port: 80
           protocol: TCP
         - port: 8080
+          protocol: TCP
+    # From frontend (BFF calls via BACKEND_INTERNAL_URL http://nginx:80/api/v1)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - port: 80
           protocol: TCP
   egress:
     # To backend

@@ -1,6 +1,6 @@
 # ============================================================
 # Frontend — Network Policy
-# Allows: ingress from ingress-nginx
+# Allows: ingress from ingress-nginx + nginx reverse proxy
 # Allows: egress to nginx (BFF), DNS, external CDN
 # ============================================================
 apiVersion: networking.k8s.io/v1
@@ -16,10 +16,19 @@ spec:
     - Ingress
     - Egress
   ingress:
+    # From ingress-nginx controller (external traffic)
     - from:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 3000
+          protocol: TCP
+    # From nginx reverse proxy (internal routing)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: nginx
       ports:
         - port: 3000
           protocol: TCP
