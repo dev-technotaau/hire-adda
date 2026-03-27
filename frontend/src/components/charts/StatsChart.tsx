@@ -15,9 +15,15 @@ export default function StatsChart({
   color = '#1E5CAF',
   height = 60,
 }: StatsChartProps) {
+  // Sanitize data — replace undefined/NaN with 0 to prevent SVG polyline errors
+  const safeData = data.map((d) => ({
+    ...d,
+    [dataKey]: typeof d[dataKey] === 'number' && !isNaN(d[dataKey] as number) ? d[dataKey] : 0,
+  }));
+
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data}>
+      <AreaChart data={safeData}>
         <Tooltip
           contentStyle={{
             borderRadius: '6px',

@@ -99,7 +99,7 @@ router.post(
   // Skip Turnstile on MFA retry — token was already consumed on the initial attempt
   (req, res, next) => (req.body.mfaCode ? next() : verifyTurnstile(req, res, next)),
   validate(loginSchema),
-  authController.login,
+  authController.login
 );
 
 /**
@@ -333,6 +333,9 @@ router.delete('/whatsapp-number', protect, authController.removeWhatsappNumber);
 // Firebase Auth Login
 // ===============================
 router.post('/firebase-login', validate(firebaseLoginSchema), firebaseAuthController.firebaseLogin);
+
+// Firebase custom token (for browser RTDB auth — presence, etc.)
+router.get('/firebase-token', protect, authController.getFirebaseToken);
 
 // ===============================
 // Social Auth Routes

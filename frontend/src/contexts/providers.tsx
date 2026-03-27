@@ -15,7 +15,7 @@ import { pushService } from '@/services/push.service';
 import { useFeatureFlags } from '@/hooks/use-feature-flags';
 import { usePresenceTracker } from '@/hooks/use-presence-tracker';
 import { QUERY_KEYS } from '@/constants/config';
-import { onFCMMessage } from '@/lib/firebase';
+import { onFCMMessage, signOutFirebase } from '@/lib/firebase';
 import { showToast } from '@/components/ui/Toast';
 import MaintenancePage from '@/components/common/MaintenancePage';
 
@@ -138,6 +138,7 @@ function AuthSyncListener({ children }: { children: ReactNode }) {
   useEffect(() => {
     return onAuthMessage((msg) => {
       if (msg.type === 'logout' || msg.type === 'session_expired') {
+        signOutFirebase().catch(() => {});
         getQueryClient().clear();
         storeLogout();
       } else if (msg.type === 'login') {

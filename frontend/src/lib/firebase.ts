@@ -1,4 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { getAuth, signInWithCustomToken, signOut, type Auth } from 'firebase/auth';
 import { getMessaging, getToken, onMessage, type Messaging } from 'firebase/messaging';
 import { getDatabase, type Database } from 'firebase/database';
 import { getFirestore, type Firestore } from 'firebase/firestore';
@@ -92,4 +93,66 @@ export function getFirebaseFirestore(): Firestore | null {
     }
   }
   return firestoreInstance;
+}
+
+// ── Firebase Auth for RTDB (presence) ──
+
+let firebaseAuth: Auth | null = null;
+let firebaseSignInPromise: Promise<void> | null = null;
+
+function getFirebaseAuth(): Auth | null {
+  if (typeof window === 'undefined') return null;
+  if (!firebaseAuth) {
+    try {
+      firebaseAuth = getAuth(getFirebaseApp());
+    } catch {
+      console.warn('[Firebase] Auth not supported');
+      return null;
+    }
+  }
+  return firebaseAuth;
+}
+
+/**
+ * Sign into Firebase Auth using a custom token from our backend.
+ * Idempotent — skips if already signed in. Called once after app login.
+ * Firebase SDK auto-refreshes the session, so this only runs once per tab.
+ */
+export async function signInToFirebase(): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (!auth) return;
+
+  // Already signed in
+  if (auth.currentUser) return;
+
+  // Deduplicate concurrent calls
+  if (firebaseSignInPromise) return firebaseSignInPromise;
+
+  firebaseSignInPromise = (async () => {
+    try {
+      const res = await fetch('/api/auth/firebase-token', { credentials: 'include' });
+      if (!res.ok) return;
+      const json = await res.json();
+      const token = json.data?.token;
+      if (!token) return;
+      await signInWithCustomToken(auth, token);
+    } catch (error) {
+      console.warn('[Firebase] Auth sign-in failed:', error);
+    } finally {
+      firebaseSignInPromise = null;
+    }
+  })();
+
+  return firebaseSignInPromise;
+}
+
+/** Sign out of Firebase Auth (call on app logout). */
+export async function signOutFirebase(): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (!auth) return;
+  try {
+    await signOut(auth);
+  } catch {
+    // Silent — logout cleanup is best-effort
+  }
 }

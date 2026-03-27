@@ -24,8 +24,13 @@ function nextWithCsp(): NextResponse {
   // s-gke-apse1-nssi2-0.asia-southeast1.firebasedatabase.app), so we need a
   // wildcard on the regional subdomain, not just the specific DB hostname.
   const firebaseDbUrl = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || '';
-  const firebaseDbWildcard = firebaseDbUrl
-    ? `https://*.${new URL(firebaseDbUrl).hostname.split('.').slice(1).join('.')}`
+  // Build both https:// and wss:// wildcards — Firebase RTDB uses WebSocket
+  // for realtime sync and falls back to long-polling (HTTPS) on restricted networks.
+  const firebaseDbRegion = firebaseDbUrl
+    ? new URL(firebaseDbUrl).hostname.split('.').slice(1).join('.')
+    : '';
+  const firebaseDbWildcard = firebaseDbRegion
+    ? `https://*.${firebaseDbRegion} wss://*.${firebaseDbRegion}`
     : '';
 
   const csp = [
@@ -35,7 +40,7 @@ function nextWithCsp(): NextResponse {
     "img-src 'self' data: blob: https://res.cloudinary.com https://assets.hireadda.in https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com https://vercel.live https://vercel.com",
     "font-src 'self' https://fonts.gstatic.com https://vercel.live",
     `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com https://challenges.cloudflare.com https://vercel.live https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
-    "frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com https://vercel.live",
+    `frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com https://vercel.live${firebaseDbRegion ? ` https://*.${firebaseDbRegion}` : ''}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "object-src 'none'",

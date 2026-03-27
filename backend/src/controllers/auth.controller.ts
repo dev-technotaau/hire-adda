@@ -4,6 +4,7 @@ import * as mfaService from '../services/mfa.service';
 import { AppError } from '../middleware/error';
 import prisma from '../config/prisma';
 import { env } from '../config/env';
+import { auth as firebaseAuth } from '../config/firebase';
 import { setTokenCookies, clearTokenCookies, COOKIE_NAMES } from '../utils/cookie-helpers';
 
 // Helper to get client info
@@ -52,7 +53,13 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
 
     // Set httpOnly cookies (BFF reads these; body tokens kept for backward compat)
     if (result.accessToken && result.refreshToken) {
-      setTokenCookies(res, result.accessToken, result.refreshToken, req.body.rememberMe ?? true, result.sessionId);
+      setTokenCookies(
+        res,
+        result.accessToken,
+        result.refreshToken,
+        req.body.rememberMe ?? true,
+        result.sessionId
+      );
     }
 
     res.status(200).json({
@@ -128,8 +135,7 @@ export const refreshToken = async (
 ): Promise<void> => {
   try {
     // Read refresh token from body (legacy) or httpOnly cookie (BFF)
-    const oldRefreshToken =
-      req.body.refreshToken || req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
+    const oldRefreshToken = req.body.refreshToken || req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
     const { userAgent, ipAddress } = getClientInfo(req);
 
     if (!oldRefreshToken) {
@@ -438,7 +444,8 @@ export const mfaRecoveryRequest = async (
     await mfaService.requestMfaRecovery(email);
     res.status(200).json({
       status: 'success',
-      message: 'If MFA is enabled on this account, a recovery code has been sent to the associated email.',
+      message:
+        'If MFA is enabled on this account, a recovery code has been sent to the associated email.',
     });
   } catch (error) {
     next(error);
@@ -853,7 +860,7 @@ export const exportMyData = async (
 ): Promise<void> => {
   try {
     if (!req.user) throw new AppError('Not authorized', 401);
-    const { requestDataExport} = await import('../services/data-export.service');
+    const { requestDataExport } = await import('../services/data-export.service');
     await requestDataExport(req.user.id, req.user.email);
     res.status(202).json({
       status: 'success',
@@ -903,6 +910,30 @@ export const updateProfile = async (
       status: 'success',
       data: { user: updatedUser },
       message: 'Profile updated successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ===============================
+// Firebase Custom Token (for browser RTDB auth)
+// ===============================
+export const getFirebaseToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) throw new AppError('Not authorized', 401);
+    if (!firebaseAuth)
+      throw new AppError('Firebase Auth is not configured', 503, 'FIREBASE_UNAVAILABLE');
+
+    const token = await firebaseAuth.createCustomToken(req.user.id);
+
+    res.status(200).json({
+      status: 'success',
+      data: { token },
     });
   } catch (error) {
     next(error);

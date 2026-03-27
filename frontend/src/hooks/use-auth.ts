@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { authService } from '@/services/auth.service';
 import { ROUTES, ROLE_DASHBOARDS } from '@/constants/routes';
 import { broadcastLogout, broadcastLogin } from '@/lib/auth-channel';
+import { signOutFirebase } from '@/lib/firebase';
 import type { LoginRequest, Role, User } from '@/types/auth';
 
 const ADMIN_ROLES: Role[] = ['ADMIN', 'SUPER_ADMIN'];
@@ -79,10 +80,13 @@ export function useAuth() {
     [storeLogin, queryClient],
   );
 
-  const register = useCallback(async (data: Parameters<typeof authService.register>[0], turnstileToken?: string) => {
-    const res = await authService.register(data, turnstileToken);
-    return res;
-  }, []);
+  const register = useCallback(
+    async (data: Parameters<typeof authService.register>[0], turnstileToken?: string) => {
+      const res = await authService.register(data, turnstileToken);
+      return res;
+    },
+    [],
+  );
 
   const logout = useCallback(async () => {
     const isAdmin = user?.role && ADMIN_ROLES.includes(user.role as Role);
@@ -91,6 +95,8 @@ export function useAuth() {
     } catch {
       // Continue with local logout even if API fails
     }
+    // Sign out of Firebase Auth (presence cleanup)
+    signOutFirebase().catch(() => {});
     // Clear all cached query data to prevent stale data on next login
     queryClient.clear();
     storeLogout();
