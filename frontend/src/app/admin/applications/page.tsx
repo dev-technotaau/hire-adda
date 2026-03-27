@@ -187,7 +187,14 @@ export default function ApplicationMonitoringPage() {
                 </h3>
                 <div className="mt-4 h-56">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={stats.dailyTrend}>
+                    <AreaChart
+                      data={
+                        stats.dailyTrend?.map((d: Record<string, unknown>) => ({
+                          ...d,
+                          count: Number(d.count) || 0,
+                        })) ?? []
+                      }
+                    >
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                       <XAxis
                         dataKey="date"

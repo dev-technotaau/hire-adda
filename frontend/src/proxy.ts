@@ -40,7 +40,7 @@ function nextWithCsp(): NextResponse {
     "img-src 'self' data: blob: https://res.cloudinary.com https://assets.hireadda.in https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com https://vercel.live https://vercel.com",
     "font-src 'self' https://fonts.gstatic.com https://vercel.live",
     `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com https://challenges.cloudflare.com https://vercel.live https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
-    `frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com https://vercel.live${firebaseDbRegion ? ` https://*.${firebaseDbRegion}` : ''}`,
+    `frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com https://vercel.live https://*.firebaseapp.com${firebaseDbRegion ? ` https://*.${firebaseDbRegion}` : ''}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "object-src 'none'",

@@ -312,7 +312,13 @@ export default function SuperAdminTicketsPage() {
               </h3>
               {dailyVolumeData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={dailyVolumeData}>
+                  <AreaChart
+                    data={dailyVolumeData.map((d) => ({
+                      ...d,
+                      created: Number(d.created) || 0,
+                      resolved: Number(d.resolved) || 0,
+                    }))}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="date" tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
                     <YAxis

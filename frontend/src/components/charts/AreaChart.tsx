@@ -32,7 +32,7 @@ export default function AreaChart({
   showGrid = true,
 }: AreaChartProps) {
   // Sanitize data — replace undefined/NaN with 0 to prevent SVG polyline errors
-  const safeData = data.map((d) => {
+  const safeData = (data ?? []).map((d) => {
     const row: Record<string, unknown> = { ...d };
     for (const key of [yKey, yKey2]) {
       if (key) {
@@ -41,6 +41,8 @@ export default function AreaChart({
     }
     return row;
   });
+
+  if (safeData.length === 0) return null;
 
   return (
     <ResponsiveContainer width="100%" height={height}>

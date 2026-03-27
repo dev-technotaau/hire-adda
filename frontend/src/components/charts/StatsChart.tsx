@@ -16,10 +16,12 @@ export default function StatsChart({
   height = 60,
 }: StatsChartProps) {
   // Sanitize data — replace undefined/NaN with 0 to prevent SVG polyline errors
-  const safeData = data.map((d) => ({
+  const safeData = (data ?? []).map((d) => ({
     ...d,
     [dataKey]: typeof d[dataKey] === 'number' && !isNaN(d[dataKey] as number) ? d[dataKey] : 0,
   }));
+
+  if (safeData.length === 0) return null;
 
   return (
     <ResponsiveContainer width="100%" height={height}>
