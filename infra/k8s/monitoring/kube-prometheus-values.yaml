@@ -99,7 +99,7 @@ alertmanager:
             send_resolved: true
         slack_configs:
           # Slack
-          - api_url_file: '/etc/alertmanager/secrets/alertmanager-slack/slack-webhook-url'
+          - api_url_file: '/etc/alertmanager/secrets/alertmanager-slack/slack-webhook-url-critical'
             channel: '#alerts-critical'
             send_resolved: true
             title: 'CRITICAL: {{ .CommonLabels.alertname }}'
@@ -110,11 +110,13 @@ alertmanager:
             title: 'CRITICAL: {{ .CommonLabels.alertname }}'
             text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ "\n" }}{{ end }}'
         email_configs:
-          - to: 'alerts@hireadda.in'
-            from: 'alertmanager@hireadda.in'
-            smarthost: 'smtp.gmail.com:587'
-            auth_username: 'alerts@hireadda.in'
+          - to: 'info.hireadda@gmail.com'
+            from: 'Hire Adda <noreply@hireadda.in>'
+            smarthost: 'mail.hireadda.in:587'
+            auth_username: 'noreply@hireadda.in'
             auth_password_file: '/etc/alertmanager/secrets/alertmanager-smtp/smtp-password'
+            headers:
+              Reply-To: 'support@hireadda.in'
             require_tls: true
             send_resolved: true
 

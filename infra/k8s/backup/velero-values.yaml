@@ -12,10 +12,10 @@ configuration:
   backupStorageLocation:
     - name: default
       provider: aws
-      bucket: talent-bridge-velero-backups
+      bucket: hire-adda-velero-backups
       config:
         region: auto
-        s3Url: https://CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com
+        s3Url: https://c6027029a4faaf83fb46084c06d9762b.r2.cloudflarestorage.com
         s3ForcePathStyle: 'true'
   # No volume snapshot — using file-level backup via Kopia
   volumeSnapshotLocation: []
@@ -23,13 +23,12 @@ configuration:
   uploaderType: kopia
 
 # ── Credentials ──
+# R2 credentials stored in SealedSecret (velero-r2-credentials)
+# The sealed secret creates a k8s secret named "velero-r2-credentials"
+# with key "cloud" containing AWS-format credentials for R2.
 credentials:
   useSecret: true
-  secretContents:
-    cloud: |
-      [default]
-      aws_access_key_id = R2_ACCESS_KEY_ID_PLACEHOLDER
-      aws_secret_access_key = R2_SECRET_ACCESS_KEY_PLACEHOLDER
+  existingSecret: velero-r2-credentials
 
 # ── Resources ──
 resources:
