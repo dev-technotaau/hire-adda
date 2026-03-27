@@ -162,10 +162,10 @@ jobs:
       - name: Update backend image tag
         if: needs.build-backend.result == 'success'
         run: |
-          # Update Deployment (standard K8s)
+          # Update Rollout in apps/ (ArgoCD source of truth)
           sed -i "s|image: ${{ env.BACKEND_IMAGE }}:.*|image: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}|g" \
             infra/k8s/apps/backend/deployment.yaml
-          # Update Rollouts (Argo Rollouts canary + blue-green)
+          # Update Rollout variants in cd/ (used by deploy-k8s.sh for strategy switching)
           sed -i "s|image: ${{ env.BACKEND_IMAGE }}:.*|image: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}|g" \
             infra/k8s/cd/rollout.yaml
           sed -i "s|image: ${{ env.BACKEND_IMAGE }}:.*|image: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}|g" \
@@ -174,10 +174,10 @@ jobs:
       - name: Update frontend image tag
         if: needs.build-frontend.result == 'success'
         run: |
-          # Update Deployment (standard K8s)
+          # Update Rollout in apps/ (ArgoCD source of truth)
           sed -i "s|image: ${{ env.FRONTEND_IMAGE }}:.*|image: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}|g" \
             infra/k8s/apps/frontend/deployment.yaml
-          # Update Rollouts (Argo Rollouts canary + blue-green)
+          # Update Rollout variants in cd/ (used by deploy-k8s.sh for strategy switching)
           sed -i "s|image: ${{ env.FRONTEND_IMAGE }}:.*|image: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}|g" \
             infra/k8s/cd/frontend-rollout.yaml
           sed -i "s|image: ${{ env.FRONTEND_IMAGE }}:.*|image: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}|g" \

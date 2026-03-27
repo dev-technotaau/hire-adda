@@ -10,8 +10,8 @@ metadata:
     app: frontend
 spec:
   scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
     name: frontend
   minReplicas: 1
   maxReplicas: 2

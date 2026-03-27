@@ -1,9 +1,9 @@
 # ============================================================
-# Backend API — Deployment
+# Backend API — Argo Rollout (Blue-Green with Prometheus analysis)
 # Express 5 + Node 20 + BullMQ workers + Socket.IO
 # ============================================================
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: backend
   namespace: hire-adda
@@ -16,14 +16,18 @@ metadata:
 spec:
   replicas: 1
   revisionHistoryLimit: 5
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
   selector:
     matchLabels:
       app: backend
+  strategy:
+    blueGreen:
+      activeService: backend
+      previewService: backend-preview
+      autoPromotionEnabled: false
+      scaleDownDelaySeconds: 30
+      prePromotionAnalysis:
+        templates:
+          - templateName: backend-success-rate
   template:
     metadata:
       labels:
