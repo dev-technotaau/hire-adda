@@ -91,12 +91,16 @@ spec:
             - sh
             - -c
             - |
-              # Copy S3 keystore from init container
-              if [ -f /keystore-init/opensearch.keystore ]; then
-                cp /keystore-init/opensearch.keystore config/opensearch.keystore
+              # Install plugins (idempotent — skips if already installed)
+              if ! bin/opensearch-plugin list | grep -q repository-s3; then
+                bin/opensearch-plugin install --batch repository-s3
               fi
               if ! bin/opensearch-plugin list | grep -q prometheus-exporter; then
                 bin/opensearch-plugin install --batch https://github.com/Aiven-Open/prometheus-exporter-plugin-for-opensearch/releases/download/2.18.0.0/prometheus-exporter-2.18.0.0.zip
+              fi
+              # Copy S3 keystore from init container (after S3 plugin is installed)
+              if [ -f /keystore-init/opensearch.keystore ]; then
+                cp /keystore-init/opensearch.keystore config/opensearch.keystore
               fi
               exec ./opensearch-docker-entrypoint.sh opensearch
           ports:
