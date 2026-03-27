@@ -47,11 +47,11 @@ spec:
                 name: backend-config
           resources:
             requests:
-              memory: '512Mi'
-              cpu: '100m'
+              memory: '768Mi'
+              cpu: '250m'
             limits:
-              memory: '1Gi'
-              cpu: '1000m'
+              memory: '1536Mi'
+              cpu: '1500m'
           livenessProbe:
             httpGet:
               path: /health/live

@@ -14,7 +14,7 @@ metadata:
     app.kubernetes.io/component: api
     app.kubernetes.io/part-of: hire-adda
 spec:
-  replicas: 1
+  replicas: 2
   revisionHistoryLimit: 5
   selector:
     matchLabels:
@@ -57,11 +57,11 @@ spec:
                 name: backend-config
           resources:
             requests:
-              memory: '512Mi'
-              cpu: '100m'
+              memory: '768Mi'
+              cpu: '250m'
             limits:
-              memory: '1Gi'
-              cpu: '1000m'
+              memory: '1536Mi'
+              cpu: '1500m'
           # Liveness: is the process alive? (always 200 if server running)
           livenessProbe:
             httpGet:
