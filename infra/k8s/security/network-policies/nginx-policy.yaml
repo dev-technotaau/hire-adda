@@ -1,0 +1,51 @@
+# ============================================================
+# Nginx Reverse Proxy — Network Policy
+# Allows: ingress from ingress-nginx controller
+# Allows: egress to backend, frontend, DNS
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nginx-netpol
+  namespace: hire-adda
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 80
+          protocol: TCP
+        - port: 8080
+          protocol: TCP
+  egress:
+    # To backend
+    - to:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - port: 5000
+          protocol: TCP
+    # To frontend
+    - to:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - port: 3000
+          protocol: TCP
+    # DNS
+    - to: []
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
