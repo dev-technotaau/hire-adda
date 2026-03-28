@@ -39,6 +39,17 @@ spec:
                   set -e
                   mkdir -p /backups/redis
 
+                  # Wait for network policy propagation
+                  echo "Waiting for Redis connectivity..."
+                  for i in 1 2 3 4 5 6; do
+                    if redis-cli -h redis -a "$REDIS_PASSWORD" --no-auth-warning PING 2>/dev/null | grep -q PONG; then
+                      echo "Redis reachable"
+                      break
+                    fi
+                    [ "$i" -eq 6 ] && { echo "ERROR: Cannot reach Redis"; exit 1; }
+                    sleep 5
+                  done
+
                   echo "Triggering BGSAVE..."
                   BEFORE=$(redis-cli -h redis -a "$REDIS_PASSWORD" --no-auth-warning LASTSAVE)
                   redis-cli -h redis -a "$REDIS_PASSWORD" --no-auth-warning BGSAVE

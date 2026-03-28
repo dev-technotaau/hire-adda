@@ -64,8 +64,20 @@ spec:
               command: ['/bin/sh', '-c']
               args:
                 - |
-                  set -e
+                  set -eo pipefail
                   mkdir -p /backups/db
+
+                  # Wait for network policy propagation
+                  echo "Waiting for PostgreSQL connectivity..."
+                  for i in 1 2 3 4 5 6; do
+                    if pg_isready -h "$PGHOST" -p "$PGPORT" >/dev/null 2>&1; then
+                      echo "PostgreSQL reachable"
+                      break
+                    fi
+                    [ "$i" -eq 6 ] && { echo "ERROR: Cannot reach PostgreSQL"; exit 1; }
+                    sleep 5
+                  done
+
                   TIMESTAMP=$(date +%Y%m%d_%H%M%S)
                   BACKUP_FILE="/backups/db/hire_adda_${TIMESTAMP}.sql.gz"
                   # Write timestamp to shared file for R2 upload step
