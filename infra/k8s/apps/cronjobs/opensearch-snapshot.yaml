@@ -1,7 +1,7 @@
 # ============================================================
 # OpenSearch Snapshot — CronJob (Daily 3AM UTC)
 # S3-compatible snapshots to Cloudflare R2
-# All 3 cluster nodes share the same R2 bucket
+# Only application indices (excludes ephemeral log indices)
 # ============================================================
 apiVersion: batch/v1
 kind: CronJob
@@ -70,7 +70,7 @@ spec:
                   echo "Creating snapshot: $SNAPSHOT"
                   curl -sf -X PUT "$OS_URL/_snapshot/$REPO/$SNAPSHOT?wait_for_completion=true" \
                     -H 'Content-Type: application/json' \
-                    -d '{"indices": "*", "ignore_unavailable": true}'
+                    -d '{"indices": "candidates,employers,jobs,suggestions", "ignore_unavailable": true}'
 
                   echo "Snapshot complete: $SNAPSHOT"
 
