@@ -22,6 +22,14 @@ spec:
       ports:
         - port: 6379
           protocol: TCP
+    # Allow backup CronJobs
+    - from:
+        - podSelector:
+            matchLabels:
+              app: redis-backup
+      ports:
+        - port: 6379
+          protocol: TCP
     # Allow Prometheus to scrape redis-exporter
     - from:
         - namespaceSelector:
