@@ -42,7 +42,19 @@ spec:
                   REPO="hireadda_snapshots"
                   SNAPSHOT="snapshot_$(date +%Y%m%d_%H%M%S)"
 
+                  # Wait for network policy propagation + OpenSearch readiness
+                  echo "Waiting for OpenSearch connectivity..."
+                  for i in 1 2 3 4 5 6; do
+                    if curl -sf --connect-timeout 5 "$OS_URL/_cluster/health" >/dev/null 2>&1; then
+                      echo "OpenSearch reachable"
+                      break
+                    fi
+                    [ "$i" -eq 6 ] && { echo "ERROR: Cannot reach OpenSearch"; exit 1; }
+                    sleep 5
+                  done
+
                   # Ensure S3 snapshot repository exists (Cloudflare R2)
+                  echo "Registering snapshot repository..."
                   curl -sf -X PUT "$OS_URL/_snapshot/$REPO" \
                     -H 'Content-Type: application/json' \
                     -d '{
