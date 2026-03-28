@@ -1,6 +1,7 @@
 # ============================================================
-# Apache Kafka 3.8 — StatefulSet (KRaft mode, single broker)
+# Apache Kafka 3.8 — StatefulSet (3-node KRaft cluster)
 # Event streaming for consolidated topics
+# Quorum-based HA: 3 combined broker+controller nodes
 # ============================================================
 apiVersion: apps/v1
 kind: StatefulSet
@@ -15,8 +16,8 @@ metadata:
     app.kubernetes.io/part-of: hire-adda
 spec:
   serviceName: kafka
-  # Phase 2: Cloud Aiven — scale to 1 for Phase 3 (local)
-  replicas: 0
+  replicas: 3
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: kafka
@@ -39,6 +40,14 @@ spec:
       containers:
         - name: kafka
           image: apache/kafka:3.8.1
+          command:
+            - sh
+            - -c
+            - |
+              ORDINAL=${HOSTNAME##*-}
+              export KAFKA_NODE_ID=$((ORDINAL + 1))
+              export KAFKA_ADVERTISED_LISTENERS="PLAINTEXT://${HOSTNAME}.kafka.hire-adda.svc.cluster.local:9092"
+              exec /etc/kafka/docker/run
           ports:
             - name: tcp-kafka
               containerPort: 9092
@@ -47,16 +56,12 @@ spec:
               containerPort: 9093
               protocol: TCP
           env:
-            - name: KAFKA_NODE_ID
-              value: '1'
             - name: KAFKA_PROCESS_ROLES
               value: 'broker,controller'
             - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: '1@kafka-0.kafka.hire-adda.svc.cluster.local:9093'
+              value: '1@kafka-0.kafka.hire-adda.svc.cluster.local:9093,2@kafka-1.kafka.hire-adda.svc.cluster.local:9093,3@kafka-2.kafka.hire-adda.svc.cluster.local:9093'
             - name: KAFKA_LISTENERS
               value: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
-            - name: KAFKA_ADVERTISED_LISTENERS
-              value: 'PLAINTEXT://kafka-0.kafka.hire-adda.svc.cluster.local:9092'
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: 'PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT'
             - name: KAFKA_CONTROLLER_LISTENER_NAMES
@@ -64,15 +69,17 @@ spec:
             - name: KAFKA_INTER_BROKER_LISTENER_NAME
               value: 'PLAINTEXT'
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
-              value: '1'
+              value: '3'
             - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
-              value: '1'
+              value: '3'
             - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
-              value: '1'
+              value: '2'
             - name: KAFKA_NUM_PARTITIONS
               value: '3'
             - name: KAFKA_DEFAULT_REPLICATION_FACTOR
-              value: '1'
+              value: '3'
+            - name: KAFKA_MIN_INSYNC_REPLICAS
+              value: '2'
             - name: KAFKA_LOG_RETENTION_HOURS
               value: '168'
             - name: KAFKA_LOG_RETENTION_BYTES
@@ -80,15 +87,15 @@ spec:
             - name: KAFKA_LOG_SEGMENT_BYTES
               value: '1073741824'
             - name: KAFKA_HEAP_OPTS
-              value: '-Xmx512m -Xms512m'
+              value: '-Xmx384m -Xms384m'
             - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
               value: 'true'
           resources:
             requests:
-              memory: '512Mi'
-              cpu: '200m'
+              memory: '384Mi'
+              cpu: '150m'
             limits:
-              memory: '1Gi'
+              memory: '768Mi'
               cpu: '500m'
           livenessProbe:
             tcpSocket:
@@ -126,8 +133,8 @@ spec:
               protocol: TCP
           resources:
             requests:
-              memory: '16Mi'
-              cpu: '10m'
+              memory: '24Mi'
+              cpu: '15m'
             limits:
               memory: '64Mi'
               cpu: '50m'

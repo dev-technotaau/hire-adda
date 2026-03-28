@@ -17,10 +17,9 @@ metadata:
     app.kubernetes.io/part-of: hire-adda
 data:
   # ══════════════════════════════════════════════════════════════
-  # Infrastructure Profile: Local PG + Local Redis + Cloud Kafka
+  # Infrastructure Profile: All Local K8s
   # ══════════════════════════════════════════════════════════════
-  # PostgreSQL: local K8s (migrated from Neon)
-  # Redis: local K8s | Kafka: Aiven cloud
+  # PostgreSQL, Redis, Kafka, OpenSearch: all local K8s
   # ══════════════════════════════════════════════════════════════
 
   # ── Server ──
@@ -44,8 +43,8 @@ data:
   # ── Elasticsearch/OpenSearch (K8s service DNS) ──
   ELASTICSEARCH_URL: 'http://opensearch:9200'
 
-  # ── Kafka (Cloud Aiven — Phase 2) ──
-  # Cloud credentials in SealedSecret; no local overrides needed
+  # ── Kafka (Local K8s — 3-node KRaft cluster, no SASL) ──
+  KAFKA_BROKERS: 'kafka-0.kafka.hire-adda.svc.cluster.local:9092,kafka-1.kafka.hire-adda.svc.cluster.local:9092,kafka-2.kafka.hire-adda.svc.cluster.local:9092'
   KAFKA_CLIENT_ID: 'hire-adda-api'
 
   # ── JWT Authentication ──

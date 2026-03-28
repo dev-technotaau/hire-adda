@@ -1,7 +1,7 @@
 # ============================================================
-# Kafka — Network Policy
-# Only backend can connect to broker port.
-# Prometheus can scrape kafka-exporter metrics.
+# Kafka — Network Policy (3-node KRaft cluster)
+# Backend → broker, inter-broker replication + controller quorum,
+# Prometheus → kafka-exporter metrics
 # ============================================================
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -16,6 +16,17 @@ spec:
     - Ingress
     - Egress
   ingress:
+    # Inter-broker communication (replication + KRaft controller quorum)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - port: 9092
+          protocol: TCP
+        - port: 9093
+          protocol: TCP
+    # From backend (producer/consumer connections)
     - from:
         - podSelector:
             matchLabels:
@@ -32,8 +43,18 @@ spec:
         - port: 9308
           protocol: TCP
   egress:
-    # DNS only
+    # DNS
     - to: []
       ports:
         - port: 53
           protocol: UDP
+    # Inter-broker communication (replication + KRaft controller quorum)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - port: 9092
+          protocol: TCP
+        - port: 9093
+          protocol: TCP

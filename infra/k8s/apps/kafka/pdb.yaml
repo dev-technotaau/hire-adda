@@ -1,0 +1,19 @@
+# ============================================================
+# Kafka — PodDisruptionBudget
+# Ensures quorum (2/3 nodes) during voluntary disruptions
+# ============================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kafka-pdb
+  namespace: hire-adda
+  labels:
+    app: kafka
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/component: messaging
+    app.kubernetes.io/part-of: hire-adda
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: kafka
