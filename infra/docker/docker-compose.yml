@@ -689,7 +689,7 @@ services:
           cpus: '0.1'
     command:
       - '--kafka.server=kafka:9092'
-      - '--topic.filter=tb\..*|hire-adda\..*'
+      - '--topic.filter=ha\..*|hire-adda\..*'
     depends_on:
       kafka:
         condition: service_healthy

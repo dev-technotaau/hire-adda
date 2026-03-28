@@ -104,20 +104,20 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"hire-adda\",topic=\"tb.users\"}[5m]))",
-          "legendFormat": "tb.users"
+          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"hire-adda\",topic=\"ha.users\"}[5m]))",
+          "legendFormat": "ha.users"
         },
         {
-          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"hire-adda\",topic=\"tb.jobs\"}[5m]))",
-          "legendFormat": "tb.jobs"
+          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"hire-adda\",topic=\"ha.jobs\"}[5m]))",
+          "legendFormat": "ha.jobs"
         },
         {
-          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"hire-adda\",topic=\"tb.applications\"}[5m]))",
-          "legendFormat": "tb.applications"
+          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"hire-adda\",topic=\"ha.applications\"}[5m]))",
+          "legendFormat": "ha.applications"
         },
         {
-          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"hire-adda\",topic=\"tb.notifications\"}[5m]))",
-          "legendFormat": "tb.notifications"
+          "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"hire-adda\",topic=\"ha.notifications\"}[5m]))",
+          "legendFormat": "ha.notifications"
         }
       ]
     },

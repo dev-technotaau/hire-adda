@@ -126,7 +126,7 @@ spec:
           image: danielqsj/kafka-exporter:v1.8.0
           args:
             - '--kafka.server=localhost:9092'
-            - '--topic.filter=tb\..*|hire-adda\..*'
+            - '--topic.filter=ha\..*|hire-adda\..*'
           ports:
             - name: metrics
               containerPort: 9308

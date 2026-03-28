@@ -37,8 +37,8 @@ export enum KafkaTopics {
 }
 
 export const ConsolidatedTopics = {
-  USERS: 'tb.users',
-  JOBS: 'tb.jobs',
-  APPLICATIONS: 'tb.applications',
-  NOTIFICATIONS: 'tb.notifications',
+  USERS: 'ha.users',
+  JOBS: 'ha.jobs',
+  APPLICATIONS: 'ha.applications',
+  NOTIFICATIONS: 'ha.notifications',
 } as const;

@@ -118,11 +118,11 @@ kafka-logs:             ## View Kafka logs
 kafka-topics:           ## List Kafka topics
 	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 
-kafka-create-topics:    ## Create consolidated Kafka topics (tb.users, tb.jobs, etc.)
-	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.users --partitions 3 --replication-factor 1 --if-not-exists
-	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.jobs --partitions 3 --replication-factor 1 --if-not-exists
-	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.applications --partitions 3 --replication-factor 1 --if-not-exists
-	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic tb.notifications --partitions 3 --replication-factor 1 --if-not-exists
+kafka-create-topics:    ## Create consolidated Kafka topics (ha.users, ha.jobs, etc.)
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic ha.users --partitions 3 --replication-factor 1 --if-not-exists
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic ha.jobs --partitions 3 --replication-factor 1 --if-not-exists
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic ha.applications --partitions 3 --replication-factor 1 --if-not-exists
+	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic ha.notifications --partitions 3 --replication-factor 1 --if-not-exists
 	cd infra/docker && docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic hire-adda.dlq --partitions 1 --replication-factor 1 --if-not-exists
 
 kafka-describe:         ## Describe all Kafka topics with partition details
