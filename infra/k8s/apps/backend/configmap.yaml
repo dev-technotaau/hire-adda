@@ -77,7 +77,7 @@ data:
 
   # ── Email (SMTP via Docker Mailserver on host) ──
   # SMTP_USER, SMTP_PASS are in SealedSecret
-  SMTP_HOST: 'mail.hireadda.in'
+  SMTP_HOST: 'mailserver-external'
   SMTP_PORT: '465'
   SMTP_SECURE: 'true'
   SMTP_FROM_NAME: 'Hire Adda'

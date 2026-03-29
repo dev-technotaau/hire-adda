@@ -27,6 +27,10 @@ spec:
       port: 143
       targetPort: 143
       protocol: TCP
+    - name: smtps
+      port: 465
+      targetPort: 465
+      protocol: TCP
     - name: smtp-submission
       port: 587
       targetPort: 587
@@ -51,6 +55,9 @@ subsets:
     ports:
       - name: imap
         port: 143
+        protocol: TCP
+      - name: smtps
+        port: 465
         protocol: TCP
       - name: smtp-submission
         port: 587

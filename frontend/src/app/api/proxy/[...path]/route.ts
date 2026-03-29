@@ -52,12 +52,24 @@ async function proxyRequest(
     body = await request.arrayBuffer();
   }
 
-  let res = await fetch(url, {
-    method: request.method,
-    headers,
-    body,
-    cache: 'no-store',
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: request.method,
+      headers,
+      body,
+      cache: 'no-store',
+    });
+  } catch {
+    // Network error (ECONNREFUSED/ECONNRESET during pod restart) — retry once after delay
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    res = await fetch(url, {
+      method: request.method,
+      headers,
+      body,
+      cache: 'no-store',
+    });
+  }
 
   // On 401, attempt silent refresh then retry once
   if (res.status === 401 && accessToken) {

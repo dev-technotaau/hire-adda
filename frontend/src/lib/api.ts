@@ -83,6 +83,7 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _rateLimitRetry?: boolean;
       _csrfRetry?: boolean;
+      _authRetry?: boolean;
     };
 
     // Handle 403 CSRF token mismatch — re-fetch token and retry once
@@ -125,9 +126,15 @@ api.interceptors.response.use(
       return Promise.reject(transformError(error));
     }
 
-    // 401 after BFF already tried refresh → session is dead
+    // 401 after BFF already tried refresh — retry once before giving up.
+    // During rolling restarts, the first 401 may be transient (pod switchover).
     if (error.response?.status === 401) {
-      // Clear httpOnly cookies via BFF logout (fire-and-forget)
+      if (!originalRequest._authRetry) {
+        originalRequest._authRetry = true;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        return api(originalRequest);
+      }
+      // Second 401 → session is truly dead
       axios.post('/api/auth/logout', {}, { withCredentials: true }).catch(() => {});
       broadcastLogout();
       redirectToLogin();
