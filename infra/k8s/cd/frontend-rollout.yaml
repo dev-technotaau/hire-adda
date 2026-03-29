@@ -64,7 +64,7 @@ spec:
           resources:
             requests:
               memory: '384Mi'
-              cpu: '200m'
+              cpu: '150m'
             limits:
               memory: '768Mi'
               cpu: '750m'
@@ -121,8 +121,8 @@ spec:
               - templateName: frontend-success-rate
               - templateName: frontend-canary-comparison
         - setWeight: 100
-      maxSurge: 1
-      maxUnavailable: 0
+      maxSurge: 0
+      maxUnavailable: 1
 ---
 # ============================================================
 # AnalysisTemplate — Frontend canary analysis (absolute thresholds)
