@@ -44,7 +44,7 @@ data:
   ELASTICSEARCH_URL: 'http://opensearch:9200'
 
   # ── Kafka (Local K8s — 3-node KRaft cluster, no SASL) ──
-  KAFKA_BROKERS: 'kafka-0.kafka.hire-adda.svc.cluster.local:9092,kafka-1.kafka.hire-adda.svc.cluster.local:9092,kafka-2.kafka.hire-adda.svc.cluster.local:9092'
+  KAFKA_BROKERS: 'kafka-0.kafka.hire-adda.svc.cluster.local:9092,kafka-1.kafka.hire-adda.svc.cluster.local:9092'
   KAFKA_CLIENT_ID: 'hire-adda-api'
 
   # ── JWT Authentication ──

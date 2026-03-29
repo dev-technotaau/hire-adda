@@ -82,43 +82,52 @@ export const fetchFeatureFlags = async (force = false): Promise<FeatureFlagsConf
     }
   }
 
-  // Layer 3: Fetch from Firebase Remote Config
-  try {
-    const remoteConfig = admin.remoteConfig();
-    const template = await remoteConfig.getTemplate();
+  // Layer 3: Fetch from Firebase Remote Config (with retry for transient startup failures)
+  const MAX_RETRIES = 2;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const remoteConfig = admin.remoteConfig();
+      const template = await remoteConfig.getTemplate();
 
-    const flags: FeatureFlagsConfig = { ...defaultFlags };
+      const flags: FeatureFlagsConfig = { ...defaultFlags };
 
-    // Parse parameters from template
-    // Admin SDK returns { value: string } for explicit values
-    if (template.parameters) {
-      for (const [key, param] of Object.entries(template.parameters)) {
-        const dv = param.defaultValue as { value?: string } | undefined;
-        const value = dv?.value;
-        if (value === undefined || value === null) continue;
+      // Parse parameters from template
+      // Admin SDK returns { value: string } for explicit values
+      if (template.parameters) {
+        for (const [key, param] of Object.entries(template.parameters)) {
+          const dv = param.defaultValue as { value?: string } | undefined;
+          const value = dv?.value;
+          if (value === undefined || value === null) continue;
 
-        if (value === 'true' || value === 'false') {
-          flags[key] = value === 'true';
-        } else if (value !== '' && !isNaN(Number(value))) {
-          flags[key] = Number(value);
-        } else {
-          flags[key] = value;
+          if (value === 'true' || value === 'false') {
+            flags[key] = value === 'true';
+          } else if (value !== '' && !isNaN(Number(value))) {
+            flags[key] = Number(value);
+          } else {
+            flags[key] = value;
+          }
         }
       }
+
+      cachedFlags = flags;
+      lastFetchTime = now;
+      logger.info('Feature flags refreshed from Firebase Remote Config');
+
+      // Cache entire flags object in Redis (fire-and-forget)
+      redis.set(REDIS_FF_KEY, JSON.stringify(flags), 'EX', REDIS_FF_TTL).catch(() => {});
+
+      return flags;
+    } catch (error) {
+      if (attempt < MAX_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
+      logger.error('Failed to fetch feature flags from Firebase:', error);
+      return cachedFlags;
     }
-
-    cachedFlags = flags;
-    lastFetchTime = now;
-    logger.info('Feature flags refreshed from Firebase Remote Config');
-
-    // Cache entire flags object in Redis (fire-and-forget)
-    redis.set(REDIS_FF_KEY, JSON.stringify(flags), 'EX', REDIS_FF_TTL).catch(() => {});
-
-    return flags;
-  } catch (error) {
-    logger.error('Failed to fetch feature flags from Firebase:', error);
-    return cachedFlags;
   }
+
+  return cachedFlags;
 };
 
 /**

@@ -1,5 +1,5 @@
 # ============================================================
-# Kafka — Network Policy (3-node KRaft cluster)
+# Kafka — Network Policy (2-node KRaft cluster)
 # Backend → broker, inter-broker replication + controller quorum,
 # Prometheus → kafka-exporter metrics
 # ============================================================

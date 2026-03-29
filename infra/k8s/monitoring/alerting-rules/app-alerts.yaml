@@ -129,7 +129,7 @@ spec:
             summary: 'Container {{ $labels.container }} memory usage above 90%'
 
         # ── Kafka ──
-        - alert: KafkaQuorumAtRisk
+        - alert: KafkaBrokerDown
           expr: |
             count(kube_pod_container_status_ready{namespace="hire-adda",container="kafka"} == 1) < 2
           for: 2m
@@ -137,8 +137,8 @@ spec:
             severity: critical
             team: infra
           annotations:
-            summary: 'Kafka cluster has fewer than 2 ready brokers (quorum at risk)'
-            description: 'Only {{ $value }} Kafka brokers are ready. KRaft requires 2/3 for quorum.'
+            summary: 'Kafka cluster has fewer than 2 ready brokers'
+            description: 'Only {{ $value }} Kafka brokers are ready. KRaft requires both nodes for quorum.'
 
         - alert: KafkaConsumerLagHigh
           expr: |
