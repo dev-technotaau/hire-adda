@@ -1,3 +1,4 @@
+// Trigger CI/CD rebuild: canary rollout strategy + resource optimization
 import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';

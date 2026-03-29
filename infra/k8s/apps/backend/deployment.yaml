@@ -1,5 +1,5 @@
 # ============================================================
-# Backend API — Argo Rollout (Blue-Green with Prometheus analysis)
+# Backend API — Argo Rollout (Canary with Prometheus analysis)
 # Express 5 + Node 20 + BullMQ workers + Socket.IO
 # ============================================================
 apiVersion: argoproj.io/v1alpha1
@@ -20,14 +20,26 @@ spec:
     matchLabels:
       app: backend
   strategy:
-    blueGreen:
-      activeService: backend
-      previewService: backend-preview
-      autoPromotionEnabled: true
-      scaleDownDelaySeconds: 30
-      prePromotionAnalysis:
-        templates:
-          - templateName: backend-success-rate
+    canary:
+      canaryService: backend-canary
+      stableService: backend
+      maxSurge: 1
+      maxUnavailable: 1
+      trafficRouting:
+        nginx:
+          stableIngress: api-ingress
+      steps:
+        - setWeight: 20
+        - pause: { duration: 60s }
+        - analysis:
+            templates:
+              - templateName: backend-success-rate
+        - setWeight: 50
+        - pause: { duration: 120s }
+        - analysis:
+            templates:
+              - templateName: backend-success-rate
+        - setWeight: 100
   template:
     metadata:
       labels:
