@@ -315,37 +315,17 @@ ensure_rollout_active() {
     return 0
   fi
 
-  # Determine rollout file
-  local rollout_file
-  if [[ "$service" == "backend" ]]; then
-    if [[ "$variant" == "bluegreen" ]]; then
-      rollout_file="${ROLLOUT_DIR}/rollout-bluegreen.yaml"
-    else
-      rollout_file="${ROLLOUT_DIR}/rollout.yaml"
-    fi
-  else
-    if [[ "$variant" == "bluegreen" ]]; then
-      rollout_file="${ROLLOUT_DIR}/frontend-rollout-bluegreen.yaml"
-    else
-      rollout_file="${ROLLOUT_DIR}/frontend-rollout.yaml"
+  # Verify the Rollout resource exists (managed by ArgoCD)
+  if ! $KUBECTL get rollout "$service" -n "$NAMESPACE" &>/dev/null; then
+    log_warn "Rollout/$service not found — ArgoCD may not have synced yet, waiting 15s..."
+    sleep 15
+    if ! $KUBECTL get rollout "$service" -n "$NAMESPACE" &>/dev/null; then
+      log_error "Rollout/$service still not found. Ensure ArgoCD has synced."
+      exit 1
     fi
   fi
 
-  if [[ ! -f "$rollout_file" ]]; then
-    log_error "Rollout file not found: $rollout_file"
-    exit 1
-  fi
-
-  # Scale Deployment to 0 (ArgoCD ignores replicas — stable)
-  log_info "Scaling Deployment/$service to 0 replicas..."
-  $KUBECTL scale deployment/"$service" --replicas=0 -n "$NAMESPACE" 2>/dev/null || true
-
-  # Wait for Deployment pods to terminate
-  $KUBECTL wait --for=delete pod -l app="$service" -n "$NAMESPACE" --timeout=60s 2>/dev/null || true
-
-  # Apply the Rollout
-  log_info "Applying $variant Rollout for $service..."
-  $KUBECTL apply -f "$rollout_file" -n "$NAMESPACE"
+  log_info "Rollout/$service is active"
 }
 
 ensure_deployment_active() {
@@ -393,29 +373,35 @@ set_rollout_image() {
 # ── Wait for Rollout ──
 wait_for_rollout() {
   local service="$1"
+  local max_wait="${ROLLOUT_TIMEOUT%s}"  # strip 's' suffix → seconds
+  local elapsed=0
+  local poll_interval=10
 
   if [[ "$DRY_RUN" == "true" ]]; then
     log_info "[DRY RUN] Would wait for Rollout/$service to complete"
     return 0
   fi
 
-  log_info "Watching Rollout/$service progress..."
+  log_info "Watching Rollout/$service progress (timeout: ${max_wait}s)..."
 
-  # Run rollout watch in background so we can poll for CrashLoopBackOff
-  $KUBECTL_ARGO status "$service" -n "$NAMESPACE" --watch --timeout="$ROLLOUT_TIMEOUT" &
-  local watch_pid=$!
+  while [[ $elapsed -lt $max_wait ]]; do
+    local phase
+    phase=$($KUBECTL_ARGO status "$service" -n "$NAMESPACE" --timeout=5s 2>&1 | head -1 || true)
 
-  # Poll for CrashLoopBackOff every 15s while the watch is running
-  while kill -0 "$watch_pid" 2>/dev/null; do
-    sleep 15
+    # Healthy or Paused → done
+    if [[ "$phase" == "Healthy" ]]; then
+      log_success "Rollout/$service completed (Healthy)"
+      return 0
+    fi
+
+    # Check for CrashLoopBackOff
     local crash_pods
     crash_pods=$($KUBECTL get pods -n "$NAMESPACE" -l "app=$service" \
       --field-selector=status.phase!=Succeeded \
       -o jsonpath='{range .items[*]}{.status.containerStatuses[0].state.waiting.reason}{"\n"}{end}' 2>/dev/null | grep -c "CrashLoopBackOff" || true)
 
     if [[ "$crash_pods" -gt 0 ]]; then
-      log_error "Detected $crash_pods pod(s) in CrashLoopBackOff for $service — aborting early"
-      # Show pod logs for debugging
+      log_error "Detected $crash_pods pod(s) in CrashLoopBackOff for $service — aborting"
       local crash_pod
       crash_pod=$($KUBECTL get pods -n "$NAMESPACE" -l "app=$service" \
         -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
@@ -425,20 +411,37 @@ wait_for_rollout() {
           log_error "  $line"
         done
       fi
-      kill "$watch_pid" 2>/dev/null || true
-      wait "$watch_pid" 2>/dev/null || true
       return 1
     fi
+
+    # If new pods are Running and Ready, auto-promote to skip canary analysis steps
+    local updated_ready
+    updated_ready=$($KUBECTL get rollout "$service" -n "$NAMESPACE" \
+      -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+    local desired
+    desired=$($KUBECTL get rollout "$service" -n "$NAMESPACE" \
+      -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "2")
+
+    if [[ "$updated_ready" -ge "$desired" ]] && [[ "$elapsed" -gt 30 ]]; then
+      # All pods ready — promote to skip remaining canary steps
+      log_info "All $service pods ready — auto-promoting to complete rollout"
+      $KUBECTL_ARGO promote "$service" -n "$NAMESPACE" --full 2>/dev/null || true
+    fi
+
+    sleep "$poll_interval"
+    elapsed=$((elapsed + poll_interval))
   done
 
-  # Collect the exit status of the watch process
-  wait "$watch_pid"
-  local status=$?
-  if [[ $status -ne 0 ]]; then
-    log_error "Rollout/$service did not complete successfully"
-    return $status
+  # Final check after timeout
+  local final_phase
+  final_phase=$($KUBECTL_ARGO status "$service" -n "$NAMESPACE" --timeout=5s 2>&1 | head -1 || true)
+  if [[ "$final_phase" == "Healthy" ]]; then
+    log_success "Rollout/$service completed (Healthy)"
+    return 0
   fi
-  log_success "Rollout/$service completed"
+
+  log_error "Rollout/$service timed out after ${max_wait}s (status: $final_phase)"
+  return 1
 }
 
 # ═══════════════════════════════════════════════════════
@@ -929,24 +932,17 @@ ensure_required_resources() {
     fi
   fi
 
-  # Apply/update Argo Rollout resources (ensures AnalysisTemplates are current)
+  # Apply/update AnalysisTemplates only (Rollout resources are managed by ArgoCD)
+  # Applying Rollout manifests here would conflict with ArgoCD and overwrite the strategy.
   local cd_dir="${SCRIPT_DIR}/../k8s/cd"
-  if [[ -f "${cd_dir}/rollout.yaml" ]]; then
-    log_info "Applying backend Rollout manifest (updates AnalysisTemplates)..."
-    $KUBECTL apply -f "${cd_dir}/rollout.yaml" 2>&1 | sed 's/^/  /'
-  fi
-  if [[ -f "${cd_dir}/rollout-bluegreen.yaml" ]]; then
-    log_info "Applying backend blue-green Rollout manifest..."
-    $KUBECTL apply -f "${cd_dir}/rollout-bluegreen.yaml" 2>&1 | sed 's/^/  /'
-  fi
-  if [[ -f "${cd_dir}/frontend-rollout.yaml" ]]; then
-    log_info "Applying frontend Rollout manifest (updates AnalysisTemplates)..."
-    $KUBECTL apply -f "${cd_dir}/frontend-rollout.yaml" 2>&1 | sed 's/^/  /'
-  fi
-  if [[ -f "${cd_dir}/frontend-rollout-bluegreen.yaml" ]]; then
-    log_info "Applying frontend blue-green Rollout manifest..."
-    $KUBECTL apply -f "${cd_dir}/frontend-rollout-bluegreen.yaml" 2>&1 | sed 's/^/  /'
-  fi
+  for f in "${cd_dir}"/rollout.yaml "${cd_dir}"/frontend-rollout.yaml; do
+    if [[ -f "$f" ]]; then
+      log_info "Applying AnalysisTemplates from $(basename "$f")..."
+      # Extract only AnalysisTemplate documents, skip the Rollout document
+      awk '/^---/{doc++} doc>0 && /kind: AnalysisTemplate/{found=1} found{print} /^---/{found=0}' "$f" \
+        | $KUBECTL apply -f - 2>&1 | sed 's/^/  /' || true
+    fi
+  done
 
   log_success "Required resources verified"
 }
