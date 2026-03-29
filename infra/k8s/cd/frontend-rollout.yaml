@@ -121,7 +121,7 @@ spec:
               - templateName: frontend-success-rate
               - templateName: frontend-canary-comparison
         - setWeight: 100
-      maxSurge: 0
+      maxSurge: 1
       maxUnavailable: 1
 ---
 # ============================================================
