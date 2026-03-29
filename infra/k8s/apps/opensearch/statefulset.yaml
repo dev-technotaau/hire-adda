@@ -17,6 +17,7 @@ metadata:
 spec:
   serviceName: opensearch
   replicas: 3
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: opensearch
