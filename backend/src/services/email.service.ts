@@ -20,6 +20,11 @@ const transporter = nodemailer.createTransport({
     user: env.SMTP_USER,
     pass: env.SMTP_PASS,
   },
+  tls: {
+    // When connecting via K8s service (mailserver-external), validate cert
+    // against the actual mail domain so TLS hostname check passes
+    servername: 'mail.hireadda.in',
+  },
 });
 
 /**
