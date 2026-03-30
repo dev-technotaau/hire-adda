@@ -549,22 +549,17 @@ deploy_progressive() {
 
   local backend_completed=false
 
+  # Pause ArgoCD auto-sync to prevent it from resetting rollout state during deploy
+  log_info "Pausing ArgoCD auto-sync for hire-adda..."
+  $KUBECTL patch app hire-adda -n argocd --type merge \
+    -p '{"spec":{"syncPolicy":{"automated":null}}}' 2>/dev/null || true
+
   # Phase 1: Backend
   if [[ -n "$BACKEND_TAG" ]]; then
     log_info "Phase 1: Backend progressive rollout..."
     run_migrations "$BACKEND_TAG"
     ensure_rollout_active "backend" "canary"
-    # Image tag is already updated in git by the update-manifests job.
-    # ArgoCD syncs the new image from apps/backend/deployment.yaml.
-    # Only set image directly if ArgoCD hasn't picked it up yet.
-    local current_image
-    current_image=$($KUBECTL get rollout backend -n "$NAMESPACE" \
-      -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
-    if [[ "$current_image" != *"$BACKEND_TAG"* ]]; then
-      set_rollout_image "backend" "$BACKEND_TAG"
-    else
-      log_info "Backend already has image tag $BACKEND_TAG (synced by ArgoCD)"
-    fi
+    set_rollout_image "backend" "$BACKEND_TAG"
     wait_for_rollout "backend"
     backend_completed=true
   fi
@@ -574,14 +569,7 @@ deploy_progressive() {
   if [[ -n "$FRONTEND_TAG" ]]; then
     log_info "Phase 2: Frontend progressive rollout..."
     ensure_rollout_active "frontend" "canary"
-    local current_fe_image
-    current_fe_image=$($KUBECTL get rollout frontend -n "$NAMESPACE" \
-      -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
-    if [[ "$current_fe_image" != *"$FRONTEND_TAG"* ]]; then
-      set_rollout_image "frontend" "$FRONTEND_TAG"
-    else
-      log_info "Frontend already has image tag $FRONTEND_TAG (synced by ArgoCD)"
-    fi
+    set_rollout_image "frontend" "$FRONTEND_TAG"
 
     if ! wait_for_rollout "frontend"; then
       log_error "Frontend progressive rollout failed!"
@@ -602,6 +590,9 @@ deploy_progressive() {
         "${BACKEND_TAG:-$STATE_BACKEND_TAG}" \
         "${FRONTEND_TAG:-$STATE_FRONTEND_TAG}" \
         "0" "rollout"
+      # Re-enable ArgoCD auto-sync even on failure
+      $KUBECTL patch app hire-adda -n argocd --type merge \
+        -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}' 2>/dev/null || true
       exit 1
     fi
   fi
@@ -614,6 +605,11 @@ deploy_progressive() {
   grafana_annotate \
     "Deploy (progressive): backend=${BACKEND_TAG:-unchanged} frontend=${FRONTEND_TAG:-unchanged}" \
     '"deploy","progressive"'
+
+  # Re-enable ArgoCD auto-sync
+  log_info "Resuming ArgoCD auto-sync..."
+  $KUBECTL patch app hire-adda -n argocd --type merge \
+    -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}' 2>/dev/null || true
 
   log_success "Progressive deployment completed"
 }

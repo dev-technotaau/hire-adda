@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: rollout scaledown fix + deploy script + actions v6
+// Trigger CI/CD rebuild: ArgoCD pause during deploy + rollout fixes
 import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';

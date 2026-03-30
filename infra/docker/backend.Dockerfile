@@ -14,11 +14,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Sentry sourcemaps (token passed via --build-arg in CD workflow)
-ARG SENTRY_AUTH_TOKEN
-
-# Build TypeScript
-RUN npm run build
+# Build TypeScript (Sentry token mounted as secret, not baked into layer)
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
+    SENTRY_AUTH_TOKEN=$(cat /run/secrets/SENTRY_AUTH_TOKEN 2>/dev/null) \
+    npm run build
 
 # Remove dev dependencies after build
 RUN npm prune --omit=dev

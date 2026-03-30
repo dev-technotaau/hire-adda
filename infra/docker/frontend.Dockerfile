@@ -36,9 +36,10 @@ ARG NEXT_PUBLIC_R2_PUBLIC_URL
 ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
 ARG NEXT_PUBLIC_NOMINATIM_BASE_URL
 ARG NEXT_PUBLIC_RAZORPAY_KEY_ID
-ARG SENTRY_AUTH_TOKEN
-
-RUN npm run build
+# Sentry token mounted as secret, not baked into layer
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
+    SENTRY_AUTH_TOKEN=$(cat /run/secrets/SENTRY_AUTH_TOKEN 2>/dev/null) \
+    npm run build
 
 # Production Stage
 FROM node:22-alpine AS runner
