@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: ArgoCD-driven deploy, no rollout manipulation
+// Trigger CI/CD rebuild: 300s timeout for canary steps
 import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';

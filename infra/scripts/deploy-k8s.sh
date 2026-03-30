@@ -52,7 +52,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROLLOUT_DIR="${SCRIPT_DIR}/../k8s/cd"
 LOG_FILE="/var/log/hire-adda-deploy-k8s.log"
 
-ROLLOUT_TIMEOUT="120s"
+ROLLOUT_TIMEOUT="300s"
 MIGRATION_TIMEOUT="120s"
 
 # ── Colors ──

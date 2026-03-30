@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: ArgoCD-driven deploy, no rollout manipulation
+// Trigger CI/CD rebuild: 300s timeout for canary steps
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';
