@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: ArgoCD pause during deploy + rollout fixes
+// Trigger CI/CD rebuild: abort stale rollout before deploy
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';

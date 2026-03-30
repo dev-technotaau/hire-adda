@@ -559,6 +559,9 @@ deploy_progressive() {
     log_info "Phase 1: Backend progressive rollout..."
     run_migrations "$BACKEND_TAG"
     ensure_rollout_active "backend" "canary"
+    # Abort any stale in-progress rollout so set_rollout_image starts clean
+    $KUBECTL_ARGO abort backend -n "$NAMESPACE" 2>/dev/null || true
+    $KUBECTL_ARGO retry rollout backend -n "$NAMESPACE" 2>/dev/null || true
     set_rollout_image "backend" "$BACKEND_TAG"
     wait_for_rollout "backend"
     backend_completed=true
@@ -569,6 +572,8 @@ deploy_progressive() {
   if [[ -n "$FRONTEND_TAG" ]]; then
     log_info "Phase 2: Frontend progressive rollout..."
     ensure_rollout_active "frontend" "canary"
+    $KUBECTL_ARGO abort frontend -n "$NAMESPACE" 2>/dev/null || true
+    $KUBECTL_ARGO retry rollout frontend -n "$NAMESPACE" 2>/dev/null || true
     set_rollout_image "frontend" "$FRONTEND_TAG"
 
     if ! wait_for_rollout "frontend"; then
