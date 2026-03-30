@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: BIMI logo + vehicle types + deploy fixes
+// Trigger CI/CD rebuild: deploy script pod check fix
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';

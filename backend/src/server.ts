@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: BIMI logo + vehicle types + deploy fixes
+// Trigger CI/CD rebuild: deploy script pod check fix
 import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';

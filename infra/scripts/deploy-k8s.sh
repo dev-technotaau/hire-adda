@@ -405,8 +405,9 @@ wait_for_rollout() {
     if [[ "$elapsed" -gt 40 ]]; then
       local ready_with_tag
       ready_with_tag=$($KUBECTL get pods -n "$NAMESPACE" -l "app=$service" \
-        -o jsonpath="{range .items[*]}{.status.containerStatuses[0].ready} {.spec.containers[0].image}{'\n'}{end}" 2>/dev/null \
-        | grep "true.*${tag}" | wc -l || echo "0")
+        -o go-template='{{range .items}}{{if .status.containerStatuses}}{{index .status.containerStatuses 0 "ready"}} {{index .spec.containers 0 "image"}}{{"\n"}}{{end}}{{end}}' 2>/dev/null \
+        | grep -c "true.*${tag}" || echo "0")
+      ready_with_tag=$(echo "$ready_with_tag" | tr -d '[:space:]')
       if [[ "$ready_with_tag" -ge 2 ]]; then
         log_success "Rollout/$service: ${ready_with_tag} pods running with correct image (${tag:0:12})"
         # Force the rollout to Healthy by deleting and letting ArgoCD recreate
