@@ -76,6 +76,25 @@ export const EDUCATION_LEVEL_LABELS: Record<string, string> = {
   POST_DOCTORAL: 'Post Doctoral',
 };
 
+export const EDUCATION_BOARD_LABELS: Record<string, string> = {
+  CBSE: 'CBSE',
+  ICSE: 'ICSE',
+  ISC: 'ISC',
+  STATE_BOARD: 'State Board',
+  NIOS: 'NIOS',
+  IB: 'IB (International Baccalaureate)',
+  CAMBRIDGE: 'Cambridge (IGCSE)',
+  OTHER: 'Other',
+};
+
+export const TWELFTH_STREAM_LABELS: Record<string, string> = {
+  SCIENCE: 'Science',
+  COMMERCE: 'Commerce',
+  ARTS: 'Arts / Humanities',
+  VOCATIONAL: 'Vocational',
+  OTHER: 'Other',
+};
+
 export const SALARY_TYPE_LABELS: Record<string, string> = {
   ANNUAL: 'Per Year',
   MONTHLY: 'Per Month',
@@ -336,6 +355,71 @@ export const SPECIFIC_DEGREE_LABELS: Record<string, string> = {
   ANY_GRADUATE: 'Any Graduate',
   ANY_POSTGRADUATE: 'Any Post Graduate',
 };
+
+// Maps each education level to the specific degrees allowed at that level
+export const DEGREES_BY_EDUCATION_LEVEL: Record<string, string[]> = {
+  TENTH: [],
+  TWELFTH: [],
+  DIPLOMA: ['DIPLOMA_ENGINEERING'],
+  BACHELORS: [
+    'BTECH_BE',
+    'BCA',
+    'BSC',
+    'BCOM',
+    'BA',
+    'BBA',
+    'MBBS',
+    'LLB',
+    'BARCH',
+    'BDES',
+    'BPHARM',
+    'ANY_GRADUATE',
+  ],
+  MASTERS: [
+    'MCA',
+    'MSC',
+    'MCOM',
+    'MA',
+    'MBA_PGDM',
+    'MTECH_ME',
+    'MS',
+    'LLM',
+    'MD',
+    'CA',
+    'CS',
+    'ICWA',
+    'ANY_POSTGRADUATE',
+  ],
+  PHD: ['PHD'],
+  POST_DOCTORAL: ['PHD'],
+};
+
+// Ordered education levels (lowest to highest) for comparison
+export const EDUCATION_LEVEL_ORDER: string[] = [
+  'TENTH',
+  'TWELFTH',
+  'DIPLOMA',
+  'BACHELORS',
+  'MASTERS',
+  'PHD',
+  'POST_DOCTORAL',
+];
+
+// Returns filtered degree options based on education level
+export function getDegreesForLevel(level: string): { value: string; label: string }[] {
+  const allowed = DEGREES_BY_EDUCATION_LEVEL[level];
+  if (!allowed || allowed.length === 0) return [];
+  return allowed
+    .filter((key) => SPECIFIC_DEGREE_LABELS[key])
+    .map((key) => ({ value: key, label: SPECIFIC_DEGREE_LABELS[key] }));
+}
+
+// Returns education levels at or below the given highest level
+export function getLevelsAtOrBelow(highestLevel: string): string[] {
+  const idx = EDUCATION_LEVEL_ORDER.indexOf(highestLevel);
+  if (idx === -1) return [];
+  return EDUCATION_LEVEL_ORDER.slice(0, idx + 1);
+}
 
 export const GENDER_PREFERENCE_LABELS: Record<string, string> = {
   ANY: 'Any',

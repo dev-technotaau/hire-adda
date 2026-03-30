@@ -135,195 +135,246 @@ const referenceSchema = z.object({
 // --- Main profile update schema ---
 
 export const updateCandidateProfileSchema = z.object({
-  body: z.object({
-    // Personal & Identity
-    headline: z.string().max(200).optional(),
-    gender: z.nativeEnum(Gender, { error: 'Invalid gender' }).optional(),
-    dob: z.string().date().or(z.string().datetime()).optional(),
-    bio: z.string().max(2000).optional(),
-    maritalStatus: z.nativeEnum(MaritalStatus, { error: 'Invalid marital status' }).optional(),
-    nationality: z.string().max(50).optional(),
-    hometown: z.string().max(100).optional(),
-    pronouns: z.string().max(30).optional(),
-    category: z.enum(['GENERAL', 'SC', 'ST', 'OBC', 'EWS', 'PREFER_NOT_TO_SAY']).optional(),
+  body: z
+    .object({
+      // Personal & Identity
+      headline: z.string().max(200).optional(),
+      gender: z.nativeEnum(Gender, { error: 'Invalid gender' }).optional(),
+      dob: z.string().date().or(z.string().datetime()).optional(),
+      bio: z.string().max(2000).optional(),
+      maritalStatus: z.nativeEnum(MaritalStatus, { error: 'Invalid marital status' }).optional(),
+      nationality: z.string().max(50).optional(),
+      hometown: z.string().max(100).optional(),
+      pronouns: z.string().max(30).optional(),
+      category: z.enum(['GENERAL', 'SC', 'ST', 'OBC', 'EWS', 'PREFER_NOT_TO_SAY']).optional(),
 
-    // Address
-    addressLine1: z.string().max(200).optional(),
-    addressLine2: z.string().max(200).optional(),
-    city: z.string().max(100).optional(),
-    state: z.string().max(100).optional(),
-    pincode: z
-      .string()
-      .regex(/^\d{6}$/, 'Pincode must be 6 digits')
-      .optional()
-      .or(z.literal('')),
-    country: z.string().max(100).optional(),
+      // Address
+      addressLine1: z.string().max(200).optional(),
+      addressLine2: z.string().max(200).optional(),
+      city: z.string().max(100).optional(),
+      state: z.string().max(100).optional(),
+      pincode: z
+        .string()
+        .regex(/^\d{6}$/, 'Pincode must be 6 digits')
+        .optional()
+        .or(z.literal('')),
+      country: z.string().max(100).optional(),
 
-    // Contact & Location
-    currentLocation: z.string().optional(),
-    preferredLocations: z.array(z.string()).optional(),
-    phone: z.string().optional(),
-    alternatePhone: z.string().max(20).optional(),
-    alternateEmail: z.string().email().or(z.literal('')).optional(),
-    videoResumeUrl: z.string().url().or(z.literal('')).optional(),
+      // Contact & Location
+      currentLocation: z.string().optional(),
+      preferredLocations: z.array(z.string()).optional(),
+      phone: z.string().optional(),
+      alternatePhone: z.string().max(20).optional(),
+      alternateEmail: z.string().email().or(z.literal('')).optional(),
+      videoResumeUrl: z.string().url().or(z.literal('')).optional(),
 
-    // Professional
-    experienceYears: z.number().min(0).max(50).optional(),
-    totalExperienceMonths: z.number().int().min(0).max(600).optional(),
-    experienceLevel: z
-      .nativeEnum(ExperienceLevel, { error: 'Invalid experience level' })
-      .optional(),
-    currentCompany: z.string().optional(),
-    currentRole: z.string().optional(),
-    currentIndustry: z.string().optional(),
-    currentDepartment: z.string().optional(),
-    functionalArea: z.string().optional(),
-    hasCareerBreak: z.boolean().optional(),
-    careerBreakReason: z.string().max(500).optional(),
-    careerBreakType: z
-      .enum([
-        'HEALTH',
-        'FAMILY',
-        'HIGHER_EDUCATION',
-        'TRAVEL',
-        'LAYOFF',
-        'PERSONAL',
-        'CAREGIVING',
-        'CAREER_TRANSITION',
-        'OTHER',
-      ])
-      .optional(),
-    openToWork: z.enum(['ACTIVELY_LOOKING', 'OPEN_TO_OFFERS', 'NOT_LOOKING']).optional(),
+      // Professional
+      experienceYears: z.number().min(0).max(50).optional(),
+      totalExperienceMonths: z.number().int().min(0).max(600).optional(),
+      experienceLevel: z
+        .nativeEnum(ExperienceLevel, { error: 'Invalid experience level' })
+        .optional(),
+      currentCompany: z.string().optional(),
+      currentRole: z.string().optional(),
+      currentIndustry: z.string().optional(),
+      currentDepartment: z.string().optional(),
+      functionalArea: z.string().optional(),
+      hasCareerBreak: z.boolean().optional(),
+      careerBreakReason: z.string().max(500).optional(),
+      careerBreakType: z
+        .enum([
+          'HEALTH',
+          'FAMILY',
+          'HIGHER_EDUCATION',
+          'TRAVEL',
+          'LAYOFF',
+          'PERSONAL',
+          'CAREGIVING',
+          'CAREER_TRANSITION',
+          'OTHER',
+        ])
+        .optional(),
+      openToWork: z.enum(['ACTIVELY_LOOKING', 'OPEN_TO_OFFERS', 'NOT_LOOKING']).optional(),
 
-    // Salary
-    currSalary: z.coerce.number().min(0).optional(),
-    expectedSalaryMin: z.coerce.number().min(0).optional(),
-    expectedSalaryMax: z.coerce.number().min(0).optional(),
-    salaryCurrency: z.string().optional(),
+      // Salary
+      currSalary: z.coerce.number().min(0).optional(),
+      expectedSalaryMin: z.coerce.number().min(0).optional(),
+      expectedSalaryMax: z.coerce.number().min(0).optional(),
+      salaryCurrency: z.string().optional(),
 
-    // Career Preferences
-    noticePeriod: z.nativeEnum(NoticePeriod, { error: 'Invalid notice period' }).optional(),
-    servingNoticePeriod: z.boolean().optional(),
-    workStatus: z.nativeEnum(WorkStatus, { error: 'Invalid work status' }).optional(),
-    preferredJobType: z.array(z.nativeEnum(JobType, { error: 'Invalid job type' })).optional(),
-    preferredWorkMode: z.array(z.nativeEnum(WorkMode, { error: 'Invalid work mode' })).optional(),
-    preferredShift: z.nativeEnum(ShiftType, { error: 'Invalid shift type' }).optional(),
-    preferredIndustries: z.array(z.string()).optional(),
-    preferredRoleCategories: z.array(z.string()).optional(),
-    dateOfAvailability: z.string().date().or(z.string().datetime()).optional(),
-    willingToRelocate: z.boolean().optional(),
-    travelWillingnessPercent: z.number().int().min(0).max(100).optional(),
+      // Career Preferences
+      noticePeriod: z.nativeEnum(NoticePeriod, { error: 'Invalid notice period' }).optional(),
+      servingNoticePeriod: z.boolean().optional(),
+      workStatus: z.nativeEnum(WorkStatus, { error: 'Invalid work status' }).optional(),
+      preferredJobType: z.array(z.nativeEnum(JobType, { error: 'Invalid job type' })).optional(),
+      preferredWorkMode: z.array(z.nativeEnum(WorkMode, { error: 'Invalid work mode' })).optional(),
+      preferredShift: z.nativeEnum(ShiftType, { error: 'Invalid shift type' }).optional(),
+      preferredIndustries: z.array(z.string()).optional(),
+      preferredRoleCategories: z.array(z.string()).optional(),
+      dateOfAvailability: z.string().date().or(z.string().datetime()).optional(),
+      willingToRelocate: z.boolean().optional(),
+      travelWillingnessPercent: z.number().int().min(0).max(100).optional(),
 
-    // Disability
-    disabilityType: z.nativeEnum(DisabilityType, { error: 'Invalid disability type' }).optional(),
-    disabilityPercentage: z.number().int().min(0).max(100).optional(),
-    isPhysicallyChallenged: z.boolean().optional(),
+      // Disability
+      disabilityType: z.nativeEnum(DisabilityType, { error: 'Invalid disability type' }).optional(),
+      disabilityPercentage: z.number().int().min(0).max(100).optional(),
+      isPhysicallyChallenged: z.boolean().optional(),
 
-    // Education Level
-    highestEducationLevel: z
-      .nativeEnum(EducationLevel, { error: 'Invalid education level' })
-      .optional(),
-    highestDegree: z.nativeEnum(SpecificDegree, { error: 'Invalid degree' }).optional(),
+      // Education Level
+      highestEducationLevel: z
+        .nativeEnum(EducationLevel, { error: 'Invalid education level' })
+        .optional(),
+      highestDegree: z.nativeEnum(SpecificDegree, { error: 'Invalid degree' }).optional(),
 
-    // Skills & Education
-    skills: z.array(z.string()).optional(),
-    skillsWithProficiency: z.array(skillWithProficiencySchema).optional(),
-    languages: z.array(z.string()).optional(),
-    languageProficiency: z.array(languageProficiencySchema).optional(),
-    education: z
-      .array(
-        z.object({
-          degree: z.string(),
-          institution: z.string(),
-          field: z.string().optional(),
-          year: z.string().optional(),
-          startDate: z.string().optional(),
-          endDate: z.string().optional(),
-          grade: z.string().optional(),
-          description: z.string().optional(),
-          gradeType: z.enum(['PERCENTAGE', 'CGPA', 'GPA']).optional(),
-          courseType: z.enum(['FULL_TIME', 'PART_TIME', 'DISTANCE', 'CORRESPONDENCE']).optional(),
-          specialization: z.string().optional(),
-          activities: z.string().optional(),
+      // Skills & Education
+      skills: z.array(z.string()).optional(),
+      skillsWithProficiency: z.array(skillWithProficiencySchema).optional(),
+      languages: z.array(z.string()).optional(),
+      languageProficiency: z.array(languageProficiencySchema).optional(),
+      education: z
+        .array(
+          z.object({
+            educationLevel: z
+              .nativeEnum(EducationLevel, { error: 'Invalid education level' })
+              .optional(),
+            degree: z.string(),
+            institution: z.string(),
+            field: z.string().optional(),
+            year: z.string().optional(),
+            startDate: z.string().optional(),
+            endDate: z.string().optional(),
+            grade: z.string().optional(),
+            description: z.string().optional(),
+            gradeType: z.enum(['PERCENTAGE', 'CGPA', 'GPA']).optional(),
+            courseType: z.enum(['FULL_TIME', 'PART_TIME', 'DISTANCE', 'CORRESPONDENCE']).optional(),
+            specialization: z.string().optional(),
+            activities: z.string().optional(),
+          })
+        )
+        .optional(),
+      experience: z
+        .array(
+          z.object({
+            company: z.string(),
+            role: z.string(),
+            location: z.string().optional(),
+            startDate: z.string(),
+            endDate: z.string().optional(),
+            isCurrent: z.boolean().optional(),
+            description: z.string().optional(),
+            industry: z.string().optional(),
+            department: z.string().optional(),
+            employmentType: z.string().optional(),
+            keyAchievements: z.array(z.string()).optional(),
+            teamSize: z.number().min(0).optional(),
+            reportingTo: z.string().optional(),
+            annualCtc: z.number().min(0).optional(),
+          })
+        )
+        .optional(),
+
+      // Rich JSON fields
+      certifications: z.array(certificationSchema).optional(),
+      projects: z.array(projectSchema).optional(),
+      awards: z.array(awardSchema).optional(),
+      itSkills: z.array(itSkillSchema).optional(),
+      publications: z.array(publicationSchema).optional(),
+      patents: z.array(patentSchema).optional(),
+      volunteerExperience: z.array(volunteerExperienceSchema).optional(),
+      professionalMemberships: z.array(professionalMembershipSchema).optional(),
+      courses: z.array(courseSchema).optional(),
+      testScores: z.array(testScoreSchema).optional(),
+      references: z.array(referenceSchema).optional(),
+
+      // Documents & Background
+      visaStatus: z.string().max(100).optional(),
+      workPermitStatus: z.string().max(100).optional(),
+      passportNumber: z.string().max(20).optional(),
+      passportExpiryDate: z.string().date().or(z.string().datetime()).or(z.literal('')).optional(),
+      hasDrivingLicense: z.boolean().optional(),
+      drivingLicenseType: z
+        .nativeEnum(DrivingLicenseType, { error: 'Invalid driving license type' })
+        .optional(),
+      ownVehicle: z.boolean().optional(),
+      vehicleTypes: z
+        .array(z.nativeEnum(VehicleType, { error: 'Invalid vehicle type' }))
+        .optional(),
+      isVeteran: z.boolean().optional(),
+      blockedCompanies: z.array(z.string().max(200)).optional(),
+
+      // Interests & Hobbies
+      interests: z.array(z.string().max(100)).optional(),
+      hobbies: z.array(z.string().max(100)).optional(),
+
+      // Notification Preferences
+      notificationPreferences: z
+        .object({
+          emailNotifications: z.boolean().optional(),
+          smsNotifications: z.boolean().optional(),
+          whatsappNotifications: z.boolean().optional(),
+          inAppNotifications: z.boolean().optional(),
+          fcmNotifications: z.boolean().optional(),
+          webPushNotifications: z.boolean().optional(),
         })
-      )
-      .optional(),
-    experience: z
-      .array(
-        z.object({
-          company: z.string(),
-          role: z.string(),
-          location: z.string().optional(),
-          startDate: z.string(),
-          endDate: z.string().optional(),
-          isCurrent: z.boolean().optional(),
-          description: z.string().optional(),
-          industry: z.string().optional(),
-          department: z.string().optional(),
-          employmentType: z.string().optional(),
-          keyAchievements: z.array(z.string()).optional(),
-          teamSize: z.number().min(0).optional(),
-          reportingTo: z.string().optional(),
-          annualCtc: z.number().min(0).optional(),
-        })
-      )
-      .optional(),
+        .optional(),
 
-    // Rich JSON fields
-    certifications: z.array(certificationSchema).optional(),
-    projects: z.array(projectSchema).optional(),
-    awards: z.array(awardSchema).optional(),
-    itSkills: z.array(itSkillSchema).optional(),
-    publications: z.array(publicationSchema).optional(),
-    patents: z.array(patentSchema).optional(),
-    volunteerExperience: z.array(volunteerExperienceSchema).optional(),
-    professionalMemberships: z.array(professionalMembershipSchema).optional(),
-    courses: z.array(courseSchema).optional(),
-    testScores: z.array(testScoreSchema).optional(),
-    references: z.array(referenceSchema).optional(),
-
-    // Documents & Background
-    visaStatus: z.string().max(100).optional(),
-    workPermitStatus: z.string().max(100).optional(),
-    passportNumber: z.string().max(20).optional(),
-    passportExpiryDate: z.string().date().or(z.string().datetime()).or(z.literal('')).optional(),
-    hasDrivingLicense: z.boolean().optional(),
-    drivingLicenseType: z
-      .nativeEnum(DrivingLicenseType, { error: 'Invalid driving license type' })
-      .optional(),
-    ownVehicle: z.boolean().optional(),
-    vehicleTypes: z.array(z.nativeEnum(VehicleType, { error: 'Invalid vehicle type' })).optional(),
-    isVeteran: z.boolean().optional(),
-    blockedCompanies: z.array(z.string().max(200)).optional(),
-
-    // Interests & Hobbies
-    interests: z.array(z.string().max(100)).optional(),
-    hobbies: z.array(z.string().max(100)).optional(),
-
-    // Notification Preferences
-    notificationPreferences: z
-      .object({
-        emailNotifications: z.boolean().optional(),
-        smsNotifications: z.boolean().optional(),
-        whatsappNotifications: z.boolean().optional(),
-        inAppNotifications: z.boolean().optional(),
-        fcmNotifications: z.boolean().optional(),
-        webPushNotifications: z.boolean().optional(),
-      })
-      .optional(),
-
-    // Social Profiles
-    githubProfile: z.string().url().optional().or(z.literal('')),
-    linkedinProfile: z.string().url().optional().or(z.literal('')),
-    portfolioUrl: z.string().url().optional().or(z.literal('')),
-    stackOverflowProfile: z.string().url().optional().or(z.literal('')),
-    twitterProfile: z.string().url().optional().or(z.literal('')),
-    personalBlogUrl: z.string().url().optional().or(z.literal('')),
-    dribbbleProfile: z.string().url().or(z.literal('')).optional(),
-    behanceProfile: z.string().url().or(z.literal('')).optional(),
-    mediumProfile: z.string().url().or(z.literal('')).optional(),
-    youtubeChannel: z.string().url().or(z.literal('')).optional(),
-  }),
+      // Social Profiles
+      githubProfile: z.string().url().optional().or(z.literal('')),
+      linkedinProfile: z.string().url().optional().or(z.literal('')),
+      portfolioUrl: z.string().url().optional().or(z.literal('')),
+      stackOverflowProfile: z.string().url().optional().or(z.literal('')),
+      twitterProfile: z.string().url().optional().or(z.literal('')),
+      personalBlogUrl: z.string().url().optional().or(z.literal('')),
+      dribbbleProfile: z.string().url().or(z.literal('')).optional(),
+      behanceProfile: z.string().url().or(z.literal('')).optional(),
+      mediumProfile: z.string().url().or(z.literal('')).optional(),
+      youtubeChannel: z.string().url().or(z.literal('')).optional(),
+    })
+    .refine(
+      (data) => {
+        if (!data.highestEducationLevel || !data.highestDegree) return true;
+        const DEGREES_BY_LEVEL: Record<string, string[]> = {
+          TENTH: [],
+          TWELFTH: [],
+          DIPLOMA: ['DIPLOMA_ENGINEERING'],
+          BACHELORS: [
+            'BTECH_BE',
+            'BCA',
+            'BSC',
+            'BCOM',
+            'BA',
+            'BBA',
+            'MBBS',
+            'LLB',
+            'BARCH',
+            'BDES',
+            'BPHARM',
+            'ANY_GRADUATE',
+          ],
+          MASTERS: [
+            'MCA',
+            'MSC',
+            'MCOM',
+            'MA',
+            'MBA_PGDM',
+            'MTECH_ME',
+            'MS',
+            'LLM',
+            'MD',
+            'CA',
+            'CS',
+            'ICWA',
+            'ANY_POSTGRADUATE',
+          ],
+          PHD: ['PHD'],
+          POST_DOCTORAL: ['PHD'],
+        };
+        const allowed = DEGREES_BY_LEVEL[data.highestEducationLevel] || [];
+        if (allowed.length === 0) return true; // TENTH/TWELFTH have no degrees
+        return allowed.includes(data.highestDegree);
+      },
+      { message: 'Selected degree does not match the education level' }
+    ),
 });
 
 export type UpdateCandidateProfileInput = z.infer<typeof updateCandidateProfileSchema>['body'];

@@ -177,6 +177,7 @@ export interface CandidateProfile {
 }
 
 export interface EducationEntry {
+  educationLevel?: string;
   institution: string;
   degree: string;
   field: string;

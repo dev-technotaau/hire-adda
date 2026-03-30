@@ -37,6 +37,10 @@ import {
   SPECIFIC_DEGREE_LABELS,
   WORK_MODE_LABELS,
   WORK_STATUS_LABELS,
+  EDUCATION_BOARD_LABELS,
+  TWELFTH_STREAM_LABELS,
+  getDegreesForLevel,
+  getLevelsAtOrBelow,
 } from '@/constants/enums';
 import { ROUTES } from '@/constants/routes';
 import { INDIAN_STATES, VISA_STATUS_OPTIONS } from '@/constants/suggestions';
@@ -389,6 +393,8 @@ const DISABILITY_TYPE_OPTIONS = toSelectOptions(DISABILITY_TYPE_LABELS);
 const CAREER_BREAK_OPTIONS = toSelectOptions(CAREER_BREAK_TYPE_LABELS);
 const CATEGORY_OPTIONS = toSelectOptions(RESERVATION_CATEGORY_LABELS);
 const COURSE_TYPE_OPTIONS = toSelectOptions(COURSE_TYPE_LABELS);
+const BOARD_OPTIONS = toSelectOptions(EDUCATION_BOARD_LABELS);
+const STREAM_OPTIONS = toSelectOptions(TWELFTH_STREAM_LABELS);
 const OPEN_TO_WORK_OPTIONS = toSelectOptions(OPEN_TO_WORK_LABELS);
 const PATENT_STATUS_OPTIONS = toSelectOptions(PATENT_STATUS_LABELS);
 const GRADE_TYPE_OPTIONS = toSelectOptions(GRADE_TYPE_LABELS);
@@ -411,7 +417,15 @@ function emptyExperience(): ExperienceEntry {
 }
 
 function emptyEducation(): EducationEntry {
-  return { institution: '', degree: '', field: '', startDate: '', endDate: '', grade: '' };
+  return {
+    educationLevel: '',
+    institution: '',
+    degree: '',
+    field: '',
+    startDate: '',
+    endDate: '',
+    grade: '',
+  };
 }
 
 function emptyCertification(): CertificationEntry {
@@ -664,10 +678,21 @@ export default function CandidateOnboardingPage() {
         if (!data.workStatus) return 'Please select your work status';
         return null;
       case 'education':
+        if (!data.highestEducationLevel) return 'Please select your highest education level';
+        if (getDegreesForLevel(data.highestEducationLevel).length > 0 && !data.highestDegree)
+          return 'Please select your highest degree';
         if (data.education.length === 0) return 'Please add at least one education entry';
         for (const edu of data.education) {
-          if (!edu.institution.trim() || !edu.degree.trim() || !edu.field.trim()) {
-            return 'Please fill in all required education fields';
+          if (!edu.educationLevel) return 'Please select education level for each entry';
+          if (!edu.institution.trim() || !edu.degree.trim()) {
+            return 'Please fill in institution and degree for each entry';
+          }
+          if (
+            edu.educationLevel !== 'TENTH' &&
+            edu.educationLevel !== 'TWELFTH' &&
+            !edu.field.trim()
+          ) {
+            return 'Please fill in field of study for diploma and above';
           }
         }
         return null;
@@ -2052,15 +2077,34 @@ export default function CandidateOnboardingPage() {
               label="Highest Education Level"
               options={EDUCATION_LEVEL_OPTIONS}
               value={data.highestEducationLevel}
-              onChange={(val) => updateData({ highestEducationLevel: val })}
+              onChange={(val) => {
+                const degreeOptions = getDegreesForLevel(val as string);
+                const currentDegreeValid = degreeOptions.some(
+                  (d) => d.value === data.highestDegree,
+                );
+                updateData({
+                  highestEducationLevel: val,
+                  highestDegree: currentDegreeValid ? data.highestDegree : '',
+                });
+              }}
               placeholder="Select level"
             />
             <Select
               label="Highest Degree"
-              options={SPECIFIC_DEGREE_OPTIONS}
+              options={getDegreesForLevel(data.highestEducationLevel)}
               value={data.highestDegree}
               onChange={(val) => updateData({ highestDegree: val })}
-              placeholder="Select degree"
+              placeholder={
+                !data.highestEducationLevel
+                  ? 'Select education level first'
+                  : getDegreesForLevel(data.highestEducationLevel).length === 0
+                    ? 'Not applicable for this level'
+                    : 'Select degree'
+              }
+              disabled={
+                !data.highestEducationLevel ||
+                getDegreesForLevel(data.highestEducationLevel).length === 0
+              }
             />
           </div>
 
@@ -2085,9 +2129,40 @@ export default function CandidateOnboardingPage() {
                 </Tooltip>
               </div>
 
+              <Select
+                label="Education Level"
+                options={
+                  data.highestEducationLevel
+                    ? getLevelsAtOrBelow(data.highestEducationLevel).map((l) => ({
+                        value: l,
+                        label: EDUCATION_LEVEL_LABELS[l] || l,
+                      }))
+                    : EDUCATION_LEVEL_OPTIONS
+                }
+                value={edu.educationLevel || ''}
+                onChange={(val) =>
+                  updateEducation(i, {
+                    educationLevel: val as string,
+                    degree:
+                      val === 'TENTH'
+                        ? '10th Standard'
+                        : val === 'TWELFTH'
+                          ? '12th Standard'
+                          : edu.degree,
+                    field: val === 'TENTH' || val === 'TWELFTH' ? edu.field : edu.field,
+                  })
+                }
+                placeholder="Select education level for this entry"
+                required
+              />
+
               <ServerSuggestionInput
                 label="Institution"
-                placeholder="e.g. IIT Bombay"
+                placeholder={
+                  edu.educationLevel === 'TENTH' || edu.educationLevel === 'TWELFTH'
+                    ? 'e.g. Delhi Public School'
+                    : 'e.g. IIT Bombay'
+                }
                 value={edu.institution}
                 onChange={(val) => updateEducation(i, { institution: val })}
                 category="institution"
@@ -2095,42 +2170,74 @@ export default function CandidateOnboardingPage() {
               />
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <ServerSuggestionInput
-                  label="Degree"
-                  placeholder="e.g. B.Tech"
-                  value={edu.degree}
-                  onChange={(val) => updateEducation(i, { degree: val })}
-                  category="degree"
-                  required
-                />
-                <ServerSuggestionInput
-                  label="Field of Study"
-                  placeholder="e.g. Computer Science"
-                  value={edu.field}
-                  onChange={(val) => updateEducation(i, { field: val })}
-                  category="field_of_study"
-                  required
-                />
+                {edu.educationLevel === 'TENTH' || edu.educationLevel === 'TWELFTH' ? (
+                  <Select
+                    label="Board"
+                    options={BOARD_OPTIONS}
+                    value={edu.degree}
+                    onChange={(val) => updateEducation(i, { degree: val as string })}
+                    placeholder="Select board"
+                    required
+                  />
+                ) : (
+                  <ServerSuggestionInput
+                    label="Degree"
+                    placeholder="e.g. B.Tech"
+                    value={edu.degree}
+                    onChange={(val) => updateEducation(i, { degree: val })}
+                    category="degree"
+                    required
+                  />
+                )}
+                {edu.educationLevel === 'TENTH' ? (
+                  <Select
+                    label="Medium"
+                    options={STREAM_OPTIONS}
+                    value={edu.field}
+                    onChange={(val) => updateEducation(i, { field: val as string })}
+                    placeholder="Select medium (optional)"
+                  />
+                ) : edu.educationLevel === 'TWELFTH' ? (
+                  <Select
+                    label="Stream"
+                    options={STREAM_OPTIONS}
+                    value={edu.field}
+                    onChange={(val) => updateEducation(i, { field: val as string })}
+                    placeholder="Select stream"
+                    required
+                  />
+                ) : (
+                  <ServerSuggestionInput
+                    label="Field of Study"
+                    placeholder="e.g. Computer Science"
+                    value={edu.field}
+                    onChange={(val) => updateEducation(i, { field: val })}
+                    category="field_of_study"
+                    required
+                  />
+                )}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Select
-                  label="Course Type"
-                  options={COURSE_TYPE_OPTIONS}
-                  value={edu.courseType || ''}
-                  onChange={(val) =>
-                    updateEducation(i, { courseType: val as EducationEntry['courseType'] })
-                  }
-                  placeholder="Select course type"
-                />
-                <ServerSuggestionInput
-                  category="field_of_study"
-                  label="Specialization"
-                  placeholder="e.g. Data Science"
-                  value={edu.specialization || ''}
-                  onChange={(val) => updateEducation(i, { specialization: val })}
-                />
-              </div>
+              {edu.educationLevel !== 'TENTH' && edu.educationLevel !== 'TWELFTH' && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Select
+                    label="Course Type"
+                    options={COURSE_TYPE_OPTIONS}
+                    value={edu.courseType || ''}
+                    onChange={(val) =>
+                      updateEducation(i, { courseType: val as EducationEntry['courseType'] })
+                    }
+                    placeholder="Select course type"
+                  />
+                  <ServerSuggestionInput
+                    category="field_of_study"
+                    label="Specialization"
+                    placeholder="e.g. Data Science"
+                    value={edu.specialization || ''}
+                    onChange={(val) => updateEducation(i, { specialization: val })}
+                  />
+                </div>
+              )}
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <DatePicker
@@ -4228,7 +4335,9 @@ export default function CandidateOnboardingPage() {
               <div className="mt-2 space-y-1">
                 {data.education.map((edu, i) => (
                   <p key={i} className="text-xs text-[var(--text-secondary)]">
-                    {edu.degree} in {edu.field} from {edu.institution}
+                    {edu.educationLevel ? EDUCATION_LEVEL_LABELS[edu.educationLevel] + ': ' : ''}
+                    {edu.degree}
+                    {edu.field ? ` in ${edu.field}` : ''} from {edu.institution}
                   </p>
                 ))}
               </div>

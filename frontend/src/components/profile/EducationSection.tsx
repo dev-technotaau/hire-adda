@@ -13,6 +13,10 @@ import {
   GRADE_TYPE_LABELS,
   EDUCATION_LEVEL_LABELS,
   SPECIFIC_DEGREE_LABELS,
+  EDUCATION_BOARD_LABELS,
+  TWELFTH_STREAM_LABELS,
+  getDegreesForLevel,
+  getLevelsAtOrBelow,
 } from '@/constants/enums';
 import type { ProfileSectionProps } from './types';
 import type { EducationEntry, UpdateCandidateRequest } from '@/types/candidate';
@@ -23,7 +27,13 @@ function toSelectOptions(labels: Record<string, string>): SelectOption[] {
 
 export default function EducationSection({ form, updateField }: ProfileSectionProps) {
   const addEducation = () => {
-    const newEd: EducationEntry = { institution: '', degree: '', field: '', startDate: '' };
+    const newEd: EducationEntry = {
+      educationLevel: '',
+      institution: '',
+      degree: '',
+      field: '',
+      startDate: '',
+    };
     updateField('education', [...(form.education || []), newEd]);
   };
 
@@ -45,7 +55,12 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
       header={
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--text)]">Education</h2>
-          <Button size="sm" variant="outline" onClick={addEducation} tooltip="Add a new education entry">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={addEducation}
+            tooltip="Add a new education entry"
+          >
             <Plus className="mr-1 h-4 w-4" /> Add
           </Button>
         </div>
@@ -58,22 +73,38 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
             label="Highest Education Level"
             options={toSelectOptions(EDUCATION_LEVEL_LABELS)}
             value={form.highestEducationLevel || ''}
-            onChange={(v) =>
+            onChange={(v) => {
+              const level = v as string;
+              const degreeOptions = getDegreesForLevel(level);
+              const currentDegreeValid = degreeOptions.some((d) => d.value === form.highestDegree);
               updateField(
                 'highestEducationLevel',
-                v as UpdateCandidateRequest['highestEducationLevel'],
-              )
-            }
+                level as UpdateCandidateRequest['highestEducationLevel'],
+              );
+              if (!currentDegreeValid) {
+                updateField('highestDegree', undefined);
+              }
+            }}
             placeholder="Select level"
           />
           <Select
             label="Highest Degree"
-            options={toSelectOptions(SPECIFIC_DEGREE_LABELS)}
+            options={getDegreesForLevel(form.highestEducationLevel || '')}
             value={form.highestDegree || ''}
             onChange={(v) =>
               updateField('highestDegree', v as UpdateCandidateRequest['highestDegree'])
             }
-            placeholder="Select degree"
+            placeholder={
+              !form.highestEducationLevel
+                ? 'Select education level first'
+                : getDegreesForLevel(form.highestEducationLevel).length === 0
+                  ? 'Not applicable for this level'
+                  : 'Select degree'
+            }
+            disabled={
+              !form.highestEducationLevel ||
+              getDegreesForLevel(form.highestEducationLevel).length === 0
+            }
           />
         </div>
 
@@ -95,30 +126,83 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
                   </button>
                 </Tooltip>
               </div>
+              <Select
+                label="Education Level"
+                options={
+                  form.highestEducationLevel
+                    ? getLevelsAtOrBelow(form.highestEducationLevel).map((l) => ({
+                        value: l,
+                        label: EDUCATION_LEVEL_LABELS[l] || l,
+                      }))
+                    : toSelectOptions(EDUCATION_LEVEL_LABELS)
+                }
+                value={edu.educationLevel || ''}
+                onChange={(v) => {
+                  const level = v as string;
+                  updateEducation(i, {
+                    educationLevel: level,
+                    degree:
+                      level === 'TENTH'
+                        ? '10th Standard'
+                        : level === 'TWELFTH'
+                          ? '12th Standard'
+                          : edu.degree,
+                  });
+                }}
+                placeholder="Select education level"
+              />
+              <ServerSuggestionInput
+                category="institution"
+                label="Institution"
+                value={edu.institution}
+                onChange={(val) => updateEducation(i, { institution: val })}
+                required
+              />
               <div className="grid gap-3 sm:grid-cols-2">
-                <ServerSuggestionInput
-                  category="institution"
-                  label="Institution"
-                  value={edu.institution}
-                  onChange={(val) => updateEducation(i, { institution: val })}
-                  required
-                />
-                <ServerSuggestionInput
-                  category="degree"
-                  label="Degree"
-                  value={edu.degree}
-                  onChange={(val) => updateEducation(i, { degree: val })}
-                  required
-                />
+                {edu.educationLevel === 'TENTH' || edu.educationLevel === 'TWELFTH' ? (
+                  <Select
+                    label="Board"
+                    options={toSelectOptions(EDUCATION_BOARD_LABELS)}
+                    value={edu.degree}
+                    onChange={(val) => updateEducation(i, { degree: val as string })}
+                    placeholder="Select board"
+                  />
+                ) : (
+                  <ServerSuggestionInput
+                    category="degree"
+                    label="Degree"
+                    value={edu.degree}
+                    onChange={(val) => updateEducation(i, { degree: val })}
+                    required
+                  />
+                )}
+                {edu.educationLevel === 'TENTH' ? (
+                  <Select
+                    label="Medium"
+                    options={toSelectOptions(TWELFTH_STREAM_LABELS)}
+                    value={edu.field}
+                    onChange={(val) => updateEducation(i, { field: val as string })}
+                    placeholder="Select medium (optional)"
+                  />
+                ) : edu.educationLevel === 'TWELFTH' ? (
+                  <Select
+                    label="Stream"
+                    options={toSelectOptions(TWELFTH_STREAM_LABELS)}
+                    value={edu.field}
+                    onChange={(val) => updateEducation(i, { field: val as string })}
+                    placeholder="Select stream"
+                  />
+                ) : (
+                  <ServerSuggestionInput
+                    category="field_of_study"
+                    label="Field of Study"
+                    value={edu.field}
+                    onChange={(val) => updateEducation(i, { field: val })}
+                    required
+                  />
+                )}
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <ServerSuggestionInput
-                  category="field_of_study"
-                  label="Field of Study"
-                  value={edu.field}
-                  onChange={(val) => updateEducation(i, { field: val })}
-                  required
-                />
+              <div className="grid gap-3 sm:grid-cols-2">
                 <DatePicker
                   label="Start Date"
                   mode="month"
@@ -133,34 +217,36 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
                   onChange={(val) => updateEducation(i, { endDate: val })}
                 />
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Select
-                  label="Course Type"
-                  options={toSelectOptions(COURSE_TYPE_LABELS)}
-                  value={edu.courseType || ''}
-                  onChange={(v) =>
-                    updateEducation(i, { courseType: v as EducationEntry['courseType'] })
-                  }
-                  placeholder="Select type"
-                />
-                <ServerSuggestionInput
-                  category="field_of_study"
-                  label="Specialization"
-                  value={edu.specialization || ''}
-                  onChange={(v) => updateEducation(i, { specialization: v })}
-                  onSelect={(v) => updateEducation(i, { specialization: v })}
-                  placeholder="e.g. Machine Learning"
-                />
-                <Select
-                  label="Grade Type"
-                  options={toSelectOptions(GRADE_TYPE_LABELS)}
-                  value={edu.gradeType || ''}
-                  onChange={(v) =>
-                    updateEducation(i, { gradeType: v as EducationEntry['gradeType'] })
-                  }
-                  placeholder="Select type"
-                />
-              </div>
+              {edu.educationLevel !== 'TENTH' && edu.educationLevel !== 'TWELFTH' && (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Select
+                    label="Course Type"
+                    options={toSelectOptions(COURSE_TYPE_LABELS)}
+                    value={edu.courseType || ''}
+                    onChange={(v) =>
+                      updateEducation(i, { courseType: v as EducationEntry['courseType'] })
+                    }
+                    placeholder="Select type"
+                  />
+                  <ServerSuggestionInput
+                    category="field_of_study"
+                    label="Specialization"
+                    value={edu.specialization || ''}
+                    onChange={(v) => updateEducation(i, { specialization: v })}
+                    onSelect={(v) => updateEducation(i, { specialization: v })}
+                    placeholder="e.g. Machine Learning"
+                  />
+                  <Select
+                    label="Grade Type"
+                    options={toSelectOptions(GRADE_TYPE_LABELS)}
+                    value={edu.gradeType || ''}
+                    onChange={(v) =>
+                      updateEducation(i, { gradeType: v as EducationEntry['gradeType'] })
+                    }
+                    placeholder="Select type"
+                  />
+                </div>
+              )}
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input
                   label="Grade/GPA"
