@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: canary rollout strategy + resource optimization
+// Trigger CI/CD rebuild: vehicle types feature + deploy script auto-promote fix
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';

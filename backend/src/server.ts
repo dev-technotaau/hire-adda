@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: canary rollout strategy + resource optimization
+// Trigger CI/CD rebuild: vehicle types feature + deploy script auto-promote fix
 import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';

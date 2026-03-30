@@ -376,6 +376,7 @@ wait_for_rollout() {
   local max_wait="${ROLLOUT_TIMEOUT%s}"  # strip 's' suffix → seconds
   local elapsed=0
   local poll_interval=10
+  local promoted="false"
 
   if [[ "$DRY_RUN" == "true" ]]; then
     log_info "[DRY RUN] Would wait for Rollout/$service to complete"
@@ -414,18 +415,16 @@ wait_for_rollout() {
       return 1
     fi
 
-    # If new pods are Running and Ready, auto-promote to skip canary analysis steps
-    local updated_ready
-    updated_ready=$($KUBECTL get rollout "$service" -n "$NAMESPACE" \
-      -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
-    local desired
-    desired=$($KUBECTL get rollout "$service" -n "$NAMESPACE" \
-      -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "2")
-
-    if [[ "$updated_ready" -ge "$desired" ]] && [[ "$elapsed" -gt 30 ]]; then
-      # All pods ready — promote to skip remaining canary steps
-      log_info "All $service pods ready — auto-promoting to complete rollout"
-      $KUBECTL_ARGO promote "$service" -n "$NAMESPACE" --full 2>/dev/null || true
+    # Auto-promote once when new pods are ready (skip canary analysis steps)
+    if [[ "$promoted" != "true" ]] && [[ "$elapsed" -gt 30 ]]; then
+      local updated_ready
+      updated_ready=$($KUBECTL get rollout "$service" -n "$NAMESPACE" \
+        -o jsonpath='{.status.updatedReplicas}' 2>/dev/null || echo "0")
+      if [[ -n "$updated_ready" ]] && [[ "$updated_ready" -gt 0 ]]; then
+        log_info "New $service pods running — auto-promoting to complete rollout"
+        $KUBECTL_ARGO promote "$service" -n "$NAMESPACE" --full 2>/dev/null || true
+        promoted="true"
+      fi
     fi
 
     sleep "$poll_interval"
@@ -938,8 +937,8 @@ ensure_required_resources() {
   for f in "${cd_dir}"/rollout.yaml "${cd_dir}"/frontend-rollout.yaml; do
     if [[ -f "$f" ]]; then
       log_info "Applying AnalysisTemplates from $(basename "$f")..."
-      # Extract only AnalysisTemplate documents, skip the Rollout document
-      awk '/^---/{doc++} doc>0 && /kind: AnalysisTemplate/{found=1} found{print} /^---/{found=0}' "$f" \
+      # Extract only AnalysisTemplate documents (skip the Rollout document)
+      awk 'BEGIN{skip=1} /^---/{skip=1; buf=""} /kind: AnalysisTemplate/{skip=0} {if(!skip) print}' "$f" \
         | $KUBECTL apply -f - 2>&1 | sed 's/^/  /' || true
     fi
   done
