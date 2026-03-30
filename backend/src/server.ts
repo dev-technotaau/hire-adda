@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: vehicle types + deploy script ArgoCD sync fix
+// Trigger CI/CD rebuild: rollout scaledown fix + deploy script + actions v6
 import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';

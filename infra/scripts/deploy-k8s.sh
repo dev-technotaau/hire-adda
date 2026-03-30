@@ -52,7 +52,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROLLOUT_DIR="${SCRIPT_DIR}/../k8s/cd"
 LOG_FILE="/var/log/hire-adda-deploy-k8s.log"
 
-ROLLOUT_TIMEOUT="600s"
+ROLLOUT_TIMEOUT="120s"
 MIGRATION_TIMEOUT="120s"
 
 # ── Colors ──
@@ -394,16 +394,14 @@ wait_for_rollout() {
       return 1
     fi
 
-    # Auto-promote once when new pods are ready (skip canary analysis steps)
-    if [[ "$promoted" != "true" ]] && [[ "$elapsed" -gt 30 ]]; then
-      local updated_ready
-      updated_ready=$($KUBECTL get rollout "$service" -n "$NAMESPACE" \
-        -o jsonpath='{.status.updatedReplicas}' 2>/dev/null || echo "0")
-      if [[ -n "$updated_ready" ]] && [[ "$updated_ready" -gt 0 ]]; then
-        log_info "New $service pods running — auto-promoting to complete rollout"
-        $KUBECTL_ARGO promote "$service" -n "$NAMESPACE" --full 2>/dev/null || true
-        promoted="true"
-      fi
+    # Auto-promote once to skip canary analysis steps.
+    # Promote if rollout is Progressing and either:
+    #   - new pods exist (updatedReplicas > 0), or
+    #   - rollout has been progressing for 30s+ (ArgoCD may have already updated)
+    if [[ "$promoted" != "true" ]] && [[ "$elapsed" -gt 20 ]]; then
+      log_info "Auto-promoting $service to complete rollout"
+      $KUBECTL_ARGO promote "$service" -n "$NAMESPACE" --full 2>/dev/null || true
+      promoted="true"
     fi
 
     sleep "$poll_interval"

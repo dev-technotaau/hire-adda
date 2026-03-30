@@ -21,7 +21,8 @@ metadata:
     tier: app
 spec:
   replicas: 2
-  revisionHistoryLimit: 5
+  revisionHistoryLimit: 2
+  progressDeadlineSeconds: 300
   selector:
     matchLabels:
       app: backend
@@ -106,6 +107,7 @@ spec:
     canary:
       canaryService: backend-canary
       stableService: backend
+      scaleDownDelaySeconds: 0
       trafficRouting:
         nginx:
           stableIngress: api-ingress
