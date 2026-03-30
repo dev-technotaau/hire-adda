@@ -35,7 +35,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: backend
-          image: ghcr.io/dev-technotaau/hire-adda-backend:6736804ad9cc4a9049de0e8ffd0f823521c54a48
+          image: ghcr.io/dev-technotaau/hire-adda-backend:3bdb0d4ddcbd0848d4cf675717062072bece5b16
           imagePullPolicy: Always
           ports:
             - name: http
