@@ -352,6 +352,12 @@ export const DRIVING_LICENSE_TYPE_LABELS: Record<string, string> = {
   HEAVY_VEHICLE: 'Heavy Vehicle',
 };
 
+export const VEHICLE_TYPE_LABELS: Record<string, string> = {
+  BIKE: 'Motorcycle / Bike',
+  CAR: 'Car',
+  SCOOTER: 'Scooter / Moped',
+};
+
 export const POSTING_VISIBILITY_LABELS: Record<string, string> = {
   PUBLIC: 'Public',
   INTERNAL: 'Internal Only',

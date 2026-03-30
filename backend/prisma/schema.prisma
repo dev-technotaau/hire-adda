@@ -455,6 +455,12 @@ enum DrivingLicenseType {
   HEAVY_VEHICLE
 }
 
+enum VehicleType {
+  BIKE
+  CAR
+  SCOOTER
+}
+
 enum PostingVisibility {
   PUBLIC
   INTERNAL
@@ -597,6 +603,7 @@ model CandidateProfile {
   hasDrivingLicense  Boolean             @default(false)
   drivingLicenseType DrivingLicenseType? @default(NONE) // Matches JobPost.drivingLicenseRequired
   ownVehicle         Boolean             @default(false)
+  vehicleTypes       VehicleType[]       @default([])
   isVeteran          Boolean             @default(false)
   blockedCompanies   String[]            @default([])
 

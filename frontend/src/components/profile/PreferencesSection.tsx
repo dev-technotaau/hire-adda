@@ -13,6 +13,7 @@ import {
   SHIFT_TYPE_LABELS,
   DISABILITY_TYPE_LABELS,
   DRIVING_LICENSE_TYPE_LABELS,
+  VEHICLE_TYPE_LABELS,
 } from '@/constants/enums';
 import { VISA_STATUS_OPTIONS } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
@@ -250,11 +251,28 @@ export default function PreferencesSection({ form, updateField }: ProfileSection
               <input
                 type="checkbox"
                 checked={form.ownVehicle || false}
-                onChange={(e) => updateField('ownVehicle', e.target.checked)}
+                onChange={(e) => {
+                  updateField('ownVehicle', e.target.checked);
+                  if (!e.target.checked) updateField('vehicleTypes', []);
+                }}
                 className="text-primary h-4 w-4 rounded border-[var(--border)]"
               />
               <span className="text-sm text-[var(--text)]">Own Vehicle</span>
             </label>
+            {form.ownVehicle && (
+              <div className="ml-7">
+                <Select
+                  label="Vehicle Type(s)"
+                  options={toSelectOptions(VEHICLE_TYPE_LABELS)}
+                  value={form.vehicleTypes || []}
+                  onChange={(v) =>
+                    updateField('vehicleTypes', v as UpdateCandidateRequest['vehicleTypes'])
+                  }
+                  multiple
+                  placeholder="Select vehicle types"
+                />
+              </div>
+            )}
             <label className="flex items-center gap-3">
               <input
                 type="checkbox"

@@ -41,6 +41,7 @@ export type ReservationCategory = 'GENERAL' | 'SC' | 'ST' | 'OBC' | 'EWS' | 'PRE
 export type CourseType = 'FULL_TIME' | 'PART_TIME' | 'DISTANCE' | 'CORRESPONDENCE';
 export type LanguageReadWrite = 'READ' | 'WRITE' | 'SPEAK' | 'READ_WRITE' | 'READ_WRITE_SPEAK';
 export type OpenToWorkStatus = 'ACTIVELY_LOOKING' | 'OPEN_TO_OFFERS' | 'NOT_LOOKING';
+export type VehicleType = 'BIKE' | 'CAR' | 'SCOOTER';
 
 export interface CandidateProfile {
   id: string;
@@ -118,6 +119,7 @@ export interface CandidateProfile {
   hasDrivingLicense: boolean;
   drivingLicenseType: DrivingLicenseType | null;
   ownVehicle: boolean;
+  vehicleTypes: VehicleType[];
   isVeteran: boolean;
   blockedCompanies: string[];
   skills: string[];
@@ -393,6 +395,7 @@ export interface UpdateCandidateRequest {
   hasDrivingLicense?: boolean;
   drivingLicenseType?: DrivingLicenseType;
   ownVehicle?: boolean;
+  vehicleTypes?: VehicleType[];
   isVeteran?: boolean;
   blockedCompanies?: string[];
   skills?: string[];

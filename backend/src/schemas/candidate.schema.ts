@@ -13,6 +13,7 @@ import {
   EducationLevel,
   SpecificDegree,
   DrivingLicenseType,
+  VehicleType,
 } from '@prisma/client';
 
 // --- Reusable sub-schemas for JSON fields ---
@@ -169,7 +170,9 @@ export const updateCandidateProfileSchema = z.object({
     // Professional
     experienceYears: z.number().min(0).max(50).optional(),
     totalExperienceMonths: z.number().int().min(0).max(600).optional(),
-    experienceLevel: z.nativeEnum(ExperienceLevel, { error: 'Invalid experience level' }).optional(),
+    experienceLevel: z
+      .nativeEnum(ExperienceLevel, { error: 'Invalid experience level' })
+      .optional(),
     currentCompany: z.string().optional(),
     currentRole: z.string().optional(),
     currentIndustry: z.string().optional(),
@@ -289,6 +292,7 @@ export const updateCandidateProfileSchema = z.object({
       .nativeEnum(DrivingLicenseType, { error: 'Invalid driving license type' })
       .optional(),
     ownVehicle: z.boolean().optional(),
+    vehicleTypes: z.array(z.nativeEnum(VehicleType, { error: 'Invalid vehicle type' })).optional(),
     isVeteran: z.boolean().optional(),
     blockedCompanies: z.array(z.string().max(200)).optional(),
 

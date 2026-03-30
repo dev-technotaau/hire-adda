@@ -21,6 +21,7 @@ import {
   COURSE_TYPE_LABELS,
   DISABILITY_TYPE_LABELS,
   DRIVING_LICENSE_TYPE_LABELS,
+  VEHICLE_TYPE_LABELS,
   EDUCATION_LEVEL_LABELS,
   EXPERIENCE_LEVEL_LABELS,
   GENDER_LABELS,
@@ -66,6 +67,7 @@ import type {
   SkillWithProficiency,
   TestScoreEntry,
   UpdateCandidateRequest,
+  VehicleType,
   VolunteerEntry,
   WorkStatus,
 } from '@/types/candidate';
@@ -206,6 +208,7 @@ interface CandidateOnboardingData {
   hasDrivingLicense: boolean;
   drivingLicenseType: string;
   ownVehicle: boolean;
+  vehicleTypes: string[];
   isVeteran: boolean;
   isPhysicallyChallenged: boolean;
   disabilityType: string;
@@ -321,6 +324,7 @@ const INITIAL_DATA: CandidateOnboardingData = {
   hasDrivingLicense: false,
   drivingLicenseType: '',
   ownVehicle: false,
+  vehicleTypes: [],
   isVeteran: false,
   isPhysicallyChallenged: false,
   disabilityType: '',
@@ -380,6 +384,7 @@ const EXPERIENCE_LEVEL_OPTIONS = toSelectOptions(EXPERIENCE_LEVEL_LABELS);
 const EDUCATION_LEVEL_OPTIONS = toSelectOptions(EDUCATION_LEVEL_LABELS);
 const SPECIFIC_DEGREE_OPTIONS = toSelectOptions(SPECIFIC_DEGREE_LABELS);
 const DRIVING_LICENSE_OPTIONS = toSelectOptions(DRIVING_LICENSE_TYPE_LABELS);
+const VEHICLE_TYPE_OPTIONS = toSelectOptions(VEHICLE_TYPE_LABELS);
 const DISABILITY_TYPE_OPTIONS = toSelectOptions(DISABILITY_TYPE_LABELS);
 const CAREER_BREAK_OPTIONS = toSelectOptions(CAREER_BREAK_TYPE_LABELS);
 const CATEGORY_OPTIONS = toSelectOptions(RESERVATION_CATEGORY_LABELS);
@@ -777,6 +782,10 @@ export default function CandidateOnboardingPage() {
           hasDrivingLicense: data.hasDrivingLicense,
           drivingLicenseType: (data.drivingLicenseType as DrivingLicenseType) || undefined,
           ownVehicle: data.ownVehicle,
+          vehicleTypes:
+            data.ownVehicle && data.vehicleTypes.length > 0
+              ? (data.vehicleTypes as VehicleType[])
+              : [],
           isVeteran: data.isVeteran,
           isPhysicallyChallenged: data.isPhysicallyChallenged,
           disabilityType: data.isPhysicallyChallenged
@@ -3564,11 +3573,28 @@ export default function CandidateOnboardingPage() {
               <input
                 type="checkbox"
                 checked={data.ownVehicle}
-                onChange={(e) => updateData({ ownVehicle: e.target.checked })}
+                onChange={(e) =>
+                  updateData({
+                    ownVehicle: e.target.checked,
+                    vehicleTypes: e.target.checked ? data.vehicleTypes : [],
+                  })
+                }
                 className="text-primary focus:ring-primary/20 h-4 w-4 rounded border-[var(--border)]"
               />
               <span className="text-sm text-[var(--text)]">I own a vehicle</span>
             </label>
+            {data.ownVehicle && (
+              <div className="ml-6">
+                <Select
+                  label="Vehicle Type(s)"
+                  options={VEHICLE_TYPE_OPTIONS}
+                  value={data.vehicleTypes}
+                  onChange={(val) => updateData({ vehicleTypes: val as string[] })}
+                  multiple
+                  placeholder="Select vehicle types"
+                />
+              </div>
+            )}
             <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
@@ -4340,6 +4366,14 @@ export default function CandidateOnboardingPage() {
                 <p className={fieldLabel}>Own Vehicle</p>
                 <p className={fieldValue}>{data.ownVehicle ? 'Yes' : 'No'}</p>
               </div>
+              {data.ownVehicle && data.vehicleTypes.length > 0 && (
+                <div>
+                  <p className={fieldLabel}>Vehicle Types</p>
+                  <p className={fieldValue}>
+                    {data.vehicleTypes.map((t) => VEHICLE_TYPE_LABELS[t] || t).join(', ')}
+                  </p>
+                </div>
+              )}
               <div>
                 <p className={fieldLabel}>Veteran</p>
                 <p className={fieldValue}>{data.isVeteran ? 'Yes' : 'No'}</p>
