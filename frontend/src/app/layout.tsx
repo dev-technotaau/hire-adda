@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: pragmatic rollout check + ArgoCD trap resume
+// Trigger CI/CD rebuild: BIMI logo + vehicle types + deploy fixes
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';

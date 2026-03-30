@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: pragmatic rollout check + ArgoCD trap resume
+// Trigger CI/CD rebuild: BIMI logo + vehicle types + deploy fixes
 import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';
