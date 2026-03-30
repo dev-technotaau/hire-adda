@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: abort stale rollout before deploy
+// Trigger CI/CD rebuild: pragmatic rollout check + ArgoCD trap resume
 import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';
