@@ -220,33 +220,12 @@ run_migrations() {
 
   log_info "Running Prisma migrations..."
 
-  # Pre-flight: verify PostgreSQL is reachable before running migrations.
-  # Prevents wasting time on migration pod startup if the DB is down or restarting.
-  local direct_url
-  direct_url=$($KUBECTL get secret backend-secrets -n "$NAMESPACE" \
-    -o jsonpath='{.data.DIRECT_URL}' | base64 -d 2>/dev/null)
-  if [[ -n "$direct_url" ]]; then
-    local db_host db_port
-    db_host=$(echo "$direct_url" | sed -n 's|.*@\([^:/]*\).*|\1|p')
-    db_port=$(echo "$direct_url" | sed -n 's|.*:\([0-9]*\)/.*|\1|p')
-    db_port="${db_port:-5432}"
-    log_info "Checking PostgreSQL connectivity ($db_host:$db_port)..."
-    for i in 1 2 3; do
-      if $KUBECTL run "pg-check-$RANDOM" --rm -i --restart=Never \
-        --image=busybox:1.36 --namespace="$NAMESPACE" \
-        --labels="app=backend" \
-        --overrides='{"spec":{"securityContext":{"runAsUser":1001,"runAsNonRoot":true,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"check","image":"busybox:1.36","command":["nc","-zv","-w","10","'"$db_host"'","'"$db_port"'"],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}],"restartPolicy":"Never"}}' \
-        --timeout=30s 2>&1 | grep -q "open"; then
-        log_success "PostgreSQL is reachable"
-        break
-      fi
-      if [[ $i -lt 3 ]]; then
-        log_warn "PostgreSQL not reachable (attempt $i/3), retrying in 5s..."
-        sleep 5
-      else
-        log_warn "PostgreSQL connectivity check failed after 3 attempts — proceeding with migration anyway"
-      fi
-    done
+  # Pre-flight: verify PostgreSQL is reachable using pg_isready inside the postgres pod.
+  log_info "Checking PostgreSQL connectivity..."
+  if $KUBECTL exec postgres-0 -n "$NAMESPACE" -- pg_isready -U postgres -q 2>/dev/null; then
+    log_success "PostgreSQL is reachable"
+  else
+    log_warn "PostgreSQL readiness check failed — proceeding with migration anyway"
   fi
 
   local max_attempts=3
@@ -577,7 +556,17 @@ deploy_progressive() {
     log_info "Phase 1: Backend progressive rollout..."
     run_migrations "$BACKEND_TAG"
     ensure_rollout_active "backend" "canary"
-    set_rollout_image "backend" "$BACKEND_TAG"
+    # Image tag is already updated in git by the update-manifests job.
+    # ArgoCD syncs the new image from apps/backend/deployment.yaml.
+    # Only set image directly if ArgoCD hasn't picked it up yet.
+    local current_image
+    current_image=$($KUBECTL get rollout backend -n "$NAMESPACE" \
+      -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
+    if [[ "$current_image" != *"$BACKEND_TAG"* ]]; then
+      set_rollout_image "backend" "$BACKEND_TAG"
+    else
+      log_info "Backend already has image tag $BACKEND_TAG (synced by ArgoCD)"
+    fi
     wait_for_rollout "backend"
     backend_completed=true
   fi
@@ -587,7 +576,14 @@ deploy_progressive() {
   if [[ -n "$FRONTEND_TAG" ]]; then
     log_info "Phase 2: Frontend progressive rollout..."
     ensure_rollout_active "frontend" "canary"
-    set_rollout_image "frontend" "$FRONTEND_TAG"
+    local current_fe_image
+    current_fe_image=$($KUBECTL get rollout frontend -n "$NAMESPACE" \
+      -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
+    if [[ "$current_fe_image" != *"$FRONTEND_TAG"* ]]; then
+      set_rollout_image "frontend" "$FRONTEND_TAG"
+    else
+      log_info "Frontend already has image tag $FRONTEND_TAG (synced by ArgoCD)"
+    fi
 
     if ! wait_for_rollout "frontend"; then
       log_error "Frontend progressive rollout failed!"
