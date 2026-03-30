@@ -350,78 +350,50 @@ set_rollout_image() {
 }
 
 # ── Wait for Rollout ──
-wait_for_rollout() {
+wait_for_pods() {
   local service="$1"
-  local tag="$2"  # expected image tag
+  local tag="$2"
   local max_wait="${ROLLOUT_TIMEOUT%s}"
   local elapsed=0
   local poll_interval=10
-  local promoted="false"
 
   if [[ "$DRY_RUN" == "true" ]]; then
-    log_info "[DRY RUN] Would wait for Rollout/$service to complete"
+    log_info "[DRY RUN] Would wait for $service pods with tag ${tag:0:12}"
     return 0
   fi
 
-  # Determine expected image
-  local expected_image
-  if [[ "$service" == "backend" ]]; then
-    expected_image="${BACKEND_IMAGE}:${tag}"
-  else
-    expected_image="${FRONTEND_IMAGE}:${tag}"
-  fi
-
-  log_info "Watching Rollout/$service progress (timeout: ${max_wait}s)..."
+  log_info "Waiting for $service pods with image ${tag:0:12}... (timeout: ${max_wait}s)"
 
   while [[ $elapsed -lt $max_wait ]]; do
-    # Check if rollout reports Healthy
-    local phase
-    phase=$($KUBECTL_ARGO status "$service" -n "$NAMESPACE" --timeout=5s 2>&1 | head -1 || true)
-    if [[ "$phase" == "Healthy" ]]; then
-      log_success "Rollout/$service completed (Healthy)"
-      return 0
-    fi
-
     # Check for CrashLoopBackOff
-    local crash_pods
-    crash_pods=$($KUBECTL get pods -n "$NAMESPACE" -l "app=$service" \
-      --field-selector=status.phase!=Succeeded \
-      -o jsonpath='{range .items[*]}{.status.containerStatuses[0].state.waiting.reason}{"\n"}{end}' 2>/dev/null | grep -c "CrashLoopBackOff" || true)
-    if [[ "$crash_pods" -gt 0 ]]; then
-      log_error "Detected $crash_pods pod(s) in CrashLoopBackOff for $service — aborting"
+    local crash
+    crash=$($KUBECTL get pods -n "$NAMESPACE" -l "app=$service" \
+      -o go-template='{{range .items}}{{range .status.containerStatuses}}{{if .state.waiting}}{{.state.waiting.reason}}{{"\n"}}{{end}}{{end}}{{end}}' 2>/dev/null \
+      | grep -c "CrashLoopBackOff" || true)
+    crash=$(echo "$crash" | tr -d '[:space:]')
+    if [[ "$crash" -gt 0 ]]; then
+      log_error "$service has $crash pod(s) in CrashLoopBackOff"
       return 1
     fi
 
-    # Auto-promote once after 20s
-    if [[ "$promoted" != "true" ]] && [[ "$elapsed" -gt 20 ]]; then
-      log_info "Auto-promoting $service to complete rollout"
-      $KUBECTL_ARGO promote "$service" -n "$NAMESPACE" --full 2>/dev/null || true
-      promoted="true"
+    # Count pods running with the correct image tag and Ready
+    local ready
+    ready=$($KUBECTL get pods -n "$NAMESPACE" -l "app=$service" \
+      -o go-template='{{range .items}}{{range .status.containerStatuses}}{{if .ready}}{{$.spec.containers | len}}{{end}}{{end}} {{range .spec.containers}}{{.image}}{{end}}{{"\n"}}{{end}}' 2>/dev/null \
+      | grep -c "${tag}" || true)
+    ready=$(echo "$ready" | tr -d '[:space:]')
+
+    if [[ "$ready" -ge 2 ]]; then
+      log_success "$service: $ready pods running with image ${tag:0:12}"
+      return 0
     fi
 
-    # Pragmatic check: if pods with the correct image are Running+Ready, declare success.
-    # The rollout controller may still show "Progressing" due to internal bookkeeping,
-    # but the deploy is effectively complete if the right pods are serving traffic.
-    if [[ "$elapsed" -gt 40 ]]; then
-      local ready_with_tag
-      ready_with_tag=$($KUBECTL get pods -n "$NAMESPACE" -l "app=$service" \
-        -o go-template='{{range .items}}{{if .status.containerStatuses}}{{index .status.containerStatuses 0 "ready"}} {{index .spec.containers 0 "image"}}{{"\n"}}{{end}}{{end}}' 2>/dev/null \
-        | grep -c "true.*${tag}" || echo "0")
-      ready_with_tag=$(echo "$ready_with_tag" | tr -d '[:space:]')
-      if [[ "$ready_with_tag" -ge 2 ]]; then
-        log_success "Rollout/$service: ${ready_with_tag} pods running with correct image (${tag:0:12})"
-        # Force the rollout to Healthy by deleting and letting ArgoCD recreate
-        $KUBECTL delete rollout "$service" -n "$NAMESPACE" --cascade=orphan 2>/dev/null || true
-        sleep 5
-        return 0
-      fi
-    fi
-
+    log_info "  $service: $ready/2 pods ready with ${tag:0:12}... (${elapsed}s)"
     sleep "$poll_interval"
     elapsed=$((elapsed + poll_interval))
   done
 
-  log_error "Rollout/$service timed out after ${max_wait}s (status: $(echo "$phase" | head -1))"
+  log_error "$service: timed out waiting for pods with image ${tag:0:12}"
   return 1
 }
 
@@ -550,69 +522,23 @@ deploy_canary() {
 # Argo Rollout canary with auto-stepping (20→50→100) + analysis
 # ═══════════════════════════════════════════════════════
 deploy_progressive() {
-  log_info "Strategy: Progressive (auto-stepping 20% → 50% → 100% with analysis)"
+  log_info "Strategy: Progressive (ArgoCD-driven rollout with pod verification)"
 
-  local backend_completed=false
-
-  # Pause ArgoCD auto-sync to prevent it from resetting rollout state during deploy
-  # Trap ensures ArgoCD is ALWAYS resumed, even on unexpected exit (set -e)
-  resume_argocd() {
-    log_info "Resuming ArgoCD auto-sync..."
-    $KUBECTL patch app hire-adda -n argocd --type merge \
-      -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}' 2>/dev/null || true
-  }
-  trap resume_argocd EXIT
-
-  log_info "Pausing ArgoCD auto-sync for hire-adda..."
-  $KUBECTL patch app hire-adda -n argocd --type merge \
-    -p '{"spec":{"syncPolicy":{"automated":null}}}' 2>/dev/null || true
+  # ArgoCD manages the rollout — update-manifests already committed the new
+  # image tag to git. ArgoCD syncs it and the rollout controller handles
+  # the canary steps. This script just runs migrations and verifies pods.
 
   # Phase 1: Backend
   if [[ -n "$BACKEND_TAG" ]]; then
-    log_info "Phase 1: Backend progressive rollout..."
+    log_info "Phase 1: Backend deployment..."
     run_migrations "$BACKEND_TAG"
-    ensure_rollout_active "backend" "canary"
-    # Abort any stale in-progress rollout so set_rollout_image starts clean
-    $KUBECTL_ARGO abort backend -n "$NAMESPACE" 2>/dev/null || true
-    $KUBECTL_ARGO retry rollout backend -n "$NAMESPACE" 2>/dev/null || true
-    set_rollout_image "backend" "$BACKEND_TAG"
-    wait_for_rollout "backend" "$BACKEND_TAG"
-    backend_completed=true
+    wait_for_pods "backend" "$BACKEND_TAG"
   fi
 
   # Phase 2: Frontend
-  # If frontend fails, undo backend phase (atomic deploy — matches Docker's _undo_backend)
   if [[ -n "$FRONTEND_TAG" ]]; then
-    log_info "Phase 2: Frontend progressive rollout..."
-    ensure_rollout_active "frontend" "canary"
-    $KUBECTL_ARGO abort frontend -n "$NAMESPACE" 2>/dev/null || true
-    $KUBECTL_ARGO retry rollout frontend -n "$NAMESPACE" 2>/dev/null || true
-    set_rollout_image "frontend" "$FRONTEND_TAG"
-
-    if ! wait_for_rollout "frontend" "$FRONTEND_TAG"; then
-      log_error "Frontend progressive rollout failed!"
-
-      if [[ "$backend_completed" == "true" && "$DRY_RUN" != "true" ]]; then
-        log_warn "Undoing backend phase — rolling back to previous version..."
-        $KUBECTL_ARGO undo backend -n "$NAMESPACE" || true
-        log_info "Waiting for backend rollback..."
-        $KUBECTL_ARGO status backend -n "$NAMESPACE" --watch --timeout="$ROLLOUT_TIMEOUT" 2>/dev/null || true
-        log_info "Backend rolled back to previous version"
-
-        grafana_annotate \
-          "Progressive FAILED: frontend rollout failed, backend rolled back" \
-          '"deploy","rollback","progressive"'
-      fi
-
-      write_state "failed" \
-        "${BACKEND_TAG:-$STATE_BACKEND_TAG}" \
-        "${FRONTEND_TAG:-$STATE_FRONTEND_TAG}" \
-        "0" "rollout"
-      # Re-enable ArgoCD auto-sync even on failure
-      $KUBECTL patch app hire-adda -n argocd --type merge \
-        -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}' 2>/dev/null || true
-      exit 1
-    fi
+    log_info "Phase 2: Frontend deployment..."
+    wait_for_pods "frontend" "$FRONTEND_TAG"
   fi
 
   write_state "progressive" \

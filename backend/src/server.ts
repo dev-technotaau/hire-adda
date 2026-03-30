@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: deploy script pod check fix
+// Trigger CI/CD rebuild: ArgoCD-driven deploy, no rollout manipulation
 import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';

@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: deploy script pod check fix
+// Trigger CI/CD rebuild: ArgoCD-driven deploy, no rollout manipulation
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';
