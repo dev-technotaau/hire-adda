@@ -528,6 +528,18 @@ deploy_progressive() {
   # image tag to git. ArgoCD syncs it and the rollout controller handles
   # the canary steps. This script just runs migrations and verifies pods.
 
+  # Clean up orphaned canary ingresses that block rollout progression.
+  # These become orphaned when rollouts are deleted/recreated by ArgoCD.
+  # The rollout controller will recreate them with proper ownership.
+  for ingress in $($KUBECTL get ingress -n "$NAMESPACE" -o name 2>/dev/null | grep "\-canary$"); do
+    local owner
+    owner=$($KUBECTL get "$ingress" -n "$NAMESPACE" -o jsonpath='{.metadata.ownerReferences[0].kind}' 2>/dev/null || echo "")
+    if [[ -z "$owner" ]]; then
+      log_info "Cleaning orphaned canary ingress: $ingress"
+      $KUBECTL delete "$ingress" -n "$NAMESPACE" 2>/dev/null || true
+    fi
+  done
+
   # Phase 1: Backend
   if [[ -n "$BACKEND_TAG" ]]; then
     log_info "Phase 1: Backend deployment..."

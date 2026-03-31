@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: 300s timeout for canary steps
+// Trigger CI/CD rebuild: orphaned canary ingress cleanup + dashboard fixes
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';
