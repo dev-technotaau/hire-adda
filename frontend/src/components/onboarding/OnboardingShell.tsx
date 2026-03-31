@@ -1,8 +1,8 @@
 'use client';
 
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, SkipForward, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, SkipForward, Check, CornerDownLeft } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
@@ -31,6 +31,9 @@ interface OnboardingShellProps {
   dashboardPath: string;
   title?: string;
   subtitle?: string;
+  editFromReview?: boolean;
+  onReturnToReview?: () => void;
+  highestVisitedStep?: number;
 }
 
 export default function OnboardingShell({
@@ -49,8 +52,24 @@ export default function OnboardingShell({
   dashboardPath,
   title = 'Complete Your Profile',
   subtitle,
+  editFromReview,
+  onReturnToReview,
+  highestVisitedStep,
 }: OnboardingShellProps) {
   const progress = steps.length > 1 ? Math.round((currentStep / (steps.length - 1)) * 100) : 0;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const activeTabRef = useRef<HTMLButtonElement>(null);
+
+  // Auto-scroll to active tab
+  useEffect(() => {
+    if (activeTabRef.current && scrollRef.current) {
+      activeTabRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [currentStep]);
 
   return (
     <div className="min-h-screen bg-[var(--bg-secondary)]">
@@ -92,17 +111,19 @@ export default function OnboardingShell({
           </div>
         </div>
 
-        {/* Step Navigator (Scrollable on mobile) */}
-        <div className="scrollbar-hide mb-6 overflow-x-auto">
+        {/* Step Navigator (Scrollable) */}
+        <div ref={scrollRef} className="scrollbar-hide mb-6 overflow-x-auto">
           <div className="flex min-w-max gap-1">
             {steps.map((step, i) => {
               const isCompleted = i < currentStep;
               const isCurrent = i === currentStep;
-              const isClickable = i <= currentStep;
+              const maxVisited = highestVisitedStep ?? currentStep;
+              const isClickable = i <= maxVisited;
 
               return (
                 <button
                   key={step.key}
+                  ref={isCurrent ? activeTabRef : undefined}
                   onClick={() => isClickable && onGoToStep?.(i)}
                   disabled={!isClickable}
                   className={cn(
@@ -164,7 +185,17 @@ export default function OnboardingShell({
             )}
           </div>
           <div className="flex items-center gap-3">
-            {steps[currentStep]?.optional && (
+            {editFromReview && onReturnToReview && (
+              <Button
+                variant="outline"
+                onClick={onReturnToReview}
+                leftIcon={<CornerDownLeft className="h-4 w-4" />}
+                tooltip="Save changes and go back to review"
+              >
+                Save & Return to Review
+              </Button>
+            )}
+            {!editFromReview && steps[currentStep]?.optional && (
               <Button
                 variant="ghost"
                 onClick={onNext}
@@ -174,15 +205,17 @@ export default function OnboardingShell({
                 Skip this step
               </Button>
             )}
-            <Button
-              onClick={onNext}
-              isLoading={isSubmitting}
-              disabled={nextDisabled}
-              rightIcon={!isLastStep ? <ArrowRight className="h-4 w-4" /> : undefined}
-              tooltip={isLastStep ? 'Complete your profile setup' : 'Proceed to next step'}
-            >
-              {nextLabel || (isLastStep ? 'Complete Setup' : 'Continue')}
-            </Button>
+            {!editFromReview && !isFirstStep && (
+              <Button
+                onClick={onNext}
+                isLoading={isSubmitting}
+                disabled={nextDisabled}
+                rightIcon={!isLastStep ? <ArrowRight className="h-4 w-4" /> : undefined}
+                tooltip={isLastStep ? 'Complete your profile setup' : 'Proceed to next step'}
+              >
+                {nextLabel || (isLastStep ? 'Complete Setup' : 'Continue')}
+              </Button>
+            )}
           </div>
         </div>
 

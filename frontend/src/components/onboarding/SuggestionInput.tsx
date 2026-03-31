@@ -36,6 +36,7 @@ export default function SuggestionInput({
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const filtered =
     value.trim().length >= 1
@@ -69,6 +70,8 @@ export default function SuggestionInput({
       onSelect?.(selected);
       setIsOpen(false);
       setHighlightIndex(-1);
+      // Re-focus input after selection so user can continue typing
+      requestAnimationFrame(() => inputRef.current?.focus());
     },
     [onChange, onSelect],
   );
@@ -107,6 +110,7 @@ export default function SuggestionInput({
           </div>
         )}
         <input
+          ref={inputRef}
           type="text"
           value={value}
           onChange={(e) => {

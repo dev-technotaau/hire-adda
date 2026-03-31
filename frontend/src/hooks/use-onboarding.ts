@@ -19,6 +19,10 @@ interface UseOnboardingReturn<T> {
   nextStep: () => void;
   prevStep: () => void;
   goToStep: (step: number) => void;
+  editFromReview: boolean;
+  goToStepFromReview: (step: number) => void;
+  returnToReview: () => void;
+  highestVisitedStep: number;
   isFirstStep: boolean;
   isLastStep: boolean;
   progress: number;
@@ -36,6 +40,8 @@ export function useOnboarding<T extends Record<string, unknown>>({
   const [step, setStep] = useState(0);
   const [data, setData] = useState<T>(initialData);
   const [isDirty, setIsDirty] = useState(false);
+  const [editFromReview, setEditFromReview] = useState(false);
+  const [highestVisitedStep, setHighestVisitedStep] = useState(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const initialLoadRef = useRef(true);
 
@@ -47,7 +53,10 @@ export function useOnboarding<T extends Record<string, unknown>>({
         const parsed = JSON.parse(saved);
         queueMicrotask(() => {
           if (parsed.data) setData(parsed.data);
-          if (typeof parsed.step === 'number') setStep(parsed.step);
+          if (typeof parsed.step === 'number') {
+            setStep(parsed.step);
+            setHighestVisitedStep(parsed.step);
+          }
         });
       }
     } catch {
@@ -81,7 +90,11 @@ export function useOnboarding<T extends Record<string, unknown>>({
   }, []);
 
   const nextStep = useCallback(() => {
-    setStep((prev) => Math.min(prev + 1, totalSteps - 1));
+    setStep((prev) => {
+      const next = Math.min(prev + 1, totalSteps - 1);
+      setHighestVisitedStep((h) => Math.max(h, next));
+      return next;
+    });
   }, [totalSteps]);
 
   const prevStep = useCallback(() => {
@@ -91,11 +104,27 @@ export function useOnboarding<T extends Record<string, unknown>>({
   const goToStep = useCallback(
     (target: number) => {
       if (target >= 0 && target < totalSteps) {
+        setEditFromReview(false);
         setStep(target);
       }
     },
     [totalSteps],
   );
+
+  const goToStepFromReview = useCallback(
+    (target: number) => {
+      if (target >= 0 && target < totalSteps) {
+        setEditFromReview(true);
+        setStep(target);
+      }
+    },
+    [totalSteps],
+  );
+
+  const returnToReview = useCallback(() => {
+    setEditFromReview(false);
+    setStep(totalSteps - 1); // Review is always the last step
+  }, [totalSteps]);
 
   const skipOnboarding = useCallback(() => {
     try {
@@ -159,6 +188,10 @@ export function useOnboarding<T extends Record<string, unknown>>({
     nextStep,
     prevStep,
     goToStep,
+    editFromReview,
+    goToStepFromReview,
+    returnToReview,
+    highestVisitedStep,
     isFirstStep: step === 0,
     isLastStep: step === totalSteps - 1,
     progress,

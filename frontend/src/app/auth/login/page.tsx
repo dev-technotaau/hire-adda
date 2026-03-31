@@ -118,6 +118,11 @@ export default function LoginPage() {
       router.push(redirect || ROLE_DASHBOARDS[role]);
     } catch (err) {
       const error = err as ApiError;
+      if (error.code === 'EMAIL_NOT_VERIFIED') {
+        const loginEmail = getValues('email');
+        router.push(`${ROUTES.AUTH.VERIFY_EMAIL}?email=${encodeURIComponent(loginEmail)}`);
+        return;
+      }
       showToast.error(error.message || 'Login failed');
     } finally {
       setIsLoading(false);

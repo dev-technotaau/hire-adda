@@ -312,13 +312,6 @@ export default function CandidateDashboard() {
         color: 'text-secondary bg-secondary-light',
         description: 'average employer response time',
       },
-      {
-        label: 'Profile Score',
-        value: `${analytics.summary.profileScore ?? 0}%`,
-        icon: Target,
-        color: 'text-accent bg-accent-light',
-        description: 'profile strength score',
-      },
     ];
   }, [analytics?.summary]);
 
@@ -557,8 +550,8 @@ export default function CandidateDashboard() {
               ))}
         </div>
 
-        {/* KPI Insights Row */}
-        {analytics?.summary && kpiCards.length > 0 && (
+        {/* KPI Insights Row + Application Funnel */}
+        {analytics?.summary && (kpiCards.length > 0 || funnelData.length > 0) && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {kpiCards.map((kpi) => (
               <Card key={kpi.label} className="relative overflow-hidden">
@@ -576,6 +569,39 @@ export default function CandidateDashboard() {
                 <p className="mt-2 text-[10px] text-[var(--text-muted)]">{kpi.description}</p>
               </Card>
             ))}
+            {funnelData.length > 0 && (
+              <Card
+                className="sm:col-span-2"
+                header={
+                  <h2 className="text-lg font-semibold text-[var(--text)]">Application Funnel</h2>
+                }
+              >
+                <div className="space-y-3">
+                  {funnelData.map((stage) => {
+                    const maxCount = Math.max(...funnelData.map((s) => s.count), 1);
+                    const widthPct = Math.max((stage.count / maxCount) * 100, 4);
+                    return (
+                      <div key={stage.name} className="flex items-center gap-3">
+                        <span className="w-20 shrink-0 text-xs text-[var(--text-secondary)]">
+                          {stage.name}
+                        </span>
+                        <div className="h-7 flex-1 overflow-hidden rounded-full bg-[var(--bg-secondary)]">
+                          <div
+                            className="flex h-full items-center rounded-full px-2 text-xs font-medium text-white"
+                            style={{ width: `${widthPct}%`, backgroundColor: stage.color }}
+                          >
+                            {stage.count > 0 && stage.count}
+                          </div>
+                        </div>
+                        <span className="w-8 shrink-0 text-right text-xs font-semibold text-[var(--text)]">
+                          {stage.count}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
           </div>
         )}
 
@@ -612,55 +638,15 @@ export default function CandidateDashboard() {
           </Card>
         )}
 
-        {/* Application Funnel + Status Distribution */}
-        {analytics && (funnelData.length > 0 || analyticsStatusPie.length > 0) && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Application Funnel */}
-            {funnelData.length > 0 && (
-              <Card
-                header={
-                  <h2 className="text-lg font-semibold text-[var(--text)]">Application Funnel</h2>
-                }
-              >
-                <div className="space-y-3">
-                  {funnelData.map((stage) => {
-                    const maxCount = Math.max(...funnelData.map((s) => s.count), 1);
-                    const widthPct = Math.max((stage.count / maxCount) * 100, 4);
-                    return (
-                      <div key={stage.name} className="flex items-center gap-3">
-                        <span className="w-20 shrink-0 text-xs text-[var(--text-secondary)]">
-                          {stage.name}
-                        </span>
-                        <div className="h-7 flex-1 overflow-hidden rounded-full bg-[var(--bg-secondary)]">
-                          <div
-                            className="h-full rounded-full transition-all"
-                            style={{
-                              width: `${widthPct}%`,
-                              backgroundColor: stage.color,
-                            }}
-                          />
-                        </div>
-                        <span className="w-10 shrink-0 text-right text-xs font-semibold text-[var(--text)]">
-                          {stage.count}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-            )}
-
-            {/* Status Distribution (analytics-powered) */}
-            {analyticsStatusPie.length > 0 && (
-              <Card
-                header={
-                  <h2 className="text-lg font-semibold text-[var(--text)]">Status Distribution</h2>
-                }
-              >
-                <PieChart data={analyticsStatusPie} height={250} innerRadius={45} />
-              </Card>
-            )}
-          </div>
+        {/* Status Distribution */}
+        {analytics && analyticsStatusPie.length > 0 && (
+          <Card
+            header={
+              <h2 className="text-lg font-semibold text-[var(--text)]">Status Distribution</h2>
+            }
+          >
+            <PieChart data={analyticsStatusPie} height={250} innerRadius={45} />
+          </Card>
         )}
 
         {/* Skills Gap Analysis */}

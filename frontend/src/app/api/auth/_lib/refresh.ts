@@ -12,7 +12,7 @@ let refreshPromise: Promise<{ accessToken: string; refreshToken: string } | null
  */
 let cachedTokens: { accessToken: string; refreshToken: string } | null = null;
 let cachedAt = 0;
-const CACHE_TTL_MS = 10_000; // 10 seconds
+const CACHE_TTL_MS = 840_000; // 14 minutes (just under the 15min JWT expiry)
 
 /**
  * Attempt a silent token refresh server-side.

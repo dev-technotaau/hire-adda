@@ -26,7 +26,6 @@ import {
   Youtube,
   Calendar,
   DollarSign,
-  ExternalLink,
   Gem,
   BookOpen,
   HandHeart,
@@ -36,6 +35,7 @@ import {
   ImageIcon,
   Briefcase as BriefcaseBusiness,
   Layers,
+  Pencil,
 } from 'lucide-react';
 import OnboardingShell, { type OnboardingStep } from '@/components/onboarding/OnboardingShell';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
@@ -295,6 +295,10 @@ export default function EmployerOnboardingPage() {
     nextStep,
     prevStep,
     goToStep,
+    editFromReview,
+    goToStepFromReview,
+    returnToReview,
+    highestVisitedStep,
     isFirstStep,
     isLastStep,
     skipOnboarding,
@@ -2599,13 +2603,13 @@ export default function EmployerOnboardingPage() {
             >
               <button
                 type="button"
-                onClick={() => goToStep(section.stepIndex)}
+                onClick={() => goToStepFromReview(section.stepIndex)}
                 title="Edit this section"
                 className="text-primary mb-3 flex cursor-pointer items-center gap-2 text-sm font-semibold hover:underline"
               >
                 <Icon className="h-4 w-4" />
                 {section.title}
-                <ExternalLink className="h-3 w-3" />
+                <Pencil className="h-3 w-3" />
               </button>
               <div className="grid gap-2 sm:grid-cols-2">
                 {filledItems.map((item) => (
@@ -2624,12 +2628,12 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStep(2)}
+              onClick={() => goToStepFromReview(2)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <Building2 className="h-4 w-4" />
               Company Logo
-              <ExternalLink className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
             </button>
             <div className="flex items-center gap-3">
               <img
@@ -2647,12 +2651,12 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStep(5)}
+              onClick={() => goToStepFromReview(5)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <Heart className="h-4 w-4" />
               Benefits
-              <ExternalLink className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
             </button>
             <div className="flex flex-wrap gap-2">
               {data.benefits.map((b) => (
@@ -2667,12 +2671,12 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStep(5)}
+              onClick={() => goToStepFromReview(5)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <Layers className="h-4 w-4" />
               Structured Perks
-              <ExternalLink className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
             </button>
             <div className="space-y-3">
               {data.structuredPerks.map((cat) => (
@@ -2696,12 +2700,12 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStep(6)}
+              onClick={() => goToStepFromReview(6)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <Zap className="h-4 w-4" />
               Tech Stack
-              <ExternalLink className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
             </button>
             <div className="flex flex-wrap gap-2">
               {data.techStack.map((t) => (
@@ -2716,12 +2720,12 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStep(3)}
+              onClick={() => goToStepFromReview(3)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <Gem className="h-4 w-4" />
               Core Values
-              <ExternalLink className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
             </button>
             <div className="flex flex-wrap gap-2">
               {data.coreValues.map((v) => (
@@ -2736,12 +2740,12 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStep(9)}
+              onClick={() => goToStepFromReview(9)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <TrendingUp className="h-4 w-4" />
               Investors
-              <ExternalLink className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
             </button>
             <div className="flex flex-wrap gap-2">
               {data.investors.map((i) => (
@@ -2756,12 +2760,12 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStep(1)}
+              onClick={() => goToStepFromReview(1)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <Briefcase className="h-4 w-4" />
               Specialties
-              <ExternalLink className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
             </button>
             <div className="flex flex-wrap gap-2">
               {data.specialties.map((s) => (
@@ -2776,12 +2780,12 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStep(6)}
+              onClick={() => goToStepFromReview(6)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <Zap className="h-4 w-4" />
               Products & Services
-              <ExternalLink className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
             </button>
             <div className="flex flex-wrap gap-2">
               {data.productsServices.map((p) => (
@@ -2796,12 +2800,12 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStep(3)}
+              onClick={() => goToStepFromReview(3)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <Heart className="h-4 w-4" />
               Employee Resource Groups
-              <ExternalLink className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
             </button>
             <div className="flex flex-wrap gap-2">
               {data.employeeResourceGroups.map((e) => (
@@ -2816,12 +2820,12 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStep(12)}
+              onClick={() => goToStepFromReview(12)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <MapPin className="h-4 w-4" />
               Office Locations
-              <ExternalLink className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
             </button>
             <div className="flex flex-wrap gap-2">
               {data.locations.map((l) => (
@@ -2935,6 +2939,9 @@ export default function EmployerOnboardingPage() {
         dashboardPath={ROUTES.EMPLOYER.DASHBOARD}
         title={getStepTitle()}
         subtitle={getStepSubtitle()}
+        editFromReview={editFromReview}
+        onReturnToReview={returnToReview}
+        highestVisitedStep={highestVisitedStep}
       >
         {renderStepContent()}
       </OnboardingShell>

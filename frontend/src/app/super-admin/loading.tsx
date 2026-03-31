@@ -1,6 +1,6 @@
 import Spinner from '@/components/ui/Spinner';
 
-export default function EmployerLoading() {
+export default function SuperAdminLoading() {
   return (
     <div className="flex flex-1 items-center justify-center">
       <div className="text-center">

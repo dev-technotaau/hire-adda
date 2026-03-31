@@ -242,7 +242,7 @@ export default function DashboardHeader() {
               <ExperienceSelect
                 value={experience}
                 onChange={setExperience}
-                size="sm"
+                size="md"
                 className="w-full"
               />
             </div>

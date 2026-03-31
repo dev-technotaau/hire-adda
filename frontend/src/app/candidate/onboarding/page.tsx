@@ -106,6 +106,7 @@ import {
   Plus,
   Settings,
   Sparkles,
+  Pencil,
   Trash2,
   Upload,
   User,
@@ -531,6 +532,10 @@ export default function CandidateOnboardingPage() {
     nextStep,
     prevStep,
     goToStep,
+    editFromReview,
+    goToStepFromReview,
+    returnToReview,
+    highestVisitedStep,
     isFirstStep,
     isLastStep,
     skipOnboarding,
@@ -3651,7 +3656,7 @@ export default function CandidateOnboardingPage() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-[var(--text)]">
-                Documents & Miscellaneous
+                Documents Documents & Miscellaneous Miscellaneous <Pencil className="h-3.5 w-3.5" />
               </h2>
               <p className="text-sm text-[var(--text-muted)]">Driving license and other details</p>
             </div>
@@ -3987,7 +3992,8 @@ export default function CandidateOnboardingPage() {
     // ===================================================================
     if (currentKey === 'review') {
       const sectionClass = 'rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4';
-      const sectionTitle = 'text-sm font-semibold text-primary cursor-pointer hover:underline';
+      const sectionTitle =
+        'flex items-center gap-1.5 text-sm font-semibold text-primary cursor-pointer hover:underline';
       const fieldLabel = 'text-xs font-medium text-[var(--text-muted)]';
       const fieldValue = 'text-sm text-[var(--text)]';
 
@@ -4000,8 +4006,8 @@ export default function CandidateOnboardingPage() {
             <div>
               <h2 className="text-lg font-semibold text-[var(--text)]">Review Your Profile</h2>
               <p className="text-sm text-[var(--text-muted)]">
-                Review your information before submitting. Click a section title to go back and
-                edit.
+                Review your information before submitting. Click{' '}
+                <Pencil className="mx-0.5 inline h-3 w-3" /> to edit any field.
               </p>
             </div>
           </div>
@@ -4011,11 +4017,11 @@ export default function CandidateOnboardingPage() {
             <div className={sectionClass}>
               <button
                 type="button"
-                onClick={() => goToStep(1)}
+                onClick={() => goToStepFromReview(1)}
                 className={sectionTitle}
                 title="Edit profile photo"
               >
-                Profile Photo
+                Profile Photo <Pencil className="h-3.5 w-3.5" />
               </button>
               <div className="mt-2 flex items-center gap-3">
                 <img
@@ -4038,11 +4044,11 @@ export default function CandidateOnboardingPage() {
                 <div className={sectionClass}>
                   <button
                     type="button"
-                    onClick={() => goToStep(2)}
+                    onClick={() => goToStepFromReview(2)}
                     className={sectionTitle}
                     title="Edit resume"
                   >
-                    Resume
+                    Resume <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <div className="mt-2 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
@@ -4101,11 +4107,11 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(3)}
+              onClick={() => goToStepFromReview(3)}
               className={sectionTitle}
               title="Edit personal details"
             >
-              Personal Details
+              Personal Details <Pencil className="h-3.5 w-3.5" />
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               <div>
@@ -4165,11 +4171,11 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(4)}
+              onClick={() => goToStepFromReview(4)}
               className={sectionTitle}
               title="Edit professional summary"
             >
-              Professional Summary
+              Professional Summary <Pencil className="h-3.5 w-3.5" />
             </button>
             <div className="mt-2 space-y-2">
               <div>
@@ -4225,11 +4231,11 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(5)}
+              onClick={() => goToStepFromReview(5)}
               className={sectionTitle}
               title="Edit current employment"
             >
-              Current Employment
+              Current Employment <Pencil className="h-3.5 w-3.5" />
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <div>
@@ -4274,11 +4280,11 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(6)}
+              onClick={() => goToStepFromReview(6)}
               className={sectionTitle}
               title="Edit work experience"
             >
-              Work Experience
+              Work Experience <Pencil className="h-3.5 w-3.5" />
             </button>
             <p className="mt-2 text-sm text-[var(--text)]">
               {data.experience.length === 0
@@ -4301,11 +4307,11 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(7)}
+              onClick={() => goToStepFromReview(7)}
               className={sectionTitle}
               title="Edit education"
             >
-              Education
+              Education <Pencil className="h-3.5 w-3.5" />
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <div>
@@ -4348,11 +4354,11 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(8)}
+              onClick={() => goToStepFromReview(8)}
               className={sectionTitle}
               title="Edit skills"
             >
-              Skills
+              Skills <Pencil className="h-3.5 w-3.5" />
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               <div>
@@ -4389,11 +4395,11 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(9)}
+              onClick={() => goToStepFromReview(9)}
               className={sectionTitle}
               title="Edit job preferences"
             >
-              Job Preferences
+              Job Preferences <Pencil className="h-3.5 w-3.5" />
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <div>
@@ -4455,11 +4461,11 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(10)}
+              onClick={() => goToStepFromReview(10)}
               className={sectionTitle}
               title="Edit documents"
             >
-              Documents & Miscellaneous
+              Documents Documents & Miscellaneous Miscellaneous <Pencil className="h-3.5 w-3.5" />
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               <div>
@@ -4511,11 +4517,11 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStep(11)}
+              onClick={() => goToStepFromReview(11)}
               className={sectionTitle}
               title="Edit social links"
             >
-              Social Links
+              Social Links <Pencil className="h-3.5 w-3.5" />
             </button>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {[
@@ -4588,6 +4594,9 @@ export default function CandidateOnboardingPage() {
             ? 'This step is optional -- you can skip it'
             : undefined
       }
+      editFromReview={editFromReview}
+      onReturnToReview={returnToReview}
+      highestVisitedStep={highestVisitedStep}
     >
       {renderStepContent()}
     </OnboardingShell>
