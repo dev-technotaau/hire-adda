@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: orphaned canary ingress cleanup + dashboard fixes
+// Trigger CI/CD rebuild: refresh GHCR credentials after VPS reboot
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';

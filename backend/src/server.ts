@@ -1,4 +1,4 @@
-// Trigger CI/CD rebuild: 300s timeout for canary steps
+// Trigger CI/CD rebuild: refresh GHCR credentials after VPS reboot
 import app from './app';
 import logger from './config/logger';
 import { initTelemetry } from './config/telemetry';
