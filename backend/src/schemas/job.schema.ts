@@ -123,6 +123,7 @@ export const createJobSchema = z.object({
       // Core
       title: z.string().min(3).max(200),
       description: z.string().min(10),
+      clientCompanyName: z.string().max(200).optional(),
       requirements: z.string().optional(),
       benefits: z.string().optional(),
       keyResponsibilities: z.string().optional(),
@@ -210,6 +211,7 @@ export const updateJobSchema = z.object({
       // Core
       title: z.string().min(3).max(200).optional(),
       description: z.string().min(10).optional(),
+      clientCompanyName: z.string().max(200).optional(),
       requirements: z.string().optional(),
       benefits: z.string().optional(),
       keyResponsibilities: z.string().optional(),

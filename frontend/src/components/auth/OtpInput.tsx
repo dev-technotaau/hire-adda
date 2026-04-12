@@ -10,6 +10,7 @@ interface OtpInputProps {
   onComplete?: () => void;
   error?: string;
   disabled?: boolean;
+  autoFocus?: boolean;
 }
 
 export default function OtpInput({
@@ -19,6 +20,7 @@ export default function OtpInput({
   onComplete,
   error,
   disabled,
+  autoFocus,
 }: OtpInputProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -90,6 +92,7 @@ export default function OtpInput({
             maxLength={1}
             value={digit}
             disabled={disabled}
+            autoFocus={autoFocus && index === 0}
             onChange={(e) => handleChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={handlePaste}

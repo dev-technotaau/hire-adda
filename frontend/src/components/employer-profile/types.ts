@@ -18,4 +18,5 @@ export interface EmployerProfileSectionProps {
   ) => void;
   addToArray: (key: ArrayKey, value: string, clearFn: (v: string) => void) => void;
   removeFromArray: (key: ArrayKey, value: string) => void;
+  isIndividual?: boolean;
 }

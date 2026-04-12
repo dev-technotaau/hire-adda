@@ -24,6 +24,7 @@ interface AwardsFundingSectionProps {
   ) => void;
   addToArray: (key: ArrayKey, value: string, clearFn: (v: string) => void) => void;
   removeFromArray: (key: ArrayKey, value: string) => void;
+  isIndividual?: boolean;
 }
 
 export default function AwardsFundingSection({
@@ -31,6 +32,7 @@ export default function AwardsFundingSection({
   updateField,
   addToArray,
   removeFromArray,
+  isIndividual,
 }: AwardsFundingSectionProps) {
   const [investorInput, setInvestorInput] = useState('');
 
@@ -124,79 +126,83 @@ export default function AwardsFundingSection({
         </Button>
       </div>
 
-      {/* Funding */}
-      <div className="border-t border-[var(--border)] pt-8">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-xl">
-            <TrendingUp className="text-primary h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-[var(--text)]">Funding Details</h3>
-            <p className="text-xs text-[var(--text-muted)]">
-              Share your company&apos;s funding journey (optional)
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Select
-              label="Funding Stage"
-              options={FUNDING_STAGE_OPTIONS}
-              value={form.fundingStage || ''}
-              onChange={(v) => updateField('fundingStage', v as FundingStage)}
-              placeholder="Select funding stage"
-            />
-            <Input
-              label="Total Funding Raised"
-              placeholder="e.g. $50M, ₹200 Crore"
-              value={form.totalFundingRaised || ''}
-              onChange={(e) => updateField('totalFundingRaised', e.target.value)}
-              leftIcon={<DollarSign className="h-4 w-4" />}
-            />
-          </div>
-
-          {/* Investors */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Investors</label>
-            <p className="mb-3 text-xs text-[var(--text-muted)]">
-              Add your key investors and backers
-            </p>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <ServerSuggestionInput
-                  category="investor"
-                  placeholder="e.g. Sequoia Capital India"
-                  value={investorInput}
-                  onChange={setInvestorInput}
-                  onSelect={(v) => addToArray('investors', v, setInvestorInput)}
-                />
-              </div>
-              <Button
-                variant="outline"
-                className="shrink-0"
-                onClick={() => addToArray('investors', investorInput, setInvestorInput)}
-                disabled={!investorInput.trim()}
-                tooltip="Add investor"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+      {/* Funding — Company only */}
+      {!isIndividual && (
+        <div className="border-t border-[var(--border)] pt-8">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-xl">
+              <TrendingUp className="text-primary h-5 w-5" />
             </div>
-            {(form.investors || []).length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {(form.investors || []).map((inv) => (
-                  <Tag
-                    key={inv}
-                    label={inv}
-                    variant="primary"
-                    onRemove={() => removeFromArray('investors', inv)}
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--text)]">Funding Details</h3>
+              <p className="text-xs text-[var(--text-muted)]">
+                Share your company&apos;s funding journey (optional)
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Funding Stage"
+                options={FUNDING_STAGE_OPTIONS}
+                value={form.fundingStage || ''}
+                onChange={(v) => updateField('fundingStage', v as FundingStage)}
+                placeholder="Select funding stage"
+              />
+              <Input
+                label="Total Funding Raised"
+                placeholder="e.g. $50M, ₹200 Crore"
+                value={form.totalFundingRaised || ''}
+                onChange={(e) => updateField('totalFundingRaised', e.target.value)}
+                leftIcon={<DollarSign className="h-4 w-4" />}
+              />
+            </div>
+
+            {/* Investors */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                Investors
+              </label>
+              <p className="mb-3 text-xs text-[var(--text-muted)]">
+                Add your key investors and backers
+              </p>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <ServerSuggestionInput
+                    category="investor"
+                    placeholder="e.g. Sequoia Capital India"
+                    value={investorInput}
+                    onChange={setInvestorInput}
+                    onSelect={(v) => addToArray('investors', v, setInvestorInput)}
                   />
-                ))}
+                </div>
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => addToArray('investors', investorInput, setInvestorInput)}
+                  disabled={!investorInput.trim()}
+                  tooltip="Add investor"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
-            )}
+              {(form.investors || []).length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(form.investors || []).map((inv) => (
+                    <Tag
+                      key={inv}
+                      label={inv}
+                      variant="primary"
+                      onRemove={() => removeFromArray('investors', inv)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { Upload } from '@aws-sdk/lib-storage';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { scanFile } from '../utils/file-scan';
+import { AppError } from '../middleware/error';
 
 const tracer = trace.getTracer('storage-service');
 
@@ -22,6 +24,12 @@ export const uploadFileToR2 = async (
   folder: string = 'uploads',
   mimetype: string
 ): Promise<{ key: string; url: string }> => {
+  // Security scan before upload
+  const scanResult = scanFile(fileBuffer, originalFilename, mimetype);
+  if (!scanResult.safe) {
+    throw new AppError(scanResult.reason || 'File rejected by security scan', 400, 'FILE_REJECTED');
+  }
+
   const ext = path.extname(originalFilename);
   const key = `${folder}/${uuidv4()}${ext}`;
 

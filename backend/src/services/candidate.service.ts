@@ -5,7 +5,7 @@ import type { CandidateProfile } from '@prisma/client';
 import { uploadImage, uploadOptions, deleteImage, extractPublicId } from '../config/cloudinary';
 import { searchService } from './search.service';
 import { PAGINATION } from '@/constants';
-import {  } from '../kafka/producer';
+import {} from '../kafka/producer';
 import { publishEvent } from '../kafka/producer';
 import { KafkaTopics } from '../kafka/topics';
 import { trackEvent, getClientId } from './analytics.service';
@@ -164,7 +164,8 @@ export class CandidateService {
     // Sync with Search (async via BullMQ)
     if (profile) {
       addReindexJob({ indexType: 'candidate', documentId: profile.id, action: 'index' }).catch(
-        (err: unknown) => logger.error('Failed to queue ES reindex for candidate (resume upload)', err)
+        (err: unknown) =>
+          logger.error('Failed to queue ES reindex for candidate (resume upload)', err)
       );
     }
 
@@ -219,8 +220,12 @@ export class CandidateService {
 
     // Sync with Search (async via BullMQ)
     if (candidateProfile) {
-      addReindexJob({ indexType: 'candidate', documentId: candidateProfile.id, action: 'index' }).catch(
-        (err: unknown) => logger.error('Failed to queue ES reindex for candidate (image upload)', err)
+      addReindexJob({
+        indexType: 'candidate',
+        documentId: candidateProfile.id,
+        action: 'index',
+      }).catch((err: unknown) =>
+        logger.error('Failed to queue ES reindex for candidate (image upload)', err)
       );
     }
 
@@ -342,7 +347,8 @@ export class CandidateService {
     // Sync with Elasticsearch (async via BullMQ)
     if (profile) {
       addReindexJob({ indexType: 'candidate', documentId: profile.id, action: 'index' }).catch(
-        (err: unknown) => logger.error('Failed to queue ES reindex for candidate (resume deletion)', err)
+        (err: unknown) =>
+          logger.error('Failed to queue ES reindex for candidate (resume deletion)', err)
       );
     }
 
@@ -432,15 +438,18 @@ export class CandidateService {
     // 1. Try Elasticsearch — only when actual search criteria exist (not just page/limit/sortBy)
     const ignoreKeys = new Set(['page', 'limit', 'sortBy']);
     const hasSearchCriteria = Object.entries(filters).some(
-      ([key, val]) => !ignoreKeys.has(key) && val !== undefined && val !== null && val !== '',
+      ([key, val]) => !ignoreKeys.has(key) && val !== undefined && val !== null && val !== ''
     );
     if (query || hasSearchCriteria) {
       try {
-        const { hits, total, facets } = await searchService.searchCandidates(query || filters.keyword, {
-          ...filters,
-          from: skip,
-          size: cappedLimit,
-        });
+        const { hits, total, facets } = await searchService.searchCandidates(
+          query || filters.keyword,
+          {
+            ...filters,
+            from: skip,
+            size: cappedLimit,
+          }
+        );
 
         return {
           candidates: hits,
@@ -459,7 +468,6 @@ export class CandidateService {
 
     // 2. Prisma DB fallback — used when no search criteria or when ES fails
     {
-
       const where: any = {};
 
       if (filters.keyword) {
@@ -744,6 +752,8 @@ export class CandidateService {
       return { percentage: 0, completed: [], missing: ['Create your profile'] };
     }
 
+    const isFresher = profile.experienceLevel === 'FRESHER';
+
     const checks = [
       {
         field: 'Personal Info',
@@ -766,7 +776,7 @@ export class CandidateService {
       },
       {
         field: 'Professional',
-        weight: 12,
+        weight: isFresher ? 0 : 12,
         check: !!(
           profile.currentRole ||
           profile.experienceLevel ||
@@ -784,10 +794,10 @@ export class CandidateService {
       },
       {
         field: 'Experience',
-        weight: 10,
+        weight: isFresher ? 0 : 10,
         check: !!(profile.experience && (profile.experience as any[]).length > 0),
       },
-      { field: 'Resume', weight: 5, check: !!profile.resume },
+      { field: 'Resume', weight: isFresher ? 0 : 5, check: !!profile.resume },
       { field: 'Headline', weight: 5, check: !!profile.headline },
       {
         field: 'Preferences',
@@ -855,9 +865,22 @@ export class CandidateService {
       },
     ];
 
-    const completed = checks.filter((c) => c.check).map((c) => c.field);
-    const missing = checks.filter((c) => !c.check).map((c) => c.field);
-    const percentage = checks.reduce((acc, c) => acc + (c.check ? c.weight : 0), 0);
+    // Filter out zero-weight checks (not applicable for freshers)
+    const applicableChecks = checks.filter((c) => c.weight > 0);
+    const totalWeight = applicableChecks.reduce((acc, c) => acc + c.weight, 0);
+    const normalizedChecks = applicableChecks.map((c) => ({
+      ...c,
+      weight: Math.floor((c.weight / totalWeight) * 100),
+    }));
+    let remainder = 100 - normalizedChecks.reduce((acc, c) => acc + c.weight, 0);
+    for (let i = 0; remainder > 0 && i < normalizedChecks.length; i++) {
+      normalizedChecks[i].weight++;
+      remainder--;
+    }
+
+    const completed = normalizedChecks.filter((c) => c.check).map((c) => c.field);
+    const missing = normalizedChecks.filter((c) => !c.check).map((c) => c.field);
+    const percentage = normalizedChecks.reduce((acc, c) => acc + (c.check ? c.weight : 0), 0);
 
     return { percentage, completed, missing };
   }

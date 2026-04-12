@@ -49,7 +49,6 @@ const STATUS_COLORS: Record<string, string> = {
   APPLIED: '#3B82F6',
   VIEWED: '#8B5CF6',
   SHORTLISTED: '#F59E0B',
-  INTERVIEW_SCHEDULED: '#6366F1',
   OFFERED: '#10B981',
   HIRED: '#059669',
   REJECTED: '#EF4444',
@@ -60,7 +59,6 @@ const STATUS_LABELS: Record<string, string> = {
   APPLIED: 'Applied',
   VIEWED: 'Viewed',
   SHORTLISTED: 'Shortlisted',
-  INTERVIEW_SCHEDULED: 'Interview',
   OFFERED: 'Offered',
   HIRED: 'Hired',
   REJECTED: 'Rejected',
@@ -291,7 +289,12 @@ export default function CandidateAnalyticsPage() {
               Track your job search progress and identify areas for improvement.
             </p>
           </div>
-          <Button variant="outline" onClick={handleExport} disabled={isLoading || !analytics} tooltip="Download analytics data as CSV">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isLoading || !analytics}
+            tooltip="Download analytics data as CSV"
+          >
             <Download className="mr-1.5 h-4 w-4" />
             Export CSV
           </Button>

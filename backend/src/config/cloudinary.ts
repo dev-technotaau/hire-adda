@@ -49,8 +49,19 @@ export const uploadOptions = {
 // Upload image from buffer or base64
 export const uploadImage = async (
   file: string | Buffer,
-  options: UploadApiOptions = uploadOptions.profileImage
+  options: UploadApiOptions = uploadOptions.profileImage,
+  originalFilename?: string
 ): Promise<UploadApiResponse> => {
+  // Security scan for buffer uploads
+  if (typeof file !== 'string' && originalFilename) {
+    const { scanFile } = await import('../utils/file-scan');
+    const mimetype = options.resource_type === 'raw' ? 'application/pdf' : 'image/jpeg';
+    const result = scanFile(file, originalFilename, mimetype);
+    if (!result.safe) {
+      throw new Error(result.reason || 'File rejected by security scan');
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const uploadCallback = (error: any, result: UploadApiResponse | undefined) => {
       if (error) return reject(error);

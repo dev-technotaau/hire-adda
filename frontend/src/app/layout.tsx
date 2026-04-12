@@ -3,6 +3,7 @@ import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';
 import BackToTop from '@/components/common/BackToTop';
+import SmoothScroll from '@/components/common/SmoothScroll';
 import CookieConsent from '@/components/common/CookieConsent';
 import KeyboardShortcuts from '@/components/common/KeyboardShortcuts';
 import OfflineBanner from '@/components/common/OfflineBanner';
@@ -61,6 +62,13 @@ export default async function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <head>
+        {/* Frame-busting fallback for browsers that don't support CSP frame-ancestors */}
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: `if(window.top!==window.self){window.top.location=window.self.location}`,
+          }}
+        />
         <GTMHead nonce={nonce} />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -88,9 +96,11 @@ export default async function RootLayout({
         <TopLoadingBar />
         <OfflineBanner />
         <Providers>
-          <main id="main-content" className="flex flex-1 flex-col">
-            {children}
-          </main>
+          <SmoothScroll>
+            <main id="main-content" className="flex flex-1 flex-col">
+              {children}
+            </main>
+          </SmoothScroll>
         </Providers>
         <WebVitals />
         <GoogleAnalytics nonce={nonce} />

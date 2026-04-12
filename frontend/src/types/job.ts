@@ -98,6 +98,7 @@ export type ScreeningQuestionType = 'TEXT' | 'YES_NO' | 'MULTIPLE_CHOICE' | 'NUM
 export interface Job {
   id: string;
   companyId: string;
+  clientCompanyName: string | null;
   title: string;
   description: string;
   keyResponsibilities: string | null;
@@ -268,6 +269,7 @@ export interface SelectCandidateRequest {
 export interface CreateJobRequest {
   title: string;
   description: string;
+  clientCompanyName?: string;
   keyResponsibilities?: string;
   requirements?: string;
   benefits?: string;

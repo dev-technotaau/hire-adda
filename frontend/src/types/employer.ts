@@ -1,6 +1,9 @@
 import type { CompanyType } from './job';
 import type { ImageVariants } from './admin';
 
+export type AccountType = 'COMPANY' | 'INDIVIDUAL';
+export type HiringType = 'DIRECT' | 'CONSULTANCY';
+
 export type FundingStage =
   | 'BOOTSTRAPPED'
   | 'SEED'
@@ -43,6 +46,8 @@ export interface OfficePhotoEntry {
 export interface CompanyProfile {
   id: string;
   userId: string;
+  accountType: AccountType | null;
+  hiringType: HiringType | null;
   companyName: string;
   companyType: CompanyType | null;
   tagline: string | null;
@@ -88,7 +93,13 @@ export interface CompanyProfile {
   structuredPerks: Array<{ category: string; perks: string[] }> | null;
   workplacePolicies: Record<string, string> | null;
   interviewProcess: string | null;
-  awardsRecognitions: Array<{ title: string; year?: number; issuer?: string; issuingOrg?: string; description?: string }> | null;
+  awardsRecognitions: Array<{
+    title: string;
+    year?: number;
+    issuer?: string;
+    issuingOrg?: string;
+    description?: string;
+  }> | null;
   leadershipTeam: LeadershipEntry[] | null;
   employeeTestimonials: EmployeeTestimonialEntry[] | null;
   officePhotos: OfficePhotoEntry[] | null;
@@ -119,7 +130,12 @@ export interface CompanyProfile {
   linkedinUrl?: string | null;
   twitterUrl?: string | null;
   facebookUrl?: string | null;
-  awards?: Array<{ title: string; year?: number; issuingOrg?: string; description?: string }> | null;
+  awards?: Array<{
+    title: string;
+    year?: number;
+    issuingOrg?: string;
+    description?: string;
+  }> | null;
   createdAt: string;
   updatedAt: string;
   user?: {
@@ -132,6 +148,8 @@ export interface CompanyProfile {
 }
 
 export interface UpdateCompanyRequest {
+  accountType?: AccountType;
+  hiringType?: HiringType;
   companyName?: string;
   companyType?: CompanyType;
   tagline?: string;

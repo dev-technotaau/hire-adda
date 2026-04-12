@@ -37,9 +37,11 @@ import {
   verifyEmail as verifyEmailTemplate,
   passwordResetOtp as passwordResetOtpTemplate,
   changePasswordOtp as changePasswordOtpTemplate,
+  loginAlert,
 } from '../templates/email/auth';
 import { sessionService } from './session.service';
-import {  } from '../kafka/producer';
+import { checkImpossibleTravel } from '../utils/impossible-travel';
+import {} from '../kafka/producer';
 import { publishEvent } from '../kafka/producer';
 import { KafkaTopics } from '../kafka/topics';
 import { trackEvent, getClientId } from './analytics.service';
@@ -391,6 +393,31 @@ export const login = async (
 
   logger.info(`User logged in: ${email}`);
 
+  // Impossible travel detection (non-blocking)
+  if (ipAddress && user.lastLoginIp) {
+    checkImpossibleTravel(ipAddress, user.lastLoginIp, user.lastLoginAt)
+      .then((warning) => {
+        if (warning) {
+          // Send security alert email
+          const alertContent = loginAlert(
+            new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+            ipAddress,
+            userAgent
+          );
+          return emailQueue
+            .add('send-email', {
+              to: user.email,
+              subject: '⚠️ Suspicious Login Detected — Hire Adda',
+              html: alertContent.html,
+              text: alertContent.text,
+            })
+            .catch(() => {});
+        }
+        return undefined;
+      })
+      .catch(() => {});
+  }
+
   // Create session and generate tokens with sessionId
   const session = await sessionService.createSession(user.id, userAgent, ipAddress);
   const tokenPayload: TokenPayload = {
@@ -449,7 +476,11 @@ export const login = async (
 // ===============================
 // Logout
 // ===============================
-export const logout = async (refreshToken: string, userId?: string, sessionId?: string): Promise<void> => {
+export const logout = async (
+  refreshToken: string,
+  userId?: string,
+  sessionId?: string
+): Promise<void> => {
   await revokeToken(refreshToken);
 
   // Revoke the session if sessionId is provided
@@ -547,7 +578,12 @@ export const refreshTokens = async (
   };
 
   const accessToken = signAccessToken(tokenPayload);
-  const refreshToken = await createRefreshToken(tokenRecord.user.id, userAgent, ipAddress, sessionId);
+  const refreshToken = await createRefreshToken(
+    tokenRecord.user.id,
+    userAgent,
+    ipAddress,
+    sessionId
+  );
 
   return { accessToken, refreshToken, sessionId };
 };
@@ -1103,7 +1139,7 @@ export const verifyWhatsapp = async (
     `whatsapp:pending:${userId}`,
     JSON.stringify({ number: separateWhatsapp, targetNumber }),
     'EX',
-    expiryMinutes * 60,
+    expiryMinutes * 60
   );
 
   await prisma.user.update({
@@ -1225,7 +1261,7 @@ export const changeWhatsappNumber = async (
     `whatsapp:pending:${userId}`,
     JSON.stringify({ number: storeNumber, targetNumber }),
     'EX',
-    expiryMinutes * 60,
+    expiryMinutes * 60
   );
 
   // Keep old WhatsApp verification active until confirmWhatsappOtp switches to the new number.

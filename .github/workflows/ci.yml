@@ -119,11 +119,11 @@ jobs:
 
       - name: Audit backend
         working-directory: ./backend
-        run: npm audit --audit-level=critical || true
+        run: npm audit --audit-level=critical --production
 
       - name: Audit frontend
         working-directory: ./frontend
-        run: npm audit --audit-level=critical || true
+        run: npm audit --audit-level=critical --production
 
   # ─── Container Security ────────────────────────────────
   container-security:

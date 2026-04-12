@@ -39,6 +39,8 @@ import Badge from '@/components/ui/Badge';
 import Skeleton from '@/components/ui/Skeleton';
 import Tooltip from '@/components/ui/Tooltip';
 import Logo from '@/components/common/Logo';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useAuth } from '@/hooks/use-auth';
 import { employerService } from '@/services/employer.service';
 import { QUERY_KEYS } from '@/constants/config';
 import { FUNDING_STAGE_LABELS } from '@/constants/enums';
@@ -66,6 +68,20 @@ function PublicPageShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function PageShell({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuth();
+
+  if (isAuthenticated && user?.role) {
+    return (
+      <DashboardLayout requiredRole={[user.role]}>
+        <div className="mx-auto max-w-5xl">{children}</div>
+      </DashboardLayout>
+    );
+  }
+
+  return <PublicPageShell>{children}</PublicPageShell>;
+}
+
 export default function PublicCompanyProfilePage() {
   const params = useParams();
   const id = params.id as string;
@@ -84,7 +100,7 @@ export default function PublicCompanyProfilePage() {
 
   if (isLoading) {
     return (
-      <PublicPageShell>
+      <PageShell>
         <div className="space-y-6">
           <Card>
             <Skeleton variant="rect" height={200} />
@@ -96,13 +112,13 @@ export default function PublicCompanyProfilePage() {
             <Skeleton variant="rect" height={200} />
           </Card>
         </div>
-      </PublicPageShell>
+      </PageShell>
     );
   }
 
   if (isError || !company) {
     return (
-      <PublicPageShell>
+      <PageShell>
         <div className="flex flex-col items-center justify-center py-20">
           <AlertCircle className="h-12 w-12 text-[var(--text-muted)]" />
           <h2 className="mt-4 text-lg font-semibold text-[var(--text)]">Company Not Found</h2>
@@ -115,12 +131,15 @@ export default function PublicCompanyProfilePage() {
             </Link>
           </Tooltip>
         </div>
-      </PublicPageShell>
+      </PageShell>
     );
   }
 
+  const isIndividual = company.accountType === 'INDIVIDUAL';
+  const isConsultancy = company.hiringType === 'CONSULTANCY';
+
   return (
-    <PublicPageShell>
+    <PageShell>
       <div className="space-y-6">
         {/* Company Header */}
         <Card>
@@ -165,7 +184,7 @@ export default function PublicCompanyProfilePage() {
                     {company.subIndustry ? ` · ${company.subIndustry}` : ''}
                   </span>
                 )}
-                {company.companySize && (
+                {!isIndividual && company.companySize && (
                   <span className="flex items-center gap-1">
                     <Users className="h-4 w-4" /> {company.companySize}
                     {company.employeeCount ? ` (${company.employeeCount.toLocaleString()})` : ''}
@@ -183,7 +202,7 @@ export default function PublicCompanyProfilePage() {
                     <Calendar className="h-4 w-4" /> Founded {company.foundedYear}
                   </span>
                 )}
-                {company.numberOfOffices && (
+                {!isIndividual && company.numberOfOffices && (
                   <span className="flex items-center gap-1">
                     <Home className="h-4 w-4" /> {company.numberOfOffices}{' '}
                     {company.numberOfOffices === 1 ? 'office' : 'offices'}
@@ -192,12 +211,22 @@ export default function PublicCompanyProfilePage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {company.companyType && (
+                {isIndividual && (
+                  <Badge variant="info" size="sm">
+                    Individual
+                  </Badge>
+                )}
+                {isConsultancy && (
+                  <Badge variant="info" size="sm">
+                    Staffing Agency
+                  </Badge>
+                )}
+                {!isIndividual && company.companyType && (
                   <Badge variant="neutral" size="sm">
                     {company.companyType.replace(/_/g, ' ')}
                   </Badge>
                 )}
-                {company.parentCompany && (
+                {!isIndividual && company.parentCompany && (
                   <Badge variant="neutral" size="sm">
                     Subsidiary of {company.parentCompany}
                   </Badge>
@@ -505,8 +534,8 @@ export default function PublicCompanyProfilePage() {
           </Card>
         )}
 
-        {/* Leadership Team */}
-        {company.leadershipTeam && company.leadershipTeam.length > 0 && (
+        {/* Leadership Team — Company only */}
+        {!isIndividual && company.leadershipTeam && company.leadershipTeam.length > 0 && (
           <Card
             header={
               <div className="flex items-center gap-2">
@@ -553,48 +582,52 @@ export default function PublicCompanyProfilePage() {
           </Card>
         )}
 
-        {/* Employee Testimonials */}
-        {company.employeeTestimonials && company.employeeTestimonials.length > 0 && (
-          <Card
-            header={
-              <div className="flex items-center gap-2">
-                <Quote className="h-5 w-5 text-[#8B5CF6]" />
-                <h2 className="text-lg font-semibold text-[var(--text)]">Employee Testimonials</h2>
-              </div>
-            }
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              {company.employeeTestimonials.map((testimonial, i) => (
-                <div key={i} className="rounded-lg border border-[var(--border)] p-4">
-                  <p className="text-sm text-[var(--text-secondary)] italic">
-                    &ldquo;{testimonial.quote}&rdquo;
-                  </p>
-                  <div className="mt-3 flex items-center gap-3">
-                    {testimonial.imageUrl ? (
-                      <img
-                        src={testimonial.imageUrl}
-                        alt={testimonial.name}
-                        className="h-8 w-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-tertiary)]">
-                        <User className="h-4 w-4 text-[var(--text-muted)]" />
+        {/* Employee Testimonials — Company only */}
+        {!isIndividual &&
+          company.employeeTestimonials &&
+          company.employeeTestimonials.length > 0 && (
+            <Card
+              header={
+                <div className="flex items-center gap-2">
+                  <Quote className="h-5 w-5 text-[#8B5CF6]" />
+                  <h2 className="text-lg font-semibold text-[var(--text)]">
+                    Employee Testimonials
+                  </h2>
+                </div>
+              }
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                {company.employeeTestimonials.map((testimonial, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--border)] p-4">
+                    <p className="text-sm text-[var(--text-secondary)] italic">
+                      &ldquo;{testimonial.quote}&rdquo;
+                    </p>
+                    <div className="mt-3 flex items-center gap-3">
+                      {testimonial.imageUrl ? (
+                        <img
+                          src={testimonial.imageUrl}
+                          alt={testimonial.name}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-tertiary)]">
+                          <User className="h-4 w-4 text-[var(--text-muted)]" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-[var(--text)]">{testimonial.name}</p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          {[testimonial.designation, testimonial.department]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
                       </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-medium text-[var(--text)]">{testimonial.name}</p>
-                      <p className="text-xs text-[var(--text-muted)]">
-                        {[testimonial.designation, testimonial.department]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
+                ))}
+              </div>
+            </Card>
+          )}
 
         {/* Awards & Recognitions */}
         {company.awardsRecognitions && company.awardsRecognitions.length > 0 && (
@@ -619,55 +652,56 @@ export default function PublicCompanyProfilePage() {
           </Card>
         )}
 
-        {/* Funding & Investors */}
-        {(company.fundingStage ||
-          company.totalFundingRaised ||
-          company.annualRevenueRange ||
-          (company.investors && company.investors.length > 0)) && (
-          <Card
-            header={
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-[var(--success)]" />
-                <h2 className="text-lg font-semibold text-[var(--text)]">Funding & Investors</h2>
-              </div>
-            }
-          >
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
-                {company.fundingStage && (
-                  <span className="flex items-center gap-1.5">
-                    <span className="font-medium text-[var(--text)]">Stage:</span>{' '}
-                    {FUNDING_STAGE_LABELS[company.fundingStage] || company.fundingStage}
-                  </span>
-                )}
-                {company.totalFundingRaised && (
-                  <span className="flex items-center gap-1.5">
-                    <span className="font-medium text-[var(--text)]">Total Raised:</span>{' '}
-                    {company.totalFundingRaised}
-                  </span>
-                )}
-                {company.annualRevenueRange && (
-                  <span className="flex items-center gap-1.5">
-                    <span className="font-medium text-[var(--text)]">Annual Revenue:</span>{' '}
-                    {company.annualRevenueRange}
-                  </span>
-                )}
-              </div>
-              {company.investors && company.investors.length > 0 && (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold text-[var(--text)]">Investors</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {company.investors.map((investor) => (
-                      <Badge key={investor} variant="neutral" size="sm">
-                        {investor}
-                      </Badge>
-                    ))}
-                  </div>
+        {/* Funding & Investors — Company only */}
+        {!isIndividual &&
+          (company.fundingStage ||
+            company.totalFundingRaised ||
+            company.annualRevenueRange ||
+            (company.investors && company.investors.length > 0)) && (
+            <Card
+              header={
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-[var(--success)]" />
+                  <h2 className="text-lg font-semibold text-[var(--text)]">Funding & Investors</h2>
                 </div>
-              )}
-            </div>
-          </Card>
-        )}
+              }
+            >
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-4 text-sm text-[var(--text-secondary)]">
+                  {company.fundingStage && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-medium text-[var(--text)]">Stage:</span>{' '}
+                      {FUNDING_STAGE_LABELS[company.fundingStage] || company.fundingStage}
+                    </span>
+                  )}
+                  {company.totalFundingRaised && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-medium text-[var(--text)]">Total Raised:</span>{' '}
+                      {company.totalFundingRaised}
+                    </span>
+                  )}
+                  {company.annualRevenueRange && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-medium text-[var(--text)]">Annual Revenue:</span>{' '}
+                      {company.annualRevenueRange}
+                    </span>
+                  )}
+                </div>
+                {company.investors && company.investors.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 text-sm font-semibold text-[var(--text)]">Investors</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {company.investors.map((investor) => (
+                        <Badge key={investor} variant="neutral" size="sm">
+                          {investor}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
 
         {/* Workplace Policies */}
         {company.workplacePolicies && Object.keys(company.workplacePolicies).length > 0 && (
@@ -900,6 +934,6 @@ export default function PublicCompanyProfilePage() {
           </Card>
         )}
       </div>
-    </PublicPageShell>
+    </PageShell>
   );
 }

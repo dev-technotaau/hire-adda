@@ -145,17 +145,20 @@ export class VerificationService {
 
     // If Approved, update related profile flags
     if (status === VerificationStatus.APPROVED) {
-      if (request.type === VerificationType.GST && request.user.role === Role.EMPLOYER) {
-        await prisma.companyProfile.update({
-          where: { userId: request.userId },
-          data: { isVerified: true },
-        });
-        // Publish company verified event
-        publishEvent(KafkaTopics.COMPANY_VERIFIED, request.userId, {
-          userId: request.userId,
-          requestId,
-          type: request.type,
-        }).catch(() => {});
+      if (request.user.role === Role.EMPLOYER) {
+        // GST verification (company accounts) or IDENTITY verification (individual accounts)
+        if (request.type === VerificationType.GST || request.type === VerificationType.IDENTITY) {
+          await prisma.companyProfile.update({
+            where: { userId: request.userId },
+            data: { isVerified: true },
+          });
+          // Publish company verified event
+          publishEvent(KafkaTopics.COMPANY_VERIFIED, request.userId, {
+            userId: request.userId,
+            requestId,
+            type: request.type,
+          }).catch(() => {});
+        }
       }
       // Add other logic for Candidate Identity etc.
     }

@@ -167,12 +167,18 @@ export default function ForgotPasswordPage() {
                   leftIcon={<Mail className="h-4 w-4" />}
                   error={errors.email?.message}
                   required
+                  autoFocus
                   {...register('email')}
                 />
 
                 <Turnstile onSuccess={setTurnstileToken} onExpire={() => setTurnstileToken('')} />
 
-                <Button type="submit" fullWidth isLoading={isLoading} tooltip="Send password reset code to your email">
+                <Button
+                  type="submit"
+                  fullWidth
+                  isLoading={isLoading}
+                  tooltip="Send password reset code to your email"
+                >
                   Send Reset Code
                 </Button>
               </form>
@@ -252,7 +258,11 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     leftIcon={<Lock className="h-4 w-4" />}
                     rightIcon={
-                      <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4" />
                         ) : (
@@ -272,7 +282,11 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     leftIcon={<Lock className="h-4 w-4" />}
                     rightIcon={
-                      <button type="button" onClick={() => setShowConfirm(!showConfirm)}>
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => setShowConfirm(!showConfirm)}
+                      >
                         {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     }
@@ -312,7 +326,12 @@ export default function ForgotPasswordPage() {
                   Your password has been successfully reset. You can now log in with your new
                   password.
                 </p>
-                <Button fullWidth className="mt-6" onClick={() => router.push(ROUTES.AUTH.LOGIN)} tooltip="Go back to login">
+                <Button
+                  fullWidth
+                  className="mt-6"
+                  onClick={() => router.push(ROUTES.AUTH.LOGIN)}
+                  tooltip="Go back to login"
+                >
                   Go to Login
                 </Button>
               </div>

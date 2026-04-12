@@ -329,6 +329,14 @@ apiV1Router.use('/public', publicRoutes);
 apiV1Router.use('/tickets', ticketRoutes);
 apiV1Router.use('/internal/alertmanager', alertmanagerRoutes);
 
+// API versioning headers
+apiV1Router.use((_req, res, next) => {
+  res.setHeader('API-Version', 'v1');
+  res.setHeader('Deprecation', 'false');
+  // When v2 is released, set: res.setHeader('Sunset', 'Sat, 01 Jan 2028 00:00:00 GMT');
+  next();
+});
+
 app.use('/api/v1', apiV1Router);
 
 // Root route

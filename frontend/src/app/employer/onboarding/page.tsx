@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
   Globe,
@@ -52,7 +52,13 @@ import { showToast } from '@/components/ui/Toast';
 import { employerService } from '@/services/employer.service';
 import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS, FILE_LIMITS } from '@/constants/config';
-import { COMPANY_TYPE_LABELS, FUNDING_STAGE_LABELS } from '@/constants/enums';
+import {
+  COMPANY_TYPE_LABELS,
+  FUNDING_STAGE_LABELS,
+  ACCOUNT_TYPE_LABELS,
+  HIRING_TYPE_LABELS,
+  getSubIndustriesForIndustry,
+} from '@/constants/enums';
 import { INDIAN_STATES, REVENUE_RANGE_OPTIONS } from '@/constants/suggestions';
 import { useAuth } from '@/hooks/use-auth';
 import type {
@@ -85,6 +91,9 @@ function emptyTestimonial(): EmployeeTestimonialEntry {
 
 interface EmployerOnboardingData {
   [key: string]: unknown;
+  // Step: Account Type
+  accountType: string;
+  hiringType: string;
   // Step: Company Basics
   companyName: string;
   companyType: string;
@@ -168,25 +177,20 @@ interface EmployerOnboardingData {
 
 const STEPS: OnboardingStep[] = [
   { key: 'welcome', label: 'Welcome' },
+  { key: 'accountType', label: 'Account Type' },
   { key: 'basics', label: 'Company Basics' },
-  { key: 'identity', label: 'Company Identity' },
-  { key: 'culture', label: 'Mission & Culture', optional: true },
-  { key: 'whyWorkForUs', label: 'Why Work For Us', optional: true },
-  { key: 'benefits', label: 'Benefits & Perks', optional: true },
-  { key: 'tech', label: 'Tech & Policies', optional: true },
-  { key: 'leadership', label: 'Leadership & Testimonials', optional: true },
-  { key: 'awards', label: 'Awards', optional: true },
-  { key: 'funding', label: 'Funding', optional: true },
-  { key: 'legal', label: 'Legal & Financial', optional: true },
   { key: 'contact', label: 'Contact Info' },
   { key: 'address', label: 'Address & Locations' },
   { key: 'social', label: 'Social Profiles', optional: true },
+  { key: 'legal', label: 'Legal & Financial', optional: true },
+  { key: 'funding', label: 'Funding', optional: true },
   { key: 'interviewProcess', label: 'Interview Process', optional: true },
-  { key: 'csrValues', label: 'CSR & Values', optional: true },
   { key: 'review', label: 'Review' },
 ];
 
 const INITIAL_DATA: EmployerOnboardingData = {
+  accountType: '',
+  hiringType: '',
   companyName: '',
   companyType: '',
   industry: '',
@@ -308,6 +312,33 @@ export default function EmployerOnboardingPage() {
     initialData: INITIAL_DATA,
   });
 
+  // --- Pre-fill from existing company profile (e.g. company name from registration) ---
+  const prefilled = useRef(false);
+  const { data: existingCompany } = useQuery({
+    queryKey: QUERY_KEYS.EMPLOYERS.COMPANY,
+    queryFn: () => employerService.getCompany(),
+  });
+
+  useEffect(() => {
+    if (prefilled.current || !existingCompany?.data) return;
+    const c = existingCompany.data;
+    // Only pre-fill fields that are empty in the onboarding form
+    const updates: Partial<EmployerOnboardingData> = {};
+    if (c.accountType && !data.accountType) updates.accountType = c.accountType;
+    if (c.hiringType && !data.hiringType) updates.hiringType = c.hiringType;
+    if (c.companyName && !data.companyName) updates.companyName = c.companyName;
+    if (c.industry && !data.industry) updates.industry = c.industry;
+    if (c.companyType && !data.companyType) updates.companyType = c.companyType;
+    if (c.companySize && !data.companySize) updates.companySize = c.companySize;
+    if (c.website && !data.website) updates.website = c.website;
+    if (c.description && !data.description) updates.description = c.description;
+    if (c.tagline && !data.tagline) updates.tagline = c.tagline;
+    if (Object.keys(updates).length > 0) {
+      updateData(updates);
+      prefilled.current = true;
+    }
+  }, [existingCompany, data, updateData]);
+
   // --- Local input states for tag-based fields ---------------------------
   const [benefitInput, setBenefitInput] = useState('');
   const [techInput, setTechInput] = useState('');
@@ -336,6 +367,7 @@ export default function EmployerOnboardingPage() {
     mutationFn: (payload: UpdateCompanyRequest) => employerService.updateCompany(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPANY });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPLETENESS });
     },
   });
 
@@ -424,6 +456,16 @@ export default function EmployerOnboardingPage() {
   // --- Validation ---------------------------------------------------------
   const validateStep = useCallback((): boolean => {
     const key = STEPS[step]?.key;
+    if (key === 'accountType') {
+      if (!data.accountType) {
+        showToast.error('Please select your account type');
+        return false;
+      }
+      if (!data.hiringType) {
+        showToast.error('Please select your hiring type');
+        return false;
+      }
+    }
     if (key === 'basics') {
       if (!data.companyName.trim()) {
         showToast.error('Company name is required');
@@ -456,6 +498,8 @@ export default function EmployerOnboardingPage() {
     if (isLastStep) {
       // Build payload
       const payload: UpdateCompanyRequest = {
+        accountType: (data.accountType as UpdateCompanyRequest['accountType']) || undefined,
+        hiringType: (data.hiringType as UpdateCompanyRequest['hiringType']) || undefined,
         companyName: data.companyName || undefined,
         companyType: (data.companyType as UpdateCompanyRequest['companyType']) || undefined,
         industry: data.industry || undefined,
@@ -823,7 +867,8 @@ export default function EmployerOnboardingPage() {
   const getStepTitle = (): string => {
     const titles: Record<string, string> = {
       welcome: 'Welcome to Hire Adda!',
-      basics: 'Company Basics',
+      accountType: 'Account Type',
+      basics: `${companyLabel} Basics`,
       identity: 'Company Identity',
       culture: 'Mission & Culture',
       whyWorkForUs: 'Why Work For Us',
@@ -845,7 +890,8 @@ export default function EmployerOnboardingPage() {
   const getStepSubtitle = (): string => {
     const subtitles: Record<string, string> = {
       welcome: "Let's set up your company profile",
-      basics: 'Tell us about your company',
+      accountType: 'Tell us about your hiring setup',
+      basics: `Tell us about your ${companyLabel.toLowerCase()}`,
       identity: 'Help candidates understand who you are',
       culture: 'Share your company values and culture',
       whyWorkForUs: 'Tell candidates why they should join you',
@@ -865,6 +911,10 @@ export default function EmployerOnboardingPage() {
   };
 
   // --- Computed helpers for review ----------------------------------------
+  const isIndividual = data.accountType === 'INDIVIDUAL';
+  const isConsultancy = data.hiringType === 'CONSULTANCY';
+  const companyLabel = isIndividual ? 'Business' : 'Company';
+
   const displayName = user?.firstName
     ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`
     : 'there';
@@ -888,13 +938,13 @@ export default function EmployerOnboardingPage() {
 
       <div className="mt-8 w-full max-w-md space-y-3 text-left">
         {[
-          { icon: Building2, text: 'Company details and identity' },
-          { icon: Heart, text: 'Culture, benefits, and perks' },
-          { icon: UserCircle, text: 'Leadership team and testimonials' },
-          { icon: TrendingUp, text: 'Funding and investor details' },
-          { icon: Shield, text: 'Legal and financial info (optional)' },
+          { icon: Layers, text: 'Account type and hiring setup' },
+          { icon: Building2, text: 'Company basics and details' },
+          { icon: Mail, text: 'Contact information' },
           { icon: MapPin, text: 'Address and office locations' },
           { icon: Globe, text: 'Social media profiles' },
+          { icon: Shield, text: 'Legal and financial info (optional)' },
+          { icon: TrendingUp, text: 'Funding and investor details (optional)' },
         ].map(({ icon: Icon, text }) => (
           <div
             key={text}
@@ -908,9 +958,135 @@ export default function EmployerOnboardingPage() {
         ))}
       </div>
 
-      <p className="mt-6 text-xs text-[var(--text-muted)]">
+      <Button className="mt-8" size="lg" onClick={nextStep} tooltip="Start company profile setup">
+        Let&apos;s Go!
+      </Button>
+      <p className="mt-4 text-xs text-[var(--text-muted)]">
         This takes about 5-10 minutes. You can always save and continue later.
       </p>
+    </div>
+  );
+
+  const renderAccountType = () => (
+    <div className="space-y-8">
+      {/* Account Type */}
+      <div>
+        <label className="mb-1 block text-sm font-semibold text-[var(--text)]">
+          Are you hiring as a company or an individual?{' '}
+          <span className="text-[var(--error)]">*</span>
+        </label>
+        <p className="mb-4 text-xs text-[var(--text-muted)]">
+          This helps us tailor the experience for you
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Object.entries(ACCOUNT_TYPE_LABELS).map(([value, label]) => {
+            const isSelected = data.accountType === value;
+            const Icon = value === 'COMPANY' ? Building2 : UserCircle;
+            const desc =
+              value === 'COMPANY'
+                ? 'Registered business, startup, or organization'
+                : 'Sole proprietor, freelancer, or individual hiring';
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => updateData({ accountType: value })}
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
+                  isSelected
+                    ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-sm'
+                    : 'border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--text-muted)]'
+                }`}
+              >
+                <div
+                  className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                    isSelected
+                      ? 'bg-primary-light text-primary'
+                      : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <span
+                    className={`block text-sm font-semibold ${isSelected ? 'text-primary' : 'text-[var(--text)]'}`}
+                  >
+                    {label}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-[var(--text-muted)]">{desc}</span>
+                </div>
+                <div
+                  className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    isSelected
+                      ? 'border-[var(--primary)] bg-[var(--primary)]'
+                      : 'border-[var(--border)]'
+                  }`}
+                >
+                  {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Hiring Type */}
+      <div>
+        <label className="mb-1 block text-sm font-semibold text-[var(--text)]">
+          What kind of hiring do you do?
+        </label>
+        <p className="mb-4 text-xs text-[var(--text-muted)]">
+          Are you hiring for your own company or for client companies?
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Object.entries(HIRING_TYPE_LABELS).map(([value, label]) => {
+            const isSelected = data.hiringType === value;
+            const Icon = value === 'DIRECT' ? Building2 : Briefcase;
+            const desc =
+              value === 'DIRECT'
+                ? 'Hiring employees directly for your organization'
+                : 'Recruiting for other companies as a staffing agency';
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => updateData({ hiringType: value })}
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
+                  isSelected
+                    ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-sm'
+                    : 'border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--text-muted)]'
+                }`}
+              >
+                <div
+                  className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                    isSelected
+                      ? 'bg-primary-light text-primary'
+                      : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <span
+                    className={`block text-sm font-semibold ${isSelected ? 'text-primary' : 'text-[var(--text)]'}`}
+                  >
+                    {label}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-[var(--text-muted)]">{desc}</span>
+                </div>
+                <div
+                  className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    isSelected
+                      ? 'border-[var(--primary)] bg-[var(--primary)]'
+                      : 'border-[var(--border)]'
+                  }`}
+                >
+                  {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 
@@ -918,20 +1094,24 @@ export default function EmployerOnboardingPage() {
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
-          label="Company Name"
-          placeholder="e.g. Acme Technologies Pvt. Ltd."
+          label={isIndividual ? 'Business Name' : 'Company Name'}
+          placeholder={
+            isIndividual ? 'e.g. John Doe Consulting' : 'e.g. Acme Technologies Pvt. Ltd.'
+          }
           value={data.companyName}
           onChange={(e) => updateData({ companyName: e.target.value })}
           leftIcon={<Building2 className="h-4 w-4" />}
           required
         />
-        <Select
-          label="Company Type"
-          options={toSelectOptions(COMPANY_TYPE_LABELS)}
-          value={data.companyType}
-          onChange={(v) => updateData({ companyType: v })}
-          placeholder="Select type"
-        />
+        {!isIndividual && (
+          <Select
+            label="Company Type"
+            options={toSelectOptions(COMPANY_TYPE_LABELS)}
+            value={data.companyType}
+            onChange={(v) => updateData({ companyType: v })}
+            placeholder="Select type"
+          />
+        )}
       </div>
 
       <ServerSuggestionInput
@@ -940,20 +1120,32 @@ export default function EmployerOnboardingPage() {
         value={data.industry}
         onChange={(v) => updateData({ industry: v })}
         category="industry"
-        onSelect={(v) => updateData({ industry: v })}
+        onSelect={(v) => updateData({ industry: v, subIndustry: '' })}
         leftIcon={<Briefcase className="h-4 w-4" />}
         required
       />
 
-      <ServerSuggestionInput
-        label="Sub-Industry"
-        placeholder="e.g. SaaS, AI/ML, Payments"
-        value={data.subIndustry}
-        onChange={(v) => updateData({ subIndustry: v })}
-        category="sub_industry"
-        onSelect={(v) => updateData({ subIndustry: v })}
-        leftIcon={<BriefcaseBusiness className="h-4 w-4" />}
-      />
+      {getSubIndustriesForIndustry(data.industry).length > 0 ? (
+        <Select
+          label="Sub-Industry"
+          options={getSubIndustriesForIndustry(data.industry).map((s) => ({ value: s, label: s }))}
+          value={data.subIndustry}
+          onChange={(v) => updateData({ subIndustry: v as string })}
+          placeholder={data.industry ? 'Select sub-industry' : 'Select industry first'}
+          disabled={!data.industry}
+        />
+      ) : (
+        <ServerSuggestionInput
+          label="Sub-Industry"
+          placeholder={data.industry ? 'e.g. SaaS, AI/ML, Payments' : 'Select industry first'}
+          value={data.subIndustry}
+          onChange={(v) => updateData({ subIndustry: v })}
+          category="sub_industry"
+          onSelect={(v) => updateData({ subIndustry: v })}
+          leftIcon={<BriefcaseBusiness className="h-4 w-4" />}
+          disabled={!data.industry}
+        />
+      )}
 
       {/* Specialties */}
       <div>
@@ -989,39 +1181,41 @@ export default function EmployerOnboardingPage() {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Select
-          label="Company Size"
-          options={companySizeOptions}
-          value={data.companySize}
-          onChange={(v) => updateData({ companySize: v })}
-          placeholder="Select size"
-        />
-        <Input
-          label="Employee Count"
-          type="number"
-          placeholder="e.g. 250"
-          value={data.employeeCount ?? ''}
-          onChange={(e) =>
-            updateData({ employeeCount: e.target.value ? Number(e.target.value) : undefined })
-          }
-          leftIcon={<Users className="h-4 w-4" />}
-        />
-        <Input
-          label="Number of Offices"
-          type="number"
-          placeholder="e.g. 5"
-          value={data.numberOfOffices ?? ''}
-          onChange={(e) =>
-            updateData({ numberOfOffices: e.target.value ? Number(e.target.value) : undefined })
-          }
-          leftIcon={<MapPin className="h-4 w-4" />}
-        />
-      </div>
+      {!isIndividual && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Select
+            label="Company Size"
+            options={companySizeOptions}
+            value={data.companySize}
+            onChange={(v) => updateData({ companySize: v })}
+            placeholder="Select size"
+          />
+          <Input
+            label="Employee Count"
+            type="number"
+            placeholder="e.g. 250"
+            value={data.employeeCount ?? ''}
+            onChange={(e) =>
+              updateData({ employeeCount: e.target.value ? Number(e.target.value) : undefined })
+            }
+            leftIcon={<Users className="h-4 w-4" />}
+          />
+          <Input
+            label="Number of Offices"
+            type="number"
+            placeholder="e.g. 5"
+            value={data.numberOfOffices ?? ''}
+            onChange={(e) =>
+              updateData({ numberOfOffices: e.target.value ? Number(e.target.value) : undefined })
+            }
+            leftIcon={<MapPin className="h-4 w-4" />}
+          />
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
-          label="Founded Year"
+          label={isIndividual ? 'Year Started' : 'Founded Year'}
           type="number"
           placeholder="e.g. 2015"
           value={data.foundedYear ?? ''}
@@ -1040,24 +1234,7 @@ export default function EmployerOnboardingPage() {
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <ServerSuggestionInput
-          category="company"
-          label="Parent Company"
-          placeholder="e.g. Alphabet Inc."
-          value={data.parentCompany}
-          onChange={(val) => updateData({ parentCompany: val })}
-          helperText="Leave blank if not a subsidiary"
-        />
-        <Input
-          label="Stock Ticker"
-          placeholder="e.g. GOOG, TCS"
-          value={data.stockTicker}
-          onChange={(e) => updateData({ stockTicker: e.target.value })}
-          leftIcon={<TrendingUp className="h-4 w-4" />}
-          helperText="Only if publicly listed"
-        />
-      </div>
+      {/* Parent Company and Stock Ticker available in profile settings */}
     </div>
   );
 
@@ -1918,104 +2095,125 @@ export default function EmployerOnboardingPage() {
     </div>
   );
 
-  const renderFunding = () => (
-    <div className="space-y-6">
-      <div className="mb-2 flex items-center gap-3">
-        <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-xl">
-          <TrendingUp className="text-primary h-5 w-5" />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-[var(--text)]">Funding Details</h3>
-          <p className="text-xs text-[var(--text-muted)]">
-            Share your company&apos;s funding journey (optional)
+  const renderFunding = () => {
+    if (isIndividual) {
+      return (
+        <div className="flex flex-col items-center py-8 text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--bg-secondary)]">
+            <TrendingUp className="h-8 w-8 text-[var(--text-muted)]" />
+          </div>
+          <p className="text-sm text-[var(--text-muted)]">
+            Funding details are not applicable for individual accounts.
           </p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">You can skip this step.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="mb-2 flex items-center gap-3">
+          <div className="bg-primary-light flex h-10 w-10 items-center justify-center rounded-xl">
+            <TrendingUp className="text-primary h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--text)]">Funding Details</h3>
+            <p className="text-xs text-[var(--text-muted)]">
+              Share your company&apos;s funding journey (optional)
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Select
+            label="Funding Stage"
+            options={FUNDING_STAGE_OPTIONS}
+            value={data.fundingStage}
+            onChange={(v) => updateData({ fundingStage: v })}
+            placeholder="Select funding stage"
+          />
+          <Input
+            label="Total Funding Raised"
+            placeholder="e.g. $50M, ₹200 Crore"
+            value={data.totalFundingRaised}
+            onChange={(e) => updateData({ totalFundingRaised: e.target.value })}
+            leftIcon={<DollarSign className="h-4 w-4" />}
+          />
+        </div>
+
+        {/* Investors */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Investors</label>
+          <p className="mb-3 text-xs text-[var(--text-muted)]">
+            Add your key investors and backers
+          </p>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <ServerSuggestionInput
+                placeholder="e.g. Sequoia Capital India"
+                value={investorInput}
+                onChange={setInvestorInput}
+                category="investor"
+                onSelect={addInvestor}
+              />
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => addInvestor(investorInput)}
+              disabled={!investorInput.trim()}
+              className="shrink-0"
+              tooltip="Add investor"
+            >
+              <Plus className="h-4 w-4" />
+              Add
+            </Button>
+          </div>
+
+          {data.investors.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {data.investors.map((investor) => (
+                <Tag
+                  key={investor}
+                  label={investor}
+                  variant="primary"
+                  onRemove={() => removeInvestor(investor)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
+    );
+  };
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Select
-          label="Funding Stage"
-          options={FUNDING_STAGE_OPTIONS}
-          value={data.fundingStage}
-          onChange={(v) => updateData({ fundingStage: v })}
-          placeholder="Select funding stage"
-        />
-        <Input
-          label="Total Funding Raised"
-          placeholder="e.g. $50M, ₹200 Crore"
-          value={data.totalFundingRaised}
-          onChange={(e) => updateData({ totalFundingRaised: e.target.value })}
-          leftIcon={<DollarSign className="h-4 w-4" />}
-        />
-      </div>
+  const renderLegal = () => {
+    const isCompany = data.accountType === 'COMPANY';
+    return (
+      <div className="space-y-6">
+        <p className="text-sm text-[var(--text-muted)]">
+          These details are optional and kept private. They help verify your{' '}
+          {isCompany ? 'company' : 'identity'} and are not shown publicly.
+        </p>
 
-      {/* Investors */}
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Investors</label>
-        <p className="mb-3 text-xs text-[var(--text-muted)]">Add your key investors and backers</p>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <ServerSuggestionInput
-              placeholder="e.g. Sequoia Capital India"
-              value={investorInput}
-              onChange={setInvestorInput}
-              category="investor"
-              onSelect={addInvestor}
+        {isCompany && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="GST Number"
+              placeholder="e.g. 22AAAAA0000A1Z5"
+              value={data.gstNumber}
+              onChange={(e) => updateData({ gstNumber: e.target.value })}
+              leftIcon={<Shield className="h-4 w-4" />}
+            />
+            <Input
+              label="CIN Number"
+              placeholder="e.g. U12345MH2020PTC123456"
+              value={data.cinNumber}
+              onChange={(e) => updateData({ cinNumber: e.target.value })}
+              leftIcon={<Shield className="h-4 w-4" />}
             />
           </div>
-          <Button
-            variant="secondary"
-            onClick={() => addInvestor(investorInput)}
-            disabled={!investorInput.trim()}
-            className="shrink-0"
-            tooltip="Add investor"
-          >
-            <Plus className="h-4 w-4" />
-            Add
-          </Button>
-        </div>
-
-        {data.investors.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {data.investors.map((investor) => (
-              <Tag
-                key={investor}
-                label={investor}
-                variant="primary"
-                onRemove={() => removeInvestor(investor)}
-              />
-            ))}
-          </div>
         )}
-      </div>
-    </div>
-  );
 
-  const renderLegal = () => (
-    <div className="space-y-6">
-      <p className="text-sm text-[var(--text-muted)]">
-        These details are optional and kept private. They help verify your company and are not shown
-        publicly.
-      </p>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="GST Number"
-          placeholder="e.g. 22AAAAA0000A1Z5"
-          value={data.gstNumber}
-          onChange={(e) => updateData({ gstNumber: e.target.value })}
-          leftIcon={<Shield className="h-4 w-4" />}
-        />
-        <Input
-          label="CIN Number"
-          placeholder="e.g. U12345MH2020PTC123456"
-          value={data.cinNumber}
-          onChange={(e) => updateData({ cinNumber: e.target.value })}
-          leftIcon={<Shield className="h-4 w-4" />}
-        />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="PAN Number"
           placeholder="e.g. AAAAA1234A"
@@ -2023,65 +2221,63 @@ export default function EmployerOnboardingPage() {
           onChange={(e) => updateData({ panNumber: e.target.value })}
           leftIcon={<Shield className="h-4 w-4" />}
         />
-        <Select
-          label="Annual Revenue Range"
-          options={revenueOptions}
-          value={data.annualRevenueRange}
-          onChange={(v) => updateData({ annualRevenueRange: v })}
-          placeholder="Select revenue range"
-        />
+        {/* Annual Revenue Range available in profile settings */}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderContact = () => (
     <div className="space-y-6">
       <p className="text-sm text-[var(--text-muted)]">
-        Provide contact details so candidates and our team can reach you.
+        {isIndividual
+          ? 'Provide your contact details so candidates can reach you.'
+          : 'Provide contact details so candidates and our team can reach you.'}
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
-          label="Contact Email"
+          label={isIndividual ? 'Your Email' : 'Contact Email'}
           type="email"
-          placeholder="hr@company.com"
+          placeholder={isIndividual ? 'you@example.com' : 'hr@company.com'}
           value={data.contactEmail || user?.email || ''}
           onChange={(e) => updateData({ contactEmail: e.target.value })}
           leftIcon={<Mail className="h-4 w-4" />}
           required
         />
         <PhoneInput
-          label="Contact Phone"
+          label={isIndividual ? 'Your Phone' : 'Contact Phone'}
           placeholder="9876543210"
           value={data.contactPhone}
           onValueChange={(val) => updateData({ contactPhone: val })}
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Contact Person Name"
-          placeholder="e.g. Priya Sharma"
-          value={data.contactPersonName}
-          onChange={(e) => updateData({ contactPersonName: e.target.value })}
-          leftIcon={<UserCircle className="h-4 w-4" />}
-          helperText="Primary point of contact for candidates"
-        />
-        <ServerSuggestionInput
-          category="role_category"
-          label="Contact Person Designation"
-          placeholder="e.g. HR Manager, Talent Acquisition Lead"
-          value={data.contactPersonDesignation}
-          onChange={(val) => updateData({ contactPersonDesignation: val })}
-        />
-      </div>
+      {!isIndividual && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Contact Person Name"
+            placeholder="e.g. Priya Sharma"
+            value={data.contactPersonName}
+            onChange={(e) => updateData({ contactPersonName: e.target.value })}
+            leftIcon={<UserCircle className="h-4 w-4" />}
+            helperText="Primary point of contact for candidates"
+          />
+          <ServerSuggestionInput
+            category="role_category"
+            label="Contact Person Designation"
+            placeholder="e.g. HR Manager, Talent Acquisition Lead"
+            value={data.contactPersonDesignation}
+            onChange={(val) => updateData({ contactPersonDesignation: val })}
+          />
+        </div>
+      )}
     </div>
   );
 
   const renderAddress = () => (
     <div className="space-y-6">
       <ServerSuggestionInput
-        label="Headquarters"
+        label={isIndividual ? 'Your Location' : 'Headquarters'}
         placeholder="e.g. Bangalore, Karnataka"
         value={data.headquarters}
         onChange={(v) => updateData({ headquarters: v })}
@@ -2135,44 +2331,46 @@ export default function EmployerOnboardingPage() {
         leftIcon={<Globe className="h-4 w-4" />}
       />
 
-      {/* Additional Office Locations */}
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-          Additional Office Locations
-        </label>
-        <p className="mb-3 text-xs text-[var(--text-muted)]">
-          Add other cities or locations where you have offices
-        </p>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <ServerSuggestionInput
-              placeholder="e.g. Mumbai, Maharashtra"
-              value={locationInput}
-              onChange={setLocationInput}
-              category="location"
-              onSelect={addLocation}
-            />
+      {/* Additional Office Locations — Company only */}
+      {!isIndividual && (
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+            Additional Office Locations
+          </label>
+          <p className="mb-3 text-xs text-[var(--text-muted)]">
+            Add other cities or locations where you have offices
+          </p>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <ServerSuggestionInput
+                placeholder="e.g. Mumbai, Maharashtra"
+                value={locationInput}
+                onChange={setLocationInput}
+                category="location"
+                onSelect={addLocation}
+              />
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => addLocation(locationInput)}
+              disabled={!locationInput.trim()}
+              className="shrink-0"
+              tooltip="Add location"
+            >
+              <Plus className="h-4 w-4" />
+              Add
+            </Button>
           </div>
-          <Button
-            variant="secondary"
-            onClick={() => addLocation(locationInput)}
-            disabled={!locationInput.trim()}
-            className="shrink-0"
-            tooltip="Add location"
-          >
-            <Plus className="h-4 w-4" />
-            Add
-          </Button>
-        </div>
 
-        {data.locations.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {data.locations.map((loc) => (
-              <Tag key={loc} label={loc} variant="primary" onRemove={() => removeLocation(loc)} />
-            ))}
-          </div>
-        )}
-      </div>
+          {data.locations.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {data.locations.map((loc) => (
+                <Tag key={loc} label={loc} variant="primary" onRemove={() => removeLocation(loc)} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -2227,43 +2425,55 @@ export default function EmployerOnboardingPage() {
         leftIcon={<Youtube className="h-4 w-4" />}
       />
 
-      <Input
-        label="Glassdoor"
-        type="url"
-        placeholder="https://glassdoor.co.in/Overview/your-company"
-        value={data.socialLinks.glassdoor}
-        onChange={(e) => updateSocial('glassdoor', e.target.value)}
-        leftIcon={<Globe className="h-4 w-4" />}
-      />
+      {!isIndividual && (
+        <>
+          <Input
+            label="Glassdoor"
+            type="url"
+            placeholder="https://glassdoor.co.in/Overview/your-company"
+            value={data.socialLinks.glassdoor}
+            onChange={(e) => updateSocial('glassdoor', e.target.value)}
+            leftIcon={<Globe className="h-4 w-4" />}
+          />
+
+          <Input
+            label="Careers Page URL"
+            type="url"
+            placeholder="https://yourcompany.com/careers"
+            value={data.careersPageUrl}
+            onChange={(e) => updateData({ careersPageUrl: e.target.value })}
+            leftIcon={<BriefcaseBusiness className="h-4 w-4" />}
+            helperText="Link to your company's careers page"
+          />
+        </>
+      )}
 
       <Input
-        label="Careers Page URL"
+        label={isIndividual ? 'Portfolio / Blog URL' : 'Blog URL'}
         type="url"
-        placeholder="https://yourcompany.com/careers"
-        value={data.careersPageUrl}
-        onChange={(e) => updateData({ careersPageUrl: e.target.value })}
-        leftIcon={<BriefcaseBusiness className="h-4 w-4" />}
-        helperText="Link to your company's careers page"
-      />
-
-      <Input
-        label="Blog URL"
-        type="url"
-        placeholder="https://blog.yourcompany.com"
+        placeholder={isIndividual ? 'https://your-portfolio.com' : 'https://blog.yourcompany.com'}
         value={data.blogUrl}
         onChange={(e) => updateData({ blogUrl: e.target.value })}
         leftIcon={<BookOpen className="h-4 w-4" />}
-        helperText="Link to your company's blog or engineering blog"
+        helperText={
+          isIndividual
+            ? 'Link to your portfolio or blog'
+            : "Link to your company's blog or engineering blog"
+        }
       />
 
       <Input
-        label="Company Video URL"
+        label={isIndividual ? 'Intro Video URL' : 'Company Video URL'}
         type="url"
         placeholder="https://youtube.com/watch?v=..."
         value={data.companyVideoUrl}
         onChange={(e) => updateData({ companyVideoUrl: e.target.value })}
         leftIcon={<Camera className="h-4 w-4" />}
-        helperText="Intro video, office tour, or culture video (YouTube, Vimeo)"
+        helperText={
+          isIndividual
+            ? 'Intro or portfolio showcase video'
+            : 'Intro video, office tour, or culture video (YouTube, Vimeo)'
+        }
       />
     </div>
   );
@@ -2323,9 +2533,8 @@ export default function EmployerOnboardingPage() {
   );
 
   const renderReview = () => {
-    // Step indices: 0=welcome 1=basics 2=identity 3=culture 4=whyWorkForUs 5=benefits
-    // 6=tech 7=leadership 8=awards 9=funding 10=legal 11=contact 12=address 13=social
-    // 14=interviewProcess 15=csrValues 16=review
+    // Steps: 0=welcome 1=accountType 2=basics 3=contact 4=address 5=social 6=legal 7=funding
+    // 8=interviewProcess 9=review
     const sections: Array<{
       title: string;
       stepIndex: number;
@@ -2333,201 +2542,72 @@ export default function EmployerOnboardingPage() {
       items: Array<{ label: string; value: string | number | undefined | null }>;
     }> = [
       {
-        title: 'Company Basics',
+        title: 'Account Type',
         stepIndex: 1,
+        icon: Layers,
+        items: [
+          {
+            label: 'Account Type',
+            value: data.accountType ? ACCOUNT_TYPE_LABELS[data.accountType] : undefined,
+          },
+          {
+            label: 'Hiring Type',
+            value: data.hiringType ? HIRING_TYPE_LABELS[data.hiringType] : undefined,
+          },
+        ],
+      },
+      {
+        title: `${companyLabel} Basics`,
+        stepIndex: 2,
         icon: Building2,
         items: [
-          { label: 'Company Name', value: data.companyName },
-          {
-            label: 'Company Type',
-            value: data.companyType ? COMPANY_TYPE_LABELS[data.companyType] : undefined,
-          },
+          { label: isIndividual ? 'Business Name' : 'Company Name', value: data.companyName },
+          ...(!isIndividual
+            ? [
+                {
+                  label: 'Company Type',
+                  value: data.companyType ? COMPANY_TYPE_LABELS[data.companyType] : undefined,
+                },
+              ]
+            : []),
           { label: 'Industry', value: data.industry },
           { label: 'Sub-Industry', value: data.subIndustry },
           {
             label: 'Specialties',
             value: data.specialties.length > 0 ? data.specialties.join(', ') : undefined,
           },
-          { label: 'Company Size', value: data.companySize },
-          { label: 'Employee Count', value: data.employeeCount },
-          { label: 'Number of Offices', value: data.numberOfOffices },
-          { label: 'Founded Year', value: data.foundedYear },
+          ...(!isIndividual
+            ? [
+                { label: 'Company Size', value: data.companySize },
+                { label: 'Employee Count', value: data.employeeCount },
+                { label: 'Number of Offices', value: data.numberOfOffices },
+              ]
+            : []),
+          { label: isIndividual ? 'Year Started' : 'Founded Year', value: data.foundedYear },
           { label: 'Website', value: data.website },
-          { label: 'Parent Company', value: data.parentCompany },
-          { label: 'Stock Ticker', value: data.stockTicker },
-        ],
-      },
-      {
-        title: 'Company Identity',
-        stepIndex: 2,
-        icon: Sparkles,
-        items: [
-          { label: 'Tagline', value: data.tagline },
-          {
-            label: 'Description',
-            value: data.description ? `${data.description.slice(0, 120)}...` : undefined,
-          },
-        ],
-      },
-      {
-        title: 'Why Work For Us',
-        stepIndex: 4,
-        icon: Gem,
-        items: [
-          {
-            label: 'Why Work For Us',
-            value: data.whyWorkForUs ? `${data.whyWorkForUs.slice(0, 100)}...` : undefined,
-          },
-        ],
-      },
-      {
-        title: 'Mission & Culture',
-        stepIndex: 3,
-        icon: Target,
-        items: [
-          {
-            label: 'Mission',
-            value: data.missionStatement ? `${data.missionStatement.slice(0, 80)}...` : undefined,
-          },
-          {
-            label: 'Vision',
-            value: data.visionStatement ? `${data.visionStatement.slice(0, 80)}...` : undefined,
-          },
-          { label: 'Culture', value: data.companyCulture ? 'Provided' : undefined },
-          { label: 'Diversity', value: data.diversityStatement ? 'Provided' : undefined },
-          {
-            label: 'Core Values',
-            value: data.coreValues.length > 0 ? data.coreValues.join(', ') : undefined,
-          },
-          {
-            label: 'ERGs',
-            value:
-              data.employeeResourceGroups.length > 0
-                ? `${data.employeeResourceGroups.length} groups`
-                : undefined,
-          },
-        ],
-      },
-      {
-        title: 'Benefits & Perks',
-        stepIndex: 5,
-        icon: Heart,
-        items: [
-          {
-            label: 'Benefits',
-            value: data.benefits.length > 0 ? `${data.benefits.length} added` : undefined,
-          },
-          {
-            label: 'Structured Perks',
-            value:
-              data.structuredPerks.length > 0
-                ? `${data.structuredPerks.length} categories`
-                : undefined,
-          },
-        ],
-      },
-      {
-        title: 'Tech & Policies',
-        stepIndex: 6,
-        icon: Zap,
-        items: [
-          {
-            label: 'Tech Stack',
-            value: data.techStack.length > 0 ? `${data.techStack.length} technologies` : undefined,
-          },
-          {
-            label: 'Products & Services',
-            value:
-              data.productsServices.length > 0
-                ? `${data.productsServices.length} items`
-                : undefined,
-          },
-          {
-            label: 'Policies',
-            value:
-              Object.values(data.workplacePolicies).filter(Boolean).length > 0
-                ? `${Object.values(data.workplacePolicies).filter(Boolean).length} policies`
-                : undefined,
-          },
-        ],
-      },
-      {
-        title: 'Leadership & Testimonials',
-        stepIndex: 7,
-        icon: UserCircle,
-        items: [
-          {
-            label: 'Leadership Team',
-            value:
-              data.leadershipTeam.length > 0 ? `${data.leadershipTeam.length} leaders` : undefined,
-          },
-          {
-            label: 'Testimonials',
-            value:
-              data.employeeTestimonials.length > 0
-                ? `${data.employeeTestimonials.length} testimonials`
-                : undefined,
-          },
-        ],
-      },
-      {
-        title: 'Awards',
-        stepIndex: 8,
-        icon: Award,
-        items: [
-          {
-            label: 'Awards',
-            value:
-              data.awardsRecognitions.length > 0
-                ? `${data.awardsRecognitions.length} awards`
-                : undefined,
-          },
-        ],
-      },
-      {
-        title: 'Funding & Investors',
-        stepIndex: 9,
-        icon: TrendingUp,
-        items: [
-          {
-            label: 'Funding Stage',
-            value: data.fundingStage ? FUNDING_STAGE_LABELS[data.fundingStage] : undefined,
-          },
-          { label: 'Total Funding', value: data.totalFundingRaised },
-          {
-            label: 'Investors',
-            value: data.investors.length > 0 ? data.investors.join(', ') : undefined,
-          },
-        ],
-      },
-      {
-        title: 'Legal & Financial',
-        stepIndex: 10,
-        icon: Shield,
-        items: [
-          { label: 'GST Number', value: data.gstNumber },
-          { label: 'CIN Number', value: data.cinNumber },
-          { label: 'PAN Number', value: data.panNumber },
-          { label: 'Annual Revenue', value: data.annualRevenueRange },
         ],
       },
       {
         title: 'Contact Info',
-        stepIndex: 11,
+        stepIndex: 3,
         icon: Mail,
         items: [
           { label: 'Email', value: data.contactEmail },
           { label: 'Phone', value: data.contactPhone },
-          { label: 'Contact Person', value: data.contactPersonName },
-          { label: 'Designation', value: data.contactPersonDesignation },
+          ...(!isIndividual
+            ? [
+                { label: 'Contact Person', value: data.contactPersonName },
+                { label: 'Designation', value: data.contactPersonDesignation },
+              ]
+            : []),
         ],
       },
       {
         title: 'Address & Locations',
-        stepIndex: 12,
+        stepIndex: 4,
         icon: MapPin,
         items: [
-          { label: 'Headquarters', value: data.headquarters },
+          { label: isIndividual ? 'Location' : 'Headquarters', value: data.headquarters },
           {
             label: 'Full Address',
             value:
@@ -2544,7 +2624,7 @@ export default function EmployerOnboardingPage() {
       },
       {
         title: 'Social Profiles',
-        stepIndex: 13,
+        stepIndex: 5,
         icon: Globe,
         items: [
           { label: 'LinkedIn', value: data.socialLinks.linkedin },
@@ -2552,31 +2632,58 @@ export default function EmployerOnboardingPage() {
           { label: 'Facebook', value: data.socialLinks.facebook },
           { label: 'Instagram', value: data.socialLinks.instagram },
           { label: 'YouTube', value: data.socialLinks.youtube },
-          { label: 'Glassdoor', value: data.socialLinks.glassdoor },
-          { label: 'Careers Page', value: data.careersPageUrl },
-          { label: 'Blog', value: data.blogUrl },
-          { label: 'Company Video', value: data.companyVideoUrl },
+          ...(!isIndividual
+            ? [
+                { label: 'Glassdoor', value: data.socialLinks.glassdoor },
+                { label: 'Careers Page', value: data.careersPageUrl },
+              ]
+            : []),
+          { label: isIndividual ? 'Portfolio / Blog' : 'Blog', value: data.blogUrl },
+          { label: isIndividual ? 'Intro Video' : 'Company Video', value: data.companyVideoUrl },
         ],
       },
       {
+        title: 'Legal & Financial',
+        stepIndex: 6,
+        icon: Shield,
+        items: [
+          ...(data.accountType === 'COMPANY'
+            ? [
+                { label: 'GST Number', value: data.gstNumber },
+                { label: 'CIN Number', value: data.cinNumber },
+              ]
+            : []),
+          { label: 'PAN Number', value: data.panNumber },
+        ],
+      },
+      ...(!isIndividual
+        ? [
+            {
+              title: 'Funding & Investors',
+              stepIndex: 7,
+              icon: TrendingUp,
+              items: [
+                {
+                  label: 'Funding Stage',
+                  value: data.fundingStage ? FUNDING_STAGE_LABELS[data.fundingStage] : undefined,
+                },
+                { label: 'Total Funding', value: data.totalFundingRaised },
+                {
+                  label: 'Investors',
+                  value: data.investors.length > 0 ? data.investors.join(', ') : undefined,
+                },
+              ],
+            },
+          ]
+        : []),
+      {
         title: 'Interview Process',
-        stepIndex: 14,
+        stepIndex: 8,
         icon: Target,
         items: [
           {
             label: 'Interview Process',
             value: data.interviewProcess ? `${data.interviewProcess.slice(0, 100)}...` : undefined,
-          },
-        ],
-      },
-      {
-        title: 'CSR & Values',
-        stepIndex: 15,
-        icon: HandHeart,
-        items: [
-          {
-            label: 'CSR Initiatives',
-            value: data.csrInitiatives ? `${data.csrInitiatives.slice(0, 100)}...` : undefined,
           },
         ],
       },
@@ -2623,124 +2730,12 @@ export default function EmployerOnboardingPage() {
           );
         })}
 
-        {/* Logo preview in review */}
-        {logoPreview && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <button
-              type="button"
-              onClick={() => goToStepFromReview(2)}
-              className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
-            >
-              <Building2 className="h-4 w-4" />
-              Company Logo
-              <Pencil className="h-3 w-3" />
-            </button>
-            <div className="flex items-center gap-3">
-              <img
-                src={logoPreview}
-                alt="Company logo"
-                className="h-16 w-16 rounded-lg border border-[var(--border)] bg-white object-contain"
-              />
-              <span className="text-sm font-medium text-green-600">Logo uploaded</span>
-            </div>
-          </div>
-        )}
-
-        {/* Benefits tags in review */}
-        {data.benefits.length > 0 && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <button
-              type="button"
-              onClick={() => goToStepFromReview(5)}
-              className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
-            >
-              <Heart className="h-4 w-4" />
-              Benefits
-              <Pencil className="h-3 w-3" />
-            </button>
-            <div className="flex flex-wrap gap-2">
-              {data.benefits.map((b) => (
-                <Tag key={b} label={b} variant="primary" size="sm" />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Structured perks in review */}
-        {data.structuredPerks.length > 0 && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <button
-              type="button"
-              onClick={() => goToStepFromReview(5)}
-              className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
-            >
-              <Layers className="h-4 w-4" />
-              Structured Perks
-              <Pencil className="h-3 w-3" />
-            </button>
-            <div className="space-y-3">
-              {data.structuredPerks.map((cat) => (
-                <div key={cat.category}>
-                  <span className="text-xs font-medium text-[var(--text-muted)]">
-                    {cat.category}
-                  </span>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {cat.perks.map((p) => (
-                      <Tag key={p} label={p} variant="primary" size="sm" />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Tech stack tags in review */}
-        {data.techStack.length > 0 && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <button
-              type="button"
-              onClick={() => goToStepFromReview(6)}
-              className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
-            >
-              <Zap className="h-4 w-4" />
-              Tech Stack
-              <Pencil className="h-3 w-3" />
-            </button>
-            <div className="flex flex-wrap gap-2">
-              {data.techStack.map((t) => (
-                <Tag key={t} label={t} variant="primary" size="sm" />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Core values tags in review */}
-        {data.coreValues.length > 0 && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <button
-              type="button"
-              onClick={() => goToStepFromReview(3)}
-              className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
-            >
-              <Gem className="h-4 w-4" />
-              Core Values
-              <Pencil className="h-3 w-3" />
-            </button>
-            <div className="flex flex-wrap gap-2">
-              {data.coreValues.map((v) => (
-                <Tag key={v} label={v} variant="primary" size="sm" />
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Investors tags in review */}
         {data.investors.length > 0 && (
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStepFromReview(9)}
+              onClick={() => goToStepFromReview(7)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <TrendingUp className="h-4 w-4" />
@@ -2760,7 +2755,7 @@ export default function EmployerOnboardingPage() {
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStepFromReview(1)}
+              onClick={() => goToStepFromReview(2)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <Briefcase className="h-4 w-4" />
@@ -2775,52 +2770,12 @@ export default function EmployerOnboardingPage() {
           </div>
         )}
 
-        {/* Products & Services tags in review */}
-        {data.productsServices.length > 0 && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <button
-              type="button"
-              onClick={() => goToStepFromReview(6)}
-              className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
-            >
-              <Zap className="h-4 w-4" />
-              Products & Services
-              <Pencil className="h-3 w-3" />
-            </button>
-            <div className="flex flex-wrap gap-2">
-              {data.productsServices.map((p) => (
-                <Tag key={p} label={p} variant="primary" size="sm" />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ERGs tags in review */}
-        {data.employeeResourceGroups.length > 0 && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-            <button
-              type="button"
-              onClick={() => goToStepFromReview(3)}
-              className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
-            >
-              <Heart className="h-4 w-4" />
-              Employee Resource Groups
-              <Pencil className="h-3 w-3" />
-            </button>
-            <div className="flex flex-wrap gap-2">
-              {data.employeeResourceGroups.map((e) => (
-                <Tag key={e} label={e} variant="primary" size="sm" />
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Locations tags in review */}
         {data.locations.length > 0 && (
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
             <button
               type="button"
-              onClick={() => goToStepFromReview(12)}
+              onClick={() => goToStepFromReview(4)}
               className="text-primary mb-3 flex items-center gap-2 text-sm font-semibold hover:underline"
             >
               <MapPin className="h-4 w-4" />
@@ -2847,6 +2802,8 @@ export default function EmployerOnboardingPage() {
     switch (key) {
       case 'welcome':
         return renderWelcome();
+      case 'accountType':
+        return renderAccountType();
       case 'basics':
         return renderBasics();
       case 'identity':

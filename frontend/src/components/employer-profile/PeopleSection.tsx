@@ -23,9 +23,10 @@ interface PeopleSectionProps {
     key: K,
     value: UpdateCompanyRequest[K],
   ) => void;
+  isIndividual?: boolean;
 }
 
-export default function PeopleSection({ form, updateField }: PeopleSectionProps) {
+export default function PeopleSection({ form, updateField, isIndividual }: PeopleSectionProps) {
   // Leadership helpers
   const addLeadership = () => {
     updateField('leadershipTeam', [...(form.leadershipTeam || []), emptyLeadership()]);
@@ -57,6 +58,22 @@ export default function PeopleSection({ form, updateField }: PeopleSectionProps)
       (form.employeeTestimonials || []).filter((_, i) => i !== index),
     );
   };
+
+  if (isIndividual) {
+    return (
+      <div className="flex flex-col items-center py-8 text-center">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--bg-secondary)]">
+          <UserCircle className="h-8 w-8 text-[var(--text-muted)]" />
+        </div>
+        <p className="text-sm text-[var(--text-muted)]">
+          Leadership team and employee testimonials are not applicable for individual accounts.
+        </p>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          You can manage this section from your profile settings if you switch to a company account.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

@@ -51,8 +51,11 @@ function nextWithCsp(): NextResponse {
     'report-to csp-endpoint',
   ].join('; ');
 
-  response.headers.set('Content-Security-Policy', csp);
+  // Set request headers (readable by layout via headers())
   response.headers.set('x-nonce', nonce);
+
+  // Set response headers (sent to client)
+  response.headers.set('Content-Security-Policy', csp);
   // Reporting API v1 endpoint header (modern browsers use this instead of report-uri)
   response.headers.set('Reporting-Endpoints', `csp-endpoint="${reportUri}"`);
 

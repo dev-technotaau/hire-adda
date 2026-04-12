@@ -1672,7 +1672,19 @@ function JobCard({
                 <span className="text-[var(--text-muted)]">Confidential Company</span>
               ) : (
                 <>
-                  <HighlightText text={job.company?.companyName || ''} highlight={searchKeyword} />
+                  {job.clientCompanyName ? (
+                    <>
+                      <HighlightText text={job.clientCompanyName} highlight={searchKeyword} />{' '}
+                      <span className="text-xs text-[var(--text-muted)]">
+                        via {job.company?.companyName}
+                      </span>
+                    </>
+                  ) : (
+                    <HighlightText
+                      text={job.company?.companyName || ''}
+                      highlight={searchKeyword}
+                    />
+                  )}
                   {job.company?.isVerified ? (
                     <span
                       className="inline-flex items-center gap-0.5 rounded-full bg-[var(--success-light)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--success-dark)]"
@@ -2000,7 +2012,11 @@ function CompactJobCard({
         </div>
         <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
           <span className="truncate">
-            {job.isConfidential ? 'Confidential' : job.company?.companyName}
+            {job.isConfidential
+              ? 'Confidential'
+              : job.clientCompanyName
+                ? `${job.clientCompanyName} via ${job.company?.companyName}`
+                : job.company?.companyName}
           </span>
           <span className="shrink-0">|</span>
           <span className="flex shrink-0 items-center gap-0.5">

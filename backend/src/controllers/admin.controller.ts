@@ -63,10 +63,12 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
     // Profile completeness filter
     if (req.query.profileCompletenessMin || req.query.profileCompletenessMax) {
       filters.profileCompleteness = {};
-      if (req.query.profileCompletenessMin)
+      if (req.query.profileCompletenessMin) {
         filters.profileCompleteness.min = Number(req.query.profileCompletenessMin);
-      if (req.query.profileCompletenessMax)
+      }
+      if (req.query.profileCompletenessMax) {
         filters.profileCompleteness.max = Number(req.query.profileCompletenessMax);
+      }
     }
 
     // Last active filter
@@ -80,6 +82,14 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
         ? req.query.verified
         : [req.query.verified];
       filters.verified = verifiedArray as ('email' | 'mobile' | 'whatsapp')[];
+    }
+
+    // Employer account type / hiring type filters
+    if (req.query.accountType) {
+      filters.accountType = req.query.accountType as 'COMPANY' | 'INDIVIDUAL';
+    }
+    if (req.query.hiringType) {
+      filters.hiringType = req.query.hiringType as 'DIRECT' | 'CONSULTANCY';
     }
 
     const result = await adminService.getUsers(
@@ -600,13 +610,11 @@ export const bulkExportUsers = async (
     if (!req.user) throw new AppError('Not authorized', 401);
     const { userIds, format } = req.body;
     const result = await adminService.bulkExportUsers(userIds, req.user.id, format);
-    res
-      .status(200)
-      .json({
-        status: 'success',
-        data: result,
-        message: 'Export queued. You will receive an email.',
-      });
+    res.status(200).json({
+      status: 'success',
+      data: result,
+      message: 'Export queued. You will receive an email.',
+    });
   } catch (error) {
     next(error);
   }
@@ -624,13 +632,11 @@ export const bulkNotifyUsers = async (
     if (!req.user) throw new AppError('Not authorized', 401);
     const { userIds, notification } = req.body;
     const result = await adminService.bulkNotifyUsers(userIds, req.user.id, notification);
-    res
-      .status(200)
-      .json({
-        status: 'success',
-        data: result,
-        message: `Notifications sent to ${result.count} users`,
-      });
+    res.status(200).json({
+      status: 'success',
+      data: result,
+      message: `Notifications sent to ${result.count} users`,
+    });
   } catch (error) {
     next(error);
   }

@@ -4,7 +4,7 @@ import { AppError } from '../middleware/error';
 import type { CompanyProfile } from '@prisma/client';
 import { uploadImage, uploadOptions, deleteImage, extractPublicId } from '../config/cloudinary';
 import { searchService } from './search.service';
-import {  } from '../kafka/producer';
+import {} from '../kafka/producer';
 import { publishEvent } from '../kafka/producer';
 import { KafkaTopics } from '../kafka/topics';
 
@@ -48,6 +48,8 @@ export class EmployerService {
       select: {
         id: true,
         userId: true,
+        accountType: true,
+        hiringType: true,
         companyName: true,
         companyType: true,
         tagline: true,
@@ -167,8 +169,13 @@ export class EmployerService {
       .catch((err) => logger.error('Failed to index employer', err));
 
     // Publish Kafka events for analytics/webhooks
-    publishEvent(KafkaTopics.PROFILE_UPDATED, userId, { userId, profileId: profile.id }).catch(() => {});
-    publishEvent(KafkaTopics.COMPANY_PROFILE_UPDATED, userId, { userId, profileId: profile.id }).catch(() => {});
+    publishEvent(KafkaTopics.PROFILE_UPDATED, userId, { userId, profileId: profile.id }).catch(
+      () => {}
+    );
+    publishEvent(KafkaTopics.COMPANY_PROFILE_UPDATED, userId, {
+      userId,
+      profileId: profile.id,
+    }).catch(() => {});
 
     // Trigger geocoding if address fields changed
     const geoAddress = [data.city, data.state, data.country, data.headquarters]
@@ -475,6 +482,7 @@ export class EmployerService {
     const profile = await prisma.companyProfile.findUnique({
       where: { userId },
       select: {
+        accountType: true,
         companyName: true,
         companyType: true,
         tagline: true,
@@ -517,16 +525,20 @@ export class EmployerService {
     });
     if (!profile) return { percentage: 0, completed: [], missing: ['Create your company profile'] };
 
-    const checks = [
+    const isIndividual = profile.accountType === 'INDIVIDUAL';
+
+    const checks: Array<{ field: string; weight: number; check: boolean }> = [
       {
         field: 'Company Basics',
         weight: 15,
-        check: !!(
-          profile.companyName &&
-          profile.industry &&
-          profile.companyType &&
-          profile.companySize
-        ),
+        check: isIndividual
+          ? !!(profile.companyName && profile.industry)
+          : !!(
+              profile.companyName &&
+              profile.industry &&
+              profile.companyType &&
+              profile.companySize
+            ),
       },
       {
         field: 'Company Description',
@@ -538,7 +550,9 @@ export class EmployerService {
       {
         field: 'Contact Info',
         weight: 10,
-        check: !!(profile.contactEmail && profile.contactPhone && profile.contactPersonName),
+        check: isIndividual
+          ? !!(profile.contactEmail && profile.contactPhone)
+          : !!(profile.contactEmail && profile.contactPhone && profile.contactPersonName),
       },
       {
         field: 'Office Location',
@@ -547,13 +561,17 @@ export class EmployerService {
       },
       {
         field: 'Why Work For Us',
-        weight: 8,
+        weight: isIndividual ? 0 : 8,
         check: !!(profile.whyWorkForUs && profile.whyWorkForUs.length >= 30),
       },
-      { field: 'Benefits & Perks', weight: 7, check: profile.benefits.length > 0 },
+      {
+        field: 'Benefits & Perks',
+        weight: isIndividual ? 0 : 7,
+        check: profile.benefits.length > 0,
+      },
       {
         field: 'Culture & Values',
-        weight: 6,
+        weight: isIndividual ? 0 : 6,
         check: !!(
           profile.companyCulture ||
           profile.missionStatement ||
@@ -575,12 +593,12 @@ export class EmployerService {
       },
       {
         field: 'Registration (GST/CIN)',
-        weight: 3,
+        weight: isIndividual ? 0 : 3,
         check: !!(profile.gstNumber || profile.cinNumber),
       },
       {
         field: 'Team & Testimonials',
-        weight: 3,
+        weight: isIndividual ? 0 : 3,
         check: !!(
           (profile.leadershipTeam as any[])?.length > 0 ||
           (profile.employeeTestimonials as any[])?.length > 0
@@ -597,9 +615,24 @@ export class EmployerService {
       },
     ];
 
-    const completed = checks.filter((c) => c.check).map((c) => c.field);
-    const missing = checks.filter((c) => !c.check).map((c) => c.field);
-    const percentage = checks.reduce((acc, c) => acc + (c.check ? c.weight : 0), 0);
+    // Filter out zero-weight checks (not applicable for this account type)
+    const applicableChecks = checks.filter((c) => c.weight > 0);
+    // Normalize weights to sum to exactly 100 (floor + distribute remainder)
+    const totalWeight = applicableChecks.reduce((acc, c) => acc + c.weight, 0);
+    const normalizedChecks = applicableChecks.map((c) => ({
+      ...c,
+      weight: Math.floor((c.weight / totalWeight) * 100),
+    }));
+    // Distribute remainder to avoid sum < 100
+    let remainder = 100 - normalizedChecks.reduce((acc, c) => acc + c.weight, 0);
+    for (let i = 0; remainder > 0 && i < normalizedChecks.length; i++) {
+      normalizedChecks[i].weight++;
+      remainder--;
+    }
+
+    const completed = normalizedChecks.filter((c) => c.check).map((c) => c.field);
+    const missing = normalizedChecks.filter((c) => !c.check).map((c) => c.field);
+    const percentage = normalizedChecks.reduce((acc, c) => acc + (c.check ? c.weight : 0), 0);
 
     return { percentage, completed, missing };
   }

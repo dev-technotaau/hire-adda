@@ -1,8 +1,11 @@
 import { z } from 'zod';
-import { CompanyType } from '@prisma/client';
+import { CompanyType, AccountType, HiringType } from '@prisma/client';
 
 export const updateCompanyProfileSchema = z.object({
   body: z.object({
+    // Account Classification
+    accountType: z.nativeEnum(AccountType, { error: 'Invalid account type' }).optional(),
+    hiringType: z.nativeEnum(HiringType, { error: 'Invalid hiring type' }).optional(),
     // Identity
     companyName: z.string().min(1).max(200).optional(),
     companyType: z.nativeEnum(CompanyType, { error: 'Invalid company type' }).optional(),

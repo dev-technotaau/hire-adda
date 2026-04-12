@@ -155,6 +155,8 @@ export default function CandidateProfilePage() {
 
   const profile = profileData?.data;
   const completeness = completenessData?.data;
+  const isFresher = profile?.experienceLevel === 'FRESHER';
+  const visibleSections = isFresher ? sections.filter((s) => s.key !== 'experience') : sections;
 
   useEffect(() => {
     if (profile) {
@@ -192,8 +194,10 @@ export default function CandidateProfilePage() {
           currentDepartment: profile.currentDepartment || '',
           functionalArea: profile.functionalArea || '',
           currSalary: profile.currSalary != null ? Number(profile.currSalary) : undefined,
-          expectedSalaryMin: profile.expectedSalaryMin != null ? Number(profile.expectedSalaryMin) : undefined,
-          expectedSalaryMax: profile.expectedSalaryMax != null ? Number(profile.expectedSalaryMax) : undefined,
+          expectedSalaryMin:
+            profile.expectedSalaryMin != null ? Number(profile.expectedSalaryMin) : undefined,
+          expectedSalaryMax:
+            profile.expectedSalaryMax != null ? Number(profile.expectedSalaryMax) : undefined,
           salaryCurrency: profile.salaryCurrency || 'INR',
           noticePeriod: profile.noticePeriod || undefined,
           servingNoticePeriod: profile.servingNoticePeriod || false,
@@ -436,8 +440,14 @@ export default function CandidateProfilePage() {
         : undefined,
       // Prisma Decimal fields serialize as strings — coerce back to numbers for Zod
       currSalary: profileFields.currSalary != null ? Number(profileFields.currSalary) : undefined,
-      expectedSalaryMin: profileFields.expectedSalaryMin != null ? Number(profileFields.expectedSalaryMin) : undefined,
-      expectedSalaryMax: profileFields.expectedSalaryMax != null ? Number(profileFields.expectedSalaryMax) : undefined,
+      expectedSalaryMin:
+        profileFields.expectedSalaryMin != null
+          ? Number(profileFields.expectedSalaryMin)
+          : undefined,
+      expectedSalaryMax:
+        profileFields.expectedSalaryMax != null
+          ? Number(profileFields.expectedSalaryMax)
+          : undefined,
     };
     updateMutation.mutate(payload);
   };
@@ -546,12 +556,20 @@ export default function CandidateProfilePage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Link href={ROUTES.CANDIDATE.PROFILE_PREVIEW} title="See how employers view your profile">
+            <Link
+              href={ROUTES.CANDIDATE.PROFILE_PREVIEW}
+              title="See how employers view your profile"
+            >
               <Button variant="outline" tooltip="Preview your profile as an employer">
                 <Eye className="mr-1.5 h-4 w-4" /> Preview as Employer
               </Button>
             </Link>
-            <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty} tooltip="Save all profile changes">
+            <Button
+              onClick={handleSave}
+              isLoading={updateMutation.isPending}
+              disabled={!formDirty}
+              tooltip="Save all profile changes"
+            >
               <Save className="mr-1.5 h-4 w-4" /> Save Changes
             </Button>
           </div>
@@ -599,7 +617,7 @@ export default function CandidateProfilePage() {
           <div className="lg:col-span-1">
             <Card padding="sm">
               <nav className="space-y-1">
-                {sections.map(({ key, label, icon: Icon }) => (
+                {visibleSections.map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}
                     type="button"
@@ -625,7 +643,7 @@ export default function CandidateProfilePage() {
               <PersonalSection form={form} updateField={updateField} profile={profile} />
             )}
 
-            {activeSection === 'experience' && (
+            {activeSection === 'experience' && !isFresher && (
               <ExperienceSection form={form} updateField={updateField} />
             )}
 
@@ -757,7 +775,11 @@ export default function CandidateProfilePage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => setShowActiveResumePreview((prev) => !prev)}
-                                  tooltip={showActiveResumePreview ? 'Hide resume preview' : 'Preview your resume'}
+                                  tooltip={
+                                    showActiveResumePreview
+                                      ? 'Hide resume preview'
+                                      : 'Preview your resume'
+                                  }
                                 >
                                   <Eye className="mr-1.5 h-4 w-4" />{' '}
                                   {showActiveResumePreview ? 'Hide Preview' : 'Preview'}
@@ -999,7 +1021,11 @@ export default function CandidateProfilePage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => setShowUploadedResumePreview((prev) => !prev)}
-                                    tooltip={showUploadedResumePreview ? 'Hide resume preview' : 'Preview uploaded resume'}
+                                    tooltip={
+                                      showUploadedResumePreview
+                                        ? 'Hide resume preview'
+                                        : 'Preview uploaded resume'
+                                    }
                                   >
                                     <Eye className="mr-1.5 h-4 w-4" />
                                     {showUploadedResumePreview ? 'Hide' : 'Preview'}
@@ -1037,7 +1063,11 @@ export default function CandidateProfilePage() {
 
                             {/* Parse with AI button (only if not yet parsed/applied) */}
                             {!resumeParsing && !parsedResumeData && !resumeParseApplied && (
-                              <Button variant="secondary" onClick={handleParseOnly} tooltip="Extract profile details using AI">
+                              <Button
+                                variant="secondary"
+                                onClick={handleParseOnly}
+                                tooltip="Extract profile details using AI"
+                              >
                                 <Sparkles className="mr-1.5 h-4 w-4" />
                                 Parse with AI
                               </Button>
@@ -1149,7 +1179,11 @@ export default function CandidateProfilePage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => setShowResumePreview((prev) => !prev)}
-                                tooltip={showResumePreview ? 'Hide generated resume preview' : 'Preview generated resume'}
+                                tooltip={
+                                  showResumePreview
+                                    ? 'Hide generated resume preview'
+                                    : 'Preview generated resume'
+                                }
                               >
                                 <Eye className="mr-1.5 h-4 w-4" />{' '}
                                 {showResumePreview ? 'Hide Preview' : 'Preview'}
@@ -1257,7 +1291,10 @@ export default function CandidateProfilePage() {
                                 const sec = sectionMap[item.section];
                                 const Icon = sec?.icon || FileText;
                                 return (
-                                  <Tooltip key={item.field} content={`Go to ${item.section} section`}>
+                                  <Tooltip
+                                    key={item.field}
+                                    content={`Go to ${item.section} section`}
+                                  >
                                     <button
                                       onClick={() => handleSectionChange(item.section as Section)}
                                       className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${colorClasses}`}
@@ -1363,7 +1400,12 @@ export default function CandidateProfilePage() {
 
             {/* Save Button (bottom) */}
             <div className="flex justify-end">
-              <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty} tooltip="Save all profile changes">
+              <Button
+                onClick={handleSave}
+                isLoading={updateMutation.isPending}
+                disabled={!formDirty}
+                tooltip="Save all profile changes"
+              >
                 <Save className="mr-1.5 h-4 w-4" /> Save Changes
               </Button>
             </div>
@@ -1508,7 +1550,11 @@ function ResumeParserSection({
           </Button>
 
           {parsedData && !showReview && !polling && (
-            <Button variant="outline" onClick={() => setShowReview(true)} tooltip="Review extracted resume data">
+            <Button
+              variant="outline"
+              onClick={() => setShowReview(true)}
+              tooltip="Review extracted resume data"
+            >
               <Eye className="mr-1.5 h-4 w-4" /> Review Parsed Data
             </Button>
           )}

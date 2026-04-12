@@ -357,6 +357,7 @@ export default function LoginPage() {
                   rightIcon={
                     <button
                       type="button"
+                      tabIndex={-1}
                       onClick={() => setShowPassword(!showPassword)}
                       className="text-[var(--text-muted)] hover:text-[var(--text)]"
                     >
@@ -618,7 +619,7 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
           Don&apos;t have an account?{' '}
           <Link
-            href={ROUTES.AUTH.REGISTER}
+            href={`${ROUTES.AUTH.REGISTER}?role=${activeTab}`}
             className="text-primary hover:text-primary-hover font-medium"
             title="Create a new account"
           >

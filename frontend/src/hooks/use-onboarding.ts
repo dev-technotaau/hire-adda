@@ -52,10 +52,13 @@ export function useOnboarding<T extends Record<string, unknown>>({
       if (saved) {
         const parsed = JSON.parse(saved);
         queueMicrotask(() => {
-          if (parsed.data) setData(parsed.data);
+          // Merge saved data with initialData so new fields get defaults
+          if (parsed.data) setData((prev) => ({ ...prev, ...parsed.data }));
           if (typeof parsed.step === 'number') {
-            setStep(parsed.step);
-            setHighestVisitedStep(parsed.step);
+            // Clamp to valid range in case totalSteps changed
+            const clamped = Math.min(parsed.step, totalSteps - 1);
+            setStep(clamped);
+            setHighestVisitedStep(clamped);
           }
         });
       }
@@ -63,6 +66,7 @@ export function useOnboarding<T extends Record<string, unknown>>({
       // Ignore parse errors
     }
     initialLoadRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
   // Auto-save to localStorage with debounce
@@ -139,7 +143,7 @@ export function useOnboarding<T extends Record<string, unknown>>({
   const clearSavedData = useCallback(() => {
     try {
       localStorage.removeItem(storageKey);
-      localStorage.removeItem(`${storageKey}_skipped`);
+      // Do NOT remove _skipped — it marks onboarding as completed
     } catch {
       // Ignore
     }

@@ -238,6 +238,7 @@ export const updateCandidateProfileSchema = z.object({
               .nativeEnum(EducationLevel, { error: 'Invalid education level' })
               .optional(),
             degree: z.string(),
+            boardState: z.string().optional(),
             institution: z.string(),
             field: z.string().optional(),
             year: z.string().optional(),

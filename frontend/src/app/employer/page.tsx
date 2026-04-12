@@ -84,7 +84,6 @@ const activityDotColor = (status: string) => {
     APPLIED: 'bg-[#3B82F6]',
     VIEWED: 'bg-[#6366F1]',
     SHORTLISTED: 'bg-[#10B981]',
-    INTERVIEW_SCHEDULED: 'bg-[#F59E0B]',
     OFFERED: 'bg-[#059669]',
     HIRED: 'bg-[#059669]',
     REJECTED: 'bg-[#EF4444]',
@@ -322,7 +321,6 @@ export default function EmployerDashboard() {
       APPLIED: '#3B82F6',
       VIEWED: '#8B5CF6',
       SHORTLISTED: '#F59E0B',
-      INTERVIEW_SCHEDULED: '#6366F1',
       OFFERED: '#10B981',
       HIRED: '#059669',
       REJECTED: '#EF4444',
@@ -375,6 +373,31 @@ export default function EmployerDashboard() {
             </Link>
           </Tooltip>
         </div>
+
+        {/* Account Type Setup Prompt */}
+        {companyData?.data && !companyData.data.accountType && (
+          <Card className="border-amber-200 bg-amber-50/50">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-[var(--text)]">Set Up Your Account Type</h3>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Tell us if you&apos;re a company or individual, and whether you hire directly or
+                    as a staffing agency.
+                  </p>
+                </div>
+              </div>
+              <Link href={`${ROUTES.EMPLOYER.SETTINGS}?tab=account`}>
+                <Button size="sm" variant="secondary">
+                  <Settings className="mr-1.5 h-4 w-4" /> Set Up Now
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        )}
 
         {/* Profile Completeness */}
         {!compLoading && completeness?.data && completeness.data.score < 100 && (

@@ -168,6 +168,8 @@ export default function CompanyProfilePage() {
     if (company) {
       queueMicrotask(() => {
         const initial: UpdateCompanyRequest = {
+          accountType: company.accountType || undefined,
+          hiringType: company.hiringType || undefined,
           companyName: company.companyName || '',
           companyType: company.companyType || undefined,
           tagline: company.tagline || '',
@@ -212,7 +214,7 @@ export default function CompanyProfilePage() {
                   (p) => [p.title, p.description || ''],
                 ),
               )
-            : (company.workplacePolicies || {}),
+            : company.workplacePolicies || {},
           interviewProcess: company.interviewProcess || '',
           // Backend uses 'issuingOrg' — convert to 'issuer' for UI
           awardsRecognitions: (company.awardsRecognitions || []).map(
@@ -491,7 +493,8 @@ export default function CompanyProfilePage() {
   // Section content
   // -----------------------------------------------------------------------
 
-  const sectionProps = { form, updateField, addToArray, removeFromArray };
+  const isIndividual = form.accountType === 'INDIVIDUAL';
+  const sectionProps = { form, updateField, addToArray, removeFromArray, isIndividual };
 
   const renderSection = () => {
     switch (activeSection) {
@@ -506,11 +509,11 @@ export default function CompanyProfilePage() {
       case 'tech':
         return <TechPoliciesSection {...sectionProps} />;
       case 'people':
-        return <PeopleSection form={form} updateField={updateField} />;
+        return <PeopleSection form={form} updateField={updateField} isIndividual={isIndividual} />;
       case 'awards':
         return <AwardsFundingSection {...sectionProps} />;
       case 'legal':
-        return <LegalSection form={form} updateField={updateField} />;
+        return <LegalSection form={form} updateField={updateField} isIndividual={isIndividual} />;
       case 'contact':
         return <ContactSection form={form} updateField={updateField} />;
       case 'address':
@@ -540,7 +543,16 @@ export default function CompanyProfilePage() {
                 </Button>
               </Link>
             </Tooltip>
-            <Button onClick={handleSave} isLoading={updateMutation.isPending} disabled={!formDirty && firstName === (user?.firstName || '') && lastName === (user?.lastName || '')} tooltip="Save all profile changes">
+            <Button
+              onClick={handleSave}
+              isLoading={updateMutation.isPending}
+              disabled={
+                !formDirty &&
+                firstName === (user?.firstName || '') &&
+                lastName === (user?.lastName || '')
+              }
+              tooltip="Save all profile changes"
+            >
               <Save className="mr-1.5 h-4 w-4" /> Save Changes
             </Button>
           </div>
@@ -834,7 +846,11 @@ export default function CompanyProfilePage() {
             </Card>
 
             <div className="flex justify-end">
-              <Button onClick={handleSave} isLoading={updateMutation.isPending} tooltip="Save all profile changes">
+              <Button
+                onClick={handleSave}
+                isLoading={updateMutation.isPending}
+                tooltip="Save all profile changes"
+              >
                 <Save className="mr-1.5 h-4 w-4" /> Save Changes
               </Button>
             </div>

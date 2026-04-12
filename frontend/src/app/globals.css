@@ -2,6 +2,18 @@
 @import 'leaflet/dist/leaflet.css';
 @plugin 'tailwindcss-animate';
 
+/* Lenis smooth scroll */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
 /* ===================================
    Tailwind v4 Theme — Blue Professional
    =================================== */

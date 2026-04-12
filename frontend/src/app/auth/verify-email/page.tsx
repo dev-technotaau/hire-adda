@@ -167,9 +167,15 @@ export default function VerifyEmailPage() {
                   onChange={setOtp}
                   onComplete={handleOtpSubmit}
                   length={otpConfig.LENGTH}
+                  autoFocus
                 />
 
-                <Button type="submit" fullWidth disabled={otp.length !== otpConfig.LENGTH} tooltip="Verify your email address">
+                <Button
+                  type="submit"
+                  fullWidth
+                  disabled={otp.length !== otpConfig.LENGTH}
+                  tooltip="Verify your email address"
+                >
                   Verify Email
                 </Button>
 
@@ -189,6 +195,15 @@ export default function VerifyEmailPage() {
                         {isResending ? 'Sending...' : 'Resend Code'}
                       </button>
                     )}
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--text-muted)]">
+                    Wrong email?{' '}
+                    <Link
+                      href={ROUTES.AUTH.REGISTER}
+                      className="text-primary font-medium hover:underline"
+                    >
+                      Change email & re-register
+                    </Link>
                   </p>
                 </div>
               </form>
@@ -213,7 +228,12 @@ export default function VerifyEmailPage() {
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
                   Your email has been successfully verified. You can now log in to your account.
                 </p>
-                <Button fullWidth className="mt-6" onClick={handleContinue} tooltip="Go to the login page">
+                <Button
+                  fullWidth
+                  className="mt-6"
+                  onClick={handleContinue}
+                  tooltip="Go to the login page"
+                >
                   Continue to Login
                 </Button>
               </div>
@@ -238,7 +258,12 @@ export default function VerifyEmailPage() {
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">{errorMessage}</p>
                 <div className="mt-6 space-y-3">
                   {email && (
-                    <Button fullWidth onClick={handleResend} isLoading={isResending} tooltip="Resend verification code to your email">
+                    <Button
+                      fullWidth
+                      onClick={handleResend}
+                      isLoading={isResending}
+                      tooltip="Resend verification code to your email"
+                    >
                       Resend Verification Code
                     </Button>
                   )}

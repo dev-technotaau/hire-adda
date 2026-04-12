@@ -53,16 +53,18 @@ export const verifyEmail = (otp: string): EmailTemplate => ({
     `
         ${iconCircle('&#9993;', '#eef2ff')}
         ${heading('Verify Your Email')}
-        ${subtitle('Enter the code below to confirm your email address.')}
-        ${paragraph('Please use the following 6-digit code to complete your email verification:')}
+        ${subtitle('Enter the code below or click the button to verify your email.')}
+        ${paragraph('Your 6-digit verification code:')}
         ${otpBlock(otp)}
+        ${smallText('Tap the code to select it, then copy.')}
+        ${button('Verify My Email', `${BRAND.url}/auth/verify-email?token=${otp}`)}
         ${warningBox('This code expires in <strong>10 minutes</strong>. Do not share this code with anyone.')}
         ${paragraph('If you did not create an account on Hire Adda, you can safely ignore this email.')}
         ${signature()}
     `,
     `Your Hire Adda verification code is ${otp}`
   ),
-  text: `Your Hire Adda email verification code is: ${otp}. This code is valid for 10 minutes. Do not share this code with anyone.`,
+  text: `Your Hire Adda email verification code is: ${otp}. Or verify directly: ${BRAND.url}/auth/verify-email?token=${otp}. This code is valid for 10 minutes. Do not share this code with anyone.`,
 });
 
 export const passwordReset = (resetLink: string): EmailTemplate => ({

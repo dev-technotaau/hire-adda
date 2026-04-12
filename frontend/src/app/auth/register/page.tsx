@@ -284,6 +284,7 @@ export default function RegisterPage() {
                     leftIcon={<User className="h-4 w-4" />}
                     error={errors.firstName?.message}
                     required
+                    autoFocus
                     {...register('firstName')}
                   />
                   <Input
@@ -346,7 +347,11 @@ export default function RegisterPage() {
                   placeholder="Create a password"
                   leftIcon={<Lock className="h-4 w-4" />}
                   rightIcon={
-                    <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   }
@@ -362,7 +367,11 @@ export default function RegisterPage() {
                   placeholder="Confirm your password"
                   leftIcon={<Lock className="h-4 w-4" />}
                   rightIcon={
-                    <button type="button" onClick={() => setShowConfirm(!showConfirm)}>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowConfirm(!showConfirm)}
+                    >
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   }
@@ -514,7 +523,7 @@ export default function RegisterPage() {
           <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
             Already have an account?{' '}
             <Link
-              href={ROUTES.AUTH.LOGIN}
+              href={`${ROUTES.AUTH.LOGIN}?tab=${activeTab.toLowerCase()}`}
               className="text-primary hover:text-primary-hover font-medium"
               title="Sign in to your existing account"
             >

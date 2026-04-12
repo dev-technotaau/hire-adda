@@ -223,9 +223,13 @@ export default function OnboardingShell({
         <p className="mt-4 text-center text-xs text-[var(--text-muted)]">
           Your progress is automatically saved. You can{' '}
           <Tooltip content="Go to your dashboard now">
-            <Link href={dashboardPath} className="text-primary hover:underline">
+            <button
+              type="button"
+              onClick={onSkip}
+              className="text-primary cursor-pointer hover:underline"
+            >
               skip to dashboard
-            </Link>
+            </button>
           </Tooltip>{' '}
           and complete later.
         </p>

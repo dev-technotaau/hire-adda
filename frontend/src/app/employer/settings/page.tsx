@@ -29,7 +29,8 @@ import type { WebAuthnCredential } from '@/types/webauthn';
 import type { WebhookDelivery, WebhookEndpoint } from '@/types/webhook';
 import { WEBHOOK_EVENTS } from '@/types/webhook';
 import { startRegistration } from '@simplewebauthn/browser';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ACCOUNT_TYPE_LABELS, HIRING_TYPE_LABELS } from '@/constants/enums';
 import {
   AlertTriangle,
   Bell,
@@ -131,6 +132,52 @@ function AccountTab() {
 
 function AccountInfoSection() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: companyData } = useQuery({
+    queryKey: QUERY_KEYS.EMPLOYERS.COMPANY,
+    queryFn: () => employerService.getCompany(),
+  });
+  const company = companyData?.data;
+
+  const [editingType, setEditingType] = useState(false);
+  const [selectedAccountType, setSelectedAccountType] = useState(company?.accountType || '');
+  const [selectedHiringType, setSelectedHiringType] = useState(company?.hiringType || '');
+
+  const openEditType = () => {
+    setSelectedAccountType(company?.accountType || '');
+    setSelectedHiringType(company?.hiringType || '');
+    setEditingType(true);
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: { accountType?: string; hiringType?: string }) =>
+      employerService.updateCompany(payload as Parameters<typeof employerService.updateCompany>[0]),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPANY });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYERS.COMPLETENESS });
+      showToast.success('Account type updated');
+      setEditingType(false);
+    },
+    onError: (err) => {
+      const apiErr = err as unknown as ApiError;
+      showToast.error(apiErr?.message || 'Failed to update account type');
+    },
+  });
+
+  const handleSaveType = () => {
+    if (!selectedAccountType) {
+      showToast.error('Please select an account type');
+      return;
+    }
+    saveMutation.mutate({
+      accountType: selectedAccountType,
+      hiringType: selectedHiringType || undefined,
+    });
+  };
+
+  const hasChanged =
+    selectedAccountType !== (company?.accountType || '') ||
+    selectedHiringType !== (company?.hiringType || '');
 
   return (
     <Card variant="bordered">
@@ -159,6 +206,105 @@ function AccountInfoSection() {
           <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Role</label>
           <Badge variant="info">Employer</Badge>
         </div>
+
+        {/* Account Type & Hiring Type */}
+        {!editingType ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[var(--text)]">
+                  Account Type
+                </label>
+                {company?.accountType ? (
+                  <Badge variant={company.accountType === 'COMPANY' ? 'info' : 'neutral'}>
+                    {ACCOUNT_TYPE_LABELS[company.accountType] || company.accountType}
+                  </Badge>
+                ) : (
+                  <span className="text-sm text-[var(--text-muted)]">Not set</span>
+                )}
+              </div>
+              <Button variant="ghost" size="sm" onClick={openEditType}>
+                {company?.accountType ? 'Change' : 'Set'}
+              </Button>
+            </div>
+            {company?.hiringType && (
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[var(--text)]">
+                  Hiring Type
+                </label>
+                <Badge variant={company.hiringType === 'CONSULTANCY' ? 'warning' : 'success'}>
+                  {HIRING_TYPE_LABELS[company.hiringType] || company.hiringType}
+                </Badge>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                Account Type
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {Object.entries(ACCOUNT_TYPE_LABELS).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSelectedAccountType(value)}
+                    className={`cursor-pointer rounded-lg border-2 px-3 py-2 text-left text-sm transition-all ${
+                      selectedAccountType === value
+                        ? 'text-primary border-[var(--primary)] bg-[var(--primary)]/5 font-medium'
+                        : 'border-[var(--border)] text-[var(--text)] hover:border-[var(--text-muted)]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                Hiring Type
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {Object.entries(HIRING_TYPE_LABELS).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSelectedHiringType(value)}
+                    className={`cursor-pointer rounded-lg border-2 px-3 py-2 text-left text-sm transition-all ${
+                      selectedHiringType === value
+                        ? 'text-primary border-[var(--primary)] bg-[var(--primary)]/5 font-medium'
+                        : 'border-[var(--border)] text-[var(--text)] hover:border-[var(--text-muted)]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleSaveType}
+                disabled={!hasChanged || saveMutation.isPending}
+                isLoading={saveMutation.isPending}
+              >
+                Save
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedAccountType(company?.accountType || '');
+                  setSelectedHiringType(company?.hiringType || '');
+                  setEditingType(false);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </Card>
   );

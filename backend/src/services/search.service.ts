@@ -7,7 +7,7 @@ import { prisma } from '../config/prisma';
 import { JobStatus } from '@prisma/client';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { isFeatureEnabled } from '../config/feature-flags';
-import {  } from '../kafka/producer';
+import {} from '../kafka/producer';
 import { publishEvent } from '../kafka/producer';
 import { KafkaTopics } from '../kafka/topics';
 import { trackSearch } from '../utils/trending';
@@ -221,7 +221,8 @@ function levenshtein(a: string, b: string): number {
   for (let i = 1; i <= m; i++) {
     const curr = [i];
     for (let j = 1; j <= n; j++) {
-      curr[j] = a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+      curr[j] =
+        a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
     }
     prev = curr;
   }
@@ -494,6 +495,7 @@ class SearchService {
             applyMethod: { type: 'keyword' },
             scheduledPublishAt: { type: 'date' },
             // Display fields (already indexed but previously unmapped)
+            clientCompanyName: { type: 'text', fields: { keyword: { type: 'keyword' } } },
             companyLogo: { type: 'keyword' },
             companyIndustry: { type: 'keyword' },
             companyIsVerified: { type: 'boolean' },
@@ -723,6 +725,8 @@ class SearchService {
           properties: {
             id: { type: 'keyword' },
             userId: { type: 'keyword' },
+            accountType: { type: 'keyword' },
+            hiringType: { type: 'keyword' },
             companyName: {
               type: 'text',
               fields: {
@@ -835,9 +839,7 @@ class SearchService {
       });
       logger.info(`Created index: ${ELASTIC_INDICES.SUGGESTIONS}`);
       // Seed suggestions on first creation
-      this.seedSuggestions().catch((err) =>
-        logger.error('Failed to seed suggestions index', err),
-      );
+      this.seedSuggestions().catch((err) => logger.error('Failed to seed suggestions index', err));
     }
   }
 
@@ -851,6 +853,7 @@ class SearchService {
       description: job.description,
       requirements: job.requirements,
       keyResponsibilities: job.keyResponsibilities,
+      clientCompanyName: job.clientCompanyName || null,
       companyName: job.company?.companyName || '',
       companyLogo: job.company?.logo || null,
       companyIndustry: job.company?.industry || null,
@@ -1057,6 +1060,8 @@ class SearchService {
     const document = {
       id: company.id,
       userId: company.userId,
+      accountType: company.accountType,
+      hiringType: company.hiringType,
       companyName: company.companyName,
       companyType: company.companyType,
       tagline: company.tagline,
@@ -1147,12 +1152,7 @@ class SearchService {
           }),
           (elasticClient.search as any)({
             index: ELASTIC_INDICES.JOBS,
-            query: this._autocompleteQuery(
-              'skills.autocomplete',
-              'skills.text',
-              query,
-              openFilter
-            ),
+            query: this._autocompleteQuery('skills.autocomplete', 'skills.text', query, openFilter),
             _source: false,
             size: 0,
             aggs: { items: { terms: { field: 'skills', size: limit, order: { _count: 'desc' } } } },
@@ -1556,7 +1556,7 @@ class SearchService {
          ORDER BY cnt DESC
          LIMIT $2`,
         `%${query}%`,
-        limit,
+        limit
       );
       return rows.map((r) => ({ text: r.skill, count: Number(r.cnt) }));
     } catch (err) {
@@ -1798,9 +1798,7 @@ class SearchService {
     }
 
     // Check Redis cache before hitting ES
-    const cacheHash = createHash('md5')
-      .update(JSON.stringify({ query, filters }))
-      .digest('hex');
+    const cacheHash = createHash('md5').update(JSON.stringify({ query, filters })).digest('hex');
     const cacheKey = `${ES_CACHE_PREFIX}jobs:${cacheHash}`;
     try {
       const cached = await redis.get(cacheKey);
@@ -2730,7 +2728,9 @@ class SearchService {
     };
 
     // Cache result in Redis (fire-and-forget)
-    redis.set(candidateCacheKey, JSON.stringify(candidateResult), 'EX', ES_CACHE_TTL).catch(() => {});
+    redis
+      .set(candidateCacheKey, JSON.stringify(candidateResult), 'EX', ES_CACHE_TTL)
+      .catch(() => {});
 
     // Track search event (fire-and-forget)
     publishEvent(KafkaTopics.SEARCH_PERFORMED, query || 'browse', {
@@ -2835,17 +2835,14 @@ class SearchService {
     query: string,
     category: string,
     limit: number = 15,
-    region?: string,
+    region?: string
   ): Promise<{ text: string; count: number }[]> {
     return tracer.startActiveSpan('search.suggest', async (span) => {
       try {
         span.setAttribute('suggestion.category', category);
         span.setAttribute('suggestion.query', query);
 
-        const filters: any[] = [
-          { term: { category } },
-          { term: { isActive: true } },
-        ];
+        const filters: any[] = [{ term: { category } }, { term: { isActive: true } }];
         if (region) {
           filters.push({ term: { region } });
         }
@@ -2898,7 +2895,7 @@ class SearchService {
   private _suggestFallbackStatic(
     query: string,
     category: string,
-    limit: number,
+    limit: number
   ): { text: string; count: number }[] {
     try {
       // Dynamic import would be async; use require for sync fallback
@@ -2906,7 +2903,8 @@ class SearchService {
       const { SEED_SUGGESTIONS } = require('../data/seed-suggestions');
       const items: string[] = SEED_SUGGESTIONS[category] || [];
       if (items.length === 0) return [];
-      const filtered = query.length > 0 ? filterStaticFuzzy(items, query, limit) : items.slice(0, limit);
+      const filtered =
+        query.length > 0 ? filterStaticFuzzy(items, query, limit) : items.slice(0, limit);
       return filtered.map((text) => ({ text, count: 0 }));
     } catch {
       return [];
@@ -2918,7 +2916,7 @@ class SearchService {
    * Used by self-population hooks after indexing jobs/candidates/employers.
    */
   private async bulkUpsertSuggestions(
-    items: { category: string; text: string; region?: string; parentCategory?: string }[],
+    items: { category: string; text: string; region?: string; parentCategory?: string }[]
   ): Promise<void> {
     const validItems = items.filter((i) => i.text && i.text.trim().length >= 2);
     if (validItems.length === 0) return;
@@ -2954,7 +2952,7 @@ class SearchService {
     for (let i = 0; i < operations.length; i += 500) {
       const chunk = operations.slice(i, i + 500);
       await (elasticClient.bulk as any)({ operations: chunk }).catch((err: any) =>
-        logger.warn('Bulk suggestion upsert partial failure', err?.message),
+        logger.warn('Bulk suggestion upsert partial failure', err?.message)
       );
     }
   }
@@ -3007,9 +3005,15 @@ class SearchService {
 
     if (profile.currentRole) items.push({ category: C.ROLE_CATEGORY, text: profile.currentRole });
     if (profile.currentCompany) items.push({ category: C.COMPANY, text: profile.currentCompany });
-    if (profile.currentLocation) items.push({ category: C.LOCATION, text: profile.currentLocation });
-    if (profile.currentIndustry) items.push({ category: C.INDUSTRY, text: profile.currentIndustry });
-    if (profile.currentDepartment) items.push({ category: C.DEPARTMENT, text: profile.currentDepartment });
+    if (profile.currentLocation) {
+      items.push({ category: C.LOCATION, text: profile.currentLocation });
+    }
+    if (profile.currentIndustry) {
+      items.push({ category: C.INDUSTRY, text: profile.currentIndustry });
+    }
+    if (profile.currentDepartment) {
+      items.push({ category: C.DEPARTMENT, text: profile.currentDepartment });
+    }
     if (profile.nationality) items.push({ category: C.NATIONALITY, text: profile.nationality });
 
     for (const skill of profile.skills || []) {
@@ -3027,7 +3031,10 @@ class SearchService {
 
     // Nested structures
     for (const edu of (profile.education as any[]) || []) {
-      if (edu?.institution) items.push({ category: C.INSTITUTION, text: edu.institution });
+      if (edu?.institution) {
+        const isSchool = edu.educationLevel === 'TENTH' || edu.educationLevel === 'TWELFTH';
+        items.push({ category: isSchool ? 'school' : C.INSTITUTION, text: edu.institution });
+      }
       if (edu?.degree) items.push({ category: C.DEGREE, text: edu.degree });
       if (edu?.fieldOfStudy) items.push({ category: C.FIELD_OF_STUDY, text: edu.fieldOfStudy });
       if (edu?.specialization) items.push({ category: C.FIELD_OF_STUDY, text: edu.specialization });
@@ -3136,7 +3143,9 @@ class SearchService {
               updatedAt: now,
             });
           }
-          logger.info(`Added ${(INDIAN_CITIES as string[]).length} Indian cities from frontend data`);
+          logger.info(
+            `Added ${(INDIAN_CITIES as string[]).length} Indian cities from frontend data`
+          );
         } catch {
           logger.warn('Frontend Indian cities data not found, using inline seed locations');
         }
@@ -3211,7 +3220,12 @@ class SearchService {
   // ─── Reindex All ────────────────────────────────────────────────────
 
   async reindexAll() {
-    const indices = [ELASTIC_INDICES.JOBS, ELASTIC_INDICES.CANDIDATES, ELASTIC_INDICES.EMPLOYERS, ELASTIC_INDICES.SUGGESTIONS];
+    const indices = [
+      ELASTIC_INDICES.JOBS,
+      ELASTIC_INDICES.CANDIDATES,
+      ELASTIC_INDICES.EMPLOYERS,
+      ELASTIC_INDICES.SUGGESTIONS,
+    ];
     for (const index of indices) {
       try {
         const exists = await elasticClient.indices.exists({ index });

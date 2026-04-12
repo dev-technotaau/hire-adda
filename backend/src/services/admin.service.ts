@@ -143,6 +143,8 @@ export class AdminService {
       profileCompleteness?: { min?: number; max?: number };
       lastActive?: 'week' | 'month' | 'quarter' | 'inactive';
       verified?: ('email' | 'mobile' | 'whatsapp')[];
+      accountType?: 'COMPANY' | 'INDIVIDUAL';
+      hiringType?: 'DIRECT' | 'CONSULTANCY';
     }
   ) {
     const skip = (page - 1) * limit;
@@ -214,6 +216,14 @@ export class AdminService {
       where.candidateProfile = { profileCompleteness: completenessWhere };
     }
 
+    // Employer account type / hiring type filters
+    if (filters?.accountType || filters?.hiringType) {
+      const companyWhere: any = {};
+      if (filters.accountType) companyWhere.accountType = filters.accountType;
+      if (filters.hiringType) companyWhere.hiringType = filters.hiringType;
+      where.companyProfile = { ...where.companyProfile, ...companyWhere };
+    }
+
     const [users, total] = await prisma.$transaction([
       prisma.user.findMany({
         where,
@@ -236,7 +246,7 @@ export class AdminService {
             select: { profileCompleteness: true },
           },
           companyProfile: {
-            select: { id: true },
+            select: { id: true, accountType: true, hiringType: true },
           },
         },
         skip,

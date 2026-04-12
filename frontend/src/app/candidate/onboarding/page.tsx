@@ -128,6 +128,8 @@ function toSelectOptions(labels: Record<string, string>): SelectOption[] {
 
 interface CandidateOnboardingData {
   [key: string]: unknown;
+  // Step: Candidate Type (Fresher / Experienced)
+  candidateType: string;
   // Step: Profile Basics
   headline: string;
   pronouns: string;
@@ -242,8 +244,9 @@ interface CandidateOnboardingData {
 
 const STEPS: OnboardingStep[] = [
   { key: 'welcome', label: 'Welcome' },
+  { key: 'candidateType', label: 'I Am' },
   { key: 'avatar', label: 'Profile Photo', optional: true },
-  { key: 'resume', label: 'Resume Upload', optional: true },
+  { key: 'resume', label: 'Resume', optional: true },
   { key: 'personal', label: 'Personal Details', optional: true },
   { key: 'professional', label: 'Professional Summary' },
   { key: 'employment', label: 'Current Employment', optional: true },
@@ -257,6 +260,7 @@ const STEPS: OnboardingStep[] = [
 ];
 
 const INITIAL_DATA: CandidateOnboardingData = {
+  candidateType: '',
   headline: '',
   pronouns: '',
   phone: '',
@@ -547,6 +551,11 @@ export default function CandidateOnboardingPage() {
   });
 
   // -----------------------------------------------------------------------
+  // Computed flags
+  // -----------------------------------------------------------------------
+  const isFresher = data.candidateType === 'FRESHER';
+
+  // -----------------------------------------------------------------------
   // Mutations
   // -----------------------------------------------------------------------
 
@@ -674,6 +683,9 @@ export default function CandidateOnboardingPage() {
 
   const validateStep = useCallback((): string | null => {
     switch (STEPS[step].key) {
+      case 'candidateType':
+        if (!data.candidateType) return 'Please select whether you are experienced or a fresher';
+        return null;
       case 'basics':
         if (!data.headline.trim()) return 'Please enter a headline';
         if (!data.currentLocation.trim()) return 'Please enter your current location';
@@ -746,22 +758,28 @@ export default function CandidateOnboardingPage() {
           pincode: data.pincode || undefined,
           country: data.country || undefined,
           bio: data.bio || undefined,
-          experienceYears: data.experienceYears || 0,
-          totalExperienceMonths: data.totalExperienceMonths || undefined,
+          experienceYears: isFresher ? 0 : data.experienceYears || 0,
+          totalExperienceMonths: isFresher ? 0 : data.totalExperienceMonths || undefined,
           workStatus: (data.workStatus as WorkStatus) || undefined,
-          hasCareerBreak: data.hasCareerBreak,
-          careerBreakType: (data.careerBreakType as CareerBreakType) || undefined,
-          careerBreakReason: data.careerBreakReason || undefined,
+          hasCareerBreak: isFresher ? false : data.hasCareerBreak,
+          careerBreakType: isFresher
+            ? undefined
+            : (data.careerBreakType as CareerBreakType) || undefined,
+          careerBreakReason: isFresher ? undefined : data.careerBreakReason || undefined,
           openToWork: (data.openToWork as OpenToWorkStatus) || undefined,
-          currentCompany: data.currentCompany || undefined,
-          currentRole: data.currentRole || undefined,
-          currentIndustry: data.currentIndustry || undefined,
-          currentDepartment: data.currentDepartment || undefined,
-          functionalArea: data.functionalArea || undefined,
-          currSalary: data.currSalary || undefined,
-          noticePeriod: (data.noticePeriod as NoticePeriod) || undefined,
-          servingNoticePeriod: data.servingNoticePeriod,
-          experience: data.experience.length > 0 ? data.experience : undefined,
+          currentCompany: isFresher ? undefined : data.currentCompany || undefined,
+          currentRole: isFresher ? undefined : data.currentRole || undefined,
+          currentIndustry: isFresher ? undefined : data.currentIndustry || undefined,
+          currentDepartment: isFresher ? undefined : data.currentDepartment || undefined,
+          functionalArea: isFresher ? undefined : data.functionalArea || undefined,
+          currSalary: isFresher ? undefined : data.currSalary || undefined,
+          noticePeriod: isFresher ? undefined : (data.noticePeriod as NoticePeriod) || undefined,
+          servingNoticePeriod: isFresher ? false : data.servingNoticePeriod,
+          experience: isFresher
+            ? undefined
+            : data.experience.length > 0
+              ? data.experience
+              : undefined,
           education: data.education.length > 0 ? data.education : undefined,
           skills: data.skills.length > 0 ? data.skills : undefined,
           skillsWithProficiency:
@@ -866,6 +884,7 @@ export default function CandidateOnboardingPage() {
   }, [
     validateStep,
     isLastStep,
+    isFresher,
     data,
     resumeFile,
     resumeUploaded,
@@ -1117,7 +1136,7 @@ export default function CandidateOnboardingPage() {
           <div className="mt-8 w-full max-w-sm space-y-3 text-left">
             {[
               { icon: User, label: 'Profile Basics' },
-              { icon: Briefcase, label: 'Experience & Employment' },
+              ...(isFresher ? [] : [{ icon: Briefcase, label: 'Experience & Employment' }]),
               { icon: GraduationCap, label: 'Education' },
               { icon: Code, label: 'Skills & Certifications' },
               { icon: Settings, label: 'Job Preferences' },
@@ -1142,7 +1161,92 @@ export default function CandidateOnboardingPage() {
     }
 
     // ===================================================================
-    // Step 1 - Profile Photo
+    // Step 1 - Candidate Type (Fresher / Experienced)
+    // ===================================================================
+    if (currentKey === 'candidateType') {
+      const options = [
+        {
+          value: 'EXPERIENCED',
+          label: 'Experienced',
+          icon: Briefcase,
+          desc: 'I have work experience and want to upload my resume',
+        },
+        {
+          value: 'FRESHER',
+          label: 'Fresher',
+          icon: GraduationCap,
+          desc: 'I am a recent graduate or have no prior work experience',
+        },
+      ];
+
+      return (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-lg font-semibold text-[var(--text)]">Tell us about yourself</h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              This helps us tailor the onboarding experience for you
+            </p>
+          </div>
+          <div className="mx-auto grid max-w-lg gap-4 sm:grid-cols-2">
+            {options.map(({ value, label, icon: Icon, desc }) => {
+              const isSelected = data.candidateType === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    const updates: Partial<CandidateOnboardingData> = { candidateType: value };
+                    if (value === 'FRESHER') {
+                      updates.experienceLevel = 'FRESHER';
+                      updates.experienceYears = 0;
+                      updates.totalExperienceMonths = 0;
+                    } else if (data.experienceLevel === 'FRESHER') {
+                      updates.experienceLevel = '';
+                    }
+                    updateData(updates);
+                  }}
+                  className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 p-6 text-center transition-all ${
+                    isSelected
+                      ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-sm'
+                      : 'border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--text-muted)]'
+                  }`}
+                >
+                  <div
+                    className={`flex h-14 w-14 items-center justify-center rounded-2xl ${
+                      isSelected
+                        ? 'bg-primary-light text-primary'
+                        : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
+                    }`}
+                  >
+                    <Icon className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <span
+                      className={`block text-base font-semibold ${isSelected ? 'text-primary' : 'text-[var(--text)]'}`}
+                    >
+                      {label}
+                    </span>
+                    <span className="mt-1 block text-xs text-[var(--text-muted)]">{desc}</span>
+                  </div>
+                  <div
+                    className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                      isSelected
+                        ? 'border-[var(--primary)] bg-[var(--primary)]'
+                        : 'border-[var(--border)]'
+                    }`}
+                  >
+                    {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ===================================================================
+    // Step 2 - Profile Photo
     // ===================================================================
     if (currentKey === 'avatar') {
       const handleAvatarDrop = (files: File[]) => {
@@ -1265,6 +1369,24 @@ export default function CandidateOnboardingPage() {
     // Step 2 - Resume Upload & AI Parse
     // ===================================================================
     if (currentKey === 'resume') {
+      if (isFresher) {
+        return (
+          <div className="flex flex-col items-center py-8 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--bg-secondary)]">
+              <FileText className="h-8 w-8 text-[var(--text-muted)]" />
+            </div>
+            <h2 className="text-lg font-semibold text-[var(--text)]">Build Your Resume</h2>
+            <p className="mt-2 max-w-md text-sm text-[var(--text-muted)]">
+              As a fresher, we&apos;ll help you build a great profile using the details you provide
+              in the next steps — your education, skills, projects, and certifications.
+            </p>
+            <p className="mt-4 text-xs text-[var(--text-muted)]">
+              You can skip this step and continue to fill in your details.
+            </p>
+          </div>
+        );
+      }
+
       const selectedFile = resumeFile[0] ?? null;
       const isPdf = selectedFile?.type === 'application/pdf';
       const typeBadge = selectedFile ? getFileTypeBadge(selectedFile) : null;
@@ -1694,34 +1816,36 @@ export default function CandidateOnboardingPage() {
             required
           />
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Input
-              label="Total Experience (Years)"
-              type="number"
-              min={0}
-              max={50}
-              value={data.experienceYears || ''}
-              onChange={(e) => updateData({ experienceYears: Number(e.target.value) || 0 })}
-              placeholder="e.g. 5"
-            />
-            <Input
-              label="Total Experience (Months)"
-              type="number"
-              min={0}
-              max={11}
-              value={data.totalExperienceMonths || ''}
-              onChange={(e) => updateData({ totalExperienceMonths: Number(e.target.value) || 0 })}
-              placeholder="e.g. 6"
-              helperText="Additional months beyond full years"
-            />
-            <Select
-              label="Experience Level"
-              options={EXPERIENCE_LEVEL_OPTIONS}
-              value={data.experienceLevel}
-              onChange={(val) => updateData({ experienceLevel: val })}
-              placeholder="Select level"
-            />
-          </div>
+          {!isFresher && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input
+                label="Total Experience (Years)"
+                type="number"
+                min={0}
+                max={50}
+                value={data.experienceYears || ''}
+                onChange={(e) => updateData({ experienceYears: Number(e.target.value) || 0 })}
+                placeholder="e.g. 5"
+              />
+              <Input
+                label="Total Experience (Months)"
+                type="number"
+                min={0}
+                max={11}
+                value={data.totalExperienceMonths || ''}
+                onChange={(e) => updateData({ totalExperienceMonths: Number(e.target.value) || 0 })}
+                placeholder="e.g. 6"
+                helperText="Additional months beyond full years"
+              />
+              <Select
+                label="Experience Level"
+                options={EXPERIENCE_LEVEL_OPTIONS.filter((o) => o.value !== 'FRESHER')}
+                value={data.experienceLevel}
+                onChange={(val) => updateData({ experienceLevel: val })}
+                placeholder="Select level"
+              />
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Select
@@ -1741,36 +1865,38 @@ export default function CandidateOnboardingPage() {
             />
           </div>
 
-          <div className="space-y-3">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={data.hasCareerBreak}
-                onChange={(e) => updateData({ hasCareerBreak: e.target.checked })}
-                className="text-primary focus:ring-primary/20 h-4 w-4 rounded border-[var(--border)]"
-              />
-              <span className="text-sm text-[var(--text)]">I have had a career break</span>
-            </label>
+          {!isFresher && (
+            <div className="space-y-3">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={data.hasCareerBreak}
+                  onChange={(e) => updateData({ hasCareerBreak: e.target.checked })}
+                  className="text-primary focus:ring-primary/20 h-4 w-4 rounded border-[var(--border)]"
+                />
+                <span className="text-sm text-[var(--text)]">I have had a career break</span>
+              </label>
 
-            {data.hasCareerBreak && (
-              <div className="space-y-3">
-                <Select
-                  label="Career Break Type"
-                  options={CAREER_BREAK_OPTIONS}
-                  value={data.careerBreakType}
-                  onChange={(val) => updateData({ careerBreakType: val })}
-                  placeholder="Select break type"
-                />
-                <Textarea
-                  label="Career Break Reason"
-                  placeholder="Briefly explain the reason for your career break..."
-                  value={data.careerBreakReason}
-                  onChange={(e) => updateData({ careerBreakReason: e.target.value })}
-                  rows={3}
-                />
-              </div>
-            )}
-          </div>
+              {data.hasCareerBreak && (
+                <div className="space-y-3">
+                  <Select
+                    label="Career Break Type"
+                    options={CAREER_BREAK_OPTIONS}
+                    value={data.careerBreakType}
+                    onChange={(val) => updateData({ careerBreakType: val })}
+                    placeholder="Select break type"
+                  />
+                  <Textarea
+                    label="Career Break Reason"
+                    placeholder="Briefly explain the reason for your career break..."
+                    value={data.careerBreakReason}
+                    onChange={(e) => updateData({ careerBreakReason: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       );
     }
@@ -1779,6 +1905,18 @@ export default function CandidateOnboardingPage() {
     // Step 4 - Current Employment (optional)
     // ===================================================================
     if (currentKey === 'employment') {
+      if (isFresher) {
+        return (
+          <div className="flex flex-col items-center py-8 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--bg-secondary)]">
+              <Building2 className="h-8 w-8 text-[var(--text-muted)]" />
+            </div>
+            <p className="text-sm text-[var(--text-muted)]">
+              Current employment details are not applicable for freshers. You can skip this step.
+            </p>
+          </div>
+        );
+      }
       return (
         <div className="space-y-6">
           <div className="mb-2 flex items-center gap-3">
@@ -1875,6 +2013,18 @@ export default function CandidateOnboardingPage() {
     // Step 5 - Work Experience (optional)
     // ===================================================================
     if (currentKey === 'experience') {
+      if (isFresher) {
+        return (
+          <div className="flex flex-col items-center py-8 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--bg-secondary)]">
+              <Briefcase className="h-8 w-8 text-[var(--text-muted)]" />
+            </div>
+            <p className="text-sm text-[var(--text-muted)]">
+              Work experience is not applicable for freshers. You can skip this step.
+            </p>
+          </div>
+        );
+      }
       return (
         <div className="space-y-6">
           <div className="mb-2 flex items-center gap-3">
@@ -2170,7 +2320,11 @@ export default function CandidateOnboardingPage() {
                 }
                 value={edu.institution}
                 onChange={(val) => updateEducation(i, { institution: val })}
-                category="institution"
+                category={
+                  edu.educationLevel === 'TENTH' || edu.educationLevel === 'TWELFTH'
+                    ? 'school'
+                    : 'institution'
+                }
                 required
               />
 
@@ -2180,7 +2334,12 @@ export default function CandidateOnboardingPage() {
                     label="Board"
                     options={BOARD_OPTIONS}
                     value={edu.degree}
-                    onChange={(val) => updateEducation(i, { degree: val as string })}
+                    onChange={(val) =>
+                      updateEducation(i, {
+                        degree: val as string,
+                        boardState: val === 'STATE_BOARD' ? edu.boardState : undefined,
+                      })
+                    }
                     placeholder="Select board"
                     required
                   />
@@ -2222,6 +2381,17 @@ export default function CandidateOnboardingPage() {
                   />
                 )}
               </div>
+
+              {edu.degree === 'STATE_BOARD' && (
+                <Select
+                  label="State"
+                  options={STATE_OPTIONS}
+                  value={edu.boardState || ''}
+                  onChange={(val) => updateEducation(i, { boardState: val as string })}
+                  placeholder="Select state"
+                  required
+                />
+              )}
 
               {edu.educationLevel !== 'TENTH' && edu.educationLevel !== 'TWELFTH' && (
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -4017,7 +4187,7 @@ export default function CandidateOnboardingPage() {
             <div className={sectionClass}>
               <button
                 type="button"
-                onClick={() => goToStepFromReview(1)}
+                onClick={() => goToStepFromReview(2)}
                 className={sectionTitle}
                 title="Edit profile photo"
               >
@@ -4044,7 +4214,7 @@ export default function CandidateOnboardingPage() {
                 <div className={sectionClass}>
                   <button
                     type="button"
-                    onClick={() => goToStepFromReview(2)}
+                    onClick={() => goToStepFromReview(3)}
                     className={sectionTitle}
                     title="Edit resume"
                   >
@@ -4107,7 +4277,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStepFromReview(3)}
+              onClick={() => goToStepFromReview(4)}
               className={sectionTitle}
               title="Edit personal details"
             >
@@ -4171,7 +4341,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStepFromReview(4)}
+              onClick={() => goToStepFromReview(5)}
               className={sectionTitle}
               title="Edit professional summary"
             >
@@ -4183,20 +4353,30 @@ export default function CandidateOnboardingPage() {
                 <p className={`${fieldValue} line-clamp-3`}>{data.bio || '--'}</p>
               </div>
               <div className="grid gap-2 sm:grid-cols-4">
-                <div>
-                  <p className={fieldLabel}>Experience</p>
-                  <p className={fieldValue}>
-                    {data.experienceYears}y {data.totalExperienceMonths}m
-                  </p>
-                </div>
-                <div>
-                  <p className={fieldLabel}>Experience Level</p>
-                  <p className={fieldValue}>
-                    {data.experienceLevel
-                      ? EXPERIENCE_LEVEL_LABELS[data.experienceLevel] || data.experienceLevel
-                      : '--'}
-                  </p>
-                </div>
+                {!isFresher && (
+                  <>
+                    <div>
+                      <p className={fieldLabel}>Experience</p>
+                      <p className={fieldValue}>
+                        {data.experienceYears}y {data.totalExperienceMonths}m
+                      </p>
+                    </div>
+                    <div>
+                      <p className={fieldLabel}>Experience Level</p>
+                      <p className={fieldValue}>
+                        {data.experienceLevel
+                          ? EXPERIENCE_LEVEL_LABELS[data.experienceLevel] || data.experienceLevel
+                          : '--'}
+                      </p>
+                    </div>
+                  </>
+                )}
+                {isFresher && (
+                  <div>
+                    <p className={fieldLabel}>Candidate Type</p>
+                    <p className={fieldValue}>Fresher</p>
+                  </div>
+                )}
                 <div>
                   <p className={fieldLabel}>Work Status</p>
                   <p className={fieldValue}>
@@ -4227,87 +4407,91 @@ export default function CandidateOnboardingPage() {
             </div>
           </div>
 
-          {/* Current Employment */}
-          <div className={sectionClass}>
-            <button
-              type="button"
-              onClick={() => goToStepFromReview(5)}
-              className={sectionTitle}
-              title="Edit current employment"
-            >
-              Current Employment <Pencil className="h-3.5 w-3.5" />
-            </button>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <div>
-                <p className={fieldLabel}>Company</p>
-                <p className={fieldValue}>{data.currentCompany || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Role</p>
-                <p className={fieldValue}>{data.currentRole || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Industry</p>
-                <p className={fieldValue}>{data.currentIndustry || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Department</p>
-                <p className={fieldValue}>{data.currentDepartment || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Functional Area</p>
-                <p className={fieldValue}>{data.functionalArea || '--'}</p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Current Salary</p>
-                <p className={fieldValue}>
-                  {data.currSalary ? `₹${data.currSalary.toLocaleString()}` : '--'}
-                </p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Notice Period</p>
-                <p className={fieldValue}>
-                  {data.noticePeriod
-                    ? NOTICE_PERIOD_LABELS[data.noticePeriod] || data.noticePeriod
-                    : '--'}
-                  {data.servingNoticePeriod && ' (Serving)'}
-                </p>
+          {/* Current Employment — Experienced only */}
+          {!isFresher && (
+            <div className={sectionClass}>
+              <button
+                type="button"
+                onClick={() => goToStepFromReview(6)}
+                className={sectionTitle}
+                title="Edit current employment"
+              >
+                Current Employment <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <div>
+                  <p className={fieldLabel}>Company</p>
+                  <p className={fieldValue}>{data.currentCompany || '--'}</p>
+                </div>
+                <div>
+                  <p className={fieldLabel}>Role</p>
+                  <p className={fieldValue}>{data.currentRole || '--'}</p>
+                </div>
+                <div>
+                  <p className={fieldLabel}>Industry</p>
+                  <p className={fieldValue}>{data.currentIndustry || '--'}</p>
+                </div>
+                <div>
+                  <p className={fieldLabel}>Department</p>
+                  <p className={fieldValue}>{data.currentDepartment || '--'}</p>
+                </div>
+                <div>
+                  <p className={fieldLabel}>Functional Area</p>
+                  <p className={fieldValue}>{data.functionalArea || '--'}</p>
+                </div>
+                <div>
+                  <p className={fieldLabel}>Current Salary</p>
+                  <p className={fieldValue}>
+                    {data.currSalary ? `₹${data.currSalary.toLocaleString()}` : '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className={fieldLabel}>Notice Period</p>
+                  <p className={fieldValue}>
+                    {data.noticePeriod
+                      ? NOTICE_PERIOD_LABELS[data.noticePeriod] || data.noticePeriod
+                      : '--'}
+                    {data.servingNoticePeriod && ' (Serving)'}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Experience */}
-          <div className={sectionClass}>
-            <button
-              type="button"
-              onClick={() => goToStepFromReview(6)}
-              className={sectionTitle}
-              title="Edit work experience"
-            >
-              Work Experience <Pencil className="h-3.5 w-3.5" />
-            </button>
-            <p className="mt-2 text-sm text-[var(--text)]">
-              {data.experience.length === 0
-                ? 'No experience entries added'
-                : `${data.experience.length} experience ${data.experience.length === 1 ? 'entry' : 'entries'} added`}
-            </p>
-            {data.experience.length > 0 && (
-              <div className="mt-2 space-y-1">
-                {data.experience.map((exp, i) => (
-                  <p key={i} className="text-xs text-[var(--text-secondary)]">
-                    {exp.role} at {exp.company}
-                    {exp.isCurrent ? ' (Current)' : ''}
-                  </p>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Experience — Experienced only */}
+          {!isFresher && (
+            <div className={sectionClass}>
+              <button
+                type="button"
+                onClick={() => goToStepFromReview(7)}
+                className={sectionTitle}
+                title="Edit work experience"
+              >
+                Work Experience <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <p className="mt-2 text-sm text-[var(--text)]">
+                {data.experience.length === 0
+                  ? 'No experience entries added'
+                  : `${data.experience.length} experience ${data.experience.length === 1 ? 'entry' : 'entries'} added`}
+              </p>
+              {data.experience.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {data.experience.map((exp, i) => (
+                    <p key={i} className="text-xs text-[var(--text-secondary)]">
+                      {exp.role} at {exp.company}
+                      {exp.isCurrent ? ' (Current)' : ''}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Education */}
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStepFromReview(7)}
+              onClick={() => goToStepFromReview(8)}
               className={sectionTitle}
               title="Edit education"
             >
@@ -4354,7 +4538,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStepFromReview(8)}
+              onClick={() => goToStepFromReview(9)}
               className={sectionTitle}
               title="Edit skills"
             >
@@ -4395,7 +4579,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStepFromReview(9)}
+              onClick={() => goToStepFromReview(10)}
               className={sectionTitle}
               title="Edit job preferences"
             >
@@ -4461,7 +4645,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStepFromReview(10)}
+              onClick={() => goToStepFromReview(11)}
               className={sectionTitle}
               title="Edit documents"
             >
@@ -4517,7 +4701,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStepFromReview(11)}
+              onClick={() => goToStepFromReview(12)}
               className={sectionTitle}
               title="Edit social links"
             >

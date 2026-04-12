@@ -22,6 +22,7 @@ import RichTextEditor from '@/components/ui/RichTextEditor';
 import ScreeningQuestionBuilder from '@/components/ui/ScreeningQuestionBuilder';
 import { showToast } from '@/components/ui/Toast';
 import { jobService } from '@/services/job.service';
+import { employerService } from '@/services/employer.service';
 import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS } from '@/constants/config';
 import {
@@ -41,6 +42,7 @@ import {
   SPECIFIC_DEGREE_LABELS,
   DIVERSITY_TAG_OPTIONS,
   SALARY_CURRENCY_LABELS,
+  getDegreesForLevel,
 } from '@/constants/enums';
 import { formatSalaryAsLPA } from '@/utils/format';
 import type { UpdateJobRequest, ScreeningQuestionInput } from '@/types/job';
@@ -74,6 +76,12 @@ export default function EditJobPage() {
   const [tagInput, setTagInput] = useState('');
   const [screeningQuestions, setScreeningQuestions] = useState<ScreeningQuestionInput[]>([]);
   const [initialized, setInitialized] = useState(false);
+
+  const { data: companyData } = useQuery({
+    queryKey: QUERY_KEYS.EMPLOYERS.COMPANY,
+    queryFn: () => employerService.getCompany(),
+  });
+  const isConsultancy = companyData?.data?.hiringType === 'CONSULTANCY';
 
   const { data: jobData, isLoading } = useQuery({
     queryKey: QUERY_KEYS.JOBS.DETAIL(id),
@@ -138,9 +146,7 @@ export default function EditJobPage() {
         tags: job.tags || [],
         jobPerks: job.jobPerks || [],
         urgencyLevel: job.urgencyLevel || undefined,
-        applicationDeadline: job.applicationDeadline
-          ? job.applicationDeadline.slice(0, 16)
-          : '',
+        applicationDeadline: job.applicationDeadline ? job.applicationDeadline.slice(0, 16) : '',
         isFeatured: job.isFeatured ?? false,
         isPremium: job.isPremium ?? false,
         expiresAt: job.expiresAt || '',
@@ -352,6 +358,15 @@ export default function EditJobPage() {
               onChange={(val) => handleChange('title', val)}
               placeholder="e.g. Senior Software Engineer"
             />
+            {isConsultancy && (
+              <Input
+                label="Client Company"
+                placeholder="Company this role is for (visible to candidates)"
+                value={form.clientCompanyName || ''}
+                onChange={(e) => handleChange('clientCompanyName', e.target.value)}
+                helperText="The actual company the candidate will work for"
+              />
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <Select
                 label="Experience Level"
@@ -364,7 +379,18 @@ export default function EditJobPage() {
                 label="Education Required"
                 options={educationLevelOptions}
                 value={form.educationRequired || ''}
-                onChange={(val) => handleChange('educationRequired', val || undefined)}
+                onChange={(val) => {
+                  handleChange('educationRequired', val || undefined);
+                  const allowed = getDegreesForLevel(val as string).map((d) => d.value);
+                  if (allowed.length === 0) {
+                    handleChange('specificDegrees', []);
+                  } else {
+                    handleChange(
+                      'specificDegrees',
+                      (form.specificDegrees || []).filter((d) => allowed.includes(d as string)),
+                    );
+                  }
+                }}
                 placeholder="Select level"
               />
             </div>
@@ -452,9 +478,20 @@ export default function EditJobPage() {
             <div>
               <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
                 Specific Degrees
+                {(!form.educationRequired ||
+                  getDegreesForLevel(form.educationRequired).length === 0) && (
+                  <span className="ml-1 text-xs font-normal text-[var(--text-muted)]">
+                    {!form.educationRequired
+                      ? '(select education level first)'
+                      : '(not applicable for this level)'}
+                  </span>
+                )}
               </label>
               <div className="mb-2 flex flex-wrap gap-2">
-                {specificDegreeOptions.map((opt) => (
+                {(form.educationRequired && getDegreesForLevel(form.educationRequired).length > 0
+                  ? getDegreesForLevel(form.educationRequired)
+                  : specificDegreeOptions
+                ).map((opt) => (
                   <Tooltip key={opt.value} content={`Toggle ${opt.label}`}>
                     <button
                       type="button"

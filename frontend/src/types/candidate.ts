@@ -180,6 +180,7 @@ export interface EducationEntry {
   educationLevel?: string;
   institution: string;
   degree: string;
+  boardState?: string;
   field: string;
   fieldOfStudy?: string;
   startDate: string;

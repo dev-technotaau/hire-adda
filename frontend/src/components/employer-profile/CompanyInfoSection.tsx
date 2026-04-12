@@ -14,7 +14,7 @@ import Select, { type SelectOption } from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import Tag from '@/components/ui/Tag';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
-import { COMPANY_TYPE_LABELS } from '@/constants/enums';
+import { COMPANY_TYPE_LABELS, getSubIndustriesForIndustry } from '@/constants/enums';
 import type { UpdateCompanyRequest } from '@/types/employer';
 import type { EmployerProfileSectionProps } from './types';
 
@@ -38,50 +38,73 @@ export default function CompanyInfoSection({
   updateField,
   addToArray,
   removeFromArray,
+  isIndividual,
 }: EmployerProfileSectionProps) {
   const [specialtyInput, setSpecialtyInput] = useState('');
 
   return (
     <div className="space-y-4">
       <Input
-        label="Company Name"
+        label={isIndividual ? 'Business Name' : 'Company Name'}
         value={form.companyName || ''}
         onChange={(e) => updateField('companyName', e.target.value)}
         leftIcon={<Building2 className="h-4 w-4" />}
         required
       />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Select
-          label="Company Type"
-          options={toSelectOptions(COMPANY_TYPE_LABELS)}
-          value={form.companyType || ''}
-          onChange={(v) => updateField('companyType', v as UpdateCompanyRequest['companyType'])}
-          placeholder="Select type"
-        />
+        {!isIndividual && (
+          <Select
+            label="Company Type"
+            options={toSelectOptions(COMPANY_TYPE_LABELS)}
+            value={form.companyType || ''}
+            onChange={(v) => updateField('companyType', v as UpdateCompanyRequest['companyType'])}
+            placeholder="Select type"
+          />
+        )}
         <ServerSuggestionInput
           category="industry"
           label="Industry"
           placeholder="e.g. Information Technology"
           value={form.industry || ''}
           onChange={(v) => updateField('industry', v)}
-          onSelect={(v) => updateField('industry', v)}
+          onSelect={(v) => {
+            updateField('industry', v);
+            updateField('subIndustry', '');
+          }}
           leftIcon={<Briefcase className="h-4 w-4" />}
           required
         />
       </div>
-      <ServerSuggestionInput
-        category="sub_industry"
-        label="Sub-Industry"
-        placeholder="e.g. SaaS, AI/ML, Payments"
-        value={form.subIndustry || ''}
-        onChange={(v) => updateField('subIndustry', v)}
-        onSelect={(v) => updateField('subIndustry', v)}
-      />
+      {getSubIndustriesForIndustry(form.industry || '').length > 0 ? (
+        <Select
+          label="Sub-Industry"
+          options={getSubIndustriesForIndustry(form.industry || '').map((s) => ({
+            value: s,
+            label: s,
+          }))}
+          value={form.subIndustry || ''}
+          onChange={(v) => updateField('subIndustry', v as UpdateCompanyRequest['subIndustry'])}
+          placeholder={form.industry ? 'Select sub-industry' : 'Select industry first'}
+          disabled={!form.industry}
+        />
+      ) : (
+        <ServerSuggestionInput
+          category="sub_industry"
+          label="Sub-Industry"
+          placeholder={form.industry ? 'e.g. SaaS, AI/ML, Payments' : 'Select industry first'}
+          value={form.subIndustry || ''}
+          onChange={(v) => updateField('subIndustry', v)}
+          onSelect={(v) => updateField('subIndustry', v)}
+          disabled={!form.industry}
+        />
+      )}
 
       {/* Specialties */}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Specialties</label>
-        <p className="mb-3 text-xs text-[var(--text-muted)]">Areas your company specializes in</p>
+        <p className="mb-3 text-xs text-[var(--text-muted)]">
+          {isIndividual ? 'Areas you specialize in' : 'Areas your company specializes in'}
+        </p>
         <div className="flex gap-2">
           <div className="flex-1">
             <ServerSuggestionInput
@@ -116,38 +139,42 @@ export default function CompanyInfoSection({
         )}
       </div>
 
+      {!isIndividual && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Select
+            label="Company Size"
+            options={companySizeOptions}
+            value={form.companySize || ''}
+            onChange={(v) => updateField('companySize', v)}
+            placeholder="Select size"
+          />
+          <Input
+            label="Employee Count"
+            type="number"
+            placeholder="e.g. 250"
+            value={form.employeeCount?.toString() || ''}
+            onChange={(e) =>
+              updateField('employeeCount', e.target.value ? Number(e.target.value) : undefined)
+            }
+            leftIcon={<UsersIcon className="h-4 w-4" />}
+          />
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Select
-          label="Company Size"
-          options={companySizeOptions}
-          value={form.companySize || ''}
-          onChange={(v) => updateField('companySize', v)}
-          placeholder="Select size"
-        />
+        {!isIndividual && (
+          <Input
+            label="Number of Offices"
+            type="number"
+            placeholder="e.g. 5"
+            value={form.numberOfOffices?.toString() || ''}
+            onChange={(e) =>
+              updateField('numberOfOffices', e.target.value ? Number(e.target.value) : undefined)
+            }
+            leftIcon={<MapPin className="h-4 w-4" />}
+          />
+        )}
         <Input
-          label="Employee Count"
-          type="number"
-          placeholder="e.g. 250"
-          value={form.employeeCount?.toString() || ''}
-          onChange={(e) =>
-            updateField('employeeCount', e.target.value ? Number(e.target.value) : undefined)
-          }
-          leftIcon={<UsersIcon className="h-4 w-4" />}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Number of Offices"
-          type="number"
-          placeholder="e.g. 5"
-          value={form.numberOfOffices?.toString() || ''}
-          onChange={(e) =>
-            updateField('numberOfOffices', e.target.value ? Number(e.target.value) : undefined)
-          }
-          leftIcon={<MapPin className="h-4 w-4" />}
-        />
-        <Input
-          label="Founded Year"
+          label={isIndividual ? 'Year Started' : 'Founded Year'}
           type="number"
           placeholder="e.g. 2015"
           value={form.foundedYear?.toString() || ''}
@@ -160,29 +187,31 @@ export default function CompanyInfoSection({
       <Input
         label="Website"
         type="url"
-        placeholder="https://www.company.com"
+        placeholder={isIndividual ? 'https://your-website.com' : 'https://www.company.com'}
         leftIcon={<Globe className="h-4 w-4" />}
         value={form.website || ''}
         onChange={(e) => updateField('website', e.target.value)}
       />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Parent Company"
-          placeholder="e.g. Alphabet Inc."
-          value={form.parentCompany || ''}
-          onChange={(e) => updateField('parentCompany', e.target.value)}
-          leftIcon={<Building2 className="h-4 w-4" />}
-          helperText="Leave blank if not a subsidiary"
-        />
-        <Input
-          label="Stock Ticker"
-          placeholder="e.g. GOOG, TCS"
-          value={form.stockTicker || ''}
-          onChange={(e) => updateField('stockTicker', e.target.value)}
-          leftIcon={<TrendingUp className="h-4 w-4" />}
-          helperText="Only if publicly listed"
-        />
-      </div>
+      {!isIndividual && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Parent Company"
+            placeholder="e.g. Alphabet Inc."
+            value={form.parentCompany || ''}
+            onChange={(e) => updateField('parentCompany', e.target.value)}
+            leftIcon={<Building2 className="h-4 w-4" />}
+            helperText="Leave blank if not a subsidiary"
+          />
+          <Input
+            label="Stock Ticker"
+            placeholder="e.g. GOOG, TCS"
+            value={form.stockTicker || ''}
+            onChange={(e) => updateField('stockTicker', e.target.value)}
+            leftIcon={<TrendingUp className="h-4 w-4" />}
+            helperText="Only if publicly listed"
+          />
+        </div>
+      )}
     </div>
   );
 }

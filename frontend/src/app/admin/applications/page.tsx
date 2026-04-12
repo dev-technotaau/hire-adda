@@ -35,7 +35,6 @@ const statusOptions = [
   { value: 'APPLIED', label: 'Applied' },
   { value: 'VIEWED', label: 'Viewed' },
   { value: 'SHORTLISTED', label: 'Shortlisted' },
-  { value: 'INTERVIEW_SCHEDULED', label: 'Interview' },
   { value: 'OFFERED', label: 'Offered' },
   { value: 'HIRED', label: 'Hired' },
   { value: 'REJECTED', label: 'Rejected' },
@@ -46,7 +45,6 @@ const STATUS_LABELS: Record<string, string> = {
   APPLIED: 'Applied',
   VIEWED: 'Viewed',
   SHORTLISTED: 'Shortlisted',
-  INTERVIEW_SCHEDULED: 'Interview',
   OFFERED: 'Offered',
   HIRED: 'Hired',
   REJECTED: 'Rejected',
@@ -60,7 +58,6 @@ const getStatusVariant = (status: string): BadgeVariant => {
     case 'OFFERED':
       return 'info';
     case 'SHORTLISTED':
-    case 'INTERVIEW_SCHEDULED':
       return 'warning';
     case 'REJECTED':
       return 'error';

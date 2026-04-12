@@ -40,6 +40,8 @@ import DOMPurify from 'isomorphic-dompurify';
 import { jobService } from '@/services/job.service';
 import { jobTemplateService } from '@/services/job-template.service';
 import { draftService } from '@/services/draft.service';
+import { employerService } from '@/services/employer.service';
+import { QUERY_KEYS } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
 import {
   JOB_TYPE_LABELS,
@@ -58,6 +60,7 @@ import {
   APPLY_METHOD_LABELS,
   DIVERSITY_TAG_OPTIONS,
   SALARY_CURRENCY_LABELS,
+  getDegreesForLevel,
 } from '@/constants/enums';
 import { formatSalaryAsLPA } from '@/utils/format';
 import type { CreateJobRequest, SpecificDegree, NoticePeriodPreference } from '@/types/job';
@@ -67,7 +70,6 @@ import type { FormDraft } from '@/types/draft';
 function toSelectOptions(labels: Record<string, string>): SelectOption[] {
   return Object.entries(labels).map(([value, label]) => ({ value, label }));
 }
-
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -102,6 +104,12 @@ export default function PostJobPage() {
   const [showLoadTemplateModal, setShowLoadTemplateModal] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [templateDesc, setTemplateDesc] = useState('');
+
+  const { data: companyData } = useQuery({
+    queryKey: QUERY_KEYS.EMPLOYERS.COMPANY,
+    queryFn: () => employerService.getCompany(),
+  });
+  const isConsultancy = companyData?.data?.hiringType === 'CONSULTANCY';
 
   const { data: templatesData, refetch: refetchTemplates } = useQuery({
     queryKey: ['job-templates'],
@@ -378,10 +386,20 @@ export default function PostJobPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleDismissDraft} tooltip="Discard saved draft">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDismissDraft}
+                tooltip="Discard saved draft"
+              >
                 Dismiss
               </Button>
-              <Button variant="primary" size="sm" onClick={handleRestoreDraft} tooltip="Restore your previously saved draft">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleRestoreDraft}
+                tooltip="Restore your previously saved draft"
+              >
                 Restore Draft
               </Button>
             </div>
@@ -396,13 +414,28 @@ export default function PostJobPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={openLoadTemplateModal} tooltip="Load a saved job template">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openLoadTemplateModal}
+              tooltip="Load a saved job template"
+            >
               <Download className="mr-1.5 h-4 w-4" /> Load Template
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowSaveTemplateModal(true)} tooltip="Save current form as a reusable template">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSaveTemplateModal(true)}
+              tooltip="Save current form as a reusable template"
+            >
               <Upload className="mr-1.5 h-4 w-4" /> Save as Template
             </Button>
-            <Button variant="outline" size="sm" onClick={saveDraft} tooltip="Save current progress as draft">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={saveDraft}
+              tooltip="Save current progress as draft"
+            >
               <Save className="mr-1.5 h-4 w-4" /> Save Draft
             </Button>
           </div>
@@ -420,25 +453,25 @@ export default function PostJobPage() {
                   }}
                   className={`flex flex-col items-center gap-1.5 ${i <= step ? 'cursor-pointer' : 'cursor-default'}`}
                 >
-                <div
-                  className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors ${
-                    i < step
-                      ? 'bg-[var(--success)] text-white'
-                      : i === step
-                        ? 'bg-primary text-white'
-                        : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
-                  }`}
-                >
-                  {i < step ? <Check className="h-4 w-4" /> : <s.icon className="h-4 w-4" />}
-                </div>
-                <span
-                  className={`hidden text-xs sm:block ${
-                    i === step ? 'text-primary font-medium' : 'text-[var(--text-muted)]'
-                  }`}
-                >
-                  {s.label}
-                </span>
-              </button>
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                      i < step
+                        ? 'bg-[var(--success)] text-white'
+                        : i === step
+                          ? 'bg-primary text-white'
+                          : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
+                    }`}
+                  >
+                    {i < step ? <Check className="h-4 w-4" /> : <s.icon className="h-4 w-4" />}
+                  </div>
+                  <span
+                    className={`hidden text-xs sm:block ${
+                      i === step ? 'text-primary font-medium' : 'text-[var(--text-muted)]'
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                </button>
               </Tooltip>
               {i < steps.length - 1 && (
                 <div
@@ -464,6 +497,15 @@ export default function PostJobPage() {
                 onChange={(val) => updateField('title', val)}
                 required
               />
+              {isConsultancy && (
+                <Input
+                  label="Client Company"
+                  placeholder="Company this role is for (visible to candidates)"
+                  value={form.clientCompanyName || ''}
+                  onChange={(e) => updateField('clientCompanyName', e.target.value)}
+                  helperText="The actual company the candidate will work for"
+                />
+              )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <Select
                   label="Job Type"
@@ -531,9 +573,19 @@ export default function PostJobPage() {
                 label="Education Required"
                 options={toSelectOptions(EDUCATION_LEVEL_LABELS)}
                 value={form.educationRequired || ''}
-                onChange={(v) =>
-                  updateField('educationRequired', v as CreateJobRequest['educationRequired'])
-                }
+                onChange={(v) => {
+                  updateField('educationRequired', v as CreateJobRequest['educationRequired']);
+                  // Clear incompatible specific degrees when education level changes
+                  const allowed = getDegreesForLevel(v as string).map((d) => d.value);
+                  if (allowed.length === 0) {
+                    updateField('specificDegrees', []);
+                  } else {
+                    updateField(
+                      'specificDegrees',
+                      (form.specificDegrees || []).filter((d) => allowed.includes(d)),
+                    );
+                  }
+                }}
                 placeholder="Select level"
               />
               <ServerAutoSuggest
@@ -589,9 +641,22 @@ export default function PostJobPage() {
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
                   Specific Degrees Accepted
+                  {(!form.educationRequired ||
+                    getDegreesForLevel(form.educationRequired).length === 0) && (
+                    <span className="ml-1 text-xs font-normal text-[var(--text-muted)]">
+                      {!form.educationRequired
+                        ? '(select education level first)'
+                        : '(not applicable for this level)'}
+                    </span>
+                  )}
                 </label>
                 <div className="mb-2 flex flex-wrap gap-1.5">
-                  {Object.entries(SPECIFIC_DEGREE_LABELS).map(([val, lbl]) => (
+                  {(form.educationRequired && getDegreesForLevel(form.educationRequired).length > 0
+                    ? getDegreesForLevel(form.educationRequired).map(
+                        ({ value: val, label: lbl }) => [val, lbl] as [string, string],
+                      )
+                    : Object.entries(SPECIFIC_DEGREE_LABELS)
+                  ).map(([val, lbl]) => (
                     <button
                       key={val}
                       type="button"
@@ -1676,7 +1741,12 @@ export default function PostJobPage() {
 
         {/* Navigation Buttons */}
         <div className="flex items-center justify-between">
-          <Button variant="outline" onClick={handleBack} disabled={step === 0} tooltip="Go to previous step">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            disabled={step === 0}
+            tooltip="Go to previous step"
+          >
             <ChevronLeft className="mr-1 h-4 w-4" /> Back
           </Button>
           <span className="text-sm text-[var(--text-muted)]">
@@ -1687,7 +1757,11 @@ export default function PostJobPage() {
               Next <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} isLoading={createMutation.isPending} tooltip="Publish your job listing">
+            <Button
+              onClick={handleSubmit}
+              isLoading={createMutation.isPending}
+              tooltip="Publish your job listing"
+            >
               <Briefcase className="mr-1.5 h-4 w-4" /> Post Job
             </Button>
           )}
@@ -1714,7 +1788,11 @@ export default function PostJobPage() {
               onChange={(e) => setTemplateDesc(e.target.value)}
             />
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowSaveTemplateModal(false)} tooltip="Cancel saving template">
+              <Button
+                variant="outline"
+                onClick={() => setShowSaveTemplateModal(false)}
+                tooltip="Cancel saving template"
+              >
                 Cancel
               </Button>
               <Button
@@ -1748,19 +1826,23 @@ export default function PostJobPage() {
                     onClick={() => handleLoadTemplate(tpl.templateData)}
                     className="hover:border-primary/50 w-full cursor-pointer rounded-lg border border-[var(--border)] p-3 text-left transition-colors hover:bg-[var(--bg-secondary)]"
                   >
-                  <p className="text-sm font-medium text-[var(--text)]">{tpl.name}</p>
-                  {tpl.description && (
-                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">{tpl.description}</p>
-                  )}
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    Saved {new Date(tpl.updatedAt).toLocaleDateString()}
-                  </p>
+                    <p className="text-sm font-medium text-[var(--text)]">{tpl.name}</p>
+                    {tpl.description && (
+                      <p className="mt-0.5 text-xs text-[var(--text-muted)]">{tpl.description}</p>
+                    )}
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      Saved {new Date(tpl.updatedAt).toLocaleDateString()}
+                    </p>
                   </button>
                 </Tooltip>
               ))
             )}
             <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setShowLoadTemplateModal(false)} tooltip="Close template selector">
+              <Button
+                variant="outline"
+                onClick={() => setShowLoadTemplateModal(false)}
+                tooltip="Close template selector"
+              >
                 Close
               </Button>
             </div>

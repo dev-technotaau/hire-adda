@@ -127,12 +127,17 @@ export default function ResetPasswordPage() {
                   placeholder="Enter new password"
                   leftIcon={<Lock className="h-4 w-4" />}
                   rightIcon={
-                    <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   }
                   error={errors.password?.message}
                   required
+                  autoFocus
                   {...register('password')}
                 />
                 <PasswordStrength password={password || ''} />
@@ -143,7 +148,11 @@ export default function ResetPasswordPage() {
                   placeholder="Confirm new password"
                   leftIcon={<Lock className="h-4 w-4" />}
                   rightIcon={
-                    <button type="button" onClick={() => setShowConfirm(!showConfirm)}>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowConfirm(!showConfirm)}
+                    >
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   }
@@ -152,7 +161,12 @@ export default function ResetPasswordPage() {
                   {...register('confirmPassword')}
                 />
 
-                <Button type="submit" fullWidth isLoading={isLoading} tooltip="Set your new password">
+                <Button
+                  type="submit"
+                  fullWidth
+                  isLoading={isLoading}
+                  tooltip="Set your new password"
+                >
                   Reset Password
                 </Button>
               </form>
@@ -175,7 +189,12 @@ export default function ResetPasswordPage() {
                   Your password has been successfully reset. You can now log in with your new
                   password.
                 </p>
-                <Button fullWidth className="mt-6" onClick={() => router.push(ROUTES.AUTH.LOGIN)} tooltip="Go back to login">
+                <Button
+                  fullWidth
+                  className="mt-6"
+                  onClick={() => router.push(ROUTES.AUTH.LOGIN)}
+                  tooltip="Go back to login"
+                >
                   Go to Login
                 </Button>
               </div>

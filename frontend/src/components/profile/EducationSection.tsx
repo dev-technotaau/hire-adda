@@ -18,6 +18,7 @@ import {
   getDegreesForLevel,
   getLevelsAtOrBelow,
 } from '@/constants/enums';
+import { INDIAN_STATES } from '@/constants/suggestions';
 import type { ProfileSectionProps } from './types';
 import type { EducationEntry, UpdateCandidateRequest } from '@/types/candidate';
 
@@ -152,7 +153,11 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
                 placeholder="Select education level"
               />
               <ServerSuggestionInput
-                category="institution"
+                category={
+                  edu.educationLevel === 'TENTH' || edu.educationLevel === 'TWELFTH'
+                    ? 'school'
+                    : 'institution'
+                }
                 label="Institution"
                 value={edu.institution}
                 onChange={(val) => updateEducation(i, { institution: val })}
@@ -164,7 +169,12 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
                     label="Board"
                     options={toSelectOptions(EDUCATION_BOARD_LABELS)}
                     value={edu.degree}
-                    onChange={(val) => updateEducation(i, { degree: val as string })}
+                    onChange={(val) =>
+                      updateEducation(i, {
+                        degree: val as string,
+                        boardState: val === 'STATE_BOARD' ? edu.boardState : undefined,
+                      })
+                    }
                     placeholder="Select board"
                   />
                 ) : (
@@ -202,6 +212,15 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
                   />
                 )}
               </div>
+              {edu.degree === 'STATE_BOARD' && (
+                <Select
+                  label="State"
+                  options={INDIAN_STATES.map((s) => ({ value: s, label: s }))}
+                  value={edu.boardState || ''}
+                  onChange={(val) => updateEducation(i, { boardState: val as string })}
+                  placeholder="Select state"
+                />
+              )}
               <div className="grid gap-3 sm:grid-cols-2">
                 <DatePicker
                   label="Start Date"

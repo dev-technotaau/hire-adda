@@ -306,9 +306,20 @@ enum SalaryType {
   HOURLY
 }
 
+enum AccountType {
+  COMPANY
+  INDIVIDUAL
+}
+
+enum HiringType {
+  DIRECT
+  CONSULTANCY
+}
+
 enum CompanyType {
   PRIVATE
   PUBLIC
+  PROPRIETARY
   STARTUP
   MNC
   GOVERNMENT
@@ -685,6 +696,10 @@ model CompanyProfile {
   id     String @id @default(uuid())
   userId String @unique
 
+  // Account Classification
+  accountType     AccountType? // COMPANY or INDIVIDUAL
+  hiringType      HiringType?  // DIRECT (own company) or CONSULTANCY (staffing agency)
+
   // Company Details
   companyName     String
   companyType     CompanyType? // PRIVATE, PUBLIC, STARTUP, MNC, GOVERNMENT, etc.
@@ -787,6 +802,9 @@ model CompanyProfile {
 model JobPost {
   id        String @id @default(uuid())
   companyId String
+
+  // Consultancy / Staffing — the actual client company this job is for
+  clientCompanyName String?
 
   // Job Details
   title               String

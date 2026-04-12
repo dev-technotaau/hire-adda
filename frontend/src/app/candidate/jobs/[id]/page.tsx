@@ -310,7 +310,22 @@ export default function JobDetailPage() {
               <div>
                 <h1 className="text-xl font-bold text-[var(--text)] sm:text-2xl">{job.title}</h1>
                 <p className="mt-1 text-[var(--text-secondary)]">
-                  {job.isConfidential ? 'Confidential Company' : job.company?.companyName}
+                  {job.isConfidential ? (
+                    'Confidential Company'
+                  ) : (
+                    <>
+                      {job.clientCompanyName ? (
+                        <>
+                          {job.clientCompanyName}{' '}
+                          <span className="text-xs text-[var(--text-muted)]">
+                            via {job.company?.companyName}
+                          </span>
+                        </>
+                      ) : (
+                        job.company?.companyName
+                      )}
+                    </>
+                  )}
                   {!job.isConfidential && job.company?.isVerified && (
                     <CheckCircle className="ml-1.5 inline h-4 w-4 text-[var(--success)]" />
                   )}
