@@ -2,6 +2,12 @@
 @import 'leaflet/dist/leaflet.css';
 @plugin 'tailwindcss-animate';
 
+/* Hide Edge/IE built-in password reveal button (we have our own toggle) */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
 /* Lenis smooth scroll */
 html.lenis,
 html.lenis body {

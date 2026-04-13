@@ -15,7 +15,10 @@ import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COUNTRY_CODES, type CountryCode } from '@/constants/country-codes';
 
-interface PhoneInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
+interface PhoneInputProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'onChange' | 'value'
+> {
   label?: string;
   error?: string;
   helperText?: string;
@@ -115,9 +118,7 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
       const q = search.trim().toLowerCase();
       return COUNTRY_CODES.filter(
         (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.code.includes(q) ||
-          c.iso.toLowerCase().includes(q),
+          c.name.toLowerCase().includes(q) || c.code.includes(q) || c.iso.toLowerCase().includes(q),
       );
     }, [search]);
 
@@ -211,7 +212,7 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         )}
         <div
           className={cn(
-            'flex w-full overflow-hidden rounded-lg border border-[var(--border)] bg-white transition-colors duration-200',
+            'flex w-full rounded-lg border border-[var(--border)] bg-white transition-colors duration-200',
             'focus-within:border-primary focus-within:ring-primary/20 focus-within:ring-2',
             error && 'border-error focus-within:border-error focus-within:ring-error/20',
             props.disabled && 'cursor-not-allowed bg-[var(--bg-secondary)] opacity-60',
@@ -245,7 +246,10 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
               <span>{currentCountry.flag}</span>
               <span>{selectedCode}</span>
               <ChevronDown
-                className={cn('h-3 w-3 opacity-50 transition-transform', dropdownOpen && 'rotate-180')}
+                className={cn(
+                  'h-3 w-3 opacity-50 transition-transform',
+                  dropdownOpen && 'rotate-180',
+                )}
               />
             </button>
             {dropdownOpen && (
