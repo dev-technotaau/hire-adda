@@ -135,7 +135,7 @@ spec:
                   BACKUP_FILE="/backups/db/hire_adda_${TIMESTAMP}.sql.gz"
                   R2_KEY="backups/db/hire_adda_${TIMESTAMP}.sql.gz"
                   BUCKET="hire-adda-velero-backups"
-                  ENDPOINT="https://c6027029a4faaf83fb46084c06d9762b.r2.cloudflarestorage.com"
+                  ENDPOINT="https://a8b640d2139e475f3b205abffe656faf.r2.cloudflarestorage.com"
 
                   echo "Uploading to R2: ${R2_KEY}"
                   aws s3 cp "$BACKUP_FILE" "s3://${BUCKET}/${R2_KEY}" \

@@ -128,7 +128,7 @@ spec:
             - name: DISABLE_INSTALL_DEMO_CONFIG
               value: 'true'
             - name: s3.client.default.endpoint
-              value: 'c6027029a4faaf83fb46084c06d9762b.r2.cloudflarestorage.com'
+              value: 'a8b640d2139e475f3b205abffe656faf.r2.cloudflarestorage.com'
             - name: s3.client.default.region
               value: 'us-east-1'
           resources:
