@@ -26,7 +26,7 @@ spec:
       stableService: backend
       maxSurge: 1
       maxUnavailable: 1
-      scaleDownDelaySeconds: 0
+      scaleDownDelaySeconds: 30
       trafficRouting:
         nginx:
           stableIngress: api-ingress
