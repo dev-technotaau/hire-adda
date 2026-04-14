@@ -43,6 +43,13 @@ data:
     SecRule REQUEST_HEADERS:Upgrade "websocket" \
       "id:1003,phase:1,pass,nolog,ctl:ruleEngine=Off"
 
+    # Whitelist authenticated API routes (BFF proxy + direct API)
+    # These routes have their own auth, CSRF, and Zod validation layers.
+    # OWASP CRS false-positives on legitimate JSON payloads (URLs, rich text,
+    # long strings) cause false 403s on profile updates, job posts, etc.
+    SecRule REQUEST_URI "^/api/(proxy|v1)/" \
+      "id:1004,phase:1,pass,nolog,ctl:ruleEngine=DetectionOnly"
+
     # ── Bot Protection ──
     # Block common vulnerability scanners
     SecRule REQUEST_HEADERS:User-Agent "@pmFromFile /etc/modsecurity/bad-bots.data" \
