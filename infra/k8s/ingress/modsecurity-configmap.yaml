@@ -1,6 +1,17 @@
 # ============================================================
-# ModSecurity WAF — Custom Rules
-# Applied via nginx-ingress controller ConfigMap
+# ModSecurity WAF — Custom Rules (REFERENCE ONLY)
+# ============================================================
+# NOTE: This ConfigMap is NOT used by nginx-ingress globally.
+# The real global ModSecurity rules live in the main
+# `ingress-nginx-controller` ConfigMap under the key
+# `modsecurity-snippet`, which is set by Helm in
+# `infra/ansible/playbooks/03-post-install.yml`.
+#
+# This file is kept as a template/reference for the custom rules
+# we'd want to inject. If you change it, also update the Helm
+# --set-string 'controller.config.modsecurity-snippet=...' in
+# 03-post-install.yml, or patch the live ConfigMap with:
+#   kubectl patch configmap ingress-nginx-controller -n ingress-nginx
 # ============================================================
 apiVersion: v1
 kind: ConfigMap
