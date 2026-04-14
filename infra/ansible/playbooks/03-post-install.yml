@@ -167,11 +167,12 @@
           --set controller.config.enable-modsecurity=true \
           --set controller.config.enable-owasp-modsecurity-crs=true \
           --set-string 'controller.config.modsecurity-snippet=SecRuleEngine On
-            SecRule REQUEST_HEADERS:User-Agent "@pm curl/ wget/ httpie scrapy python-requests Go-http-client aiohttp node-fetch axios/ phantomjs headlesschrome selenium puppeteer playwright libwww-perl colly HTTrack nikto sqlmap nmap masscan zgrab nuclei dirbuster gobuster wpscan jorgee MJ12bot DotBot AhrefsBot SemrushBot BLEXBot MegaIndex BUbiNG Exabot Majestic SEOkicks" "id:2000,phase:1,deny,status:403,msg:Bad bot detected"
-            SecRule &REQUEST_HEADERS:User-Agent "@eq 0" "id:2001,phase:1,deny,status:403,msg:Missing User-Agent"
+            SecRule REQUEST_URI "^/\.well-known/" "id:1000,phase:1,pass,nolog,ctl:ruleEngine=Off"
             SecRule REQUEST_URI "^/api/(proxy|v1)/" "id:1004,phase:1,pass,nolog,ctl:ruleEngine=DetectionOnly"
             SecRule REQUEST_URI "^/monitoring" "id:1005,phase:1,pass,nolog,ctl:ruleEngine=DetectionOnly"
-            SecRule REQUEST_URI "^/otel/" "id:1006,phase:1,pass,nolog,ctl:ruleEngine=DetectionOnly"' \
+            SecRule REQUEST_URI "^/otel/" "id:1006,phase:1,pass,nolog,ctl:ruleEngine=DetectionOnly"
+            SecRule REQUEST_HEADERS:User-Agent "@pm curl/ wget/ httpie scrapy python-requests Go-http-client aiohttp node-fetch axios/ phantomjs headlesschrome selenium puppeteer playwright libwww-perl colly HTTrack nikto sqlmap nmap masscan zgrab nuclei dirbuster gobuster wpscan jorgee MJ12bot DotBot AhrefsBot SemrushBot BLEXBot MegaIndex BUbiNG Exabot Majestic SEOkicks" "id:2000,phase:1,deny,status:403,msg:Bad bot detected"
+            SecRule &REQUEST_HEADERS:User-Agent "@eq 0" "id:2001,phase:1,deny,status:403,msg:Missing User-Agent"' \
           --set controller.resources.requests.memory=128Mi \
           --set controller.resources.limits.memory=256Mi \
           --wait --timeout 5m
