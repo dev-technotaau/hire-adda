@@ -183,7 +183,7 @@ function Select({
                 </div>
               </div>
             )}
-            <div className="max-h-60 overflow-y-auto p-1">
+            <div data-lenis-prevent className="max-h-60 overflow-y-auto overscroll-contain p-1">
               {filteredOptions.length === 0 ? (
                 <div className="px-3 py-6 text-center text-sm text-[var(--text-muted)]">
                   No options found

@@ -237,9 +237,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
     const allFiltered = suggestions.filter(
       (s) =>
         !selectedValues.includes(s.value) &&
-        (!query ||
-          s.label.toLowerCase().includes(query) ||
-          s.value.toLowerCase().includes(query)),
+        (!query || s.label.toLowerCase().includes(query) || s.value.toLowerCase().includes(query)),
     );
     const filteredSuggestions = allFiltered.slice(0, 50);
     const hasMoreResults = allFiltered.length > 50;
@@ -261,9 +259,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
     ]);
     const filteredAdditionalSections = additionalSections.map((section) => ({
       ...section,
-      options: section.options
-        .filter((o) => !mainValueSet.has(o.value.toLowerCase()))
-        .slice(0, 10),
+      options: section.options.filter((o) => !mainValueSet.has(o.value.toLowerCase())).slice(0, 10),
     }));
     const additionalItemCount = filteredAdditionalSections.reduce(
       (sum, s) => sum + s.options.length,
@@ -274,16 +270,10 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
     const selectedSet = new Set(selectedValues.map((v) => v.toLowerCase()));
     const filteredFocusSections = focusSections.map((section) => ({
       ...section,
-      options: section.options
-        .filter((o) => !selectedSet.has(o.value.toLowerCase()))
-        .slice(0, 10),
+      options: section.options.filter((o) => !selectedSet.has(o.value.toLowerCase())).slice(0, 10),
     }));
-    const focusItemCount = filteredFocusSections.reduce(
-      (sum, s) => sum + s.options.length,
-      0,
-    );
-    const hasFocusContent =
-      focusItemCount > 0 || filteredFocusSections.some((s) => s.isLoading);
+    const focusItemCount = filteredFocusSections.reduce((sum, s) => sum + s.options.length, 0);
+    const hasFocusContent = focusItemCount > 0 || filteredFocusSections.some((s) => s.isLoading);
     const showFocusState = isOpen && inputValue === '' && hasFocusContent;
 
     const totalItems = showFocusState
@@ -417,8 +407,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
 
     const inputId = label?.toLowerCase().replace(/\s+/g, '-');
     const anyAdditionalContent =
-      additionalItemCount > 0 ||
-      filteredAdditionalSections.some((s) => s.isLoading);
+      additionalItemCount > 0 || filteredAdditionalSections.some((s) => s.isLoading);
     const showDropdown =
       showFocusState ||
       (isOpen &&
@@ -549,6 +538,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
             ref={dropdownRef}
             id="autosuggest-listbox"
             role="listbox"
+            data-lenis-prevent
             aria-multiselectable={multiple}
             className={cn(
               'absolute top-full right-0 left-0 z-50 mt-1 max-h-60 overflow-y-auto overscroll-contain',
@@ -578,7 +568,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
                               e.stopPropagation();
                               section.onClear!();
                             }}
-                            className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-error transition-colors"
+                            className="hover:text-error flex items-center gap-1 text-xs text-[var(--text-muted)] transition-colors"
                           >
                             <Trash2 className="h-3 w-3" />
                             Clear
@@ -629,165 +619,162 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
             {/* ---- Typing-state content ---- */}
             {!showFocusState && (
               <>
-            {/* Loading */}
-            {isLoading && filteredSuggestions.length === 0 && !showCreate && (
-              <div className="flex items-center justify-center gap-2 p-3 text-sm text-[var(--text-muted)]">
-                <Spinner size="sm" />
-                <span>Loading suggestions...</span>
-              </div>
-            )}
+                {/* Loading */}
+                {isLoading && filteredSuggestions.length === 0 && !showCreate && (
+                  <div className="flex items-center justify-center gap-2 p-3 text-sm text-[var(--text-muted)]">
+                    <Spinner size="sm" />
+                    <span>Loading suggestions...</span>
+                  </div>
+                )}
 
-            {/* Suggestions */}
-            {filteredSuggestions.map((option, i) => {
-              const isSelected = selectedValues.includes(option.value);
-              return (
-                <button
-                  key={option.value}
-                  ref={(el) => {
-                    itemRefs.current[i] = el;
-                  }}
-                  id={`autosuggest-option-${i}`}
-                  role="option"
-                  aria-selected={isSelected || activeIndex === i}
-                  onClick={() => handleSelect(option.value)}
-                  onMouseEnter={() => setActiveIndex(i)}
-                  className={cn(
-                    'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
-                    activeIndex === i
-                      ? 'text-primary bg-[var(--primary-light)]'
-                      : 'text-[var(--text)] hover:bg-[var(--bg-secondary)]',
-                  )}
-                >
-                  {multiple && (
-                    <div
+                {/* Suggestions */}
+                {filteredSuggestions.map((option, i) => {
+                  const isSelected = selectedValues.includes(option.value);
+                  return (
+                    <button
+                      key={option.value}
+                      ref={(el) => {
+                        itemRefs.current[i] = el;
+                      }}
+                      id={`autosuggest-option-${i}`}
+                      role="option"
+                      aria-selected={isSelected || activeIndex === i}
+                      onClick={() => handleSelect(option.value)}
+                      onMouseEnter={() => setActiveIndex(i)}
                       className={cn(
-                        'flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors',
-                        isSelected
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-[var(--border)]',
+                        'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
+                        activeIndex === i
+                          ? 'text-primary bg-[var(--primary-light)]'
+                          : 'text-[var(--text)] hover:bg-[var(--bg-secondary)]',
                       )}
                     >
-                      {isSelected && <Check className="h-3 w-3" />}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate">
-                      <OptionHighlight text={option.label} query={inputValue} />
-                    </div>
-                    {option.description && (
-                      <div className="truncate text-xs text-[var(--text-muted)]">
-                        {option.description}
-                      </div>
-                    )}
-                  </div>
-                  {option.count !== undefined && (
-                    <span className="shrink-0 text-xs text-[var(--text-muted)]">
-                      {option.count.toLocaleString()}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-
-            {/* More results indicator */}
-            {hasMoreResults && (
-              <div className="border-t border-[var(--border)] px-3 py-2 text-center text-xs text-[var(--text-muted)]">
-                {allFiltered.length - 50} more results — type to narrow down
-              </div>
-            )}
-
-            {/* Create option */}
-            {showCreate && (
-              <button
-                ref={(el) => {
-                  itemRefs.current[filteredSuggestions.length] = el;
-                }}
-                id={`autosuggest-option-${filteredSuggestions.length}`}
-                role="option"
-                aria-selected={activeIndex === filteredSuggestions.length}
-                onClick={() => handleCreate(inputValue)}
-                onMouseEnter={() => setActiveIndex(filteredSuggestions.length)}
-                className={cn(
-                  'flex w-full items-center gap-2 border-t border-[var(--border)] px-3 py-2 text-left text-sm transition-colors',
-                  activeIndex === filteredSuggestions.length
-                    ? 'text-primary bg-[var(--primary-light)]'
-                    : 'text-primary hover:bg-[var(--bg-secondary)]',
-                )}
-              >
-                <span className="bg-primary/10 text-primary flex h-4 w-4 shrink-0 items-center justify-center rounded-full">
-                  +
-                </span>
-                <span>{createLabel(inputValue.trim())}</span>
-              </button>
-            )}
-
-            {/* Additional suggestion sections */}
-            {filteredAdditionalSections.map((section) => {
-              if (section.options.length === 0 && !section.isLoading) return null;
-              const sectionStartIdx =
-                filteredSuggestions.length +
-                (showCreate ? 1 : 0) +
-                filteredAdditionalSections
-                  .slice(
-                    0,
-                    filteredAdditionalSections.indexOf(section),
-                  )
-                  .reduce((sum, s) => sum + s.options.length, 0);
-
-              return (
-                <div key={section.label}>
-                  <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5">
-                    <span className="text-xs font-medium tracking-wide text-[var(--text-muted)] uppercase">
-                      {section.label}
-                    </span>
-                  </div>
-                  {section.isLoading && section.options.length === 0 && (
-                    <div className="flex items-center justify-center gap-2 p-2 text-xs text-[var(--text-muted)]">
-                      <Spinner size="sm" />
-                      <span>Loading...</span>
-                    </div>
-                  )}
-                  {section.options.map((option, i) => {
-                    const globalIdx = sectionStartIdx + i;
-                    const isSelected = selectedValues.includes(option.value);
-                    return (
-                      <button
-                        key={option.value}
-                        ref={(el) => {
-                          itemRefs.current[globalIdx] = el;
-                        }}
-                        id={`autosuggest-option-${globalIdx}`}
-                        role="option"
-                        aria-selected={isSelected || activeIndex === globalIdx}
-                        onClick={() => handleSelect(option.value)}
-                        onMouseEnter={() => setActiveIndex(globalIdx)}
-                        className={cn(
-                          'flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors',
-                          activeIndex === globalIdx
-                            ? 'text-primary bg-[var(--primary-light)]'
-                            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
-                        )}
-                      >
-                        <div className="min-w-0 flex-1 truncate">
+                      {multiple && (
+                        <div
+                          className={cn(
+                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors',
+                            isSelected
+                              ? 'border-primary bg-primary text-white'
+                              : 'border-[var(--border)]',
+                          )}
+                        >
+                          {isSelected && <Check className="h-3 w-3" />}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate">
                           <OptionHighlight text={option.label} query={inputValue} />
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
+                        {option.description && (
+                          <div className="truncate text-xs text-[var(--text-muted)]">
+                            {option.description}
+                          </div>
+                        )}
+                      </div>
+                      {option.count !== undefined && (
+                        <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                          {option.count.toLocaleString()}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
 
-            {/* No results (non-loading, non-create) */}
-            {!isLoading &&
-              filteredSuggestions.length === 0 &&
-              !showCreate &&
-              !anyAdditionalContent &&
-              inputValue.length >= minChars && (
-                <div className="p-3 text-center text-sm text-[var(--text-muted)]">
-                  No matches found
-                </div>
-              )}
+                {/* More results indicator */}
+                {hasMoreResults && (
+                  <div className="border-t border-[var(--border)] px-3 py-2 text-center text-xs text-[var(--text-muted)]">
+                    {allFiltered.length - 50} more results — type to narrow down
+                  </div>
+                )}
+
+                {/* Create option */}
+                {showCreate && (
+                  <button
+                    ref={(el) => {
+                      itemRefs.current[filteredSuggestions.length] = el;
+                    }}
+                    id={`autosuggest-option-${filteredSuggestions.length}`}
+                    role="option"
+                    aria-selected={activeIndex === filteredSuggestions.length}
+                    onClick={() => handleCreate(inputValue)}
+                    onMouseEnter={() => setActiveIndex(filteredSuggestions.length)}
+                    className={cn(
+                      'flex w-full items-center gap-2 border-t border-[var(--border)] px-3 py-2 text-left text-sm transition-colors',
+                      activeIndex === filteredSuggestions.length
+                        ? 'text-primary bg-[var(--primary-light)]'
+                        : 'text-primary hover:bg-[var(--bg-secondary)]',
+                    )}
+                  >
+                    <span className="bg-primary/10 text-primary flex h-4 w-4 shrink-0 items-center justify-center rounded-full">
+                      +
+                    </span>
+                    <span>{createLabel(inputValue.trim())}</span>
+                  </button>
+                )}
+
+                {/* Additional suggestion sections */}
+                {filteredAdditionalSections.map((section) => {
+                  if (section.options.length === 0 && !section.isLoading) return null;
+                  const sectionStartIdx =
+                    filteredSuggestions.length +
+                    (showCreate ? 1 : 0) +
+                    filteredAdditionalSections
+                      .slice(0, filteredAdditionalSections.indexOf(section))
+                      .reduce((sum, s) => sum + s.options.length, 0);
+
+                  return (
+                    <div key={section.label}>
+                      <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5">
+                        <span className="text-xs font-medium tracking-wide text-[var(--text-muted)] uppercase">
+                          {section.label}
+                        </span>
+                      </div>
+                      {section.isLoading && section.options.length === 0 && (
+                        <div className="flex items-center justify-center gap-2 p-2 text-xs text-[var(--text-muted)]">
+                          <Spinner size="sm" />
+                          <span>Loading...</span>
+                        </div>
+                      )}
+                      {section.options.map((option, i) => {
+                        const globalIdx = sectionStartIdx + i;
+                        const isSelected = selectedValues.includes(option.value);
+                        return (
+                          <button
+                            key={option.value}
+                            ref={(el) => {
+                              itemRefs.current[globalIdx] = el;
+                            }}
+                            id={`autosuggest-option-${globalIdx}`}
+                            role="option"
+                            aria-selected={isSelected || activeIndex === globalIdx}
+                            onClick={() => handleSelect(option.value)}
+                            onMouseEnter={() => setActiveIndex(globalIdx)}
+                            className={cn(
+                              'flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors',
+                              activeIndex === globalIdx
+                                ? 'text-primary bg-[var(--primary-light)]'
+                                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+                            )}
+                          >
+                            <div className="min-w-0 flex-1 truncate">
+                              <OptionHighlight text={option.label} query={inputValue} />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+
+                {/* No results (non-loading, non-create) */}
+                {!isLoading &&
+                  filteredSuggestions.length === 0 &&
+                  !showCreate &&
+                  !anyAdditionalContent &&
+                  inputValue.length >= minChars && (
+                    <div className="p-3 text-center text-sm text-[var(--text-muted)]">
+                      No matches found
+                    </div>
+                  )}
               </>
             )}
           </div>

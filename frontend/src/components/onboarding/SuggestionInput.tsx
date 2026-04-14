@@ -139,7 +139,8 @@ export default function SuggestionInput({
       {showDropdown && (
         <ul
           ref={listRef}
-          className="absolute z-30 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-[var(--border)] bg-white py-1 shadow-lg"
+          data-lenis-prevent
+          className="absolute z-30 mt-1 max-h-48 w-full overflow-auto overscroll-contain rounded-lg border border-[var(--border)] bg-white py-1 shadow-lg"
           role="listbox"
         >
           {filtered.map((item, i) => (

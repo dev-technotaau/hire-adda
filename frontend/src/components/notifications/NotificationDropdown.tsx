@@ -57,7 +57,7 @@ export default function NotificationDropdown({ onClose }: NotificationDropdownPr
         )}
       </div>
 
-      <div className="max-h-96 overflow-y-auto">
+      <div data-lenis-prevent className="max-h-96 overflow-y-auto overscroll-contain">
         {isLoading ? (
           <div className="space-y-1 p-2">
             {Array.from({ length: 4 }).map((_, i) => (

@@ -245,7 +245,10 @@ function FilterSectionBlock({
           )}
 
           {section.type === 'multiselect' && (
-            <div className="max-h-48 space-y-1 overflow-y-auto">
+            <div
+              data-lenis-prevent
+              className="max-h-48 space-y-1 overflow-y-auto overscroll-contain"
+            >
               {optionsWithCounts.map(({ key, label, count }) => {
                 const selectedValues = value ? value.split(',') : [];
                 const isChecked = selectedValues.includes(key);

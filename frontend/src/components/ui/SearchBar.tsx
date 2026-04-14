@@ -384,7 +384,8 @@ export default function SearchBar({
   }, [defaultValue]);
 
   const styles = SIZE_STYLES[size];
-  const showDropdown = isOpen && (navigableItems.length > 0 || isLoadingAutocomplete || isLoadingSeedSuggestions);
+  const showDropdown =
+    isOpen && (navigableItems.length > 0 || isLoadingAutocomplete || isLoadingSeedSuggestions);
 
   /* ---- grouped suggestions for rendering ---- */
   const groupedSuggestions = suggestions.reduce<Record<SuggestionType, AutocompleteResult[]>>(
@@ -485,6 +486,7 @@ export default function SearchBar({
           ref={dropdownRef}
           id="search-listbox"
           role="listbox"
+          data-lenis-prevent
           className={cn(
             'absolute top-full right-0 left-0 z-50 mt-1',
             'max-h-[400px] overflow-y-auto overscroll-contain',
@@ -494,20 +496,27 @@ export default function SearchBar({
           )}
         >
           {/* Loading state */}
-          {isLoadingAutocomplete && debouncedQuery.length >= 2 && suggestions.length === 0 && seededSuggestions.length === 0 && (
-            <div className="flex items-center justify-center gap-2 p-4 text-[var(--text-muted)]">
-              <Spinner size="sm" />
-              <span>Searching...</span>
-            </div>
-          )}
+          {isLoadingAutocomplete &&
+            debouncedQuery.length >= 2 &&
+            suggestions.length === 0 &&
+            seededSuggestions.length === 0 && (
+              <div className="flex items-center justify-center gap-2 p-4 text-[var(--text-muted)]">
+                <Spinner size="sm" />
+                <span>Searching...</span>
+              </div>
+            )}
 
           {/* Autocomplete + seeded suggestions */}
-          {debouncedQuery.length >= 2 && (suggestions.length > 0 || seededSuggestions.length > 0 || isLoadingSeedSuggestions) && (
-            <div className="py-1">
-              {/* Autocomplete suggestions (grouped by type) */}
-              {suggestions.length > 0 &&
-                (Object.entries(groupedSuggestions) as [SuggestionType, AutocompleteResult[]][]).map(
-                  ([type, items]) => {
+          {debouncedQuery.length >= 2 &&
+            (suggestions.length > 0 ||
+              seededSuggestions.length > 0 ||
+              isLoadingSeedSuggestions) && (
+              <div className="py-1">
+                {/* Autocomplete suggestions (grouped by type) */}
+                {suggestions.length > 0 &&
+                  (
+                    Object.entries(groupedSuggestions) as [SuggestionType, AutocompleteResult[]][]
+                  ).map(([type, items]) => {
                     const Icon = TYPE_ICONS[type];
                     return (
                       <div key={type}>
@@ -549,67 +558,66 @@ export default function SearchBar({
                         })}
                       </div>
                     );
-                  },
+                  })}
+
+                {/* Seeded suggestions section */}
+                {(seededSuggestions.length > 0 || isLoadingSeedSuggestions) && (
+                  <div>
+                    <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+                      Suggestions
+                    </div>
+                    {isLoadingSeedSuggestions && seededSuggestions.length === 0 && (
+                      <div className="flex items-center justify-center gap-2 p-2 text-xs text-[var(--text-muted)]">
+                        <Spinner size="sm" />
+                        <span>Loading...</span>
+                      </div>
+                    )}
+                    {seededSuggestions.map((item) => {
+                      const idx = flatIndexCounter++;
+                      const Icon = item.category === 'skill' ? Sparkles : Briefcase;
+                      return (
+                        <button
+                          key={`seeded-${item.text}`}
+                          ref={(el) => {
+                            itemRefs.current[idx] = el;
+                          }}
+                          id={navigableItems[idx]?.id}
+                          role="option"
+                          aria-selected={activeIndex === idx}
+                          onClick={() => handleSubmit(item.text)}
+                          onMouseEnter={() => setActiveIndex(idx)}
+                          className={cn(
+                            'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors',
+                            activeIndex === idx
+                              ? 'text-primary bg-[var(--primary-light)]'
+                              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+                          )}
+                        >
+                          <Icon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+                          <span className="flex-1 truncate">
+                            <HighlightMatch text={item.text} query={debouncedQuery} />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
 
-              {/* Seeded suggestions section */}
-              {(seededSuggestions.length > 0 || isLoadingSeedSuggestions) && (
-                <div>
-                  <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
-                    Suggestions
-                  </div>
-                  {isLoadingSeedSuggestions && seededSuggestions.length === 0 && (
-                    <div className="flex items-center justify-center gap-2 p-2 text-xs text-[var(--text-muted)]">
-                      <Spinner size="sm" />
-                      <span>Loading...</span>
-                    </div>
-                  )}
-                  {seededSuggestions.map((item) => {
-                    const idx = flatIndexCounter++;
-                    const Icon = item.category === 'skill' ? Sparkles : Briefcase;
-                    return (
-                      <button
-                        key={`seeded-${item.text}`}
-                        ref={(el) => {
-                          itemRefs.current[idx] = el;
-                        }}
-                        id={navigableItems[idx]?.id}
-                        role="option"
-                        aria-selected={activeIndex === idx}
-                        onClick={() => handleSubmit(item.text)}
-                        onMouseEnter={() => setActiveIndex(idx)}
-                        className={cn(
-                          'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors',
-                          activeIndex === idx
-                            ? 'text-primary bg-[var(--primary-light)]'
-                            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
-                        )}
-                      >
-                        <Icon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
-                        <span className="flex-1 truncate">
-                          <HighlightMatch text={item.text} query={debouncedQuery} />
-                        </span>
-                      </button>
-                    );
-                  })}
+                {/* Search for full query */}
+                <div className="border-t border-[var(--border)] px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSubmit(query)}
+                    className="text-primary flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-[var(--primary-light)]"
+                  >
+                    <Search className="h-4 w-4" />
+                    <span>
+                      Search for &quot;<span className="font-medium">{query}</span>&quot;
+                    </span>
+                  </button>
                 </div>
-              )}
-
-              {/* Search for full query */}
-              <div className="border-t border-[var(--border)] px-3 py-2">
-                <button
-                  type="button"
-                  onClick={() => handleSubmit(query)}
-                  className="text-primary flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-[var(--primary-light)]"
-                >
-                  <Search className="h-4 w-4" />
-                  <span>
-                    Search for &quot;<span className="font-medium">{query}</span>&quot;
-                  </span>
-                </button>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Empty state: show history + popular */}
           {!debouncedQuery && (
@@ -706,11 +714,15 @@ export default function SearchBar({
           )}
 
           {/* No results */}
-          {debouncedQuery.length >= 2 && !isLoadingAutocomplete && !isLoadingSeedSuggestions && suggestions.length === 0 && seededSuggestions.length === 0 && (
-            <div className="p-4 text-center text-sm text-[var(--text-muted)]">
-              No suggestions found for &quot;{debouncedQuery}&quot;
-            </div>
-          )}
+          {debouncedQuery.length >= 2 &&
+            !isLoadingAutocomplete &&
+            !isLoadingSeedSuggestions &&
+            suggestions.length === 0 &&
+            seededSuggestions.length === 0 && (
+              <div className="p-4 text-center text-sm text-[var(--text-muted)]">
+                No suggestions found for &quot;{debouncedQuery}&quot;
+              </div>
+            )}
 
           {/* Keyboard hint */}
           <div className="flex items-center gap-3 border-t border-[var(--border)] px-3 py-1.5 text-[11px] text-[var(--text-muted)]">

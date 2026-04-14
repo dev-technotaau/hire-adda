@@ -276,7 +276,8 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
                 {/* Country list */}
                 <div
                   ref={listRef}
-                  className="max-h-60 overflow-y-auto py-1"
+                  data-lenis-prevent
+                  className="max-h-60 overflow-y-auto overscroll-contain py-1"
                   role="listbox"
                   aria-label="Country codes"
                 >

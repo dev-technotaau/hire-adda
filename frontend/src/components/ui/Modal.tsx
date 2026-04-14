@@ -153,7 +153,9 @@ function Modal({ isOpen, onClose, title, children, footer, size = 'md', classNam
                 </button>
               </Tooltip>
             )}
-            <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+            <div data-lenis-prevent className="flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+              {children}
+            </div>
             {footer && <div className="border-t border-[var(--border)] px-6 py-4">{footer}</div>}
           </motion.div>
         </div>
