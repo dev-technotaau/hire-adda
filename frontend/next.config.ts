@@ -30,6 +30,14 @@ const nextConfig: NextConfig = {
           // CSP is now managed by src/proxy.ts with per-request nonce
         ],
       },
+      {
+        source: '/.well-known/mta-sts.txt',
+        headers: [{ key: 'Content-Type', value: 'text/plain; charset=utf-8' }],
+      },
+      {
+        source: '/.well-known/security.txt',
+        headers: [{ key: 'Content-Type', value: 'text/plain; charset=utf-8' }],
+      },
     ];
   },
 };

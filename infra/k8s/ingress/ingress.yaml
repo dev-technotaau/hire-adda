@@ -142,6 +142,7 @@ spec:
     - hosts:
         - hireadda.in
         - www.hireadda.in
+        - mta-sts.hireadda.in
       secretName: frontend-hireadda-tls
   rules:
     - host: hireadda.in
@@ -155,6 +156,17 @@ spec:
                 port:
                   number: 3000
     - host: www.hireadda.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000
+    # MTA-STS policy host — serves /.well-known/mta-sts.txt
+    - host: mta-sts.hireadda.in
       http:
         paths:
           - path: /
