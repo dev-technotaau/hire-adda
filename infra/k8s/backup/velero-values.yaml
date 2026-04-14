@@ -22,6 +22,16 @@ configuration:
   defaultVolumesToFsBackup: true
   uploaderType: kopia
 
+  # ── Aggressive Kopia Maintenance (Option 4) ──
+  # Default: full maintenance runs every 24h. We run it every 6h so
+  # deleted snapshots' blocks get reclaimed faster on R2.
+  defaultRepoMaintainFrequency: 6h
+  # Repository-level config (cache limits, full maintenance interval per repo)
+  backupRepositoryConfigMap: velero-repo-config
+
+  # Garbage collection frequency (default 1h — keep as-is)
+  garbageCollectionFrequency: 1h
+
 # ── Credentials ──
 # R2 credentials stored in SealedSecret (velero-r2-credentials)
 # The sealed secret creates a k8s secret named "velero-r2-credentials"

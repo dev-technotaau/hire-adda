@@ -3,6 +3,8 @@
 # ============================================================
 
 # ── Daily Full Backup (3AM UTC, after DB backup at 2AM) ──
+# Short retention for granular recent restores. Kopia dedupes blocks across
+# backups, so daily snapshots share storage with the weekly archive below.
 apiVersion: velero.io/v1
 kind: Schedule
 metadata:
@@ -13,7 +15,31 @@ spec:
   template:
     includedNamespaces:
       - hire-adda
-    ttl: 720h # 30 days retention
+    ttl: 168h # 7 days retention (short-term recovery)
+    storageLocation: default
+    defaultVolumesToFsBackup: true
+    snapshotVolumes: false
+    includedResources:
+      - '*'
+    labelSelector:
+      matchExpressions:
+        - key: app
+          operator: Exists
+---
+# ── Weekly Full Archive Backup (Sunday 5AM UTC) ──
+# Long retention for disaster recovery / point-in-time restores from the past 3 months.
+# Same scope as daily-full-backup. Kopia deduplication means storage overhead is minimal.
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: weekly-full-archive
+  namespace: velero
+spec:
+  schedule: '0 5 * * 0'
+  template:
+    includedNamespaces:
+      - hire-adda
+    ttl: 2160h # 90 days retention (long-term archive)
     storageLocation: default
     defaultVolumesToFsBackup: true
     snapshotVolumes: false
