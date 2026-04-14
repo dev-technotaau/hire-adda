@@ -19,6 +19,7 @@ import {
   getLevelsAtOrBelow,
 } from '@/constants/enums';
 import { INDIAN_STATES } from '@/constants/suggestions';
+import { resetEducationEntryForLevel } from '@/utils/education';
 import type { ProfileSectionProps } from './types';
 import type { EducationEntry, UpdateCandidateRequest } from '@/types/candidate';
 
@@ -139,16 +140,12 @@ export default function EducationSection({ form, updateField }: ProfileSectionPr
                 }
                 value={edu.educationLevel || ''}
                 onChange={(v) => {
+                  // Reset all entry fields on level change — previous values
+                  // (college name, specialization, CGPA, etc.) no longer match
+                  // the new context and would mix into the new level's form.
                   const level = v as string;
-                  updateEducation(i, {
-                    educationLevel: level,
-                    degree:
-                      level === 'TENTH'
-                        ? '10th Standard'
-                        : level === 'TWELFTH'
-                          ? '12th Standard'
-                          : edu.degree,
-                  });
+                  if (level === edu.educationLevel) return;
+                  updateEducation(i, resetEducationEntryForLevel(level));
                 }}
                 placeholder="Select education level"
               />

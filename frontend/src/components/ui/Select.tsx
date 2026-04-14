@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronDown, Check, Search, X } from 'lucide-react';
+import { usePopoverPlacement } from '@/hooks/use-popover-placement';
 
 export interface SelectOption {
   value: string;
@@ -54,6 +55,8 @@ function Select({
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  // Search bar (~48px if searchable) + list (max-h-60 = 240px) + borders
+  const dropdownPlacement = usePopoverPlacement(containerRef, isOpen, searchable ? 320 : 280);
 
   const filteredOptions =
     searchable && search
@@ -167,7 +170,12 @@ function Select({
         </button>
 
         {isOpen && (
-          <div className="animate-slide-down absolute z-50 mt-1 w-full rounded-lg border border-[var(--border)] bg-white shadow-lg">
+          <div
+            className={cn(
+              'animate-slide-down absolute z-50 w-full rounded-lg border border-[var(--border)] bg-white shadow-lg',
+              dropdownPlacement === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
+            )}
+          >
             {searchable && (
               <div className="border-b border-[var(--border)] p-2">
                 <div className="relative">

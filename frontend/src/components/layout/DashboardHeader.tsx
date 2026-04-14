@@ -209,14 +209,14 @@ export default function DashboardHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--border)] bg-white">
-      <div className="flex h-18 items-center gap-3 px-4">
+      <div className="flex h-20 items-center gap-3 px-4">
         {/* Left section */}
         <div className="flex shrink-0 items-center gap-2">
           {/* Mobile sidebar toggle */}
           <Tooltip content="Open sidebar">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] lg:hidden"
+              className="rounded-lg p-2.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] lg:hidden"
               aria-label="Open sidebar"
             >
               <Menu className="h-5 w-5" />
@@ -268,7 +268,7 @@ export default function DashboardHeader() {
             <Tooltip content="Open command palette (Ctrl+K)">
               <button
                 onClick={openCommandPalette}
-                className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--text-muted)] hover:bg-white"
+                className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--text-muted)] hover:bg-white"
               >
                 <Search className="h-4 w-4" />
                 <span className="hidden lg:inline">Search...</span>
@@ -290,7 +290,7 @@ export default function DashboardHeader() {
             <Tooltip content="Search">
               <button
                 onClick={() => router.push(SEARCH_ROUTES[user.role] || '/')}
-                className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] md:hidden"
+                className="rounded-lg p-2.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] md:hidden"
                 aria-label="Search"
               >
                 <Search className="h-5 w-5" />
@@ -305,7 +305,7 @@ export default function DashboardHeader() {
             <Tooltip content="Open user menu">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-[var(--bg-secondary)]"
+                className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-[var(--bg-secondary)]"
                 aria-expanded={userMenuOpen}
                 aria-haspopup="true"
               >
@@ -314,14 +314,14 @@ export default function DashboardHeader() {
                     src={companyLogo}
                     alt="Company"
                     loading="lazy"
-                    className="h-8 w-8 rounded-md border border-[var(--border)] object-contain"
+                    className="h-10 w-10 rounded-md border border-[var(--border)] object-contain"
                   />
                 )}
                 <Avatar
                   src={user.avatar}
                   firstName={user.firstName}
                   lastName={user.lastName}
-                  size="sm"
+                  size="md"
                 />
                 <div className="hidden items-center gap-2 xl:flex">
                   <span className="text-sm font-medium text-[var(--text)]">{user.firstName}</span>

@@ -454,142 +454,140 @@ export default function EmployerOnboardingPage() {
   };
 
   // --- Validation ---------------------------------------------------------
+  const validateStepByKey = useCallback(
+    (key: string): string | null => {
+      if (key === 'accountType') {
+        if (!data.accountType) return 'Please select your account type';
+        if (!data.hiringType) return 'Please select your hiring type';
+      }
+      if (key === 'basics') {
+        if (!data.companyName.trim()) return 'Company name is required';
+        if (!data.industry.trim()) return 'Industry is required';
+      }
+      if (key === 'identity') {
+        if (!data.description.trim()) return 'Company description is required';
+      }
+      if (key === 'contact') {
+        if (!data.contactEmail.trim()) return 'Contact email is required';
+      }
+      return null;
+    },
+    [data],
+  );
+
   const validateStep = useCallback((): boolean => {
-    const key = STEPS[step]?.key;
-    if (key === 'accountType') {
-      if (!data.accountType) {
-        showToast.error('Please select your account type');
-        return false;
-      }
-      if (!data.hiringType) {
-        showToast.error('Please select your hiring type');
-        return false;
-      }
-    }
-    if (key === 'basics') {
-      if (!data.companyName.trim()) {
-        showToast.error('Company name is required');
-        return false;
-      }
-      if (!data.industry.trim()) {
-        showToast.error('Industry is required');
-        return false;
-      }
-    }
-    if (key === 'identity') {
-      if (!data.description.trim()) {
-        showToast.error('Company description is required');
-        return false;
-      }
-    }
-    if (key === 'contact') {
-      if (!data.contactEmail.trim()) {
-        showToast.error('Contact email is required');
-        return false;
-      }
+    const error = validateStepByKey(STEPS[step]?.key ?? '');
+    if (error) {
+      showToast.error(error);
+      return false;
     }
     return true;
-  }, [step, data]);
+  }, [step, validateStepByKey]);
 
   // --- Handle next --------------------------------------------------------
+  // Build the full company payload from current form state. Used by both the
+  // final-step save (handleNext) and the Skip-to-dashboard handler so partial
+  // progress isn't lost when the user skips mid-wizard.
+  const buildPayload = useCallback(
+    (): UpdateCompanyRequest => ({
+      accountType: (data.accountType as UpdateCompanyRequest['accountType']) || undefined,
+      hiringType: (data.hiringType as UpdateCompanyRequest['hiringType']) || undefined,
+      companyName: data.companyName || undefined,
+      companyType: (data.companyType as UpdateCompanyRequest['companyType']) || undefined,
+      industry: data.industry || undefined,
+      subIndustry: data.subIndustry || undefined,
+      specialties: data.specialties.length > 0 ? data.specialties : undefined,
+      companySize: data.companySize || undefined,
+      employeeCount: data.employeeCount,
+      numberOfOffices: data.numberOfOffices,
+      foundedYear: data.foundedYear,
+      website: data.website || undefined,
+      parentCompany: data.parentCompany || undefined,
+      stockTicker: data.stockTicker || undefined,
+      tagline: data.tagline || undefined,
+      description: data.description || undefined,
+      whyWorkForUs: data.whyWorkForUs || undefined,
+      missionStatement: data.missionStatement || undefined,
+      visionStatement: data.visionStatement || undefined,
+      companyCulture: data.companyCulture || undefined,
+      diversityStatement: data.diversityStatement || undefined,
+      coreValues: data.coreValues.length > 0 ? data.coreValues : undefined,
+      employeeResourceGroups:
+        data.employeeResourceGroups.length > 0 ? data.employeeResourceGroups : undefined,
+      benefits: data.benefits.length > 0 ? data.benefits : undefined,
+      structuredPerks:
+        data.structuredPerks.length > 0
+          ? (data.structuredPerks.filter((p) =>
+              p.category.trim(),
+            ) as UpdateCompanyRequest['structuredPerks'])
+          : undefined,
+      techStack: data.techStack.length > 0 ? data.techStack : undefined,
+      productsServices: data.productsServices.length > 0 ? data.productsServices : undefined,
+      // Backend expects Array<{ title, description }> not Record<string, string>
+      workplacePolicies:
+        Object.keys(data.workplacePolicies).length > 0
+          ? (Object.entries(data.workplacePolicies)
+              .filter(([, desc]) => desc.trim())
+              .map(([title, description]) => ({
+                title,
+                description,
+              })) as unknown as UpdateCompanyRequest['workplacePolicies'])
+          : undefined,
+      // Backend uses 'issuingOrg', frontend uses 'issuer'
+      awardsRecognitions:
+        data.awardsRecognitions.length > 0
+          ? (data.awardsRecognitions
+              .filter((a) => a.title.trim())
+              .map(({ issuer, ...award }) => ({
+                ...award,
+                issuingOrg: issuer || undefined,
+              })) as unknown as UpdateCompanyRequest['awardsRecognitions'])
+          : undefined,
+      gstNumber: data.gstNumber || undefined,
+      cinNumber: data.cinNumber || undefined,
+      panNumber: data.panNumber || undefined,
+      annualRevenueRange: data.annualRevenueRange || undefined,
+      fundingStage: (data.fundingStage || undefined) as FundingStage | undefined,
+      totalFundingRaised: data.totalFundingRaised || undefined,
+      investors: data.investors.length > 0 ? data.investors : undefined,
+      leadershipTeam: data.leadershipTeam.length > 0 ? data.leadershipTeam : undefined,
+      employeeTestimonials:
+        data.employeeTestimonials.length > 0 ? data.employeeTestimonials : undefined,
+      interviewProcess: data.interviewProcess || undefined,
+      csrInitiatives: data.csrInitiatives || undefined,
+      contactEmail: data.contactEmail || undefined,
+      contactPhone: data.contactPhone || undefined,
+      contactPersonName: data.contactPersonName || undefined,
+      contactPersonDesignation: data.contactPersonDesignation || undefined,
+      headquarters: data.headquarters || undefined,
+      addressLine1: data.addressLine1 || undefined,
+      addressLine2: data.addressLine2 || undefined,
+      city: data.city || undefined,
+      state: data.state || undefined,
+      pincode: data.pincode || undefined,
+      country: data.country || undefined,
+      locations: data.locations.length > 0 ? data.locations : undefined,
+      socialLinks: {
+        linkedin: data.socialLinks.linkedin || undefined,
+        twitter: data.socialLinks.twitter || undefined,
+        facebook: data.socialLinks.facebook || undefined,
+        instagram: data.socialLinks.instagram || undefined,
+        youtube: data.socialLinks.youtube || undefined,
+        glassdoor: data.socialLinks.glassdoor || undefined,
+      },
+      careersPageUrl: data.careersPageUrl || undefined,
+      blogUrl: data.blogUrl || undefined,
+      companyVideoUrl: data.companyVideoUrl || undefined,
+    }),
+    [data],
+  );
+
   const handleNext = useCallback(async () => {
     if (!validateStep()) return;
 
     if (isLastStep) {
-      // Build payload
-      const payload: UpdateCompanyRequest = {
-        accountType: (data.accountType as UpdateCompanyRequest['accountType']) || undefined,
-        hiringType: (data.hiringType as UpdateCompanyRequest['hiringType']) || undefined,
-        companyName: data.companyName || undefined,
-        companyType: (data.companyType as UpdateCompanyRequest['companyType']) || undefined,
-        industry: data.industry || undefined,
-        subIndustry: data.subIndustry || undefined,
-        specialties: data.specialties.length > 0 ? data.specialties : undefined,
-        companySize: data.companySize || undefined,
-        employeeCount: data.employeeCount,
-        numberOfOffices: data.numberOfOffices,
-        foundedYear: data.foundedYear,
-        website: data.website || undefined,
-        parentCompany: data.parentCompany || undefined,
-        stockTicker: data.stockTicker || undefined,
-        tagline: data.tagline || undefined,
-        description: data.description || undefined,
-        whyWorkForUs: data.whyWorkForUs || undefined,
-        missionStatement: data.missionStatement || undefined,
-        visionStatement: data.visionStatement || undefined,
-        companyCulture: data.companyCulture || undefined,
-        diversityStatement: data.diversityStatement || undefined,
-        coreValues: data.coreValues.length > 0 ? data.coreValues : undefined,
-        employeeResourceGroups:
-          data.employeeResourceGroups.length > 0 ? data.employeeResourceGroups : undefined,
-        benefits: data.benefits.length > 0 ? data.benefits : undefined,
-        structuredPerks:
-          data.structuredPerks.length > 0
-            ? (data.structuredPerks.filter((p) =>
-                p.category.trim(),
-              ) as UpdateCompanyRequest['structuredPerks'])
-            : undefined,
-        techStack: data.techStack.length > 0 ? data.techStack : undefined,
-        productsServices: data.productsServices.length > 0 ? data.productsServices : undefined,
-        // Backend expects Array<{ title, description }> not Record<string, string>
-        workplacePolicies:
-          Object.keys(data.workplacePolicies).length > 0
-            ? (Object.entries(data.workplacePolicies)
-                .filter(([, desc]) => desc.trim())
-                .map(([title, description]) => ({
-                  title,
-                  description,
-                })) as unknown as UpdateCompanyRequest['workplacePolicies'])
-            : undefined,
-        // Backend uses 'issuingOrg', frontend uses 'issuer'
-        awardsRecognitions:
-          data.awardsRecognitions.length > 0
-            ? (data.awardsRecognitions
-                .filter((a) => a.title.trim())
-                .map(({ issuer, ...award }) => ({
-                  ...award,
-                  issuingOrg: issuer || undefined,
-                })) as unknown as UpdateCompanyRequest['awardsRecognitions'])
-            : undefined,
-        gstNumber: data.gstNumber || undefined,
-        cinNumber: data.cinNumber || undefined,
-        panNumber: data.panNumber || undefined,
-        annualRevenueRange: data.annualRevenueRange || undefined,
-        fundingStage: (data.fundingStage || undefined) as FundingStage | undefined,
-        totalFundingRaised: data.totalFundingRaised || undefined,
-        investors: data.investors.length > 0 ? data.investors : undefined,
-        leadershipTeam: data.leadershipTeam.length > 0 ? data.leadershipTeam : undefined,
-        employeeTestimonials:
-          data.employeeTestimonials.length > 0 ? data.employeeTestimonials : undefined,
-        interviewProcess: data.interviewProcess || undefined,
-        csrInitiatives: data.csrInitiatives || undefined,
-        contactEmail: data.contactEmail || undefined,
-        contactPhone: data.contactPhone || undefined,
-        contactPersonName: data.contactPersonName || undefined,
-        contactPersonDesignation: data.contactPersonDesignation || undefined,
-        headquarters: data.headquarters || undefined,
-        addressLine1: data.addressLine1 || undefined,
-        addressLine2: data.addressLine2 || undefined,
-        city: data.city || undefined,
-        state: data.state || undefined,
-        pincode: data.pincode || undefined,
-        country: data.country || undefined,
-        locations: data.locations.length > 0 ? data.locations : undefined,
-        socialLinks: {
-          linkedin: data.socialLinks.linkedin || undefined,
-          twitter: data.socialLinks.twitter || undefined,
-          facebook: data.socialLinks.facebook || undefined,
-          instagram: data.socialLinks.instagram || undefined,
-          youtube: data.socialLinks.youtube || undefined,
-          glassdoor: data.socialLinks.glassdoor || undefined,
-        },
-        careersPageUrl: data.careersPageUrl || undefined,
-        blogUrl: data.blogUrl || undefined,
-        companyVideoUrl: data.companyVideoUrl || undefined,
-      };
-
       try {
-        await saveMutation.mutateAsync(payload);
+        await saveMutation.mutateAsync(buildPayload());
 
         // Upload logo if provided
         if (logoFile) {
@@ -611,25 +609,56 @@ export default function EmployerOnboardingPage() {
       return;
     }
 
-    nextStep();
+    // Auto-skip steps that don't apply to this account type
+    let target = step + 1;
+    while (
+      target < STEPS.length &&
+      data.accountType === 'INDIVIDUAL' &&
+      ['funding'].includes(STEPS[target].key)
+    ) {
+      target++;
+    }
+    if (target >= STEPS.length) target = STEPS.length - 1;
+    goToStep(target);
   }, [
     validateStep,
     isLastStep,
-    data,
+    buildPayload,
+    data.accountType,
+    step,
     logoFile,
     coverImageFile,
     saveMutation,
     logoMutation,
     coverImageMutation,
-    nextStep,
+    goToStep,
     router,
   ]);
 
   // --- Skip handler -------------------------------------------------------
-  const handleSkip = useCallback(() => {
-    skipOnboarding();
-    router.push(ROUTES.EMPLOYER.DASHBOARD);
-  }, [skipOnboarding, router]);
+  // Persist whatever the user has filled so far before leaving — otherwise
+  // localStorage gets cleared on skip and partial progress is lost.
+  const handleSkip = useCallback(async () => {
+    try {
+      await saveMutation.mutateAsync(buildPayload());
+      if (logoFile) await logoMutation.mutateAsync(logoFile);
+      if (coverImageFile) await coverImageMutation.mutateAsync(coverImageFile);
+      skipOnboarding();
+      router.push(ROUTES.EMPLOYER.DASHBOARD);
+    } catch (err) {
+      const apiErr = err as unknown as ApiError;
+      showToast.error(apiErr?.message || 'Failed to save progress. Please try again.');
+    }
+  }, [
+    buildPayload,
+    saveMutation,
+    logoFile,
+    logoMutation,
+    coverImageFile,
+    coverImageMutation,
+    skipOnboarding,
+    router,
+  ]);
 
   // --- Tag helpers --------------------------------------------------------
   const addBenefit = useCallback(
@@ -914,6 +943,57 @@ export default function EmployerOnboardingPage() {
   const isIndividual = data.accountType === 'INDIVIDUAL';
   const isConsultancy = data.hiringType === 'CONSULTANCY';
   const companyLabel = isIndividual ? 'Business' : 'Company';
+
+  // Hide steps that are not applicable for INDIVIDUAL accounts.
+  // `step` state remains an index into the full STEPS array.
+  const HIDDEN_FOR_INDIVIDUAL = ['funding'];
+  const isHidden = (key: string) => isIndividual && HIDDEN_FOR_INDIVIDUAL.includes(key);
+  const visibleSteps = STEPS.filter((s) => !isHidden(s.key));
+
+  // Skip is blocked until the first few critical steps are filled — account type
+  // + company basics. Later required steps (contact, address) can be skipped and
+  // completed later from the dashboard.
+  const MUST_COMPLETE_BEFORE_SKIP = ['accountType', 'basics'];
+  const canSkip = MUST_COMPLETE_BEFORE_SKIP.every((key) => !validateStepByKey(key));
+  const currentVisibleStep = Math.max(
+    0,
+    visibleSteps.findIndex((s) => s.key === STEPS[step]?.key),
+  );
+
+  const handlePrevSmart = useCallback(() => {
+    let target = step - 1;
+    while (target >= 0 && isHidden(STEPS[target].key)) target--;
+    if (target < 0) target = 0;
+    goToStep(target);
+  }, [step, isHidden, goToStep]);
+
+  // When jumping FORWARD via tab click, validate every required step in between.
+  // If any fail, route the user to the first failing step.
+  const handleGoToVisibleStep = useCallback(
+    (visibleIdx: number) => {
+      const targetKey = visibleSteps[visibleIdx]?.key;
+      if (!targetKey) return;
+      const targetIdx = STEPS.findIndex((s) => s.key === targetKey);
+      if (targetIdx < 0) return;
+
+      if (targetIdx <= step) {
+        goToStep(targetIdx);
+        return;
+      }
+
+      for (let i = step; i < targetIdx; i++) {
+        if (isHidden(STEPS[i].key)) continue;
+        const error = validateStepByKey(STEPS[i].key);
+        if (error) {
+          showToast.error(error);
+          goToStep(i);
+          return;
+        }
+      }
+      goToStep(targetIdx);
+    },
+    [visibleSteps, step, isHidden, validateStepByKey, goToStep],
+  );
 
   const displayName = user?.firstName
     ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`
@@ -2882,12 +2962,12 @@ export default function EmployerOnboardingPage() {
       )}
 
       <OnboardingShell
-        steps={STEPS}
-        currentStep={step}
+        steps={visibleSteps}
+        currentStep={currentVisibleStep}
         onNext={handleNext}
-        onPrev={prevStep}
+        onPrev={handlePrevSmart}
         onSkip={handleSkip}
-        onGoToStep={goToStep}
+        onGoToStep={handleGoToVisibleStep}
         isSubmitting={saveMutation.isPending || logoMutation.isPending}
         isLastStep={isLastStep}
         isFirstStep={isFirstStep}
@@ -2899,6 +2979,7 @@ export default function EmployerOnboardingPage() {
         editFromReview={editFromReview}
         onReturnToReview={returnToReview}
         highestVisitedStep={highestVisitedStep}
+        canSkip={canSkip}
       >
         {renderStepContent()}
       </OnboardingShell>

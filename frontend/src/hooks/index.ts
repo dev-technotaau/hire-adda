@@ -20,6 +20,7 @@ export {
 } from './use-notifications';
 export { useOnboarding, wasOnboardingSkipped, markOnboardingComplete } from './use-onboarding';
 export { useOtpConfig } from './use-otp-config';
+export { usePopoverPlacement } from './use-popover-placement';
 export { usePresence } from './use-presence';
 export { usePresenceTracker } from './use-presence-tracker';
 export { useRecommendedJobs, useRecommendedCandidates } from './use-recommendations';

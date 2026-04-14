@@ -31,6 +31,7 @@ import {
   useClearSearchHistory,
 } from '@/hooks/use-search';
 import { useSuggest } from '@/hooks/use-suggestions';
+import { usePopoverPlacement } from '@/hooks/use-popover-placement';
 import { useAuthStore } from '@/store/auth.store';
 import Spinner from '@/components/ui/Spinner';
 import type { AutocompleteResult, SuggestionType } from '@/types/search';
@@ -121,9 +122,12 @@ export default function SearchBar({
 
   /* ---- refs ---- */
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // max-h-[400px] + padding — flip upward when there's not enough room below
+  const dropdownPlacement = usePopoverPlacement(containerRef, isOpen, 420);
 
   /* ---- queries ---- */
   const { data: autocompleteData, isLoading: isLoadingAutocomplete } = useAutocomplete(
@@ -402,6 +406,7 @@ export default function SearchBar({
 
   return (
     <div
+      ref={containerRef}
       className={cn('relative', fullWidth ? 'w-full' : 'w-full max-w-2xl', className)}
       role="combobox"
       aria-expanded={showDropdown}
@@ -488,10 +493,11 @@ export default function SearchBar({
           role="listbox"
           data-lenis-prevent
           className={cn(
-            'absolute top-full right-0 left-0 z-50 mt-1',
+            'absolute right-0 left-0 z-50',
             'max-h-[400px] overflow-y-auto overscroll-contain',
             'rounded-xl border border-[var(--border)] bg-white shadow-lg',
             'animate-slide-down',
+            dropdownPlacement === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
             styles.dropdown,
           )}
         >

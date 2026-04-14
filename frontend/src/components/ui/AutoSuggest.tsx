@@ -14,6 +14,7 @@ import { X, Check, ChevronDown, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Tag from '@/components/ui/Tag';
 import Spinner from '@/components/ui/Spinner';
+import { usePopoverPlacement } from '@/hooks/use-popover-placement';
 
 /* ---------- types ---------- */
 
@@ -134,6 +135,12 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
     const dropdownRef = useRef<HTMLDivElement>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
     const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+    // Suppresses the next onFocus-opens-dropdown behavior when we programmatically
+    // refocus the input right after a single-mode selection. Without this, focus()
+    // re-triggers onFocus → setIsOpen(true), undoing the setIsOpen(false) we just set.
+    const skipNextFocusOpenRef = useRef(false);
+    // Flip upward when there's not enough room below (max-h-60 = ~240px + padding)
+    const dropdownPlacement = usePopoverPlacement(containerRef, isOpen, 260);
 
     /* ---- derived ---- */
     const selectedValues: string[] = Array.isArray(value) ? value : value ? [value] : [];
@@ -175,6 +182,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
           const opt = suggestions.find((s) => s.value === optionValue);
           setInputValue(opt?.label ?? optionValue);
           setIsOpen(false);
+          skipNextFocusOpenRef.current = true;
         }
         setActiveIndex(-1);
         inputRef.current?.focus();
@@ -209,6 +217,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
           handleChange(trimmed);
           setInputValue(trimmed);
           setIsOpen(false);
+          skipNextFocusOpenRef.current = true;
         }
         setActiveIndex(-1);
       },
@@ -463,6 +472,10 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
             value={inputValue}
             onChange={handleInputValueChange}
             onFocus={() => {
+              if (skipNextFocusOpenRef.current) {
+                skipNextFocusOpenRef.current = false;
+                return;
+              }
               if (!disabled) setIsOpen(true);
             }}
             onKeyDown={handleKeyDown}
@@ -541,9 +554,10 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
             data-lenis-prevent
             aria-multiselectable={multiple}
             className={cn(
-              'absolute top-full right-0 left-0 z-50 mt-1 max-h-60 overflow-y-auto overscroll-contain',
+              'absolute right-0 left-0 z-50 max-h-60 overflow-y-auto overscroll-contain',
               'rounded-lg border border-[var(--border)] bg-white shadow-lg',
               'animate-in fade-in-0 slide-in-from-top-1 duration-150',
+              dropdownPlacement === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
             )}
           >
             {/* ---- Focus sections (empty input + focused) ---- */}

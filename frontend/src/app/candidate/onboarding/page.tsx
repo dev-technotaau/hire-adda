@@ -19,9 +19,6 @@ import { FILE_LIMITS, QUERY_KEYS } from '@/constants/config';
 import {
   CAREER_BREAK_TYPE_LABELS,
   COURSE_TYPE_LABELS,
-  DISABILITY_TYPE_LABELS,
-  DRIVING_LICENSE_TYPE_LABELS,
-  VEHICLE_TYPE_LABELS,
   EDUCATION_LEVEL_LABELS,
   EXPERIENCE_LEVEL_LABELS,
   GENDER_LABELS,
@@ -86,6 +83,7 @@ import type {
 } from '@/types/job';
 import type { ApplyableResumeFields, ParsedResumeData } from '@/types/resume-parse';
 import { getFileTypeBadge } from '@/utils/format';
+import { resetEducationEntryForLevel } from '@/utils/education';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Award,
@@ -254,7 +252,10 @@ const STEPS: OnboardingStep[] = [
   { key: 'education', label: 'Education' },
   { key: 'skills', label: 'Skills' },
   { key: 'preferences', label: 'Job Preferences' },
-  { key: 'documents', label: 'Documents', optional: true },
+  // 'documents' step (driving license / vehicle / veteran / disability) intentionally
+  // removed from the onboarding wizard to keep it short — these fields remain editable
+  // via the profile page. `blockedCompanies` which used to live in that step has moved
+  // into the preferences step below.
   { key: 'social', label: 'Social Links', optional: true },
   { key: 'review', label: 'Review' },
 ];
@@ -392,9 +393,9 @@ const SKILL_PROFICIENCY_OPTIONS: SelectOption[] = [
 const EXPERIENCE_LEVEL_OPTIONS = toSelectOptions(EXPERIENCE_LEVEL_LABELS);
 const EDUCATION_LEVEL_OPTIONS = toSelectOptions(EDUCATION_LEVEL_LABELS);
 const SPECIFIC_DEGREE_OPTIONS = toSelectOptions(SPECIFIC_DEGREE_LABELS);
-const DRIVING_LICENSE_OPTIONS = toSelectOptions(DRIVING_LICENSE_TYPE_LABELS);
-const VEHICLE_TYPE_OPTIONS = toSelectOptions(VEHICLE_TYPE_LABELS);
-const DISABILITY_TYPE_OPTIONS = toSelectOptions(DISABILITY_TYPE_LABELS);
+// DRIVING_LICENSE_OPTIONS / VEHICLE_TYPE_OPTIONS / DISABILITY_TYPE_OPTIONS were only
+// used by the 'documents' step which has been removed from onboarding. The underlying
+// fields are still collected via the profile page.
 const CAREER_BREAK_OPTIONS = toSelectOptions(CAREER_BREAK_TYPE_LABELS);
 const CATEGORY_OPTIONS = toSelectOptions(RESERVATION_CATEGORY_LABELS);
 const COURSE_TYPE_OPTIONS = toSelectOptions(COURSE_TYPE_LABELS);
@@ -551,9 +552,124 @@ export default function CandidateOnboardingPage() {
   });
 
   // -----------------------------------------------------------------------
-  // Computed flags
+  // Computed flags + visible steps
   // -----------------------------------------------------------------------
   const isFresher = data.candidateType === 'FRESHER';
+
+  // Validate a single step by key — extracted so we can validate intermediate
+  // steps when the user jumps forward via the tab navigator.
+  const validateStepByKey = useCallback(
+    (key: string): string | null => {
+      switch (key) {
+        case 'candidateType':
+          if (!data.candidateType) return 'Please select whether you are experienced or a fresher';
+          return null;
+        case 'basics':
+          if (!data.headline.trim()) return 'Please enter a headline';
+          if (!data.currentLocation.trim()) return 'Please enter your current location';
+          return null;
+        case 'professional':
+          if (!data.bio.trim()) return 'Please enter a brief summary about yourself';
+          if (!data.workStatus) return 'Please select your work status';
+          return null;
+        case 'education':
+          if (!data.highestEducationLevel) return 'Please select your highest education level';
+          if (getDegreesForLevel(data.highestEducationLevel).length > 0 && !data.highestDegree)
+            return 'Please select your highest degree';
+          if (data.education.length === 0) return 'Please add at least one education entry';
+          for (const edu of data.education) {
+            if (!edu.educationLevel) return 'Please select education level for each entry';
+            if (!edu.institution.trim() || !edu.degree.trim()) {
+              return 'Please fill in institution and degree for each entry';
+            }
+            if (
+              edu.educationLevel !== 'TENTH' &&
+              edu.educationLevel !== 'TWELFTH' &&
+              !edu.field.trim()
+            ) {
+              return 'Please fill in field of study for diploma and above';
+            }
+          }
+          return null;
+        case 'skills':
+          if (data.skills.length === 0) return 'Please add at least one skill';
+          return null;
+        case 'preferences':
+          if (data.preferredJobType.length === 0)
+            return 'Please select at least one preferred job type';
+          return null;
+        default:
+          return null;
+      }
+    },
+    [data],
+  );
+
+  // Hide resume/employment/experience steps entirely when fresher is selected.
+  // `step` state remains an index into the full STEPS array (stable across
+  // candidateType changes); we only filter for display + auto-skip in nav.
+  const HIDDEN_FOR_FRESHER = ['resume', 'employment', 'experience'];
+  const isHidden = (key: string) => isFresher && HIDDEN_FOR_FRESHER.includes(key);
+  const visibleSteps = STEPS.filter((s) => !isHidden(s.key));
+
+  // Skip is blocked until the first few critical steps are filled — candidate type
+  // + professional summary. Later required steps (education, skills, preferences)
+  // can be skipped and completed later from the dashboard.
+  const MUST_COMPLETE_BEFORE_SKIP = ['candidateType', 'professional'];
+  const canSkip = MUST_COMPLETE_BEFORE_SKIP.every((key) => !validateStepByKey(key));
+
+  // Map full step index → visible step index for OnboardingShell display
+  const currentVisibleStep = Math.max(
+    0,
+    visibleSteps.findIndex((s) => s.key === STEPS[step]?.key),
+  );
+
+  // Wrap next/prev to skip hidden steps when transitioning
+  const handleNextSmart = useCallback(() => {
+    let target = step + 1;
+    while (target < STEPS.length && isHidden(STEPS[target].key)) target++;
+    if (target >= STEPS.length) target = STEPS.length - 1;
+    goToStep(target);
+  }, [step, isHidden, goToStep]);
+
+  const handlePrevSmart = useCallback(() => {
+    let target = step - 1;
+    while (target >= 0 && isHidden(STEPS[target].key)) target--;
+    if (target < 0) target = 0;
+    goToStep(target);
+  }, [step, isHidden, goToStep]);
+
+  // Convert a visible-step index (from OnboardingShell click) to full STEPS index.
+  // When jumping FORWARD, validate every required step in between — if any fail,
+  // route the user to the first failing step instead of the requested target.
+  const handleGoToVisibleStep = useCallback(
+    (visibleIdx: number) => {
+      const targetKey = visibleSteps[visibleIdx]?.key;
+      if (!targetKey) return;
+      const targetIdx = STEPS.findIndex((s) => s.key === targetKey);
+      if (targetIdx < 0) return;
+
+      // Backward / same-step navigation — always allowed
+      if (targetIdx <= step) {
+        goToStep(targetIdx);
+        return;
+      }
+
+      // Forward navigation — validate every step between current (inclusive)
+      // and target (exclusive). Skip hidden steps for current candidate type.
+      for (let i = step; i < targetIdx; i++) {
+        if (isHidden(STEPS[i].key)) continue;
+        const error = validateStepByKey(STEPS[i].key);
+        if (error) {
+          showToast.error(error);
+          goToStep(i);
+          return;
+        }
+      }
+      goToStep(targetIdx);
+    },
+    [visibleSteps, step, isHidden, validateStepByKey, goToStep],
+  );
 
   // -----------------------------------------------------------------------
   // Mutations
@@ -681,53 +797,133 @@ export default function CandidateOnboardingPage() {
   // Validation
   // -----------------------------------------------------------------------
 
-  const validateStep = useCallback((): string | null => {
-    switch (STEPS[step].key) {
-      case 'candidateType':
-        if (!data.candidateType) return 'Please select whether you are experienced or a fresher';
-        return null;
-      case 'basics':
-        if (!data.headline.trim()) return 'Please enter a headline';
-        if (!data.currentLocation.trim()) return 'Please enter your current location';
-        return null;
-      case 'professional':
-        if (!data.bio.trim()) return 'Please enter a brief summary about yourself';
-        if (!data.workStatus) return 'Please select your work status';
-        return null;
-      case 'education':
-        if (!data.highestEducationLevel) return 'Please select your highest education level';
-        if (getDegreesForLevel(data.highestEducationLevel).length > 0 && !data.highestDegree)
-          return 'Please select your highest degree';
-        if (data.education.length === 0) return 'Please add at least one education entry';
-        for (const edu of data.education) {
-          if (!edu.educationLevel) return 'Please select education level for each entry';
-          if (!edu.institution.trim() || !edu.degree.trim()) {
-            return 'Please fill in institution and degree for each entry';
-          }
-          if (
-            edu.educationLevel !== 'TENTH' &&
-            edu.educationLevel !== 'TWELFTH' &&
-            !edu.field.trim()
-          ) {
-            return 'Please fill in field of study for diploma and above';
-          }
-        }
-        return null;
-      case 'skills':
-        if (data.skills.length === 0) return 'Please add at least one skill';
-        return null;
-      case 'preferences':
-        if (data.preferredJobType.length === 0)
-          return 'Please select at least one preferred job type';
-        return null;
-      default:
-        return null;
-    }
-  }, [step, data]);
+  const validateStep = useCallback(
+    (): string | null => validateStepByKey(STEPS[step].key),
+    [step, validateStepByKey],
+  );
 
   // -----------------------------------------------------------------------
   // Handle Next / Submit
   // -----------------------------------------------------------------------
+
+  // Build the full candidate payload from current form state. Used by both the
+  // final-step save (handleNext) and the Skip-to-dashboard handler so partial
+  // progress isn't lost when the user skips mid-wizard.
+  const buildPayload = useCallback(
+    (): UpdateCandidateRequest => ({
+      headline: data.headline || undefined,
+      pronouns: data.pronouns || undefined,
+      phone: data.phone || undefined,
+      currentLocation: data.currentLocation || undefined,
+      dob: data.dob ? new Date(data.dob).toISOString() : undefined,
+      gender: (data.gender as Gender) || undefined,
+      maritalStatus: (data.maritalStatus as MaritalStatus) || undefined,
+      nationality: data.nationality || undefined,
+      hometown: data.hometown || undefined,
+      category: (data.category as ReservationCategory) || undefined,
+      alternatePhone: data.alternatePhone || undefined,
+      alternateEmail: data.alternateEmail || undefined,
+      addressLine1: data.addressLine1 || undefined,
+      addressLine2: data.addressLine2 || undefined,
+      city: data.city || undefined,
+      state: data.state || undefined,
+      pincode: data.pincode || undefined,
+      country: data.country || undefined,
+      bio: data.bio || undefined,
+      experienceYears: isFresher ? 0 : data.experienceYears || 0,
+      totalExperienceMonths: isFresher ? 0 : data.totalExperienceMonths || undefined,
+      workStatus: (data.workStatus as WorkStatus) || undefined,
+      hasCareerBreak: isFresher ? false : data.hasCareerBreak,
+      careerBreakType: isFresher
+        ? undefined
+        : (data.careerBreakType as CareerBreakType) || undefined,
+      careerBreakReason: isFresher ? undefined : data.careerBreakReason || undefined,
+      openToWork: (data.openToWork as OpenToWorkStatus) || undefined,
+      currentCompany: isFresher ? undefined : data.currentCompany || undefined,
+      currentRole: isFresher ? undefined : data.currentRole || undefined,
+      currentIndustry: isFresher ? undefined : data.currentIndustry || undefined,
+      currentDepartment: isFresher ? undefined : data.currentDepartment || undefined,
+      functionalArea: isFresher ? undefined : data.functionalArea || undefined,
+      currSalary: isFresher ? undefined : data.currSalary || undefined,
+      noticePeriod: isFresher ? undefined : (data.noticePeriod as NoticePeriod) || undefined,
+      servingNoticePeriod: isFresher ? false : data.servingNoticePeriod,
+      experience: isFresher ? undefined : data.experience.length > 0 ? data.experience : undefined,
+      education: data.education.length > 0 ? data.education : undefined,
+      skills: data.skills.length > 0 ? data.skills : undefined,
+      skillsWithProficiency:
+        data.skillsWithProficiency.length > 0 ? data.skillsWithProficiency : undefined,
+      itSkills: data.itSkills.length > 0 ? data.itSkills : undefined,
+      certifications: data.certifications.length > 0 ? data.certifications : undefined,
+      awards: data.awards.length > 0 ? data.awards : undefined,
+      courses: data.courses.length > 0 ? data.courses : undefined,
+      testScores: data.testScores.length > 0 ? data.testScores : undefined,
+      languages: data.languages.length > 0 ? data.languages : undefined,
+      languageProficiency:
+        data.languageProficiency.length > 0 ? data.languageProficiency : undefined,
+      publications: data.publications.length > 0 ? data.publications : undefined,
+      patents: data.patents.length > 0 ? data.patents : undefined,
+      professionalMemberships:
+        data.professionalMemberships.length > 0 ? data.professionalMemberships : undefined,
+      volunteerExperience:
+        data.volunteerExperience.length > 0 ? data.volunteerExperience : undefined,
+      references: data.references.length > 0 ? data.references : undefined,
+      preferredJobType:
+        data.preferredJobType.length > 0 ? (data.preferredJobType as JobType[]) : undefined,
+      preferredWorkMode:
+        data.preferredWorkMode.length > 0 ? (data.preferredWorkMode as WorkMode[]) : undefined,
+      preferredShift: (data.preferredShift as ShiftType) || undefined,
+      expectedSalaryMin: data.expectedSalaryMin || undefined,
+      expectedSalaryMax: data.expectedSalaryMax || undefined,
+      salaryCurrency: data.salaryCurrency || undefined,
+      preferredLocations: data.preferredLocations.length > 0 ? data.preferredLocations : undefined,
+      preferredIndustries:
+        data.preferredIndustries.length > 0 ? data.preferredIndustries : undefined,
+      preferredRoleCategories:
+        data.preferredRoleCategories.length > 0 ? data.preferredRoleCategories : undefined,
+      willingToRelocate: data.willingToRelocate,
+      travelWillingnessPercent: data.travelWillingnessPercent || undefined,
+      dateOfAvailability: data.dateOfAvailability
+        ? new Date(data.dateOfAvailability).toISOString()
+        : undefined,
+      visaStatus: data.visaStatus || undefined,
+      passportNumber: data.passportNumber || undefined,
+      passportExpiryDate: data.passportExpiryDate
+        ? new Date(data.passportExpiryDate).toISOString()
+        : undefined,
+      experienceLevel: (data.experienceLevel as ExperienceLevel) || undefined,
+      highestEducationLevel: (data.highestEducationLevel as EducationLevel) || undefined,
+      highestDegree: (data.highestDegree as SpecificDegree) || undefined,
+      workPermitStatus: data.workPermitStatus || undefined,
+      hasDrivingLicense: data.hasDrivingLicense,
+      drivingLicenseType: (data.drivingLicenseType as DrivingLicenseType) || undefined,
+      ownVehicle: data.ownVehicle,
+      vehicleTypes:
+        data.ownVehicle && data.vehicleTypes.length > 0 ? (data.vehicleTypes as VehicleType[]) : [],
+      isVeteran: data.isVeteran,
+      isPhysicallyChallenged: data.isPhysicallyChallenged,
+      disabilityType: data.isPhysicallyChallenged
+        ? (data.disabilityType as DisabilityType) || undefined
+        : undefined,
+      disabilityPercentage: data.isPhysicallyChallenged
+        ? data.disabilityPercentage || undefined
+        : undefined,
+      videoResumeUrl: data.videoResumeUrl || undefined,
+      blockedCompanies: data.blockedCompanies.length > 0 ? data.blockedCompanies : undefined,
+      hobbies: data.hobbies.length > 0 ? data.hobbies : undefined,
+      interests: data.interests.length > 0 ? data.interests : undefined,
+      linkedinProfile: data.linkedinProfile || undefined,
+      githubProfile: data.githubProfile || undefined,
+      portfolioUrl: data.portfolioUrl || undefined,
+      stackOverflowProfile: data.stackOverflowProfile || undefined,
+      twitterProfile: data.twitterProfile || undefined,
+      personalBlogUrl: data.personalBlogUrl || undefined,
+      dribbbleProfile: data.dribbbleProfile || undefined,
+      behanceProfile: data.behanceProfile || undefined,
+      mediumProfile: data.mediumProfile || undefined,
+      youtubeChannel: data.youtubeChannel || undefined,
+    }),
+    [data, isFresher],
+  );
 
   const handleNext = useCallback(async () => {
     const error = validateStep();
@@ -738,127 +934,7 @@ export default function CandidateOnboardingPage() {
 
     if (isLastStep) {
       try {
-        const payload: UpdateCandidateRequest = {
-          headline: data.headline || undefined,
-          pronouns: data.pronouns || undefined,
-          phone: data.phone || undefined,
-          currentLocation: data.currentLocation || undefined,
-          dob: data.dob ? new Date(data.dob).toISOString() : undefined,
-          gender: (data.gender as Gender) || undefined,
-          maritalStatus: (data.maritalStatus as MaritalStatus) || undefined,
-          nationality: data.nationality || undefined,
-          hometown: data.hometown || undefined,
-          category: (data.category as ReservationCategory) || undefined,
-          alternatePhone: data.alternatePhone || undefined,
-          alternateEmail: data.alternateEmail || undefined,
-          addressLine1: data.addressLine1 || undefined,
-          addressLine2: data.addressLine2 || undefined,
-          city: data.city || undefined,
-          state: data.state || undefined,
-          pincode: data.pincode || undefined,
-          country: data.country || undefined,
-          bio: data.bio || undefined,
-          experienceYears: isFresher ? 0 : data.experienceYears || 0,
-          totalExperienceMonths: isFresher ? 0 : data.totalExperienceMonths || undefined,
-          workStatus: (data.workStatus as WorkStatus) || undefined,
-          hasCareerBreak: isFresher ? false : data.hasCareerBreak,
-          careerBreakType: isFresher
-            ? undefined
-            : (data.careerBreakType as CareerBreakType) || undefined,
-          careerBreakReason: isFresher ? undefined : data.careerBreakReason || undefined,
-          openToWork: (data.openToWork as OpenToWorkStatus) || undefined,
-          currentCompany: isFresher ? undefined : data.currentCompany || undefined,
-          currentRole: isFresher ? undefined : data.currentRole || undefined,
-          currentIndustry: isFresher ? undefined : data.currentIndustry || undefined,
-          currentDepartment: isFresher ? undefined : data.currentDepartment || undefined,
-          functionalArea: isFresher ? undefined : data.functionalArea || undefined,
-          currSalary: isFresher ? undefined : data.currSalary || undefined,
-          noticePeriod: isFresher ? undefined : (data.noticePeriod as NoticePeriod) || undefined,
-          servingNoticePeriod: isFresher ? false : data.servingNoticePeriod,
-          experience: isFresher
-            ? undefined
-            : data.experience.length > 0
-              ? data.experience
-              : undefined,
-          education: data.education.length > 0 ? data.education : undefined,
-          skills: data.skills.length > 0 ? data.skills : undefined,
-          skillsWithProficiency:
-            data.skillsWithProficiency.length > 0 ? data.skillsWithProficiency : undefined,
-          itSkills: data.itSkills.length > 0 ? data.itSkills : undefined,
-          certifications: data.certifications.length > 0 ? data.certifications : undefined,
-          awards: data.awards.length > 0 ? data.awards : undefined,
-          courses: data.courses.length > 0 ? data.courses : undefined,
-          testScores: data.testScores.length > 0 ? data.testScores : undefined,
-          languages: data.languages.length > 0 ? data.languages : undefined,
-          languageProficiency:
-            data.languageProficiency.length > 0 ? data.languageProficiency : undefined,
-          publications: data.publications.length > 0 ? data.publications : undefined,
-          patents: data.patents.length > 0 ? data.patents : undefined,
-          professionalMemberships:
-            data.professionalMemberships.length > 0 ? data.professionalMemberships : undefined,
-          volunteerExperience:
-            data.volunteerExperience.length > 0 ? data.volunteerExperience : undefined,
-          references: data.references.length > 0 ? data.references : undefined,
-          preferredJobType:
-            data.preferredJobType.length > 0 ? (data.preferredJobType as JobType[]) : undefined,
-          preferredWorkMode:
-            data.preferredWorkMode.length > 0 ? (data.preferredWorkMode as WorkMode[]) : undefined,
-          preferredShift: (data.preferredShift as ShiftType) || undefined,
-          expectedSalaryMin: data.expectedSalaryMin || undefined,
-          expectedSalaryMax: data.expectedSalaryMax || undefined,
-          salaryCurrency: data.salaryCurrency || undefined,
-          preferredLocations:
-            data.preferredLocations.length > 0 ? data.preferredLocations : undefined,
-          preferredIndustries:
-            data.preferredIndustries.length > 0 ? data.preferredIndustries : undefined,
-          preferredRoleCategories:
-            data.preferredRoleCategories.length > 0 ? data.preferredRoleCategories : undefined,
-          willingToRelocate: data.willingToRelocate,
-          travelWillingnessPercent: data.travelWillingnessPercent || undefined,
-          dateOfAvailability: data.dateOfAvailability
-            ? new Date(data.dateOfAvailability).toISOString()
-            : undefined,
-          visaStatus: data.visaStatus || undefined,
-          passportNumber: data.passportNumber || undefined,
-          passportExpiryDate: data.passportExpiryDate
-            ? new Date(data.passportExpiryDate).toISOString()
-            : undefined,
-          experienceLevel: (data.experienceLevel as ExperienceLevel) || undefined,
-          highestEducationLevel: (data.highestEducationLevel as EducationLevel) || undefined,
-          highestDegree: (data.highestDegree as SpecificDegree) || undefined,
-          workPermitStatus: data.workPermitStatus || undefined,
-          hasDrivingLicense: data.hasDrivingLicense,
-          drivingLicenseType: (data.drivingLicenseType as DrivingLicenseType) || undefined,
-          ownVehicle: data.ownVehicle,
-          vehicleTypes:
-            data.ownVehicle && data.vehicleTypes.length > 0
-              ? (data.vehicleTypes as VehicleType[])
-              : [],
-          isVeteran: data.isVeteran,
-          isPhysicallyChallenged: data.isPhysicallyChallenged,
-          disabilityType: data.isPhysicallyChallenged
-            ? (data.disabilityType as DisabilityType) || undefined
-            : undefined,
-          disabilityPercentage: data.isPhysicallyChallenged
-            ? data.disabilityPercentage || undefined
-            : undefined,
-          videoResumeUrl: data.videoResumeUrl || undefined,
-          blockedCompanies: data.blockedCompanies.length > 0 ? data.blockedCompanies : undefined,
-          hobbies: data.hobbies.length > 0 ? data.hobbies : undefined,
-          interests: data.interests.length > 0 ? data.interests : undefined,
-          linkedinProfile: data.linkedinProfile || undefined,
-          githubProfile: data.githubProfile || undefined,
-          portfolioUrl: data.portfolioUrl || undefined,
-          stackOverflowProfile: data.stackOverflowProfile || undefined,
-          twitterProfile: data.twitterProfile || undefined,
-          personalBlogUrl: data.personalBlogUrl || undefined,
-          dribbbleProfile: data.dribbbleProfile || undefined,
-          behanceProfile: data.behanceProfile || undefined,
-          mediumProfile: data.mediumProfile || undefined,
-          youtubeChannel: data.youtubeChannel || undefined,
-        };
-
-        await saveMutation.mutateAsync(payload);
+        await saveMutation.mutateAsync(buildPayload());
 
         // Upload resume if selected but not yet uploaded in resume step
         if (resumeFile.length > 0 && !resumeUploaded) {
@@ -880,16 +956,15 @@ export default function CandidateOnboardingPage() {
       return;
     }
 
-    nextStep();
+    handleNextSmart();
   }, [
     validateStep,
     isLastStep,
-    isFresher,
-    data,
+    buildPayload,
     resumeFile,
     resumeUploaded,
     avatarFile,
-    nextStep,
+    handleNextSmart,
     saveMutation,
     resumeMutation,
     avatarMutation,
@@ -897,11 +972,33 @@ export default function CandidateOnboardingPage() {
     router,
   ]);
 
-  const handleSkip = () => {
-    markOnboardingComplete('ha_candidate_onboarding');
-    clearSavedData();
-    router.push(ROUTES.CANDIDATE.DASHBOARD);
-  };
+  // Persist whatever the user has filled so far before leaving — otherwise
+  // localStorage gets cleared on skip and partial progress is lost.
+  const handleSkip = useCallback(async () => {
+    try {
+      await saveMutation.mutateAsync(buildPayload());
+      if (resumeFile.length > 0 && !resumeUploaded) {
+        await resumeMutation.mutateAsync(resumeFile[0]);
+      }
+      if (avatarFile) await avatarMutation.mutateAsync(avatarFile);
+      markOnboardingComplete('ha_candidate_onboarding');
+      clearSavedData();
+      router.push(ROUTES.CANDIDATE.DASHBOARD);
+    } catch (err) {
+      const apiError = err as unknown as ApiError;
+      showToast.error(apiError.message || 'Failed to save progress. Please try again.');
+    }
+  }, [
+    buildPayload,
+    saveMutation,
+    resumeFile,
+    resumeUploaded,
+    resumeMutation,
+    avatarFile,
+    avatarMutation,
+    clearSavedData,
+    router,
+  ]);
 
   // -----------------------------------------------------------------------
   // Array-entry helpers
@@ -2295,18 +2392,13 @@ export default function CandidateOnboardingPage() {
                     : EDUCATION_LEVEL_OPTIONS
                 }
                 value={edu.educationLevel || ''}
-                onChange={(val) =>
-                  updateEducation(i, {
-                    educationLevel: val as string,
-                    degree:
-                      val === 'TENTH'
-                        ? '10th Standard'
-                        : val === 'TWELFTH'
-                          ? '12th Standard'
-                          : edu.degree,
-                    field: val === 'TENTH' || val === 'TWELFTH' ? edu.field : edu.field,
-                  })
-                }
+                onChange={(val) => {
+                  // Reset all entry fields on level change — previous values
+                  // (college name, specialization, CGPA, etc.) no longer match
+                  // the new context and would mix into the new level's form.
+                  if ((val as string) === edu.educationLevel) return;
+                  updateEducation(i, resetEducationEntryForLevel(val as string));
+                }}
                 placeholder="Select education level for this entry"
                 required
               />
@@ -3809,119 +3901,8 @@ export default function CandidateOnboardingPage() {
             )}
           </div>
 
-          {/* Availability & relocation hidden from onboarding — available in profile settings */}
-        </div>
-      );
-    }
-
-    // ===================================================================
-    // Documents & Misc (optional)
-    // ===================================================================
-    if (currentKey === 'documents') {
-      return (
-        <div className="space-y-6">
-          <div className="mb-2 flex items-center gap-3">
-            <div className="bg-primary-light flex h-9 w-9 items-center justify-center rounded-lg">
-              <FileCheck className="text-primary h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--text)]">
-                Documents Documents & Miscellaneous Miscellaneous <Pencil className="h-3.5 w-3.5" />
-              </h2>
-              <p className="text-sm text-[var(--text-muted)]">Driving license and other details</p>
-            </div>
-          </div>
-
-          {/* Passport section hidden from onboarding — available in profile settings */}
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Select
-              label="Driving License Type"
-              options={DRIVING_LICENSE_OPTIONS}
-              value={data.drivingLicenseType}
-              onChange={(val) =>
-                updateData({
-                  drivingLicenseType: val,
-                  hasDrivingLicense: val !== '' && val !== 'NONE',
-                })
-              }
-              placeholder="Select license type"
-            />
-            <div />
-          </div>
-
-          <div className="space-y-3">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={data.ownVehicle}
-                onChange={(e) =>
-                  updateData({
-                    ownVehicle: e.target.checked,
-                    vehicleTypes: e.target.checked ? data.vehicleTypes : [],
-                  })
-                }
-                className="text-primary focus:ring-primary/20 h-4 w-4 rounded border-[var(--border)]"
-              />
-              <span className="text-sm text-[var(--text)]">I own a vehicle</span>
-            </label>
-            {data.ownVehicle && (
-              <div className="ml-6">
-                <Select
-                  label="Vehicle Type(s)"
-                  options={VEHICLE_TYPE_OPTIONS}
-                  value={data.vehicleTypes}
-                  onChange={(val) => updateData({ vehicleTypes: val as string[] })}
-                  multiple
-                  placeholder="Select vehicle types"
-                />
-              </div>
-            )}
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={data.isVeteran}
-                onChange={(e) => updateData({ isVeteran: e.target.checked })}
-                className="text-primary focus:ring-primary/20 h-4 w-4 rounded border-[var(--border)]"
-              />
-              <span className="text-sm text-[var(--text)]">I am a veteran</span>
-            </label>
-            <div>
-              <label className="mb-3 flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={data.isPhysicallyChallenged}
-                  onChange={(e) => updateData({ isPhysicallyChallenged: e.target.checked })}
-                  className="text-primary focus:ring-primary/20 h-4 w-4 rounded border-[var(--border)]"
-                />
-                <span className="text-sm text-[var(--text)]">Person with Disability</span>
-              </label>
-              {data.isPhysicallyChallenged && (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Select
-                    label="Disability Type"
-                    options={DISABILITY_TYPE_OPTIONS}
-                    value={data.disabilityType}
-                    onChange={(val) => updateData({ disabilityType: val })}
-                    placeholder="Select type"
-                  />
-                  <Input
-                    label="Disability Percentage"
-                    type="number"
-                    placeholder="e.g. 40"
-                    value={data.disabilityPercentage?.toString() || ''}
-                    onChange={(e) =>
-                      updateData({ disabilityPercentage: parseInt(e.target.value) || undefined })
-                    }
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Video resume URL hidden from onboarding — available in profile settings */}
-
-          {/* Blocked Companies */}
+          {/* Blocked Companies — moved here from the removed 'documents' step
+              so users can still express this preference during onboarding. */}
           <div className="border-t border-[var(--border)] pt-4">
             <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">Blocked Companies</h3>
             <p className="mb-3 text-xs text-[var(--text-muted)]">
@@ -3961,6 +3942,8 @@ export default function CandidateOnboardingPage() {
               </div>
             )}
           </div>
+
+          {/* Availability & relocation hidden from onboarding — available in profile settings */}
         </div>
       );
     }
@@ -4638,58 +4621,8 @@ export default function CandidateOnboardingPage() {
                     : '--'}
                 </p>
               </div>
-            </div>
-          </div>
-
-          {/* Documents */}
-          <div className={sectionClass}>
-            <button
-              type="button"
-              onClick={() => goToStepFromReview(11)}
-              className={sectionTitle}
-              title="Edit documents"
-            >
-              Documents Documents & Miscellaneous Miscellaneous <Pencil className="h-3.5 w-3.5" />
-            </button>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              <div>
-                <p className={fieldLabel}>Driving License</p>
-                <p className={fieldValue}>
-                  {data.drivingLicenseType
-                    ? DRIVING_LICENSE_TYPE_LABELS[data.drivingLicenseType] ||
-                      data.drivingLicenseType
-                    : '--'}
-                </p>
-              </div>
-              <div>
-                <p className={fieldLabel}>Own Vehicle</p>
-                <p className={fieldValue}>{data.ownVehicle ? 'Yes' : 'No'}</p>
-              </div>
-              {data.ownVehicle && data.vehicleTypes.length > 0 && (
-                <div>
-                  <p className={fieldLabel}>Vehicle Types</p>
-                  <p className={fieldValue}>
-                    {data.vehicleTypes.map((t) => VEHICLE_TYPE_LABELS[t] || t).join(', ')}
-                  </p>
-                </div>
-              )}
-              <div>
-                <p className={fieldLabel}>Veteran</p>
-                <p className={fieldValue}>{data.isVeteran ? 'Yes' : 'No'}</p>
-              </div>
-              {data.isPhysicallyChallenged && (
-                <div>
-                  <p className={fieldLabel}>Disability</p>
-                  <p className={fieldValue}>
-                    {data.disabilityType
-                      ? DISABILITY_TYPE_LABELS[data.disabilityType] || data.disabilityType
-                      : 'Yes'}
-                    {data.disabilityPercentage ? ` (${data.disabilityPercentage}%)` : ''}
-                  </p>
-                </div>
-              )}
               {data.blockedCompanies.length > 0 && (
-                <div className="col-span-3">
+                <div className="sm:col-span-2">
                   <p className={fieldLabel}>Blocked Companies</p>
                   <p className={fieldValue}>{data.blockedCompanies.join(', ')}</p>
                 </div>
@@ -4701,7 +4634,7 @@ export default function CandidateOnboardingPage() {
           <div className={sectionClass}>
             <button
               type="button"
-              onClick={() => goToStepFromReview(12)}
+              onClick={() => goToStepFromReview(11)}
               className={sectionTitle}
               title="Edit social links"
             >
@@ -4759,12 +4692,12 @@ export default function CandidateOnboardingPage() {
 
   return (
     <OnboardingShell
-      steps={STEPS}
-      currentStep={step}
+      steps={visibleSteps}
+      currentStep={currentVisibleStep}
       onNext={handleNext}
-      onPrev={prevStep}
+      onPrev={handlePrevSmart}
       onSkip={handleSkip}
-      onGoToStep={goToStep}
+      onGoToStep={handleGoToVisibleStep}
       isSubmitting={saveMutation.isPending || resumeMutation.isPending || avatarMutation.isPending}
       isLastStep={isLastStep}
       isFirstStep={isFirstStep}
@@ -4781,6 +4714,7 @@ export default function CandidateOnboardingPage() {
       editFromReview={editFromReview}
       onReturnToReview={returnToReview}
       highestVisitedStep={highestVisitedStep}
+      canSkip={canSkip}
     >
       {renderStepContent()}
     </OnboardingShell>

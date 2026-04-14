@@ -25,9 +25,13 @@ const typeColors: Record<NotificationType, string> = {
 
 interface NotificationDropdownProps {
   onClose: () => void;
+  placement?: 'top' | 'bottom';
 }
 
-export default function NotificationDropdown({ onClose }: NotificationDropdownProps) {
+export default function NotificationDropdown({
+  onClose,
+  placement = 'bottom',
+}: NotificationDropdownProps) {
   const { data, isLoading } = useNotifications({ limit: 8 });
   const markRead = useMarkAsRead();
   const markAll = useMarkAllAsRead();
@@ -42,7 +46,12 @@ export default function NotificationDropdown({ onClose }: NotificationDropdownPr
   };
 
   return (
-    <div className="animate-scale-in absolute right-0 z-50 mt-2 w-80 rounded-xl border border-[var(--border)] bg-white shadow-lg sm:w-96">
+    <div
+      className={cn(
+        'animate-scale-in absolute right-0 z-50 w-80 rounded-xl border border-[var(--border)] bg-white shadow-lg sm:w-96',
+        placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
+      )}
+    >
       <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
         <h3 className="font-semibold text-[var(--text)]">Notifications</h3>
         {notifications.some((n) => !n.isRead) && (

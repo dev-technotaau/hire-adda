@@ -16,6 +16,7 @@ import {
   OPEN_TO_WORK_LABELS,
   EXPERIENCE_LEVEL_LABELS,
   JOB_TYPE_LABELS,
+  SALARY_CURRENCY_LABELS,
 } from '@/constants/enums';
 import type { ProfileSectionProps } from './types';
 import type { ExperienceEntry, UpdateCandidateRequest } from '@/types/candidate';
@@ -134,7 +135,14 @@ export default function ExperienceSection({ form, updateField }: ProfileSectionP
             placeholder="Select status"
           />
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Select
+            label="Currency"
+            options={toSelectOptions(SALARY_CURRENCY_LABELS)}
+            value={form.salaryCurrency || ''}
+            onChange={(v) => updateField('salaryCurrency', v)}
+            placeholder="Select currency"
+          />
           <Input
             label="Current Salary (Annual)"
             type="number"

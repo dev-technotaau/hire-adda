@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, X, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EXPERIENCE_BUCKETS } from '@/constants/config';
+import { usePopoverPlacement } from '@/hooks/use-popover-placement';
 
 export interface ExperienceValue {
   min: number;
@@ -41,6 +42,8 @@ export default function ExperienceSelect({
   const [customMin, setCustomMin] = useState('');
   const [customMax, setCustomMax] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  // EXPERIENCE_BUCKETS is ~6-8 items × 36px + custom row ≈ 320px
+  const dropdownPlacement = usePopoverPlacement(containerRef, open, 320);
 
   // Close on outside click
   useEffect(() => {
@@ -111,7 +114,7 @@ export default function ExperienceSelect({
         aria-haspopup="listbox"
         className={cn(
           'flex w-full items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 transition-colors',
-          'hover:border-[var(--text-muted)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary',
+          'focus:border-primary focus:ring-primary hover:border-[var(--text-muted)] focus:ring-1 focus:outline-none',
           SIZE_STYLES[size],
           label ? 'text-[var(--text)]' : 'text-[var(--text-muted)]',
         )}
@@ -135,7 +138,12 @@ export default function ExperienceSelect({
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-xl border border-[var(--border)] bg-white shadow-lg">
+        <div
+          className={cn(
+            'absolute left-0 z-50 w-56 rounded-xl border border-[var(--border)] bg-white shadow-lg',
+            dropdownPlacement === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
+          )}
+        >
           <ul role="listbox" className="py-1">
             {EXPERIENCE_BUCKETS.map((bucket) => (
               <li key={bucket.label}>
@@ -176,7 +184,7 @@ export default function ExperienceSelect({
                       placeholder="Min"
                       value={customMin}
                       onChange={(e) => setCustomMin(e.target.value)}
-                      className="h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 text-sm text-[var(--text)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="focus:border-primary focus:ring-primary h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 text-sm text-[var(--text)] focus:ring-1 focus:outline-none"
                     />
                     <span className="text-xs text-[var(--text-muted)]">to</span>
                     <input
@@ -186,14 +194,14 @@ export default function ExperienceSelect({
                       placeholder="Max"
                       value={customMax}
                       onChange={(e) => setCustomMax(e.target.value)}
-                      className="h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 text-sm text-[var(--text)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="focus:border-primary focus:ring-primary h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 text-sm text-[var(--text)] focus:ring-1 focus:outline-none"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={handleCustomApply}
                     disabled={!customMin || parseInt(customMin, 10) < 0}
-                    className="w-full rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                    className="bg-primary hover:bg-primary/90 w-full rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
                   >
                     Apply
                   </button>

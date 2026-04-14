@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { useUnreadCount } from '@/hooks/use-notifications';
+import { usePopoverPlacement } from '@/hooks/use-popover-placement';
 import NotificationDropdown from './NotificationDropdown';
 import Tooltip from '@/components/ui/Tooltip';
 
@@ -11,6 +12,8 @@ export default function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null);
   const { data } = useUnreadCount();
   const count = data?.data?.count || 0;
+  // NotificationDropdown is tall — header + up to 8 items + footer ≈ 500px.
+  const placement = usePopoverPlacement(ref, open, 500);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -34,7 +37,7 @@ export default function NotificationBell() {
       <Tooltip content="View notifications">
         <button
           onClick={() => setOpen(!open)}
-          className="relative rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+          className="relative rounded-lg p-2.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
@@ -50,7 +53,7 @@ export default function NotificationBell() {
         </button>
       </Tooltip>
 
-      {open && <NotificationDropdown onClose={() => setOpen(false)} />}
+      {open && <NotificationDropdown onClose={() => setOpen(false)} placement={placement} />}
     </div>
   );
 }

@@ -152,11 +152,12 @@ export default function EmployerDashboard() {
     queryFn: () => employerService.getCompleteness(),
   });
 
+  // `description` is a required onboarding step and never pre-filled from registration,
+  // so its absence is the most reliable signal that onboarding hasn't been completed.
   const needsOnboarding =
     !companyLoading &&
     !wasOnboardingSkipped('ha_employer_onboarding') &&
-    (companyError ||
-      (companyData?.data && !companyData.data.description && !companyData.data.industry));
+    (companyError || (companyData?.data && !companyData.data.description));
 
   useEffect(() => {
     if (needsOnboarding) {

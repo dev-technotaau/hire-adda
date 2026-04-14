@@ -40,7 +40,14 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
         originalScrollIntoView.call(this, arg);
         return;
       }
-      // Use Lenis for smooth scrolling
+      // If element is inside a data-lenis-prevent container (dropdowns, sidebars,
+      // modal bodies), use native scrollIntoView so only that scrollable parent
+      // moves — not the whole page. Lenis hijacking would scroll the page instead.
+      if ((this as HTMLElement).closest?.('[data-lenis-prevent]')) {
+        originalScrollIntoView.call(this, arg);
+        return;
+      }
+      // Use Lenis for smooth scrolling on regular page elements
       lenis.scrollTo(this as HTMLElement, {
         offset: 0,
         duration: 0.8,

@@ -192,17 +192,30 @@ export default function CandidateDashboard() {
     queryFn: () => candidateService.getCompleteness(),
   });
 
+  const {
+    data: profileData,
+    isLoading: profileLoading,
+    isError: profileError,
+  } = useQuery({
+    queryKey: QUERY_KEYS.CANDIDATES.PROFILE,
+    queryFn: () => candidateService.getProfile(),
+    retry: false,
+  });
+
   const { data: analyticsData } = useQuery({
     queryKey: QUERY_KEYS.CANDIDATES.ANALYTICS({ groupBy: 'week' }),
     queryFn: () => candidateService.getAnalytics({ groupBy: 'week' }),
   });
   const analytics = analyticsData?.data;
 
-  // Redirect first-time users to onboarding (profile completeness 0% and not skipped)
+  // `headline` is a required onboarding step and never pre-filled from registration,
+  // so its absence is the most reliable signal that onboarding hasn't been completed.
+  // (Previously checked `completeness.score === 0`, but firstName/lastName from User
+  // table bump the score above 0 before onboarding, so the redirect never fired.)
   const needsOnboarding =
-    !compLoading &&
-    completeness?.data?.score === 0 &&
-    !wasOnboardingSkipped('ha_candidate_onboarding');
+    !profileLoading &&
+    !wasOnboardingSkipped('ha_candidate_onboarding') &&
+    (profileError || (profileData?.data && !profileData.data.headline));
 
   useEffect(() => {
     if (needsOnboarding) {
@@ -378,7 +391,7 @@ export default function CandidateDashboard() {
   }, [stats?.recentApplications]);
 
   // Block rendering until onboarding check completes to prevent dashboard flash
-  if (compLoading || needsOnboarding) {
+  if (profileLoading || needsOnboarding) {
     return (
       <DashboardLayout requiredRole={['CANDIDATE']}>
         <div className="flex h-[60vh] items-center justify-center">

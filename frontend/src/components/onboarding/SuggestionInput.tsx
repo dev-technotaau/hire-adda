@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import { usePopoverPlacement } from '@/hooks/use-popover-placement';
 
 interface SuggestionInputProps {
   label?: string;
@@ -37,6 +38,10 @@ export default function SuggestionInput({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Suppresses the next onFocus-opens-dropdown when we programmatically refocus
+  // the input right after a selection. Otherwise focus() re-triggers onFocus →
+  // setIsOpen(true), undoing the close we just set.
+  const skipNextFocusOpenRef = useRef(false);
 
   const filtered =
     value.trim().length >= 1
@@ -44,6 +49,8 @@ export default function SuggestionInput({
       : [];
 
   const showDropdown = isOpen && filtered.length > 0;
+  // max-h-48 = 192px + padding; flip up if not enough room below
+  const dropdownPlacement = usePopoverPlacement(wrapperRef, showDropdown, 220);
 
   // Close on outside click
   useEffect(() => {
@@ -71,6 +78,7 @@ export default function SuggestionInput({
       setIsOpen(false);
       setHighlightIndex(-1);
       // Re-focus input after selection so user can continue typing
+      skipNextFocusOpenRef.current = true;
       requestAnimationFrame(() => inputRef.current?.focus());
     },
     [onChange, onSelect],
@@ -118,7 +126,13 @@ export default function SuggestionInput({
             setIsOpen(true);
             setHighlightIndex(-1);
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            if (skipNextFocusOpenRef.current) {
+              skipNextFocusOpenRef.current = false;
+              return;
+            }
+            setIsOpen(true);
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
@@ -140,7 +154,10 @@ export default function SuggestionInput({
         <ul
           ref={listRef}
           data-lenis-prevent
-          className="absolute z-30 mt-1 max-h-48 w-full overflow-auto overscroll-contain rounded-lg border border-[var(--border)] bg-white py-1 shadow-lg"
+          className={cn(
+            'absolute z-30 max-h-48 w-full overflow-auto overscroll-contain rounded-lg border border-[var(--border)] bg-white py-1 shadow-lg',
+            dropdownPlacement === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
+          )}
           role="listbox"
         >
           {filtered.map((item, i) => (

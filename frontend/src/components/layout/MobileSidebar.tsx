@@ -95,7 +95,7 @@ export default function MobileSidebar() {
         aria-label="Navigation"
       >
         {/* Header */}
-        <div className="flex h-18 items-center justify-between border-b border-[var(--border)] px-4">
+        <div className="flex h-20 items-center justify-between border-b border-[var(--border)] px-4">
           <Logo size="sm" href={dashboardPath} />
           <Tooltip content="Close sidebar">
             <button

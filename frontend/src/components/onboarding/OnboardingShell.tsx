@@ -1,8 +1,8 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, SkipForward, Check, CornerDownLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight, SkipForward, Check, CornerDownLeft, Loader2 } from 'lucide-react';
 import Logo from '@/components/common/Logo';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
@@ -34,6 +34,9 @@ interface OnboardingShellProps {
   editFromReview?: boolean;
   onReturnToReview?: () => void;
   highestVisitedStep?: number;
+  /** When false, the Skip button is hidden (used to gate skipping until required
+   *  steps are filled). Defaults to true. */
+  canSkip?: boolean;
 }
 
 export default function OnboardingShell({
@@ -55,10 +58,13 @@ export default function OnboardingShell({
   editFromReview,
   onReturnToReview,
   highestVisitedStep,
+  canSkip = true,
 }: OnboardingShellProps) {
   const progress = steps.length > 1 ? Math.round((currentStep / (steps.length - 1)) * 100) : 0;
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<HTMLButtonElement>(null);
+  const dragStateRef = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: 0 });
+  const [isDragging, setIsDragging] = useState(false);
 
   // Auto-scroll to active tab
   useEffect(() => {
@@ -71,25 +77,61 @@ export default function OnboardingShell({
     }
   }, [currentStep]);
 
+  // ── Drag-to-scroll handlers for step tab strip ──
+  const handleDragStart = (e: MouseEvent<HTMLDivElement>) => {
+    if (!scrollRef.current) return;
+    dragStateRef.current = {
+      isDown: true,
+      startX: e.pageX - scrollRef.current.offsetLeft,
+      scrollLeft: scrollRef.current.scrollLeft,
+      moved: 0,
+    };
+  };
+  const handleDragMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!dragStateRef.current.isDown || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = x - dragStateRef.current.startX;
+    dragStateRef.current.moved = Math.abs(walk);
+    if (dragStateRef.current.moved > 5 && !isDragging) setIsDragging(true);
+    scrollRef.current.scrollLeft = dragStateRef.current.scrollLeft - walk;
+  };
+  const handleDragEnd = () => {
+    dragStateRef.current.isDown = false;
+    // Defer un-setting isDragging so the click handler on tab buttons can read it
+    setTimeout(() => setIsDragging(false), 50);
+  };
+
   return (
     <div className="min-h-screen bg-[var(--bg-secondary)]">
       {/* Top Bar */}
       <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-white/90 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
           <Logo size="md" />
           <div className="flex items-center gap-3">
             <span className="hidden text-xs text-[var(--text-muted)] sm:block">
               Ctrl+S to save &middot; Esc to go back
             </span>
-            <Tooltip content="Skip onboarding and go to dashboard">
-              <button
-                onClick={onSkip}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+            {canSkip && (
+              <Tooltip
+                content={
+                  isSubmitting ? 'Saving your progress...' : 'Save progress and go to dashboard'
+                }
               >
-                <SkipForward className="h-3.5 w-3.5" />
-                Skip for now
-              </button>
-            </Tooltip>
+                <button
+                  onClick={onSkip}
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-[var(--text-muted)]"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <SkipForward className="h-4 w-4" />
+                  )}
+                  {isSubmitting ? 'Saving...' : 'Skip for now'}
+                </button>
+              </Tooltip>
+            )}
           </div>
         </div>
       </header>
@@ -111,8 +153,18 @@ export default function OnboardingShell({
           </div>
         </div>
 
-        {/* Step Navigator (Scrollable) */}
-        <div ref={scrollRef} className="scrollbar-hide mb-6 overflow-x-auto">
+        {/* Step Navigator (Scrollable + Draggable) */}
+        <div
+          ref={scrollRef}
+          className={cn(
+            'scrollbar-hide mb-6 overflow-x-auto select-none',
+            isDragging ? 'cursor-grabbing' : 'cursor-grab',
+          )}
+          onMouseDown={handleDragStart}
+          onMouseMove={handleDragMove}
+          onMouseUp={handleDragEnd}
+          onMouseLeave={handleDragEnd}
+        >
           <div className="flex min-w-max gap-1">
             {steps.map((step, i) => {
               const isCompleted = i < currentStep;
@@ -124,7 +176,11 @@ export default function OnboardingShell({
                 <button
                   key={step.key}
                   ref={isCurrent ? activeTabRef : undefined}
-                  onClick={() => isClickable && onGoToStep?.(i)}
+                  onClick={() => {
+                    // Suppress click triggered at the end of a drag gesture
+                    if (dragStateRef.current.moved > 5) return;
+                    if (isClickable) onGoToStep?.(i);
+                  }}
                   disabled={!isClickable}
                   className={cn(
                     'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium whitespace-nowrap transition-all',
@@ -221,17 +277,26 @@ export default function OnboardingShell({
 
         {/* Footer hint */}
         <p className="mt-4 text-center text-xs text-[var(--text-muted)]">
-          Your progress is automatically saved. You can{' '}
-          <Tooltip content="Go to your dashboard now">
-            <button
-              type="button"
-              onClick={onSkip}
-              className="text-primary cursor-pointer hover:underline"
-            >
-              skip to dashboard
-            </button>
-          </Tooltip>{' '}
-          and complete later.
+          {canSkip ? (
+            <>
+              Your progress is automatically saved. You can{' '}
+              <Tooltip
+                content={isSubmitting ? 'Saving your progress...' : 'Go to your dashboard now'}
+              >
+                <button
+                  type="button"
+                  onClick={onSkip}
+                  disabled={isSubmitting}
+                  className="text-primary cursor-pointer hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
+                >
+                  {isSubmitting ? 'saving progress…' : 'skip to dashboard'}
+                </button>
+              </Tooltip>{' '}
+              and complete later.
+            </>
+          ) : (
+            <>Your progress is automatically saved. Complete the required steps to unlock skip.</>
+          )}
         </p>
       </div>
     </div>

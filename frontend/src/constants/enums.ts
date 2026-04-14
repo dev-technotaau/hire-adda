@@ -290,12 +290,13 @@ export const GENDER_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
+// `ACTIVELY_LOOKING` is intentionally omitted here — it belongs to OPEN_TO_WORK_LABELS
+// (job-search intent), not to WORK_STATUS (current employment situation).
 export const WORK_STATUS_LABELS: Record<string, string> = {
   EMPLOYED: 'Employed',
   UNEMPLOYED: 'Unemployed',
   STUDENT: 'Student',
   FREELANCER: 'Freelancer',
-  ACTIVELY_LOOKING: 'Actively Looking',
 };
 
 export const NOTICE_PERIOD_LABELS: Record<string, string> = {

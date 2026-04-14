@@ -85,7 +85,7 @@ export default function Header() {
           : 'bg-white',
       )}
     >
-      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Logo />
 
@@ -96,7 +96,7 @@ export default function Header() {
               <Link
                 href={item.href}
                 className={cn(
-                  'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                   pathname === item.href
                     ? 'bg-primary-light text-primary'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
@@ -116,7 +116,7 @@ export default function Header() {
               <Tooltip content="View notifications">
                 <Link
                   href={ROUTES.NOTIFICATIONS}
-                  className="relative rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
+                  className="relative rounded-lg p-2.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
                   aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
                 >
                   <Bell className="h-5 w-5" />
@@ -133,13 +133,13 @@ export default function Header() {
                 <Tooltip content="Open user menu">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-[var(--bg-secondary)]"
+                    className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-[var(--bg-secondary)]"
                   >
                     <Avatar
                       src={user.avatar}
                       firstName={user.firstName}
                       lastName={user.lastName}
-                      size="sm"
+                      size="md"
                     />
                     <span className="hidden text-sm font-medium text-[var(--text)] lg:block">
                       {user.firstName}
@@ -207,19 +207,19 @@ export default function Header() {
           ) : (
             <div className="hidden items-center gap-2 sm:flex">
               <Link href={ROUTES.AUTH.LOGIN}>
-                <Button variant="ghost" size="sm" tooltip="Sign in to your account">
+                <Button variant="ghost" size="md" tooltip="Sign in to your account">
                   Login
                 </Button>
               </Link>
               <Link href={ROUTES.AUTH.REGISTER}>
-                <Button size="sm" tooltip="Create a new account">
+                <Button size="md" tooltip="Create a new account">
                   Register
                 </Button>
               </Link>
               <div className="mx-1 h-6 w-px bg-[var(--border)]" />
               <Link href={`${ROUTES.AUTH.LOGIN}?tab=employer`}>
-                <Button variant="highlight" size="sm" tooltip="Sign in as an employer">
-                  <Briefcase className="mr-1.5 h-3.5 w-3.5" />
+                <Button variant="highlight" size="md" tooltip="Sign in as an employer">
+                  <Briefcase className="mr-1.5 h-4 w-4" />
                   Employer Login
                 </Button>
               </Link>
@@ -230,7 +230,7 @@ export default function Header() {
           <Tooltip content={mobileMenuOpen ? 'Close menu' : 'Open menu'}>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] md:hidden"
+              className="rounded-lg p-2.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] md:hidden"
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-nav"

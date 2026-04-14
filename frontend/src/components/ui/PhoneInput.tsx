@@ -14,6 +14,7 @@ import {
 import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COUNTRY_CODES, type CountryCode } from '@/constants/country-codes';
+import { usePopoverPlacement } from '@/hooks/use-popover-placement';
 
 interface PhoneInputProps extends Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -40,6 +41,81 @@ const sizeStyles = {
 
 // Pre-sort by code length descending for detection
 const SORTED_CODES = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
+
+// Common aliases — maps user input to country ISO codes for natural search
+const ALIASES: Record<string, string[]> = {
+  USA: ['US'],
+  'U.S.': ['US'],
+  'U.S.A.': ['US'],
+  AMERICA: ['US'],
+  STATES: ['US'],
+  UK: ['GB'],
+  'U.K.': ['GB'],
+  BRITAIN: ['GB'],
+  ENGLAND: ['GB'],
+  UAE: ['AE'],
+  EMIRATES: ['AE'],
+  KSA: ['SA'],
+  SAUDI: ['SA'],
+  HOLLAND: ['NL'],
+  NETHERLANDS: ['NL'],
+  DEUTSCHLAND: ['DE'],
+  GERMANY: ['DE'],
+  KOREA: ['KR', 'KP'],
+  PRC: ['CN'],
+  CHINA: ['CN'],
+  ROC: ['TW'],
+  TAIWAN: ['TW'],
+  HK: ['HK'],
+  RUSSIA: ['RU'],
+  IRAN: ['IR'],
+  TURKEY: ['TR'],
+  CZECH: ['CZ'],
+  IVORY: ['CI'],
+  CONGO: ['CD', 'CG'],
+};
+
+/**
+ * Score a country against a search query.
+ * Higher score = more relevant. Returns -1 to filter out.
+ */
+function scoreMatch(c: CountryCode, q: string): number {
+  const name = c.name.toLowerCase();
+  const iso = c.iso.toLowerCase();
+  const code = c.code.toLowerCase();
+  const qLower = q.toLowerCase();
+
+  // Exact ISO match — highest priority
+  if (iso === qLower) return 1000;
+
+  // Alias match (e.g., "USA" → US)
+  const aliasIsos = ALIASES[q.toUpperCase()];
+  if (aliasIsos?.includes(c.iso)) return 900;
+
+  // Exact dial code match (e.g., "+1" or "1")
+  const codeNoPlus = code.replace('+', '');
+  if (code === qLower || codeNoPlus === qLower.replace('+', '')) return 800;
+
+  // Name starts with query
+  if (name.startsWith(qLower)) return 700;
+
+  // ISO starts with query (handles partial like "u" → US, UK)
+  if (iso.startsWith(qLower)) return 600;
+
+  // Name word-boundary match (e.g., "states" matches "United States")
+  if (name.split(/[\s&-]+/).some((word) => word.startsWith(qLower))) return 500;
+
+  // Code starts with query
+  if (codeNoPlus.startsWith(qLower.replace('+', ''))) return 400;
+
+  // Substring in name
+  if (name.includes(qLower)) return 200;
+
+  // Substring in code
+  if (code.includes(qLower)) return 100;
+
+  return -1;
+}
 
 /** Detect country code from a full phone number */
 function detectCode(number: string): string | null {
@@ -91,13 +167,14 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
     const searchInputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const phoneInputRef = useRef<HTMLInputElement | null>(null);
+    // Flip upward when there's not enough room below — prevents a white strip
+    // from appearing beneath the page when opened near viewport bottom.
+    const dropdownPlacement = usePopoverPlacement(dropdownRef, dropdownOpen, 300);
 
     // Focus search input when dropdown opens
     useEffect(() => {
-      if (dropdownOpen) {
-        // Small delay so the dropdown renders first
-        requestAnimationFrame(() => searchInputRef.current?.focus());
-      }
+      if (!dropdownOpen) return;
+      requestAnimationFrame(() => searchInputRef.current?.focus());
     }, [dropdownOpen]);
 
     // Close dropdown on outside click
@@ -112,14 +189,14 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
       return () => document.removeEventListener('mousedown', handler);
     }, [dropdownOpen]);
 
-    // Filter countries by search query
+    // Filter countries by search query — ranked by relevance
     const filtered = useMemo(() => {
-      if (!search.trim()) return COUNTRY_CODES;
-      const q = search.trim().toLowerCase();
-      return COUNTRY_CODES.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) || c.code.includes(q) || c.iso.toLowerCase().includes(q),
-      );
+      const q = search.trim();
+      if (!q) return COUNTRY_CODES;
+      return COUNTRY_CODES.map((c) => ({ c, score: scoreMatch(c, q) }))
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score || a.c.name.localeCompare(b.c.name))
+        .map(({ c }) => c);
     }, [search]);
 
     // Scroll highlighted item into view
@@ -230,7 +307,9 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
                 setDropdownOpen(!dropdownOpen);
               }}
               className={cn(
-                'flex shrink-0 items-center gap-1 border-r border-[var(--border)] bg-[var(--bg-secondary)] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)]',
+                // rounded-l-lg matches the outer container's rounded-lg so the button's
+                // bg-secondary fill doesn't poke out past the container's curved corners.
+                'flex shrink-0 items-center gap-1 rounded-l-lg border-r border-[var(--border)] bg-[var(--bg-secondary)] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)]',
                 inputSize === 'sm'
                   ? 'h-8 px-2 text-sm'
                   : inputSize === 'lg'
@@ -253,7 +332,12 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
               />
             </button>
             {dropdownOpen && (
-              <div className="absolute top-full left-0 z-50 mt-1 w-72 rounded-lg border border-[var(--border)] bg-[var(--bg)] shadow-lg">
+              <div
+                className={cn(
+                  'absolute left-0 z-50 w-72 rounded-lg border border-[var(--border)] bg-[var(--bg)] shadow-lg',
+                  dropdownPlacement === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
+                )}
+              >
                 {/* Search input */}
                 <div className="border-b border-[var(--border)] p-2">
                   <div className="flex items-center gap-2 rounded-md bg-[var(--bg-secondary)] px-2.5">
