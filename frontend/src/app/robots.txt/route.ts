@@ -24,7 +24,7 @@ const PUBLIC_ALLOW_PATHS = [
   '/about',
   '/contact',
   '/help',
-  '/sitemap',
+  '/site-map',
   // Jobs listings — `/jobs/*` (public listing page, future) + individual
   // detail pages under the same prefix.
   '/jobs',
@@ -241,7 +241,7 @@ function buildRobotsTxt(): string {
         '/about',
         '/contact',
         '/help',
-        '/sitemap',
+        '/site-map',
         '/auth/login',
         '/auth/register',
         '/privacy',

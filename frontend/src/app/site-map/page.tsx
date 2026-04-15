@@ -32,7 +32,7 @@ export const metadata: Metadata = buildMetadata({
   description:
     'Complete site map of Hire Adda — find every page on the site in one place. Browse public pages, account entry points, legal information, and developer resources.',
   keywords: ['hire adda site map', 'sitemap', 'all pages', 'site index', 'navigation'],
-  url: '/sitemap',
+  url: '/site-map',
 });
 
 type LinkItem = {
@@ -287,10 +287,10 @@ export default function SitemapPage() {
   const totalLinks = TOTAL_LINK_COUNT();
   const breadcrumb = breadcrumbSchema([
     { name: 'Home', url: '/' },
-    { name: 'Site Map', url: '/sitemap' },
+    { name: 'Site Map', url: '/site-map' },
   ]);
   const webPage = webPageSchema({
-    url: '/sitemap',
+    url: '/site-map',
     name: 'Site Map',
     description:
       'Complete site map of Hire Adda — every public page, account entry point, and developer resource.',

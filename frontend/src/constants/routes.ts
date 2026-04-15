@@ -4,7 +4,15 @@ export const ROUTES = {
     ABOUT: '/about',
     CONTACT: '/contact',
     HELP: '/help',
-    SITEMAP: '/sitemap',
+    /**
+     * Human-readable site map page. URL is `/site-map` (dashed) because the
+     * undashed `/sitemap` conflicts with the `sitemap.xml` metadata file —
+     * having both an `app/sitemap/` folder (route segment) and an
+     * `app/sitemap.ts` (metadata file) causes Next.js to drop the `.xml`
+     * index. Renaming the HTML route removes the shadow without touching
+     * the XML sitemap.
+     */
+    SITEMAP: '/site-map',
     PRIVACY: '/privacy',
     TERMS: '/terms',
     COOKIE_POLICY: '/cookie-policy',

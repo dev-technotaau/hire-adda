@@ -142,10 +142,11 @@ const STATIC_ENTRIES: SitemapEntry[] = [
     priority: 0.2,
   },
 
-  // Site map HTML page (human-readable site index)
+  // Human-readable site map page. URL is `/site-map` (dashed) — undashed
+  // would collide with the `sitemap.xml` metadata file.
   {
-    path: '/sitemap',
-    source: 'src/app/sitemap/page.tsx',
+    path: '/site-map',
+    source: 'src/app/site-map/page.tsx',
     changeFrequency: 'monthly',
     priority: 0.5,
   },
@@ -235,20 +236,25 @@ function buildAlternates(path: string) {
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap
  * @see https://developers.google.com/search/docs/specialty/international/localized-versions
  */
-export default function sitemap({ id }: { id: string }): MetadataRoute.Sitemap {
-  switch (id) {
-    case 'static':
-      return STATIC_ENTRIES.map((entry) => ({
-        url: `${BASE_URL}${entry.path}`,
-        lastModified: entry.lastModified ?? getPageLastModified(entry.source),
-        changeFrequency: entry.changeFrequency,
-        priority: entry.priority,
-        alternates: buildAlternates(entry.path),
-        ...(entry.images && entry.images.length > 0
-          ? { images: entry.images.map((src) => `${BASE_URL}${src}`) }
-          : {}),
-      }));
+export default function sitemap({ id }: { id: number | string }): MetadataRoute.Sitemap {
+  // Fallback-first: if we only have one shard, always return the static
+  // entries regardless of `id` shape. Next.js versions differ on whether
+  // `id` is typed as string or number at runtime — matching by === on a
+  // specific literal would silently return [] if the shape drifts.
+  if (id === 'static' || id === 0 || id === undefined || id === null) {
+    return STATIC_ENTRIES.map((entry) => ({
+      url: `${BASE_URL}${entry.path}`,
+      lastModified: entry.lastModified ?? getPageLastModified(entry.source),
+      changeFrequency: entry.changeFrequency,
+      priority: entry.priority,
+      alternates: buildAlternates(entry.path),
+      ...(entry.images && entry.images.length > 0
+        ? { images: entry.images.map((src) => `${BASE_URL}${src}`) }
+        : {}),
+    }));
+  }
 
+  switch (id) {
     // Future shards — keep empty so Next.js doesn't emit a file for a shard
     // whose IDs aren't wired yet. Uncomment + implement when ready.
     //

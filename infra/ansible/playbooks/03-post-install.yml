@@ -171,6 +171,7 @@
             SecRule REQUEST_URI "^/api/(proxy|v1)/" "id:1004,phase:1,pass,nolog,ctl:ruleEngine=DetectionOnly"
             SecRule REQUEST_URI "^/monitoring" "id:1005,phase:1,pass,nolog,ctl:ruleEngine=DetectionOnly"
             SecRule REQUEST_URI "^/otel/" "id:1006,phase:1,pass,nolog,ctl:ruleEngine=DetectionOnly"
+            SecRule REQUEST_URI "^/(browserconfig\.xml|humans\.txt|ads\.txt|ai\.txt|llms\.txt|opensearch\.xml|feed\.xml|robots\.txt|sitemap\.xml|sitemap/[^/]+\.xml|safari-pinned-tab\.svg|favicon[-.][^/]*|apple-icon[^/]*|icon[-0-9][^/]*|web-app-manifest[^/]*|browserconfig\.xml|widgets/[^/]+\.json)$" "id:1007,phase:1,pass,nolog,ctl:ruleEngine=Off"
             SecRule REQUEST_HEADERS:User-Agent "@pm curl/ wget/ httpie scrapy python-requests Go-http-client aiohttp node-fetch axios/ phantomjs headlesschrome selenium puppeteer playwright libwww-perl colly HTTrack nikto sqlmap nmap masscan zgrab nuclei dirbuster gobuster wpscan jorgee MJ12bot DotBot AhrefsBot SemrushBot BLEXBot MegaIndex BUbiNG Exabot Majestic SEOkicks" "id:2000,phase:1,deny,status:403,msg:Bad bot detected"
             SecRule &REQUEST_HEADERS:User-Agent "@eq 0" "id:2001,phase:1,deny,status:403,msg:Missing User-Agent"' \
           --set controller.resources.requests.memory=128Mi \
