@@ -33,6 +33,7 @@ const footerLinks = {
     { label: 'Cookie Policy', href: ROUTES.PUBLIC.COOKIE_POLICY },
     { label: 'Refund Policy', href: ROUTES.PUBLIC.REFUND_POLICY },
     { label: 'Disclaimer', href: ROUTES.PUBLIC.DISCLAIMER },
+    { label: 'Site Map', href: ROUTES.PUBLIC.SITEMAP },
   ],
 };
 

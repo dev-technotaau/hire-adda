@@ -5,6 +5,8 @@ import PasswordStrength from '@/components/auth/PasswordStrength';
 import Turnstile from '@/components/auth/Turnstile';
 import LegalModal from '@/components/common/LegalModal';
 import AuthLayout from '@/components/layout/AuthLayout';
+import JsonLd from '@/components/seo/JsonLd';
+import { breadcrumbSchema, graph, webPageSchema } from '@/lib/json-ld';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import PhoneInput from '@/components/ui/PhoneInput';
@@ -29,6 +31,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 type Step = 'info' | 'password' | 'verify' | 'success';
+
+const registerJsonLd = graph(
+  webPageSchema({
+    url: '/auth/register',
+    name: 'Create Account — Hire Adda',
+    description: 'Create your Hire Adda account to apply for jobs or post openings. Free to join.',
+  }),
+  breadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'Register', url: '/auth/register' },
+  ]),
+);
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -187,6 +201,7 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout>
+      <JsonLd id="jsonld-register" data={registerJsonLd} />
       <div className="rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-[var(--text)]">Create Account</h1>

@@ -1,11 +1,31 @@
 import PublicLayout from '@/components/layout/PublicLayout';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
+import JsonLd from '@/components/seo/JsonLd';
+import { generateMetadata as buildMetadata } from '@/components/common/SEO';
+import { breadcrumbSchema, graph, webPageSchema } from '@/lib/json-ld';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: 'Refund Policy',
   description:
     'Understand the Hire Adda refund and cancellation policy for premium plans and paid services.',
-};
+  url: '/refund-policy',
+});
+
+const refundJsonLd = graph(
+  webPageSchema({
+    url: '/refund-policy',
+    name: 'Refund Policy',
+    description:
+      'Refund and cancellation terms for Hire Adda premium plans, employer services, and paid add-ons.',
+    dateModified: '2026-02-01',
+    speakableCssSelectors: ['h1'],
+  }),
+  breadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'Refund Policy', url: '/refund-policy' },
+  ]),
+);
 
 const sections = [
   {
@@ -58,6 +78,7 @@ const sections = [
 export default function RefundPolicyPage() {
   return (
     <PublicLayout>
+      <JsonLd id="jsonld-refund-policy" data={refundJsonLd} />
       {/* Hero Section */}
       <section className="from-primary-50 relative overflow-hidden bg-gradient-to-br via-white to-[var(--accent-light)]">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
@@ -65,10 +86,25 @@ export default function RefundPolicyPage() {
             <h1 className="text-4xl font-bold tracking-tight text-[var(--text)] sm:text-5xl">
               Refund Policy
             </h1>
-            <p className="mt-4 text-[var(--text-secondary)]">Last updated: February 2026</p>
+            <p className="mt-4 text-[var(--text-secondary)]">
+              Last updated:{' '}
+              <time dateTime="2026-02-01" className="font-medium">
+                February 2026
+              </time>
+            </p>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
+              Authored by Hire Adda Legal · Reviewed by Billing &amp; Finance team
+            </p>
           </div>
         </div>
       </section>
+
+      {/* Breadcrumbs */}
+      <div className="border-b border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'Refund Policy' }]} withSchema={false} />
+        </div>
+      </div>
 
       {/* Content */}
       <section className="bg-white py-12 sm:py-16">

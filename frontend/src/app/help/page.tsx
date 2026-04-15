@@ -1,9 +1,12 @@
 'use client';
 
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PublicLayout from '@/components/layout/PublicLayout';
+import JsonLd from '@/components/seo/JsonLd';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
 import { useAuthStore } from '@/store/auth.store';
+import { articleSchema, breadcrumbSchema, faqPageSchema, graph } from '@/lib/json-ld';
 import { ChevronDown, Mail, MessageCircle, Phone, Search, TicketCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -94,8 +97,40 @@ export default function HelpPage() {
     return faq.question.toLowerCase().includes(query) || faq.answer.toLowerCase().includes(query);
   });
 
+  // JSON-LD graph:
+  //   1. FAQPage        — Q&A rich-result eligibility
+  //   2. Article        — Hybrid coverage (editorially-curated help content)
+  //   3. BreadcrumbList — SERP crumb trail
+  //
+  // Article schema is emitted alongside FAQPage because /help is
+  // editorially curated content — each Q&A was researched and written.
+  // This gives us E-A-T attribution (expertise, authoritativeness,
+  // trustworthiness) through `author` + `publisher` + `dateModified`
+  // without conflicting with the FAQ rich-result.
+  const helpJsonLd = graph(
+    faqPageSchema(faqs.map((faq) => ({ question: faq.question, answer: faq.answer }))),
+    articleSchema({
+      url: '/help',
+      headline: 'Hire Adda Help Center — Frequently Asked Questions',
+      description:
+        'Curated answers to the most common questions about using Hire Adda — account setup, job search, applications, password reset, privacy, and mobile apps.',
+      datePublished: '2026-01-01T00:00:00+05:30',
+      dateModified: '2026-04-01T00:00:00+05:30',
+      authorName: 'Hire Adda Editorial Team',
+      authorUrl: '/about',
+      articleSection: 'Help & Support',
+      keywords: ['help', 'FAQ', 'support', 'job search help', 'employer help'],
+      speakableCssSelectors: ['h1', '.hero-subtitle'],
+    }),
+    breadcrumbSchema([
+      { name: 'Home', url: '/' },
+      { name: 'Help & FAQ', url: '/help' },
+    ]),
+  );
+
   return (
     <PublicLayout>
+      <JsonLd id="jsonld-help" data={helpJsonLd} />
       {/* Hero Section */}
       <section className="from-primary-50 relative overflow-hidden bg-gradient-to-br via-white to-[var(--accent-light)]">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
@@ -107,6 +142,29 @@ export default function HelpPage() {
               Find answers to common questions about using Hire Adda. Can&apos;t find what
               you&apos;re looking for? Contact our support team.
             </p>
+
+            {/* E-A-T signals — author byline, last-reviewed date, reviewer.
+                Helps Google assess expertise, authoritativeness, trustworthiness
+                on what is effectively YMYL content (jobs affect livelihoods). */}
+            <div className="mx-auto mt-6 flex max-w-2xl flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+              <span>
+                By{' '}
+                <a href="/about" className="text-primary hover:underline">
+                  Hire Adda Editorial Team
+                </a>
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>
+                Last reviewed: <time dateTime="2026-04-01">April 1, 2026</time>
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>Reviewed by Support &amp; Trust team</span>
+            </div>
+
+            {/* Breadcrumbs — rendered in the hero for visual parity with schema */}
+            <div className="mt-6 flex justify-center">
+              <Breadcrumbs items={[{ name: 'Help & FAQ' }]} withSchema={false} />
+            </div>
 
             {/* Search Bar */}
             <div className="relative mx-auto mt-8 max-w-xl">

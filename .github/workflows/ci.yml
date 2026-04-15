@@ -105,6 +105,35 @@ jobs:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
+      # ─── SEO: structured-data validation ────────────────
+      # Boots `next start` in the background, waits until it's serving,
+      # fetches every public page, extracts all `<script type="application/ld+json">`
+      # blocks, and validates JSON syntax + @context + @type + required
+      # fields + placeholder markers. Fails the build on any error.
+      #
+      # Run only on the 20.x leg of the matrix — the output is identical
+      # across Node versions and we don't need to re-pay the server-boot cost.
+      - name: SEO — validate structured data
+        if: matrix.node-version == '20.x'
+        working-directory: ./frontend
+        run: |
+          npm run start &
+          SERVER_PID=$!
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/ > /dev/null 2>&1; then
+              echo "Server up after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+          npm run seo:validate
+          STATUS=$?
+          kill $SERVER_PID 2>/dev/null || true
+          exit $STATUS
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_API_URL: http://localhost:5000/api/v1
+
   # ─── Security Audit ────────────────────────────────────
   security:
     name: Security Audit

@@ -12,7 +12,9 @@
     "format": "prettier --write src/",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:ci": "jest --ci --coverage"
+    "test:ci": "jest --ci --coverage",
+    "seo:validate": "node scripts/validate-structured-data.mjs http://localhost:3000",
+    "seo:validate:prod": "node scripts/validate-structured-data.mjs https://hireadda.in"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

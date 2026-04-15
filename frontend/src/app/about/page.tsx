@@ -1,17 +1,22 @@
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import StatsSection from '@/components/common/StatsSection';
 import PublicLayout from '@/components/layout/PublicLayout';
+import JsonLd from '@/components/seo/JsonLd';
+import { generateMetadata as buildMetadata } from '@/components/common/SEO';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
+import { aboutPageSchema, breadcrumbSchema, graph } from '@/lib/json-ld';
 import { ArrowRight, Award, Heart, Lightbulb, Linkedin, ShieldCheck, Twitter } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: 'About Us',
   description:
     'Learn about Hire Adda — our mission to connect talent with opportunity across India. Meet our team and discover our values.',
   keywords: ['about hire adda', 'job portal India', 'recruitment platform', 'our mission'],
-};
+  url: '/about',
+});
 
 const values = [
   {
@@ -63,9 +68,24 @@ const team = [
   },
 ];
 
+const aboutJsonLd = graph(
+  aboutPageSchema({
+    url: '/about',
+    name: 'About Hire Adda',
+    description:
+      'Learn about Hire Adda — our mission to connect talent with opportunity across India. Meet our team and discover our values.',
+    speakableCssSelectors: ['h1', '.subtitle'],
+  }),
+  breadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'About', url: '/about' },
+  ]),
+);
+
 export default function AboutPage() {
   return (
     <PublicLayout>
+      <JsonLd id="jsonld-about" data={aboutJsonLd} />
       {/* Hero Section */}
       <section className="from-primary-50 relative overflow-hidden bg-gradient-to-br via-white to-[var(--accent-light)]">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
@@ -81,6 +101,13 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      {/* Breadcrumbs */}
+      <div className="border-b border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'About' }]} withSchema={false} />
+        </div>
+      </div>
 
       {/* Mission Section */}
       <section className="bg-white py-16 sm:py-24">

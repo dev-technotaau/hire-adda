@@ -8,6 +8,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Mail, ArrowLeft, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AuthLayout from '@/components/layout/AuthLayout';
+import JsonLd from '@/components/seo/JsonLd';
+import { breadcrumbSchema, graph, webPageSchema } from '@/lib/json-ld';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import OtpInput from '@/components/auth/OtpInput';
@@ -22,6 +24,20 @@ import { useOtpConfig } from '@/hooks/use-otp-config';
 import type { ApiError } from '@/types/api';
 
 type Step = 'email' | 'otp' | 'success';
+
+const forgotPasswordJsonLd = graph(
+  webPageSchema({
+    url: '/auth/forgot-password',
+    name: 'Forgot Password — Hire Adda',
+    description:
+      'Reset your Hire Adda account password. Enter your email to receive a secure reset link.',
+  }),
+  breadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'Sign In', url: '/auth/login' },
+    { name: 'Forgot Password', url: '/auth/forgot-password' },
+  ]),
+);
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -128,6 +144,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthLayout>
+      <JsonLd id="jsonld-forgot-password" data={forgotPasswordJsonLd} />
       <div className="rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8">
         <AnimatePresence mode="wait">
           {/* Step 1: Enter Email */}

@@ -9,6 +9,8 @@ import { Eye, EyeOff, Mail, Lock, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import AuthLayout from '@/components/layout/AuthLayout';
+import JsonLd from '@/components/seo/JsonLd';
+import { breadcrumbSchema, graph, webPageSchema } from '@/lib/json-ld';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import OtpInput from '@/components/auth/OtpInput';
@@ -44,6 +46,18 @@ function setTrustedDeviceCookie(token: string) {
   const expires = new Date(Date.now() + TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000).toUTCString();
   document.cookie = `${TRUSTED_DEVICE_COOKIE}=${encodeURIComponent(token)}; expires=${expires}; path=/; SameSite=Strict; Secure`;
 }
+
+const loginJsonLd = graph(
+  webPageSchema({
+    url: '/auth/login',
+    name: 'Sign In — Hire Adda',
+    description: 'Sign in to your Hire Adda account to find jobs or hire talent.',
+  }),
+  breadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'Sign In', url: '/auth/login' },
+  ]),
+);
 
 export default function LoginPage() {
   const router = useRouter();
@@ -264,6 +278,7 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
+      <JsonLd id="jsonld-login" data={loginJsonLd} />
       <div className="rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-[var(--text)]">Welcome Back</h1>

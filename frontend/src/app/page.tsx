@@ -1,8 +1,17 @@
 import AuthHomeRedirect from '@/components/common/AuthHomeRedirect';
 import StatsSection from '@/components/common/StatsSection';
 import PublicLayout from '@/components/layout/PublicLayout';
+import JsonLd from '@/components/seo/JsonLd';
+import { generateMetadata as buildMetadata } from '@/components/common/SEO';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
+import {
+  graph,
+  siteNavigationSchema,
+  webPageSchema,
+  ORGANIZATION_ID,
+  WEBSITE_ID,
+} from '@/lib/json-ld';
 import { cn } from '@/lib/utils';
 import {
   ArrowRight,
@@ -37,7 +46,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Hire Adda — India's Leading Job Portal & Recruitment Platform",
   description:
     "Find your dream job or hire top talent on India's AI-powered recruitment platform. Verified employers, smart matching, and quick apply.",
@@ -53,49 +62,57 @@ export const metadata: Metadata = {
     'hire talent',
     'AI recruitment',
   ],
-  openGraph: {
-    title: 'Hire Adda — Find Your Dream Job',
+  url: '/',
+});
+
+/**
+ * Homepage structured-data graph — emitted as a single `@graph` so Google
+ * sees the entity cross-references (WebPage belongs to WebSite, about
+ * Organization). Keeps payload compact vs. 4 separate <script> tags.
+ *
+ * Layout.tsx already ships Organization + WebSite + WebApplication
+ * sitewide; here we add the homepage-specific WebPage + primary nav.
+ */
+const homeJsonLd = graph(
+  webPageSchema({
+    url: '/',
+    name: "Hire Adda — India's Leading Job Portal & Recruitment Platform",
     description:
-      'Connect with top companies and discover opportunities that match your skills. AI-powered matching, verified employers, quick apply.',
-    type: 'website',
-    images: [{ url: '/images/og-home.png', width: 1200, height: 630, alt: 'Hire Adda Home' }],
-  },
-};
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://hireadda.in';
-
-const jsonLd = [
+      "Find your dream job or hire top talent on India's AI-powered recruitment platform. Verified employers, smart matching, and quick apply.",
+    speakableCssSelectors: ['h1', '.hero-subtitle'],
+    primaryImage: '/images/og-home.png',
+  }),
+  // Primary navigation — drives SERP sitelinks under the top brand result.
+  siteNavigationSchema([
+    { name: 'Jobs', url: '/candidate/jobs' },
+    { name: 'Companies', url: '/companies' },
+    { name: 'About', url: '/about' },
+    { name: 'Help', url: '/help' },
+    { name: 'Contact', url: '/contact' },
+    { name: 'Site Map', url: '/sitemap' },
+    { name: 'Login', url: '/auth/login' },
+    { name: 'Register', url: '/auth/register' },
+  ]),
+  // Explicit SearchAction bound to the search form on the hero — gives
+  // Google Sitelinks Search Box the exact URL template with the
+  // `required` query-input hint.
   {
     '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'Hire Adda',
-    url: APP_URL,
-    description: "India's leading job portal and recruitment platform.",
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${APP_URL}/candidate/jobs?keyword={search_term_string}`,
-      },
-      'query-input': 'required name=search_term_string',
+    '@type': 'SearchAction',
+    '@id': `${WEBSITE_ID}#hero-search`,
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://hireadda.in'}/candidate/jobs?search={search_term_string}&location={location_string}`,
+      actionPlatform: [
+        'https://schema.org/DesktopWebPlatform',
+        'https://schema.org/MobileWebPlatform',
+      ],
     },
+    'query-input': ['required name=search_term_string', 'name=location_string'],
+    inLanguage: 'en-IN',
+    potentialAction: { '@id': ORGANIZATION_ID },
   },
-  {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'Hire Adda',
-    url: APP_URL,
-    logo: `${APP_URL}/icons/logo.svg`,
-    description:
-      "India's leading job portal and recruitment platform. Find top jobs, hire the best talent, and build your career.",
-    sameAs: [],
-    contactPoint: {
-      '@type': 'ContactPoint',
-      contactType: 'customer service',
-      url: `${APP_URL}/contact`,
-    },
-  },
-];
+);
 
 // ---------------------------------------------------------------------------
 // Server-side data fetching
@@ -386,11 +403,10 @@ export default async function Home() {
   return (
     <PublicLayout>
       <AuthHomeRedirect />
-      {/* Structured Data for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      {/* Homepage structured-data graph — WebPage + SiteNavigationElement
+          + dedicated hero SearchAction. Sitewide Organization + WebSite +
+          WebApplication are already in layout.tsx. */}
+      <JsonLd id="jsonld-home" data={homeJsonLd} />
 
       {/* ================================================================
                 SECTION 1: Hero (Enhanced)

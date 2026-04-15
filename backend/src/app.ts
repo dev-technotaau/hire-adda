@@ -19,6 +19,7 @@ import metricsRoutes, {
   activeConnections,
 } from './routes/metrics.routes';
 import requestId from './middleware/request-id';
+import { isBrowserRequest, renderRootPage, renderNotFoundPage } from './utils/pretty-page';
 // Audit middleware applied per-route in admin.routes.ts
 
 const app: Application = express();
@@ -339,8 +340,13 @@ apiV1Router.use((_req, res, next) => {
 
 app.use('/api/v1', apiV1Router);
 
-// Root route
-app.get('/', (_req: Request, res: Response) => {
+// Root route — content-negotiated: browsers get a styled landing page,
+// JSON clients (curl default, API consumers) keep the existing response.
+app.get('/', (req: Request, res: Response) => {
+  if (isBrowserRequest(req)) {
+    res.type('html').send(renderRootPage());
+    return;
+  }
   res.json({
     message: 'Welcome to Hire Adda API',
     docs: '/api-docs',
@@ -377,6 +383,16 @@ app.all('/api/*path', (_req: Request, res: Response) => {
   res
     .status(404)
     .json({ success: false, error: { message: 'API route not found', code: 'ROUTE_NOT_FOUND' } });
+});
+
+// Universal 404 for non-API paths. Browsers get the styled HTML 404 page;
+// JSON/probe clients get a consistent JSON envelope matching the /api 404.
+app.use((req: Request, res: Response) => {
+  if (isBrowserRequest(req)) {
+    res.status(404).type('html').send(renderNotFoundPage(req.originalUrl));
+    return;
+  }
+  res.status(404).json({ success: false, error: { message: 'Not found', code: 'NOT_FOUND' } });
 });
 
 // Sentry error handler

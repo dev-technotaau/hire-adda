@@ -2,6 +2,28 @@ import Link from 'next/link';
 import { FileQuestion } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
+import type { Metadata } from 'next';
+
+/**
+ * Explicit noindex on the 404 page. Without this, search engines have
+ * been known to index "Page Not Found" results — especially when the
+ * site uses soft-404s. The HTTP 404 status alone isn't always respected
+ * by every crawler, so the meta tag is belt-and-braces.
+ */
+export const metadata: Metadata = {
+  title: 'Page Not Found',
+  description: 'The page you are looking for does not exist on Hire Adda.',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+};
 
 export default function NotFound() {
   return (

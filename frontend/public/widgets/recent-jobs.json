@@ -1,0 +1,48 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Latest Jobs",
+      "weight": "Bolder",
+      "size": "Medium",
+      "color": "Accent"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Hand-picked openings matching your profile",
+      "isSubtle": true,
+      "wrap": true,
+      "spacing": "None"
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "${jobs[0].title}",
+          "weight": "Bolder"
+        },
+        {
+          "type": "TextBlock",
+          "text": "${jobs[0].company} · ${jobs[0].location}",
+          "isSubtle": true,
+          "spacing": "None"
+        }
+      ],
+      "selectAction": {
+        "type": "Action.OpenUrl",
+        "url": "${jobs[0].url}"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "See all jobs",
+      "url": "https://hireadda.in/candidate/jobs?utm_source=pwa&utm_medium=widget"
+    }
+  ]
+}

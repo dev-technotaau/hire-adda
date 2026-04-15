@@ -3,14 +3,38 @@ import prisma from '../config/prisma';
 import { redis } from '../config/redis';
 import elasticClient from '../config/elasticsearch';
 import { getConsumerLag } from '../utils/kafka-lag-monitor';
+import {
+  isBrowserRequest,
+  renderHealthPage,
+  renderLivenessPage,
+  renderReadinessPage,
+} from '../utils/pretty-page';
 
 const startedAt = new Date().toISOString();
+
+/**
+ * Send either JSON (probe / API client) or the pretty HTML page (browser),
+ * preserving the original status code in both paths.
+ */
+function sendDualFormat(
+  req: Request,
+  res: Response,
+  statusCode: number,
+  jsonPayload: unknown,
+  htmlRenderer: () => string
+): void {
+  if (isBrowserRequest(req)) {
+    res.status(statusCode).type('html').send(htmlRenderer());
+    return;
+  }
+  res.status(statusCode).json(jsonPayload);
+}
 
 /**
  * Full health check — database, Redis, Elasticsearch + system metrics
  * GET /health
  */
-export const checkHealth = async (_req: Request, res: Response) => {
+export const checkHealth = async (req: Request, res: Response) => {
   const checks: Record<string, string> = {
     database: 'down',
     redis: 'down',
@@ -47,8 +71,8 @@ export const checkHealth = async (_req: Request, res: Response) => {
   const allUp = !Object.values(checks).includes('down');
   const mem = process.memoryUsage();
 
-  res.status(allUp ? 200 : 503).json({
-    status: allUp ? 'healthy' : 'degraded',
+  const payload = {
+    status: (allUp ? 'healthy' : 'degraded') as 'healthy' | 'degraded',
     checks,
     system: {
       uptime: Math.floor(process.uptime()),
@@ -62,22 +86,25 @@ export const checkHealth = async (_req: Request, res: Response) => {
       pid: process.pid,
     },
     timestamp: new Date().toISOString(),
-  });
+  };
+
+  sendDualFormat(req, res, allUp ? 200 : 503, payload, () => renderHealthPage(payload));
 };
 
 /**
  * Liveness probe — is the process alive and responding?
  * GET /health/live
  */
-export const checkLiveness = (_req: Request, res: Response) => {
-  res.status(200).json({ status: 'alive', timestamp: new Date().toISOString() });
+export const checkLiveness = (req: Request, res: Response) => {
+  const payload = { status: 'alive', timestamp: new Date().toISOString() };
+  sendDualFormat(req, res, 200, payload, () => renderLivenessPage(payload));
 };
 
 /**
  * Readiness probe — can we serve traffic? (DB + Redis must be up)
  * GET /health/ready
  */
-export const checkReadiness = async (_req: Request, res: Response) => {
+export const checkReadiness = async (req: Request, res: Response) => {
   let dbReady = false;
   let redisReady = false;
 
@@ -95,7 +122,12 @@ export const checkReadiness = async (_req: Request, res: Response) => {
   }
 
   // Check Kafka consumer lag (non-blocking, informational)
-  let kafkaInfo: { connected: boolean; lag: Record<string, number> | null; totalLag: number; healthy: boolean } = {
+  let kafkaInfo: {
+    connected: boolean;
+    lag: Record<string, number> | null;
+    totalLag: number;
+    healthy: boolean;
+  } = {
     connected: false,
     lag: null,
     totalLag: -1,
@@ -118,13 +150,15 @@ export const checkReadiness = async (_req: Request, res: Response) => {
 
   const ready = dbReady && redisReady;
 
-  res.status(ready ? 200 : 503).json({
-    status: ready ? 'ready' : 'not_ready',
+  const payload = {
+    status: (ready ? 'ready' : 'not_ready') as 'ready' | 'not_ready',
     checks: {
       database: dbReady ? 'up' : 'down',
       redis: redisReady ? 'up' : 'down',
       kafka: kafkaInfo,
     },
     timestamp: new Date().toISOString(),
-  });
+  };
+
+  sendDualFormat(req, res, ready ? 200 : 503, payload, () => renderReadinessPage(payload));
 };

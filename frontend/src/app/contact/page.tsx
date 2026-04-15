@@ -2,12 +2,15 @@
 
 import { useState, type FormEvent } from 'react';
 import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PublicLayout from '@/components/layout/PublicLayout';
+import JsonLd from '@/components/seo/JsonLd';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { showToast } from '@/components/ui/Toast';
+import { breadcrumbSchema, contactPageSchema, graph } from '@/lib/json-ld';
 import { ticketService } from '@/services/ticket.service';
 import type { ApiError } from '@/types/api';
 import type { TicketCategory } from '@/types/ticket';
@@ -96,8 +99,23 @@ export default function ContactPage() {
     }
   };
 
+  const contactJsonLd = graph(
+    contactPageSchema({
+      url: '/contact',
+      name: 'Contact Hire Adda',
+      description:
+        'Get in touch with Hire Adda. Support, sales, billing, privacy, and security contact channels — all in one place.',
+      speakableCssSelectors: ['h1', '.subtitle'],
+    }),
+    breadcrumbSchema([
+      { name: 'Home', url: '/' },
+      { name: 'Contact', url: '/contact' },
+    ]),
+  );
+
   return (
     <PublicLayout>
+      <JsonLd id="jsonld-contact" data={contactJsonLd} />
       {/* Hero Section */}
       <section className="from-primary-50 relative overflow-hidden bg-gradient-to-br via-white to-[var(--accent-light)]">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
@@ -112,6 +130,13 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+
+      {/* Breadcrumbs */}
+      <div className="border-b border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'Contact' }]} withSchema={false} />
+        </div>
+      </div>
 
       {/* Contact Form & Info */}
       <section className="bg-white py-16 sm:py-24">

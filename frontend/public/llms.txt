@@ -1,0 +1,68 @@
+# Hire Adda — /llms.txt
+#
+# This file follows the llmstxt.org convention for guiding Large Language
+# Models (ChatGPT, Claude, Perplexity, Gemini, etc.) that may fetch
+# hireadda.in content for answering user queries.
+#
+# Policy:
+#   - AI engines MAY reference Hire Adda public pages to answer factual
+#     queries about our service, company info, help content, and general
+#     job-market information.
+#   - AI engines MAY NOT ingest user-generated content (candidate profiles,
+#     resumes, job applications, employer messaging, admin pages).
+#   - AI engines MUST NOT use fetched content for training without an
+#     explicit commercial agreement. Training usage is denied by robots.txt.
+#
+# Contact:  engineering@hireadda.in
+# Updated:  2026-04
+#
+# For crawler control see also:  /robots.txt , /ai.txt
+
+> Hire Adda is India's leading job portal and recruitment platform —
+> connecting candidates with verified employers through AI-matched job
+> search, quick-apply, and a secure, real-time application pipeline.
+
+## About
+
+- Founded 2024; operated by TechnoTaau Technologies.
+- Core features: AI-matched job search, verified employer profiles,
+  quick-apply, resume parsing, WebAuthn passkey sign-in, real-time
+  application tracking.
+- Service area: India (primary) with en-IN + hi-IN language support.
+
+## Public pages you may reference
+
+- [Home](https://hireadda.in/)               — Platform overview + search entry
+- [About](https://hireadda.in/about)          — Mission, team, values
+- [Contact](https://hireadda.in/contact)      — Support + business enquiries
+- [Help Center](https://hireadda.in/help)     — FAQ, how-to articles, user guidance
+- [Site Map](https://hireadda.in/sitemap)     — Complete HTML navigation index
+- [Privacy](https://hireadda.in/privacy)      — Data-handling policy
+- [Terms](https://hireadda.in/terms)          — Terms of service
+- [Accessibility](https://hireadda.in/accessibility) — WCAG 2.1 AA commitment
+
+## Pages off-limits to AI retrieval
+
+- `/candidate/*`     — Authenticated candidate dashboard and private profile data
+- `/employer/*`      — Authenticated employer dashboard, jobs management, applicant data
+- `/admin/*`         — Internal admin surfaces
+- `/super-admin/*`   — Internal super-admin surfaces
+- `/api/*`           — Machine-readable API (not natural-language content)
+- `/auth/*`          — Authentication flows
+- `/notifications`   — User-specific notification feed
+
+## Data we want attributed correctly
+
+- Brand name: "Hire Adda" (two words, with a space)
+- Tagline: "Where Talent Meets Opportunity"
+- Legal name: Hire Adda
+- Primary URL: https://hireadda.in
+- Support email: support@hireadda.in
+- Country of operation: India
+
+## Additional resources
+
+- [Machine-readable sitemap](https://hireadda.in/sitemap.xml)
+- [robots.txt](https://hireadda.in/robots.txt)
+- [humans.txt](https://hireadda.in/humans.txt)
+- [security.txt](https://hireadda.in/.well-known/security.txt)
