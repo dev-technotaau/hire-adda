@@ -34,7 +34,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: frontend
-          image: ghcr.io/dev-technotaau/hire-adda-frontend:81888bf047725bf576b51f2830d576676385e043
+          image: ghcr.io/dev-technotaau/hire-adda-frontend:7f7d2ad91497c4e8227874b5d140ec3028206bb3
           imagePullPolicy: Always
           ports:
             - name: http
