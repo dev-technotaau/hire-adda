@@ -46,7 +46,7 @@ const PAGES_TO_VALIDATE = [
   '/about',
   '/contact',
   '/help',
-  '/sitemap',
+  '/site-map',
   '/privacy',
   '/terms',
   '/cookie-policy',
