@@ -243,29 +243,32 @@ function buildAlternates(path: string) {
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap
  * @see https://developers.google.com/search/docs/specialty/international/localized-versions
  */
-export default function sitemap({ id }: { id: number }): MetadataRoute.Sitemap {
-  switch (id) {
-    case 0:
-      // Shard 0 — static pages (marketing, legal, auth entry points)
-      return STATIC_ENTRIES.map((entry) => ({
-        url: `${BASE_URL}${entry.path}`,
-        lastModified: entry.lastModified ?? getPageLastModified(entry.source),
-        changeFrequency: entry.changeFrequency,
-        priority: entry.priority,
-        alternates: buildAlternates(entry.path),
-        ...(entry.images && entry.images.length > 0
-          ? { images: entry.images.map((src) => `${BASE_URL}${src}`) }
-          : {}),
-      }));
-
-    // Future shards — uncomment + implement when /jobs + /companies go public.
-    //
-    // case 1:
-    //   return await fetchActiveJobsAsSitemap();
-    // case 2:
-    //   return await fetchPublicCompaniesAsSitemap();
-
-    default:
-      return [];
-  }
+export default function sitemap(): MetadataRoute.Sitemap {
+  // WORKAROUND: Next.js 16 has a compiled-code bug where the `id` parameter
+  // from generateSitemaps is passed as an unresolved Promise instead of the
+  // resolved numeric value. `0 === Promise` is false, which caused `switch`
+  // and `if` matching to silently fall to the default branch → empty <urlset>.
+  //
+  // Since we only have one shard (id: 0 = static pages), we return all entries
+  // unconditionally. The `id` param is accepted by JS at runtime (extra args
+  // are ignored) but not referenced. generateSitemaps() is preserved for the
+  // sharding URL structure (/sitemap/0.xml) and future multi-shard support.
+  //
+  // When adding dynamic shards (jobs, companies), make the function async and
+  // `await` the id before branching:
+  //
+  //   export default async function sitemap({ id }: { id: number }) {
+  //     const resolvedId = typeof id === 'object' && 'then' in id ? await id : id;
+  //     switch (resolvedId) { ... }
+  //   }
+  return STATIC_ENTRIES.map((entry) => ({
+    url: `${BASE_URL}${entry.path}`,
+    lastModified: entry.lastModified ?? getPageLastModified(entry.source),
+    changeFrequency: entry.changeFrequency,
+    priority: entry.priority,
+    alternates: buildAlternates(entry.path),
+    ...(entry.images && entry.images.length > 0
+      ? { images: entry.images.map((src) => `${BASE_URL}${src}`) }
+      : {}),
+  }));
 }
