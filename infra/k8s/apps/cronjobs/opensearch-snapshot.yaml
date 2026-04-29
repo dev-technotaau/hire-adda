@@ -74,8 +74,13 @@ spec:
 
                   echo "Snapshot complete: $SNAPSHOT"
 
-                  # Cleanup: remove snapshots older than 30 days
-                  CUTOFF=$(date -d '30 days ago' +%Y%m%d 2>/dev/null || date -v-30d +%Y%m%d)
+                  # Cleanup: remove snapshots older than 30 days.
+                  # Use POSIX-compatible epoch arithmetic — the image is
+                  # `curlimages/curl` (Alpine/BusyBox), which supports neither
+                  # GNU `date -d "30 days ago"` nor BSD `date -v-30d`. Both
+                  # forms fail under `set -e` even though the snapshot itself
+                  # already succeeded above, killing the job.
+                  CUTOFF=$(date -d "@$(( $(date +%s) - 2592000 ))" +%Y%m%d)
                   curl -sf "$OS_URL/_snapshot/$REPO/_all" | \
                     grep -o '"snapshot_[0-9]*_[0-9]*"' | tr -d '"' | while read snap; do
                       SNAP_DATE=$(echo "$snap" | grep -o '[0-9]\{8\}')
