@@ -155,42 +155,40 @@ grafana:
       folderAnnotation: grafana_folder
       provider:
         foldersFromFilesStructure: true
-  # Additional data sources (Tempo + Loki).
-  #
-  # Prometheus + Alertmanager are auto-provisioned by kube-prometheus-stack's
-  # built-in sidecar (uid: prometheus, isDefault: true). Defining them again
-  # here previously caused two `isDefault: true` entries across mounted files
-  # (`datasource.yaml` from sidecar + `datasources.yaml` from grafana subchart),
-  # which Grafana 12 rejects with: "Only one datasource per organization can
-  # be marked as default" → CrashLoopBackOff. Using `additionalDataSources`
-  # only for Tempo/Loki avoids that collision and references chart's
-  # Prometheus by `uid: prometheus`.
-  additionalDataSources:
-    - name: Tempo
-      type: tempo
-      uid: tempo
-      url: http://tempo.monitoring:3200
-      access: proxy
-      jsonData:
-        tracesToMetrics:
-          datasourceUid: prometheus
-        tracesToLogs:
-          datasourceUid: loki
-        serviceMap:
-          datasourceUid: prometheus
-        nodeGraph:
-          enabled: true
-    - name: Loki
-      type: loki
-      uid: loki
-      url: http://loki.logging:3100
-      access: proxy
-      jsonData:
-        derivedFields:
-          - datasourceUid: tempo
-            matcherRegex: '"traceId":"(\w+)"'
-            name: TraceID
-            url: '$${__value.raw}'
+  # Data sources (Prometheus + Tempo + Loki — matches Docker Compose)
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://kube-prometheus-stack-prometheus.monitoring:9090
+          access: proxy
+          isDefault: true
+        - name: Tempo
+          type: tempo
+          url: http://tempo.monitoring:3200
+          access: proxy
+          jsonData:
+            tracesToMetrics:
+              datasourceUid: prometheus
+            tracesToLogs:
+              datasourceUid: loki
+            serviceMap:
+              datasourceUid: prometheus
+            nodeGraph:
+              enabled: true
+        - name: Loki
+          type: loki
+          uid: loki
+          url: http://loki.logging:3100
+          access: proxy
+          jsonData:
+            derivedFields:
+              - datasourceUid: tempo
+                matcherRegex: '"traceId":"(\w+)"'
+                name: TraceID
+                url: '$${__value.raw}'
 
 # ── Node Exporter ──
 nodeExporter:
