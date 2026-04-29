@@ -145,25 +145,42 @@ spec:
           command: ['/bin/sh', '-c']
           args:
             - |
-              set -e
+              set -eu
               OS=http://opensearch.hire-adda.svc.cluster.local:9200
+              POLICY=logs-hire-adda-lifecycle
+
               for i in 1 2 3 4 5 6; do
                 if curl -sf --connect-timeout 5 "$OS/_cluster/health" >/dev/null 2>&1; then break; fi
                 [ "$i" -eq 6 ] && { echo "ERROR: OpenSearch unreachable"; exit 1; }
                 sleep 5
               done
 
-              echo "→ Upsert ISM policy 'logs-hire-adda-lifecycle'"
-              curl -sf -X PUT "$OS/_plugins/_ism/policies/logs-hire-adda-lifecycle" \
+              echo "→ Upsert ISM policy '$POLICY' (idempotent)"
+              # Read current seq_no + primary_term if the policy already
+              # exists; OpenSearch requires those on PUT for updates.
+              EXISTING=$(curl -s -w '\n%{http_code}' "$OS/_plugins/_ism/policies/$POLICY")
+              CODE=$(echo "$EXISTING" | tail -n1)
+              BODY=$(echo "$EXISTING" | sed '$d')
+
+              if [ "$CODE" = "200" ]; then
+                SEQ=$(echo "$BODY" | grep -o '"_seq_no":[0-9]*' | head -1 | cut -d: -f2)
+                TERM=$(echo "$BODY" | grep -o '"_primary_term":[0-9]*' | head -1 | cut -d: -f2)
+                URL="$OS/_plugins/_ism/policies/$POLICY?if_seq_no=$SEQ&if_primary_term=$TERM"
+                echo "  policy exists (seq=$SEQ term=$TERM) — updating"
+              else
+                URL="$OS/_plugins/_ism/policies/$POLICY"
+                echo "  policy not present — creating"
+              fi
+
+              curl -sf -X PUT "$URL" \
                 -H 'Content-Type: application/json' \
-                -d @/policy/policy.json
-              echo
+                -d @/policy/policy.json >/dev/null
+              echo "  ✓ policy upserted"
 
               echo "→ Attach policy to existing logs-hire-adda-* indices"
               curl -sf -X POST "$OS/_plugins/_ism/add/logs-hire-adda-*" \
                 -H 'Content-Type: application/json' \
-                -d '{"policy_id":"logs-hire-adda-lifecycle"}' || true
-              echo
+                -d "{\"policy_id\":\"$POLICY\"}" >/dev/null || true
 
               echo "✓ ISM bootstrap complete"
       volumes:
