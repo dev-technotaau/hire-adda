@@ -7,7 +7,10 @@ metadata:
   name: hire-adda
   labels:
     app.kubernetes.io/part-of: hire-adda
-    pod-security.kubernetes.io/enforce: restricted
+    # `enforce: baseline` because nginx (binds 80/443) and roundcube need
+    # CHOWN/SETGID/SETUID + root, which `restricted` forbids. Audit/warn
+    # remain at restricted so we still get visibility into policy gaps.
+    pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
 ---
