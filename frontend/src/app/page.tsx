@@ -1,3 +1,4 @@
+// Trigger CI/CD rebuild — refresh ghcr-credentials after VPS reboot (token expired during downtime)
 import AuthHomeRedirect from '@/components/common/AuthHomeRedirect';
 import StatsSection from '@/components/common/StatsSection';
 import PublicLayout from '@/components/layout/PublicLayout';
