@@ -20,8 +20,12 @@ metadata:
   name: monitoring
   labels:
     app.kubernetes.io/part-of: hire-adda
-    pod-security.kubernetes.io/enforce: baseline
-    pod-security.kubernetes.io/audit: restricted
+    # `privileged` because node-exporter (DaemonSet) needs hostNetwork
+    # + hostPID + hostPath. audit/warn stay at baseline so deviations
+    # in non-system pods still surface in the audit log.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: baseline
 ---
 apiVersion: v1
 kind: Namespace
@@ -29,8 +33,11 @@ metadata:
   name: logging
   labels:
     app.kubernetes.io/part-of: hire-adda
-    pod-security.kubernetes.io/enforce: baseline
-    pod-security.kubernetes.io/audit: restricted
+    # `privileged` because fluent-bit (DaemonSet) tails
+    # /var/log/containers via hostPath — `baseline` forbids hostPath.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: baseline
 ---
 apiVersion: v1
 kind: Namespace

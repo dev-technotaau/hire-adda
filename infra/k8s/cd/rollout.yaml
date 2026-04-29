@@ -33,6 +33,19 @@ spec:
         tier: app
     spec:
       serviceAccountName: backend-sa
+      # Spread replicas across nodes when a multi-node cluster is
+      # available. On the current single-node cluster this is a no-op
+      # (`preferred`, not `required`) but makes future scale-out give
+      # us real DR — losing one node won't take down both replicas.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: backend
+                topologyKey: kubernetes.io/hostname
       securityContext:
         runAsUser: 1001
         runAsGroup: 1001

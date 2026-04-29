@@ -60,6 +60,14 @@ spec:
       ports:
         - port: 9200
           protocol: TCP
+    # From ISM policy bootstrap Job (one-shot, sets up index lifecycle)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: opensearch-ism-bootstrap
+      ports:
+        - port: 9200
+          protocol: TCP
   egress:
     # DNS
     - to: []

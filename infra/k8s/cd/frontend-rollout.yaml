@@ -27,6 +27,17 @@ spec:
         app: frontend
         tier: app
     spec:
+      # Spread replicas across nodes when a multi-node cluster is
+      # available (preferred, not required → no-op on single node).
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: frontend
+                topologyKey: kubernetes.io/hostname
       securityContext:
         runAsUser: 1001
         runAsGroup: 1001
