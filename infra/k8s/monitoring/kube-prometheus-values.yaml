@@ -155,6 +155,17 @@ grafana:
       folderAnnotation: grafana_folder
       provider:
         foldersFromFilesStructure: true
+    # Disable the chart-default Prometheus + Alertmanager datasource CM
+    # (`kube-prometheus-stack-grafana-datasource`). Otherwise its
+    # `datasource.yaml` collides with our `datasources.yaml` below — both
+    # claim Prometheus as `isDefault: true`, which Grafana 12 rejects:
+    #   "Only one datasource per organization can be marked as default"
+    # Our config below provides the same Prometheus entry plus Tempo/Loki
+    # so nothing is lost.
+    datasources:
+      defaultDatasourceEnabled: false
+      alertmanager:
+        enabled: false
   # Data sources (Prometheus + Tempo + Loki — matches Docker Compose)
   datasources:
     datasources.yaml:
