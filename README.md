@@ -509,23 +509,17 @@ npm run start
 
 ## 🤝 Contributing
 
-We love your input! We want to make contributing to this project as easy and transparent as possible, whether it's:
+Hire Adda is closed-source. The codebase is restricted to authorized team
+members (employees, contractors, approved collaborators) who already have
+access to the private repository — public pull requests and forks are not
+accepted.
 
-- Reporting a bug
-- Discussing the current state of the code
-- Submitting a fix
-- Proposing new features
+If you are on the team, see [CONTRIBUTING.md](CONTRIBUTING.md) for the full
+internal workflow: repo access, branch naming, PR review and approval
+gates, commit conventions, code standards, and confidentiality rules.
 
-### Pull Request Process
-
-1.  **Fork** the repo on GitHub.
-2.  **Clone** component to your machine.
-3.  **Create** a branch: `git checkout -b my-new-feature`.
-4.  **Make changes** and test.
-5.  **Push** to your fork: `git push origin my-new-feature`.
-6.  **Submit** a Pull Request.
-
-**Note**: Please ensure your code passes `npm run lint` and tests before submitting.
+All contributors are expected to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 
