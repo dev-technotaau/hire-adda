@@ -244,6 +244,14 @@ app.get('/api/config/security', (_req: Request, res: Response) => {
   });
 });
 
+// Internal cluster-only routes — mounted BEFORE doubleCsrfProtection because
+// AlertManager (and other in-cluster callers) can't carry a CSRF token. The
+// /api/v1/internal/* prefix is locked down at the NetworkPolicy layer (only
+// pods in `monitoring` / `hire-adda` namespaces can reach backend:5000), so
+// CSRF on top would be both impossible and redundant.
+import alertmanagerRoutesEarly from './routes/alertmanager.routes';
+apiV1Router.use('/internal/alertmanager', alertmanagerRoutesEarly);
+
 // Protect all state-changing API routes
 // Note: This applies to POST, PUT, DELETE, PATCH requests
 apiV1Router.use(doubleCsrfProtection);
@@ -302,7 +310,7 @@ import analyticsRoutes from './routes/analytics.routes';
 import contactRoutes from './routes/contact.routes';
 import publicRoutes from './routes/public.routes';
 import ticketRoutes from './routes/ticket.routes';
-import alertmanagerRoutes from './routes/alertmanager.routes';
+// alertmanagerRoutes is mounted earlier (before CSRF middleware) — see above.
 
 apiV1Router.use('/auth', authRoutes);
 apiV1Router.use('/candidates', candidateRoutes);
@@ -328,7 +336,7 @@ apiV1Router.use('/analytics', analyticsRoutes);
 apiV1Router.use('/contact', contactRoutes);
 apiV1Router.use('/public', publicRoutes);
 apiV1Router.use('/tickets', ticketRoutes);
-apiV1Router.use('/internal/alertmanager', alertmanagerRoutes);
+// /internal/alertmanager is mounted earlier (above doubleCsrfProtection)
 
 // API versioning headers
 apiV1Router.use((_req, res, next) => {
