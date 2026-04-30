@@ -52,3 +52,17 @@ metadata:
   name: velero
   labels:
     app.kubernetes.io/part-of: hire-adda
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mail-tls
+  labels:
+    app.kubernetes.io/part-of: hire-adda
+    # `privileged` because the cert-sync CronJob mounts
+    # /etc/letsencrypt/live/mail.hireadda.in via hostPath so
+    # docker-mailserver on the host picks up renewals — baseline
+    # forbids hostPath. No other workloads run here.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: baseline

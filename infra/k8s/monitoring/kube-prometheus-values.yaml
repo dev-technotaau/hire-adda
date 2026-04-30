@@ -46,6 +46,15 @@ prometheus:
 # ── AlertManager ──
 alertmanager:
   alertmanagerSpec:
+    # Mount these Secrets (already in cluster via SealedSecrets) at
+    # /etc/alertmanager/secrets/<name>/<key> so the receivers below
+    # (slack_configs / email_configs) can read api_url_file +
+    # auth_password_file. Without this list the files don't exist
+    # in the pod and Alertmanager errors with "no such file or
+    # directory" on every notify.
+    secrets:
+      - alertmanager-slack
+      - alertmanager-smtp
     resources:
       requests:
         memory: '32Mi'
