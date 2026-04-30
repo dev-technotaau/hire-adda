@@ -68,6 +68,7 @@ ufw_rules:
   - { port: 465, proto: tcp, rule: allow, comment: 'SMTPS' }
   - { port: 587, proto: tcp, rule: allow, comment: 'SMTP STARTTLS' }
   - { port: 993, proto: tcp, rule: allow, comment: 'IMAPS' }
+  - { port: 2525, proto: tcp, rule: allow, comment: 'SMTPS alt (for hosts blocking 465)' }
 
 # K3s API port — restricted to admin IPs (handled separately in playbook)
 
