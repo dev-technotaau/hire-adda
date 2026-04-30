@@ -14,8 +14,7 @@ If you are not on the team and arrived here by mistake, please see the
 
 Repository access is granted by the tech lead. New team members should:
 
-1. Send your GitHub username to the tech lead (Slack `#dev-internal` or
-   `support@hireadda.in`).
+1. Send your GitHub username to the tech lead at `support@hireadda.in`.
 2. Accept the GitHub invitation to the `dev-technotaau/hire-adda` org.
 3. Generate an SSH key and add it to your GitHub account.
 
@@ -145,8 +144,8 @@ immediately — do not file it as a public issue.
 
 Internal bug reports and feature requests go in our project tracker (Linear
 / GitHub Issues, ask the tech lead for the link), not in public channels.
-Customer-facing bugs found in production should be filed with the
-on-call engineer first via Slack `#oncall`.
+Customer-facing bugs found in production should be reported to the on-call
+engineer first via the team's incident-response channel.
 
 ---
 

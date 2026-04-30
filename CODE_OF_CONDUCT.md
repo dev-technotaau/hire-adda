@@ -4,8 +4,9 @@ This document defines the professional conduct expected of everyone with
 access to the Hire Adda codebase, infrastructure, and internal communication
 channels — employees, contractors, and authorized collaborators.
 
-It complements (and is subordinate to) the company's HR policies and any
-employment, contractor, or NDA agreements you have signed with Hire Adda.
+It complements (and is subordinate to) the company's internal policies
+and any employment, contractor, or NDA agreements you have signed with
+Hire Adda.
 
 ---
 
@@ -15,8 +16,8 @@ This Code applies whenever you are acting in connection with Hire Adda:
 
 - Contributing to the codebase or infrastructure (commits, PRs, code
   review, deployments, on-call work).
-- Internal communication — Slack, email, video calls, in-person meetings,
-  ticket systems, design tools, dashboards.
+- Internal communication — team chat, email, video calls, in-person
+  meetings, ticket systems, design tools, dashboards.
 - Representing the company externally — conferences, customer support,
   social media when identified as a Hire Adda team member.
 
@@ -36,8 +37,8 @@ It applies regardless of role, seniority, or location.
 - **Own your mistakes.** Production incidents and bad merges happen. Be
   honest about what went wrong, fix it, and write the postmortem. Blame
   the system, not the person.
-- **Respect time and focus.** Default to async (PR comments, issues, Slack
-  threads). Reserve real-time interrupts for incidents.
+- **Respect time and focus.** Default to async (PR comments, issues,
+  threaded chat). Reserve real-time interrupts for incidents.
 - **Protect customer data and credentials** as if they were your own. See
   the Confidentiality section in [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -68,12 +69,11 @@ of repository access and termination of engagement:
 ## Reporting
 
 If you experience or witness behavior that violates this Code, report it
-through any of these channels — pick whichever you are most comfortable
+through one of these channels — pick whichever you are most comfortable
 with:
 
-1. **Tech Lead** — direct message on Slack or email.
-2. **HR / People Ops** — `hr@hireadda.in`.
-3. **Founder / leadership** — `legal@hireadda.in` for serious issues
+1. **Tech Lead** — direct message via email.
+2. **Founder / leadership** — `legal@hireadda.in` for serious issues
    involving leadership, financial misconduct, or legal exposure.
 
 Reports are treated confidentially. Reasonable steps will be taken to
@@ -88,8 +88,9 @@ separate incident-response track.
 
 ## Enforcement
 
-The tech lead and HR are jointly responsible for receiving reports,
-investigating, and deciding on outcomes. Possible outcomes include:
+The tech lead and leadership are jointly responsible for receiving
+reports, investigating, and deciding on outcomes. Possible outcomes
+include:
 
 - Informal resolution and coaching.
 - Written warning.
@@ -107,4 +108,4 @@ Decisions take into account severity, prior history, intent, and impact.
 By accessing the Hire Adda repository or infrastructure, you acknowledge
 that you have read and agree to follow this Code of Conduct.
 
-For questions about this document, contact `hr@hireadda.in`.
+For questions about this document, contact `legal@hireadda.in`.
