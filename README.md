@@ -2,7 +2,7 @@
 
 > **Bridging the gap between manual talent and top employers.**
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-16.1-black)
 ![React](https://img.shields.io/badge/React-19.2-cyan)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
@@ -531,18 +531,15 @@ We love your input! We want to make contributing to this project as easy and tra
 
 ## 📄 License
 
-This project is licensed under the **MIT License**.
+**Proprietary — All Rights Reserved.**
 
-```text
-MIT License
+Copyright (c) 2026 Hire Adda. This software and its source code are the
+proprietary and confidential property of Hire Adda. No license is granted
+to copy, modify, distribute, sublicense, reverse-engineer, or otherwise
+use the software except as expressly authorized in writing by Hire Adda.
 
-Copyright (c) 2026 Hire Adda
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software...
-```
-
-See the [LICENSE](LICENSE) file for the full text.
+See the [LICENSE](LICENSE) file for the full terms. For licensing
+inquiries, contact `legal@hireadda.in`.
 
 ---
 

@@ -27,7 +27,7 @@
     "typescript"
   ],
   "author": "Hire Adda Team",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "lint-staged": {
     "backend/src/**/*.{ts,js}": [
       "node --max-old-space-size=8192 backend/node_modules/eslint/bin/eslint.js --fix --config backend/eslint.config.mjs",

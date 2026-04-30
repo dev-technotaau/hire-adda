@@ -2,6 +2,7 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Hire Adda Backend API",
+  "private": true,
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon",
@@ -31,7 +32,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "type": "commonjs",
   "overrides": {
     "bullmq": {
