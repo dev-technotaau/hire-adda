@@ -165,6 +165,7 @@ jobs:
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.VPS_SSH_KEY }}
+          name: id_ed25519
           known_hosts: unnecessary
           if_key_exists: replace
 
@@ -193,7 +194,7 @@ jobs:
             --exclude='mail/.gitignore' \
             --exclude='mail/roundcube-custom.php' \
             --exclude='mail/webmail-nginx.conf' \
-            -e "ssh -o StrictHostKeyChecking=no" \
+            -e "ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no" \
             ./infra/ \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}/infra/
 
@@ -202,7 +203,8 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             "echo '${GHCR_TOKEN}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin"
 
       - name: Run deploy
@@ -242,7 +244,8 @@ jobs:
               ;;
           esac
 
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             "cd ${{ secrets.VPS_DEPLOY_PATH }}/infra/docker && \
              bash ${{ secrets.VPS_DEPLOY_PATH }}/infra/scripts/deploy.sh ${DEPLOY_ARGS}"
 

@@ -28,6 +28,9 @@ cookies.txt
 *.pem
 !backend/certs/aiven-ca.pem
 
+# Migration artifacts (pg_dump, redis RDB, mail volumes, sealed-secrets master keys)
+migration-artifacts/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

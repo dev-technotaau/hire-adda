@@ -165,6 +165,7 @@ jobs:
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.K8S_SSH_KEY }}
+          name: id_ed25519
           known_hosts: unnecessary
           if_key_exists: replace
 
@@ -182,20 +183,26 @@ jobs:
           sudo apt-get install -y rsync
 
       - name: Sync infra configs to K8s node
+        # `IdentitiesOnly=yes` + explicit `-i` is required because the
+        # remote sshd is hardened to MaxAuthTries=3 (Ansible 01-harden).
+        # Without it, the runner's ssh client tries every identity in
+        # ~/.ssh/ before our id_ed25519, exceeds the limit, and the
+        # server disconnects with "Too many authentication failures".
         if: steps.plan.outputs.action == 'deploy'
         run: |
           rsync -avz --delete \
             --exclude='.env' \
             --exclude='*.example' \
             --exclude='docker/' \
-            -e "ssh -o StrictHostKeyChecking=no" \
+            -e "ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no" \
             ./infra/ \
             ${{ secrets.K8S_USER }}@${{ secrets.K8S_HOST }}:${{ secrets.K8S_DEPLOY_PATH }}/infra/
 
       - name: Ensure GHCR pull secret is current
         if: steps.plan.outputs.action == 'deploy'
         run: |
-          ssh ${{ secrets.K8S_USER }}@${{ secrets.K8S_HOST }} bash -s << REMOTE_SCRIPT
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no \
+            ${{ secrets.K8S_USER }}@${{ secrets.K8S_HOST }} bash -s << REMOTE_SCRIPT
             # Recreate ghcr-credentials to ensure the PAT is current
             sudo k3s kubectl delete secret ghcr-credentials -n hire-adda --ignore-not-found
             sudo k3s kubectl create secret docker-registry ghcr-credentials \
@@ -243,7 +250,8 @@ jobs:
               ;;
           esac
 
-          ssh ${{ secrets.K8S_USER }}@${{ secrets.K8S_HOST }} \
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no \
+            ${{ secrets.K8S_USER }}@${{ secrets.K8S_HOST }} \
             "bash ${{ secrets.K8S_DEPLOY_PATH }}/infra/scripts/deploy-k8s.sh ${DEPLOY_ARGS}"
 
       - name: Verify deployment externally

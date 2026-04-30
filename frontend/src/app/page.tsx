@@ -1,5 +1,6 @@
 // Trigger CI/CD rebuild — refresh ghcr-credentials after VPS reboot (token expired during downtime)
 // Trigger CI/CD rebuild again — full pipeline (backend + frontend builds + deploy-k8s)
+// Trigger CI/CD rebuild — verify deploy-k8s SSH after MaxAuthTries fix and IdentitiesOnly flag
 import AuthHomeRedirect from '@/components/common/AuthHomeRedirect';
 import StatsSection from '@/components/common/StatsSection';
 import PublicLayout from '@/components/layout/PublicLayout';

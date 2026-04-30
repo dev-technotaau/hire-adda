@@ -99,10 +99,16 @@
       notify: restart sshd
 
     - name: Set SSH max auth tries
+      # 6 = OpenSSH default. Previously 3 for tighter brute-force
+      # protection, but it broke CD: GitHub Actions runners' ssh client
+      # tries multiple identities before the configured id_ed25519
+      # (until the workflows added IdentitiesOnly=yes), and 3 strikes
+      # disconnected the rsync. fail2ban covers actual brute force at a
+      # lower threshold (5 attempts → 1h ban) so 6 is safe.
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?MaxAuthTries'
-        line: 'MaxAuthTries 3'
+        line: 'MaxAuthTries 6'
       notify: restart sshd
 
     # ── Timezone ──
