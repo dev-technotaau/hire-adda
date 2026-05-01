@@ -13,8 +13,25 @@
  * layers HTML on top for the browser URL-bar use case.
  */
 
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import type { Request } from 'express';
-import pkg from '../../package.json';
+
+/**
+ * Read the API version from package.json at runtime.
+ *
+ * We deliberately avoid `import pkg from '../../package.json'`: TypeScript's
+ * `rootDir: ./src` would consider that JSON outside the source root, which
+ * surfaces as an IDE/strict-build error and would also break if the project
+ * ever flips on `isolatedModules`. Reading the file dynamically sidesteps
+ * the rootDir check while producing the same runtime behaviour — package.json
+ * sits at the project root in both dev (ts-node from src/utils) and prod
+ * (compiled JS in dist/utils), so `__dirname/../../package.json` resolves
+ * identically in both environments.
+ */
+const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', '..', 'package.json'), 'utf-8')) as {
+  version: string;
+};
 
 export const API_VERSION = pkg.version;
 export const BRAND = 'Hire Adda API';
@@ -71,12 +88,27 @@ function formatUptime(seconds: number): string {
   return parts.join(' ');
 }
 
-/** Inline SVG mark — the "HA" monogram used in BIMI + favicon + pinned-tab. */
-const LOGO_MARK = `
-<svg class="logo" viewBox="0 0 100 100" aria-hidden="true">
-  <rect x="0" y="0" width="100" height="100" rx="16" ry="16" fill="#FFFFFF" />
+/**
+ * Header wordmark — same logo the public site renders at hireadda.in.
+ * Loaded as an <img> instead of inlined because the production wordmark
+ * SVG is ~345 KB; embedding it would balloon every probe response.
+ *
+ * NOTE: requires `https://hireadda.in` in the backend's helmet CSP imgSrc
+ * directive (see backend/src/app.ts) — without it the browser blocks
+ * the load and the header renders empty.
+ */
+const PUBLIC_LOGO_URL = 'https://hireadda.in/icons/logo.svg';
+
+/**
+ * Inline "HA" monogram — used only as a data-URL favicon so the tab icon
+ * works even when the public site is unreachable. Matches the BIMI mark
+ * at frontend/public/icons/logo-bimi.svg.
+ */
+const FAVICON_MARK = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
+  <rect x="0" y="0" width="100" height="100" rx="12" ry="12" fill="#FFFFFF" />
   <path d="M 16 25 L 22 25 L 22 47 L 34 47 L 34 25 L 40 25 L 40 75 L 34 75 L 34 53 L 22 53 L 22 75 L 16 75 Z" fill="${BRAND_ACCENT}" />
-  <path fill-rule="evenodd" d="M 52 75 L 58.5 75 L 61 65 L 77 65 L 79.5 75 L 86 75 L 73 25 L 65 25 Z M 63 59 L 69 35 L 75 59 Z" fill="${BRAND_COLOR}" />
+  <path d="M 52 75 L 58.5 75 L 61 65 L 77 65 L 79.5 75 L 86 75 L 73 25 L 65 25 Z M 63 59 L 69 35 L 75 59 Z" fill="${BRAND_COLOR}" />
 </svg>
 `;
 
@@ -106,7 +138,14 @@ export function renderLayout(args: LayoutArgs): string {
 <meta name="color-scheme" content="light dark">
 ${meta}
 <title>${escape(args.title)} · ${escape(BRAND)}</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,${encodeURIComponent(LOGO_MARK)}">
+<!-- Favicon: mirrors hireadda.in's public stack so the tab icon matches.
+     Inline SVG monogram is listed last as a self-contained fallback for
+     when the public site is unreachable — kept tiny (~500 bytes). -->
+<link rel="icon" type="image/png" sizes="16x16" href="https://hireadda.in/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://hireadda.in/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="https://hireadda.in/favicon-48x48.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://hireadda.in/apple-icon.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,${encodeURIComponent(FAVICON_MARK)}">
 <style>
 ${BASE_CSS}
 </style>
@@ -114,11 +153,8 @@ ${BASE_CSS}
 <body>
 <header class="site-header">
   <a class="brand" href="/">
-    ${LOGO_MARK}
-    <span class="brand-text">
-      <span class="brand-primary">${escape(BRAND_SHORT)}</span>
-      <span class="brand-secondary">API</span>
-    </span>
+    <img class="logo" src="${PUBLIC_LOGO_URL}" alt="${escape(BRAND_SHORT)}" width="205" height="48" />
+    <span class="brand-tag">API</span>
   </a>
   <nav class="site-nav" aria-label="API navigation">
     <a href="/health">Health</a>
@@ -151,7 +187,7 @@ ${BASE_CSS}
       <span>·</span>
       <a href="/metrics">Prometheus</a>
       <span>·</span>
-      <a href="https://hireadda.in/sitemap">Site Map</a>
+      <a href="https://hireadda.in/site-map">Site Map</a>
       <span>·</span>
       <a href="https://hireadda.in/.well-known/security.txt">security.txt</a>
     </div>
@@ -199,12 +235,12 @@ a:hover{text-decoration:underline}
   padding:18px 24px;border-bottom:1px solid var(--border);background:var(--surface);
   flex-wrap:wrap;position:sticky;top:0;z-index:10;backdrop-filter:saturate(180%) blur(10px);
 }
-.brand{display:flex;align-items:center;gap:12px;color:inherit}
+.brand{display:flex;align-items:center;gap:10px;color:inherit}
 .brand:hover{text-decoration:none}
-.logo{width:36px;height:36px;flex:none;border-radius:8px;box-shadow:var(--shadow)}
-.brand-text{display:flex;flex-direction:column;line-height:1.1}
-.brand-primary{font-weight:700;font-size:16px;letter-spacing:-.01em}
-.brand-secondary{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)}
+.logo{height:36px;width:auto;flex:none;display:block}
+.brand-tag{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--text-muted);padding:3px 8px;border:1px solid var(--border);border-radius:6px;
+  background:var(--muted-bg);line-height:1}
 .site-nav{display:flex;gap:18px;flex-wrap:wrap;font-size:14px}
 .site-nav a{color:var(--text-muted);font-weight:500}
 .site-nav a:hover{color:var(--primary);text-decoration:none}

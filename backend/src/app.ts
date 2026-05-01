@@ -55,7 +55,13 @@ app.use(
         scriptSrc: ["'self'", "'unsafe-eval'", 'https://challenges.cloudflare.com'], // Allow Cloudflare Turnstile
         frameSrc: ["'self'", 'https://challenges.cloudflare.com'], // Allow Turnstile iframe
         frameAncestors: ["'none'"], // Modern CSP3 replacement for X-Frame-Options: DENY
-        imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://assets.hireadda.in'], // Allow Cloudinary & R2
+        imgSrc: [
+          "'self'",
+          'data:',
+          'https://res.cloudinary.com',
+          'https://assets.hireadda.in', // R2 custom domain
+          'https://hireadda.in', // wordmark logo loaded by /api/* HTML pretty-pages
+        ],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
         reportUri: ['/api/csp-report'],

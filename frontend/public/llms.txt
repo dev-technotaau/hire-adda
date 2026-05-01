@@ -36,7 +36,7 @@
 - [About](https://hireadda.in/about)          — Mission, team, values
 - [Contact](https://hireadda.in/contact)      — Support + business enquiries
 - [Help Center](https://hireadda.in/help)     — FAQ, how-to articles, user guidance
-- [Site Map](https://hireadda.in/sitemap)     — Complete HTML navigation index
+- [Site Map](https://hireadda.in/site-map)    — Complete HTML navigation index
 - [Privacy](https://hireadda.in/privacy)      — Data-handling policy
 - [Terms](https://hireadda.in/terms)          — Terms of service
 - [Accessibility](https://hireadda.in/accessibility) — WCAG 2.1 AA commitment
