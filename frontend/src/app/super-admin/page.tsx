@@ -367,7 +367,7 @@ export default function SuperAdminDashboard() {
       color: 'text-accent bg-accent-light',
       sparkData: dauItems.map((d) => ({ v: d.candidates })),
       sparkKey: 'v',
-      sparkColor: '#0284C7',
+      sparkColor: '#0EA5E9',
     },
     {
       label: 'Total Employers',
@@ -376,7 +376,7 @@ export default function SuperAdminDashboard() {
       color: 'text-secondary bg-secondary-light',
       sparkData: dauItems.map((d) => ({ v: d.employers })),
       sparkKey: 'v',
-      sparkColor: '#B05E00',
+      sparkColor: '#F5880A',
     },
     {
       label: 'Total Jobs',
@@ -403,7 +403,7 @@ export default function SuperAdminDashboard() {
       color: 'text-accent bg-accent-light',
       sparkData: appStats?.dailyTrend?.map((d) => ({ v: d.count })),
       sparkKey: 'v',
-      sparkColor: '#0284C7',
+      sparkColor: '#0EA5E9',
       delta: appDelta,
     },
     {
@@ -431,7 +431,7 @@ export default function SuperAdminDashboard() {
       color: 'text-secondary bg-secondary-light',
       sparkData: stats?.registrationTrends?.map((d) => ({ v: d.count })),
       sparkKey: 'v',
-      sparkColor: '#B05E00',
+      sparkColor: '#F5880A',
     },
     {
       label: 'Pending Verifications',

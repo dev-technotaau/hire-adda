@@ -3,18 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "license": "UNLICENSED",
-  "browserslist": [
-    "chrome >= 91",
-    "edge >= 91",
-    "firefox >= 90",
-    "safari >= 15",
-    "ios_saf >= 15",
-    "android >= 91",
-    "samsung >= 15",
-    "opera >= 76",
-    "not dead",
-    "not op_mini all"
-  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -91,7 +79,6 @@
     "@types/react-dropzone": "^4.2.2",
     "autoprefixer": "^10.4.24",
     "babel-plugin-react-compiler": "^1.0.0",
-    "critters": "^0.0.23",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "eslint-config-prettier": "^10.1.8",

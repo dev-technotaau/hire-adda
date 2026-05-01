@@ -36,36 +36,27 @@ html.lenis body {
   --color-primary-700: #184D96;
   --color-primary-800: #133D7A;
 
-  /* Colors — Secondary (Orange)
-     `--color-secondary` darkened from #F5880A to #B05E00 to clear WCAG AA
-     4.5:1 contrast on white (was 2.49:1 — Lighthouse a11y blocker). The
-     visual hue is preserved (still recognisably brand orange); only the
-     luminance drops. The lighter shades (50/100/light) and the dark shades
-     (dark/700/800) are unchanged because they aren't used as text-on-white
-     foregrounds. */
-  --color-secondary: #B05E00;
-  --color-secondary-hover: #8F4C00;
+  /* Colors — Secondary (Orange) */
+  --color-secondary: #F5880A;
+  --color-secondary-hover: #D67708;
   --color-secondary-light: #FEF3E1;
-  --color-secondary-dark: #6E3A00;
+  --color-secondary-dark: #A85806;
   --color-secondary-50: #FFF8ED;
   --color-secondary-100: #FEF0D6;
-  --color-secondary-600: #B05E00;
-  --color-secondary-700: #8F4C00;
-  --color-secondary-800: #6E3A00;
+  --color-secondary-600: #F5880A;
+  --color-secondary-700: #D67708;
+  --color-secondary-800: #A85806;
 
-  /* Colors — Accent (Sky Blue)
-     `--color-accent` shifted from #0EA5E9 (the old sky-500, contrast 2.77:1
-     on white) to #0284C7 (sky-600, contrast 4.6:1). Same hue family, one
-     shade darker. Lighter/darker variants kept. */
-  --color-accent: #0284C7;
-  --color-accent-hover: #0369A1;
+  /* Colors — Accent (Sky Blue) */
+  --color-accent: #0EA5E9;
+  --color-accent-hover: #0284C7;
   --color-accent-light: #E0F2FE;
-  --color-accent-dark: #075985;
+  --color-accent-dark: #0369A1;
   --color-accent-50: #F0F9FF;
   --color-accent-100: #E0F2FE;
-  --color-accent-600: #0284C7;
-  --color-accent-700: #0369A1;
-  --color-accent-800: #075985;
+  --color-accent-600: #0EA5E9;
+  --color-accent-700: #0284C7;
+  --color-accent-800: #0369A1;
 
   /* Colors — Semantic */
   --color-success: #22C55E;
@@ -124,28 +115,27 @@ html.lenis body {
   --primary-700: #184D96;
   --primary-800: #133D7A;
 
-  /* Secondary (Orange) — values mirror the @theme block above; see comment
-     there for rationale on the WCAG-driven darkening from #F5880A → #B05E00. */
-  --secondary: #B05E00;
-  --secondary-hover: #8F4C00;
+  /* Secondary (Orange) */
+  --secondary: #F5880A;
+  --secondary-hover: #D67708;
   --secondary-light: #FEF3E1;
-  --secondary-dark: #6E3A00;
+  --secondary-dark: #A85806;
   --secondary-50: #FFF8ED;
   --secondary-100: #FEF0D6;
-  --secondary-600: #B05E00;
-  --secondary-700: #8F4C00;
-  --secondary-800: #6E3A00;
+  --secondary-600: #F5880A;
+  --secondary-700: #D67708;
+  --secondary-800: #A85806;
 
-  /* Accent — values mirror the @theme block above (sky #0EA5E9 → #0284C7). */
-  --accent: #0284C7;
-  --accent-hover: #0369A1;
+  /* Accent */
+  --accent: #0EA5E9;
+  --accent-hover: #0284C7;
   --accent-light: #E0F2FE;
-  --accent-dark: #075985;
+  --accent-dark: #0369A1;
   --accent-50: #F0F9FF;
   --accent-100: #E0F2FE;
-  --accent-600: #0284C7;
-  --accent-700: #0369A1;
-  --accent-800: #075985;
+  --accent-600: #0EA5E9;
+  --accent-700: #0284C7;
+  --accent-800: #0369A1;
 
   /* Semantic */
   --success: #22C55E;
@@ -165,13 +155,10 @@ html.lenis body {
   --bg-secondary: #F1F5F9;
   --bg-tertiary: #E2E8F0;
 
-  /* Text
-     `--text-muted` darkened from #94A3B8 (slate-400, 2.56:1 on white — fails
-     WCAG AA) to #64748B (slate-500, 4.6:1 — passes). Used widely as a
-     secondary-info colour; previous value was a Lighthouse a11y blocker. */
+  /* Text */
   --text: #0F172A;
   --text-secondary: #475569;
-  --text-muted: #64748B;
+  --text-muted: #94A3B8;
   --text-inverse: #FFFFFF;
 
   /* Borders */

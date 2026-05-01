@@ -2,8 +2,12 @@
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';
-import DeferredUI from '@/components/common/DeferredUI';
+import BackToTop from '@/components/common/BackToTop';
 import SmoothScroll from '@/components/common/SmoothScroll';
+import CookieConsent from '@/components/common/CookieConsent';
+import KeyboardShortcuts from '@/components/common/KeyboardShortcuts';
+import OfflineBanner from '@/components/common/OfflineBanner';
+import TopLoadingBar from '@/components/common/TopLoadingBar';
 import WebVitals from '@/components/common/WebVitals';
 import JsonLd from '@/components/seo/JsonLd';
 import Providers from '@/contexts/providers';
@@ -349,6 +353,8 @@ export default async function RootLayout({
         >
           Skip to main content
         </a>
+        <TopLoadingBar />
+        <OfflineBanner />
         <Providers>
           <SmoothScroll>
             <main id="main-content" className="flex flex-1 flex-col">
@@ -356,16 +362,12 @@ export default async function RootLayout({
             </main>
           </SmoothScroll>
         </Providers>
-        {/* Web Vitals stays eager — it must register listeners before LCP/FCP
-            are reported, otherwise the very metrics we're optimising would
-            be lost. Analytics scripts stay eager too because they're already
-            gated by cookie consent and use `next/script strategy="afterInteractive"`. */}
         <WebVitals />
         <GoogleAnalytics nonce={nonce} />
         <FacebookPixel nonce={nonce} />
-        {/* All other below-the-fold / interaction-triggered UI is lazy-loaded
-            as one client chunk after hydration. See DeferredUI for the list. */}
-        <DeferredUI />
+        <BackToTop />
+        <KeyboardShortcuts />
+        <CookieConsent />
       </body>
     </html>
   );

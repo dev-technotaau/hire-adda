@@ -7,18 +7,13 @@ const BRAND = {
   name: 'Hire Adda',
   primary: '#2563EB',
   primaryDark: '#1D4ED8',
-  // Brand orange darkened from #F5880A → #B05E00 (and accent sky from
-  // #0EA5E9 → #0284C7) to match the public-site WCAG-AA tokens. Matters
-  // here because emails frequently render the orange as text on white
-  // (status pills, header pre-text), where the old values were 2.49:1
-  // and 2.77:1 respectively. New values are 5.6:1 and 4.6:1.
-  secondary: '#B05E00',
-  secondaryDark: '#8F4C00',
-  accent: '#0284C7',
-  accentDark: '#0369A1',
+  secondary: '#F5880A',
+  secondaryDark: '#D97706',
+  accent: '#0EA5E9',
+  accentDark: '#0284C7',
   success: '#059669',
   successLight: '#ecfdf5',
-  warning: '#B05E00',
+  warning: '#F5880A',
   warningLight: '#fff7ed',
   error: '#DC2626',
   errorLight: '#fef2f2',

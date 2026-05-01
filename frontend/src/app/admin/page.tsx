@@ -244,7 +244,7 @@ export default function AdminDashboard() {
       icon: Users,
       color: 'text-accent bg-accent-light',
       sparkData: dauItems.map((d) => ({ v: d.candidates })),
-      sparkColor: '#0284C7',
+      sparkColor: '#0EA5E9',
     },
     {
       label: 'Total Employers',
@@ -252,7 +252,7 @@ export default function AdminDashboard() {
       icon: Briefcase,
       color: 'text-secondary bg-secondary-light',
       sparkData: dauItems.map((d) => ({ v: d.employers })),
-      sparkColor: '#B05E00',
+      sparkColor: '#F5880A',
     },
     {
       label: 'Active Jobs',
@@ -268,7 +268,7 @@ export default function AdminDashboard() {
       icon: FileText,
       color: 'text-accent bg-accent-light',
       sparkData: appStats?.dailyTrend?.map((d) => ({ v: d.count })),
-      sparkColor: '#0284C7',
+      sparkColor: '#0EA5E9',
     },
     {
       label: 'New Today',
@@ -295,7 +295,7 @@ export default function AdminDashboard() {
       icon: TrendingUp,
       color: 'text-secondary bg-secondary-light',
       sparkData: stats?.registrationTrends?.map((d) => ({ v: d.count })),
-      sparkColor: '#B05E00',
+      sparkColor: '#F5880A',
     },
     {
       label: 'Pending Verifications',

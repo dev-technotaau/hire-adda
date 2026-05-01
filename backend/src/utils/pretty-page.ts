@@ -37,12 +37,7 @@ export const API_VERSION = pkg.version;
 export const BRAND = 'Hire Adda API';
 export const BRAND_SHORT = 'Hire Adda';
 export const BRAND_COLOR = '#1E5CAF';
-// Darkened from the original brand orange #F5880A to match the WCAG-AA
-// `--color-secondary` value used across the public site (#F5880A on white
-// scored 2.49:1, fails AA). #B05E00 is in the same hue family but reaches
-// 5.6:1, so the API HTML pages stay visually consistent with hireadda.in
-// while clearing contrast on any orange-on-white surface.
-export const BRAND_ACCENT = '#B05E00';
+export const BRAND_ACCENT = '#F5880A';
 
 /**
  * True when the caller is a browser (explicit `text/html` in Accept).

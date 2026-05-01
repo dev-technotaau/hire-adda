@@ -49,7 +49,7 @@ export const SEO_CONFIG = {
   // ── Colours ─────────────────────────────────────────────────────────
   themeColor: '#1E5CAF', // light theme
   themeColorDark: '#111A2E', // dark theme — matches pretty-page surface
-  accentColor: '#B05E00',
+  accentColor: '#F5880A',
   backgroundColor: '#FFFFFF',
 
   // ── Social handles ──────────────────────────────────────────────────
