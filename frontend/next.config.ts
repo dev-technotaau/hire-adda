@@ -15,6 +15,40 @@ const nextConfig: NextConfig = {
   },
   compress: true,
   poweredByHeader: false,
+  /**
+   * Tree-shake barrel imports from packages that re-export everything from
+   * a single index file. Without this, importing `{ Search } from 'lucide-react'`
+   * still pulls every icon's module into the client bundle. Lighthouse flags
+   * this as the primary contributor to the 270 KiB "Reduce unused JavaScript"
+   * audit on the home page (chunk 5626 alone is 196 KiB / 47% unused).
+   *
+   * Built-in to Next.js — internally rewrites `from 'lucide-react'` into
+   * direct paths like `from 'lucide-react/dist/esm/icons/search'` so only
+   * the icons that are actually used end up in the chunk graph. No source
+   * changes needed; existing `import { Foo, Bar } from 'lucide-react'` lines
+   * keep working unchanged.
+   *
+   * https://nextjs.org/docs/app/api-reference/config/next-config-js/optimizePackageImports
+   */
+  experimental: {
+    /**
+     * Tree-shake barrel imports — see comment block above. Eliminates the
+     * "Reduce unused JavaScript" cost for `lucide-react`'s ~270 icons.
+     */
+    optimizePackageImports: ['lucide-react'],
+    /**
+     * Inline above-the-fold critical CSS into the HTML and async-load the
+     * rest. Lighthouse "Render blocking requests" flagged the main
+     * stylesheet at 19.6 KiB taking 633 ms on mobile (LCP element is a
+     * text node, so it cannot paint until that CSS loads). Critters runs
+     * during `next build` to extract the rules actually used by the
+     * server-rendered HTML and inline them, dropping the blocking time
+     * dramatically.
+     *
+     * https://nextjs.org/docs/app/api-reference/config/next-config-js/optimizeCss
+     */
+    optimizeCss: true,
+  },
   async headers() {
     return [
       {
@@ -80,6 +114,47 @@ const nextConfig: NextConfig = {
             value: 'application/opensearchdescription+xml; charset=utf-8',
           },
         ],
+      },
+
+      /**
+       * ── Long-cache static assets ─────────────────────────────────────
+       * Lighthouse "Use efficient cache lifetimes" flagged
+       * /icons/logo.svg (167 KiB wasted) and /images/hero-illustration.svg
+       * because the default Next.js public-folder cache is only 4 hours.
+       * One year + immutable is the standard for content-addressable
+       * static assets — when these files change, rename the file (or add
+       * a `?v=…` query string in the importing component) and the URL
+       * gets a fresh response.
+       *
+       * Listed BEFORE volatile files (manifest.json, *.txt, sitemap.xml)
+       * so those keep their default short TTLs and updates ship to users.
+       *
+       * Service workers (firebase-messaging-sw.js) deliberately NOT in
+       * this list — they need quick updates so push registration changes
+       * land for users.
+       */
+      {
+        source: '/icons/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        source: '/images/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        // PWA manifest icons (icon-72x72.png … icon-512x512.png)
+        source: '/icon-:dim.png',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        // Browser favicons at common sizes (favicon-16x16.png, …-48x48.png)
+        source: '/favicon-:dim.png',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        // Single-file favicons + Apple touch icon (App Router auto-served)
+        source: '/:file(favicon.ico|apple-icon.png|icon0.svg|icon1.png|safari-pinned-tab.svg)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
     ];
   },

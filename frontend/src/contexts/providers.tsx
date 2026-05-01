@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { getQueryClient } from '@/lib/query-client';
@@ -11,13 +12,43 @@ import { useMaintenanceStore } from '@/store/maintenance.store';
 import { useSocket } from '@/hooks/use-socket';
 import { onAuthMessage } from '@/lib/auth-channel';
 import { pageView, fbPageView } from '@/lib/analytics';
-import { pushService } from '@/services/push.service';
 import { useFeatureFlags } from '@/hooks/use-feature-flags';
-import { usePresenceTracker } from '@/hooks/use-presence-tracker';
 import { QUERY_KEYS } from '@/constants/config';
-import { onFCMMessage, signOutFirebase } from '@/lib/firebase';
-import { showToast } from '@/components/ui/Toast';
-import MaintenancePage from '@/components/common/MaintenancePage';
+
+/**
+ * Lazy-loaded modules — kept out of the initial bundle.
+ *
+ * `MaintenancePage` pulls framer-motion (~80 KiB) and only renders when
+ * a feature flag or 503 fires; meanwhile `FirebaseSideEffects` pulls the
+ * Firebase SDK (~250 KiB across auth/messaging/database/firestore) and
+ * its work (presence tracking + FCM listener) is gated by an authenticated
+ * session anyway. Keeping them eager was the largest contributor to
+ * Lighthouse's "Reduce unused JavaScript" audit on the home page.
+ *
+ * `loading: () => null` is correct here — both render `null`/no-UI on the
+ * first frame of work, so there's no skeleton to show.
+ */
+const MaintenancePage = dynamic(() => import('@/components/common/MaintenancePage'), {
+  ssr: false,
+  loading: () => null,
+});
+const FirebaseSideEffects = dynamic(() => import('./firebase-side-effects'), {
+  ssr: false,
+  loading: () => null,
+});
+
+/**
+ * Lazy-import the Firebase signOut helper. Only the cross-tab logout path
+ * needs it, so importing it eagerly would defeat the dynamic split above.
+ */
+async function lazySignOutFirebase(): Promise<void> {
+  try {
+    const { signOutFirebase } = await import('@/lib/firebase');
+    await signOutFirebase();
+  } catch {
+    /* ignore — Firebase signOut is best-effort */
+  }
+}
 
 function FeatureFlagPrefetcher({ children }: { children: ReactNode }) {
   // Pre-fetch feature flags on app init (cached for 5 min by React Query)
@@ -138,7 +169,9 @@ function AuthSyncListener({ children }: { children: ReactNode }) {
   useEffect(() => {
     return onAuthMessage((msg) => {
       if (msg.type === 'logout' || msg.type === 'session_expired') {
-        signOutFirebase().catch(() => {});
+        // Lazy-import the Firebase signOut so this listener doesn't drag
+        // the SDK into the initial bundle just to handle cross-tab logout.
+        void lazySignOutFirebase();
         getQueryClient().clear();
         storeLogout();
       } else if (msg.type === 'login') {
@@ -156,11 +189,6 @@ function SocketInitializer({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function PresenceTracker({ children }: { children: ReactNode }) {
-  usePresenceTracker();
-  return <>{children}</>;
-}
-
 function AnalyticsTracker({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
@@ -172,55 +200,12 @@ function AnalyticsTracker({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function PushNotificationRegistrar({ children }: { children: ReactNode }) {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      pushService.requestPermissionAndSubscribe().catch(() => {
-        // Silent failure - push notifications are optional
-      });
-    }
-  }, [isAuthenticated]);
-
-  // Listen for foreground FCM messages and show toast
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const unsubscribe = onFCMMessage((payload) => {
-      showToast.info(payload.title || 'New Notification', {
-        description: payload.body,
-      });
-    });
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [isAuthenticated]);
-
-  // Send Firebase config to service worker for background messages
-  useEffect(() => {
-    if (typeof window === 'undefined' || !navigator.serviceWorker) return;
-
-    navigator.serviceWorker.ready
-      .then((registration) => {
-        registration.active?.postMessage({
-          type: 'FIREBASE_CONFIG',
-          config: {
-            apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-            authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-            storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-            messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-            appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
-          },
-        });
-      })
-      .catch(() => {});
-  }, []);
-
-  return <>{children}</>;
-}
+// `PresenceTracker` and `PushNotificationRegistrar` previously lived here
+// and ran their side effects via wrappers. They've been extracted to
+// `firebase-side-effects.tsx` and are now mounted as a single sibling
+// `<FirebaseSideEffects />` rendered alongside `children` in the tree
+// below. This lets `next/dynamic` keep the Firebase SDK out of the
+// initial bundle without changing what runs when.
 
 function ServiceWorkerRegistrar({ children }: { children: ReactNode }) {
   useEffect(() => {
@@ -243,9 +228,12 @@ export default function Providers({ children }: { children: ReactNode }) {
                 <MaintenanceGate>
                   <AnalyticsTracker>
                     <SocketInitializer>
-                      <PresenceTracker>
-                        <PushNotificationRegistrar>{children}</PushNotificationRegistrar>
-                      </PresenceTracker>
+                      {/* Firebase-using effects are mounted as a sibling
+                          (rather than a wrapper) so the Firebase SDK stays
+                          dynamically imported. Functionally equivalent to
+                          the previous wrapper chain. */}
+                      <FirebaseSideEffects />
+                      {children}
                     </SocketInitializer>
                   </AnalyticsTracker>
                 </MaintenanceGate>

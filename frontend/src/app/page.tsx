@@ -781,7 +781,10 @@ export default async function Home() {
                       <point.icon className="h-4 w-4 text-[var(--success)]" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-[var(--text)]">{point.title}</h4>
+                      {/* h3 (not h4) so the heading order under the h2
+                          "Your Data is Safe With Us" stays sequential —
+                          Lighthouse a11y "heading-order" audit. */}
+                      <h3 className="font-semibold text-[var(--text)]">{point.title}</h3>
                       <p className="text-sm text-[var(--text-secondary)]">{point.description}</p>
                     </div>
                   </li>
@@ -822,7 +825,7 @@ export default async function Home() {
               <Link
                 href="/contact"
                 title="Go to contact page"
-                className="text-primary hover:underline"
+                className="text-primary underline underline-offset-2"
               >
                 contact us
               </Link>

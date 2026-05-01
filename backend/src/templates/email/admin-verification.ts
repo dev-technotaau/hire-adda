@@ -21,7 +21,7 @@ export function verificationRequestReceivedEmailTemplate(
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
         .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .header { background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 100%); color: white; padding: 30px 20px; text-align: center; }
+        .header { background: linear-gradient(135deg, #2563EB 0%, #0284C7 100%); color: white; padding: 30px 20px; text-align: center; }
         .header h2 { margin: 0; font-size: 24px; font-weight: 600; }
         .header p { margin: 5px 0 0; font-size: 14px; opacity: 0.9; }
         .content { padding: 30px 20px; }
@@ -30,7 +30,7 @@ export function verificationRequestReceivedEmailTemplate(
         .info-box strong { color: #1F2937; }
         .button { display: inline-block; background: #2563EB; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: 600; transition: background 0.3s; }
         .button:hover { background: #1D4ED8; }
-        .alert { background: #fff7ed; border-left: 4px solid #F5880A; padding: 15px; margin: 20px 0; border-radius: 6px; }
+        .alert { background: #fff7ed; border-left: 4px solid #B05E00; padding: 15px; margin: 20px 0; border-radius: 6px; }
         .alert p { margin: 0; color: #92400E; font-size: 14px; }
         .footer { background: #F9FAFB; padding: 20px; text-align: center; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
         .footer p { margin: 5px 0; }
@@ -51,7 +51,7 @@ export function verificationRequestReceivedEmailTemplate(
                 <p><strong>User:</strong> ${userName} (${userRole})</p>
                 ${companyInfo ? `<p><strong>Company:</strong> ${companyInfo.replace(' from ', '')}</p>` : ''}
                 <p><strong>Verification Type:</strong> ${verificationType}</p>
-                <p><strong>Status:</strong> <span style="color:#F5880A;font-weight:600;">Pending Review</span></p>
+                <p><strong>Status:</strong> <span style="color:#B05E00;font-weight:600;">Pending Review</span></p>
                 <p><strong>Submitted:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
             </div>
 
