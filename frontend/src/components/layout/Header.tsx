@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -76,6 +76,26 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [pricingMenuOpen, setPricingMenuOpen] = useState(false);
+  // Hover-open with 150 ms grace period — same pattern as NavMegaMenu
+  // so cursor can travel from the Pricing button to the dropdown panel
+  // without the menu flickering closed.
+  const pricingCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelPricingClose = useCallback(() => {
+    if (pricingCloseTimerRef.current) {
+      clearTimeout(pricingCloseTimerRef.current);
+      pricingCloseTimerRef.current = null;
+    }
+  }, []);
+  const schedulePricingClose = useCallback(() => {
+    cancelPricingClose();
+    pricingCloseTimerRef.current = setTimeout(() => setPricingMenuOpen(false), 150);
+  }, [cancelPricingClose]);
+  useEffect(
+    () => () => {
+      if (pricingCloseTimerRef.current) clearTimeout(pricingCloseTimerRef.current);
+    },
+    [],
+  );
 
   const unreadCount = unreadData?.data?.count || 0;
 
@@ -153,10 +173,21 @@ export default function Header() {
           {/* Pricing dropdown — split here between "About" and "Contact" so
               audience pages get a top-level entry without crowding the right-
               side login/register block. */}
-          <div className="relative">
+          <div
+            className="relative"
+            onMouseEnter={() => {
+              cancelPricingClose();
+              setPricingMenuOpen(true);
+            }}
+            onMouseLeave={schedulePricingClose}
+          >
             <button
               type="button"
               onClick={() => setPricingMenuOpen((v) => !v)}
+              onFocus={() => {
+                cancelPricingClose();
+                setPricingMenuOpen(true);
+              }}
               aria-expanded={pricingMenuOpen}
               aria-haspopup="menu"
               className={cn(
@@ -176,6 +207,7 @@ export default function Header() {
                 <div className="fixed inset-0 z-40" onClick={() => setPricingMenuOpen(false)} />
                 <div
                   role="menu"
+                  onMouseEnter={cancelPricingClose}
                   className="animate-scale-in absolute left-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-lg"
                 >
                   {pricingMenuItems.map((child) => {

@@ -1,132 +1,186 @@
 'use client';
 
 /**
- * Big homepage-hero job search bar — keyword + location + experience +
- * prominent Search button. Submitting navigates to `/jobs?q=...` so
- * users land on the public listing page with their search pre-applied
- * and can refine further.
+ * Homepage-hero job search bar — keyword + location + experience +
+ * Search button. Built on the SAME primitives as the private candidate
+ * dashboard / find-jobs page so authed and unauthed users get the
+ * identical search experience:
  *
- * Visual design mirrors the SearchBar already used in DashboardHeader
- * + /candidate/jobs (composed from `components/ui/SearchBar` +
- * ExperienceSelect) so authenticated users transitioning between
- * surfaces feel zero friction.
+ *   - keyword       → `<SearchBar>` (Elasticsearch autosuggest dropdown,
+ *                     search history when signed in, trending searches,
+ *                     keyboard nav, debounced 250 ms — every feature the
+ *                     candidate dashboard ships with)
+ *   - location      → `<AutoSuggest>` driven by `useSuggestLocations`
+ *                     with Popular Locations focus section + Recent
+ *                     Locations focus section when signed in
+ *   - experience    → `<ExperienceSelect>` with buckets + custom range
+ *
+ * Submitting navigates to `/jobs?q=&location=&experienceMin=&experienceMax=`
+ * so users land on the public listing page with their filters applied.
  */
 
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Briefcase } from 'lucide-react';
+import { Search } from 'lucide-react';
+import SearchBar from '@/components/ui/SearchBar';
+import AutoSuggest, {
+  type SuggestOption,
+  type AdditionalSuggestSection,
+} from '@/components/ui/AutoSuggest';
+import ExperienceSelect, { type ExperienceValue } from '@/components/ui/ExperienceSelect';
 import Button from '@/components/ui/Button';
+import { useSuggestLocations } from '@/hooks/use-search';
+import { useStaticSuggestions } from '@/hooks/use-suggestions';
+import {
+  useFieldHistory,
+  useAddToFieldHistory,
+  useClearFieldHistory,
+} from '@/hooks/use-field-history';
+import { useAuthStore } from '@/store/auth.store';
+import type { AutocompleteResult } from '@/types/search';
 
 interface Props {
-  /** Override the destination URL prefix. Default `/jobs`. */
+  /** Override destination URL prefix. Default `/jobs`. */
   destination?: string;
   className?: string;
 }
 
-const EXPERIENCE_OPTIONS = [
-  { value: '', label: 'Experience' },
-  { value: '0-1', label: 'Fresher (0-1 yr)' },
-  { value: '1-3', label: '1-3 years' },
-  { value: '3-5', label: '3-5 years' },
-  { value: '5-8', label: '5-8 years' },
-  { value: '8-12', label: '8-12 years' },
-  { value: '12+', label: '12+ years' },
-];
-
 export default function HeroJobSearchBar({ destination = '/jobs', className }: Props) {
   const router = useRouter();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  /* ---- state ---- */
   const [keyword, setKeyword] = useState('');
   const [location, setLocation] = useState('');
-  const [experience, setExperience] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
+  const [experience, setExperience] = useState<ExperienceValue | null>(null);
 
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
+  /* ---- location autosuggest (mirrors candidate/jobs/page.tsx) ---- */
+  const { data: locationSuggestions, isLoading: isLoadingLocations } =
+    useSuggestLocations(locationQuery);
+  const { suggestions: popularLocations, isLoading: isLoadingPopular } = useStaticSuggestions(
+    'location',
+    8,
+  );
+  const { data: locationHistory } = useFieldHistory('location');
+  const addLocationHistory = useAddToFieldHistory('location');
+  const clearLocationHistory = useClearFieldHistory('location');
+
+  const locationOptions: SuggestOption[] = useMemo(
+    () =>
+      (locationSuggestions?.data?.suggestions ?? []).map((s) => ({
+        label: s.text,
+        value: s.text,
+        count: s.count,
+      })),
+    [locationSuggestions],
+  );
+
+  const locationFocusSections = useMemo(() => {
+    const sections: AdditionalSuggestSection[] = [];
+    const historyItems = locationHistory?.data?.history ?? [];
+    if (isAuthenticated && historyItems.length > 0) {
+      sections.push({
+        label: 'Recent Locations',
+        options: historyItems.map((h) => ({ label: h.value, value: h.value })),
+        onClear: () => clearLocationHistory.mutate(),
+      });
+    }
+    sections.push({
+      label: 'Popular Locations',
+      options: popularLocations.map((loc) => ({ label: loc, value: loc })),
+      isLoading: isLoadingPopular,
+    });
+    return sections;
+  }, [isAuthenticated, locationHistory, popularLocations, isLoadingPopular, clearLocationHistory]);
+
+  /* ---- handlers ---- */
+  function submit(opts?: { keyword?: string; location?: string }) {
+    const kw = (opts?.keyword ?? keyword).trim();
+    const loc = (opts?.location ?? location).trim();
     const sp = new URLSearchParams();
-    if (keyword.trim()) sp.set('q', keyword.trim());
-    if (location.trim()) sp.set('location', location.trim());
+    if (kw) sp.set('q', kw);
+    if (loc) {
+      sp.set('location', loc);
+      // Track in recent-locations history (only fires when signed in;
+      // the mutation no-ops for guests).
+      if (isAuthenticated) addLocationHistory.mutate(loc);
+    }
     if (experience) {
-      // Translate "1-3" → experienceMin=1, "12+" → experienceMin=12
-      if (experience.endsWith('+')) {
-        sp.set('experienceMin', experience.slice(0, -1));
-      } else {
-        const [min, max] = experience.split('-');
-        if (min) sp.set('experienceMin', min);
-        if (max) sp.set('experienceMax', max);
-      }
+      sp.set('experienceMin', String(experience.min));
+      if (experience.max !== undefined) sp.set('experienceMax', String(experience.max));
     }
     const qs = sp.toString();
     router.push(qs ? `${destination}?${qs}` : destination);
-  };
+  }
+
+  function handleKeywordSearch(q: string) {
+    setKeyword(q);
+    submit({ keyword: q });
+  }
+
+  function handleKeywordSelect(item: AutocompleteResult) {
+    setKeyword(item.text);
+    submit({ keyword: item.text });
+  }
+
+  function handleLocationChange(v: string | string[]) {
+    const val = Array.isArray(v) ? (v[0] ?? '') : v;
+    setLocation(val);
+  }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className={`flex flex-col gap-2 rounded-2xl border border-[var(--border)] bg-white p-2 shadow-md sm:flex-row sm:items-center sm:gap-0 sm:p-1.5 ${className ?? ''}`}
+    <div
+      className={`grid grid-cols-1 gap-2 rounded-2xl border border-[var(--border)] bg-white p-2 shadow-md sm:grid-cols-[1.5fr_1fr_auto_auto] sm:items-stretch sm:gap-2 lg:grid-cols-[2fr_1.4fr_auto_auto] ${className ?? ''}`}
     >
-      {/* Keyword */}
-      <div className="relative flex-1 sm:border-r sm:border-[var(--border)]">
-        <Search
-          aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]"
-        />
-        <input
-          type="search"
-          name="q"
-          autoComplete="off"
+      {/* Keyword — full-featured SearchBar (autosuggest, history, trending) */}
+      <div className="min-w-0">
+        <SearchBar
           placeholder="Job title, skills, or company"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          className="h-12 w-full bg-transparent pr-3 pl-9 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none"
+          searchType="jobs"
+          defaultValue={keyword}
+          onSearch={handleKeywordSearch}
+          onSelect={handleKeywordSelect}
+          size="md"
+          fullWidth
         />
       </div>
 
-      {/* Location */}
-      <div className="relative flex-1 sm:border-r sm:border-[var(--border)]">
-        <MapPin
-          aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]"
-        />
-        <input
-          type="search"
-          name="location"
-          autoComplete="off"
-          placeholder="Location (e.g. Bengaluru, Remote)"
+      {/* Location — AutoSuggest with ES suggestions + popular + recent (auth) */}
+      <div className="min-w-0">
+        <AutoSuggest
+          placeholder="City or remote"
           value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="h-12 w-full bg-transparent pr-3 pl-9 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none"
+          onChange={handleLocationChange}
+          suggestions={locationOptions}
+          isLoading={isLoadingLocations}
+          onInputChange={setLocationQuery}
+          allowCreate
+          createLabel={(q) => `Search in "${q}"`}
+          minChars={2}
+          inputSize="md"
+          focusSections={locationFocusSections}
         />
       </div>
 
-      {/* Experience */}
-      <div className="relative flex-1 sm:max-w-[170px]">
-        <Briefcase
-          aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]"
-        />
-        <select
-          name="experience"
-          value={experience}
-          onChange={(e) => setExperience(e.target.value)}
-          className="h-12 w-full appearance-none bg-transparent pr-7 pl-9 text-sm text-[var(--text)] focus:outline-none"
-        >
-          {EXPERIENCE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Experience — bucket picker with custom range */}
+      <ExperienceSelect
+        value={experience}
+        onChange={setExperience}
+        size="md"
+        className="w-full sm:w-44"
+      />
 
-      {/* Search button */}
+      {/* Submit */}
       <Button
-        type="submit"
+        type="button"
         variant="primary"
         size="lg"
-        className="sm:ml-1"
         leftIcon={<Search className="h-4 w-4" />}
+        onClick={() => submit()}
       >
         Search
       </Button>
-    </form>
+    </div>
   );
 }

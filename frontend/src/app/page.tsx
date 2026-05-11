@@ -426,7 +426,7 @@ export default async function Home() {
         <div className="bg-primary/5 absolute -top-40 -right-40 h-80 w-80 rounded-full blur-3xl" />
         <div className="bg-accent/5 absolute -bottom-40 -left-40 h-80 w-80 rounded-full blur-3xl" />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-36">
+        <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             {/* Left: Text */}
             <div>
@@ -444,21 +444,6 @@ export default async function Home() {
                 Connect with top companies and discover opportunities that match your skills.
                 Whether you&apos;re hiring or looking for your next role, Hire Adda has you covered.
               </p>
-
-              {/* Public hero search bar (Phase 9) — keyword + location +
-                  experience + Search button. Submitting navigates to
-                  /jobs?q=...&location=...&experienceMin/Max=... so the
-                  user lands on the public listing surface with their
-                  search pre-applied. */}
-              <div className="mt-8 max-w-2xl">
-                <HeroJobSearchBar destination="/jobs" />
-                <JobSearchHistoryChips
-                  type="JOB"
-                  destination="/jobs"
-                  className="mt-3"
-                  hideWhenEmpty
-                />
-              </div>
 
               <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row">
                 <Tooltip content="Create your free account and start your job search">
@@ -505,6 +490,19 @@ export default async function Home() {
                 fetchPriority="high"
               />
             </div>
+          </div>
+
+          {/* Public hero search bar (Phase 9) — placed as a full-width
+              row BELOW the 2-column heading/illustration grid so the
+              keyword + location + experience + Search button each get
+              comfortable width on desktop (~1280 px canvas) instead of
+              fighting for the ~640 px of the constrained left column.
+              Submitting navigates to /jobs?q=&location=&experienceMin/Max=
+              so the user lands on the public listing surface with their
+              search pre-applied. */}
+          <div className="mt-12 sm:mt-14 lg:mt-16">
+            <HeroJobSearchBar destination="/jobs" />
+            <JobSearchHistoryChips type="JOB" destination="/jobs" className="mt-3" hideWhenEmpty />
           </div>
         </div>
       </section>

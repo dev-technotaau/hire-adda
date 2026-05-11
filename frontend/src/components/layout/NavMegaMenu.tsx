@@ -49,6 +49,10 @@ interface Props {
 export default function NavMegaMenu({ onNavigate }: Props) {
   const [open, setOpen] = useState<MenuKey>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // 150ms grace period when the cursor leaves the trigger/panel cluster
+  // — lets the user travel the gap between trigger and panel without the
+  // menu flickering closed.
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: menu } = useQuery({
     queryKey: ['curated-menu'],
@@ -56,7 +60,8 @@ export default function NavMegaMenu({ onNavigate }: Props) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Close on outside click + Escape.
+  // Close on outside click + Escape (kept for keyboard/touch users who
+  // open via click; hover users get closed automatically via onMouseLeave).
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -76,29 +81,61 @@ export default function NavMegaMenu({ onNavigate }: Props) {
     }
   }, [open]);
 
+  // Clear any pending close timer on unmount.
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    },
+    [],
+  );
+
+  function cancelClose() {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }
+  function scheduleClose() {
+    cancelClose();
+    closeTimerRef.current = setTimeout(() => setOpen(null), 150);
+  }
+  function hoverOpen(key: Exclude<MenuKey, null>) {
+    cancelClose();
+    setOpen(key);
+  }
+
   const closeAndNavigate = () => {
+    cancelClose();
     setOpen(null);
     onNavigate?.();
   };
 
   return (
-    <div ref={containerRef} className="relative flex items-center gap-1">
+    <div
+      ref={containerRef}
+      className="relative flex items-center gap-1"
+      onMouseLeave={scheduleClose}
+      onMouseEnter={cancelClose}
+    >
       <NavTrigger
         label="Jobs"
         icon={Briefcase}
         isOpen={open === 'jobs'}
         onToggle={() => setOpen(open === 'jobs' ? null : 'jobs')}
+        onHoverOpen={() => hoverOpen('jobs')}
       />
       <NavTrigger
         label="Companies"
         icon={Building2}
         isOpen={open === 'companies'}
         onToggle={() => setOpen(open === 'companies' ? null : 'companies')}
+        onHoverOpen={() => hoverOpen('companies')}
       />
 
       {open === 'jobs' && (
         <div
           role="menu"
+          onMouseEnter={cancelClose}
           className="animate-scale-in absolute top-full left-0 z-50 mt-2 w-[min(96vw,1100px)] rounded-2xl border border-[var(--border)] bg-white p-6 shadow-xl"
         >
           <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
@@ -126,6 +163,7 @@ export default function NavMegaMenu({ onNavigate }: Props) {
       {open === 'companies' && (
         <div
           role="menu"
+          onMouseEnter={cancelClose}
           className="animate-scale-in absolute top-full left-0 z-50 mt-2 w-[min(96vw,720px)] rounded-2xl border border-[var(--border)] bg-white p-6 shadow-xl"
         >
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -158,16 +196,20 @@ function NavTrigger({
   icon: Icon,
   isOpen,
   onToggle,
+  onHoverOpen,
 }: {
   label: string;
   icon: typeof Briefcase;
   isOpen: boolean;
   onToggle: () => void;
+  onHoverOpen: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onToggle}
+      onMouseEnter={onHoverOpen}
+      onFocus={onHoverOpen}
       aria-expanded={isOpen}
       aria-haspopup="menu"
       className={cn(

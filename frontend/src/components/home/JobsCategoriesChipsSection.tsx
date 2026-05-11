@@ -12,6 +12,12 @@
  *   - Top 6 JOB_DEMAND entries (Fresher, Remote, WFH, Walk-in, …)
  *   - Top 7 JOB_CATEGORY entries (IT, Sales, Marketing, …)
  * Total 13 → fits cleanly into 2 rows of ~6–7 on desktop.
+ *
+ * Desktop (lg+) uses a brick / honeycomb offset: 7 cards on row 1 sit
+ * at odd column starts (1,3,5,7,9,11,13) inside a 14-column grid, and
+ * the 6 cards on row 2 sit at even column starts (2,4,6,8,10,12) so
+ * each bottom card slots into the gap between two top cards. Smaller
+ * breakpoints fall back to plain auto-flow (2/3/4 cols).
  */
 
 import Link from 'next/link';
@@ -102,6 +108,27 @@ export default function JobsCategoriesChipsSection({ limit = 13, className }: Pr
 
   if (items.length === 0) return null;
 
+  // Brick offset on lg+: 14-column grid, each card spans 2 cols.
+  // Row 1 starts at columns 1,3,5,7,9,11,13 (odd) — 7 cards.
+  // Row 2 starts at columns 2,4,6,8,10,12   (even) — 6 cards.
+  // Class strings are hard-coded (not template-built) so Tailwind's
+  // JIT picks them up at build time.
+  const BRICK_POSITION_CLASSES = [
+    'lg:col-start-1 lg:row-start-1',
+    'lg:col-start-3 lg:row-start-1',
+    'lg:col-start-5 lg:row-start-1',
+    'lg:col-start-7 lg:row-start-1',
+    'lg:col-start-9 lg:row-start-1',
+    'lg:col-start-11 lg:row-start-1',
+    'lg:col-start-13 lg:row-start-1',
+    'lg:col-start-2 lg:row-start-2',
+    'lg:col-start-4 lg:row-start-2',
+    'lg:col-start-6 lg:row-start-2',
+    'lg:col-start-8 lg:row-start-2',
+    'lg:col-start-10 lg:row-start-2',
+    'lg:col-start-12 lg:row-start-2',
+  ];
+
   return (
     <section
       aria-label="Popular job categories"
@@ -109,12 +136,13 @@ export default function JobsCategoriesChipsSection({ limit = 13, className }: Pr
     >
       <ul
         role="list"
-        className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-[repeat(14,minmax(0,1fr))]"
       >
-        {items.map((item) => {
+        {items.map((item, idx) => {
           const Icon = pickIcon(item.slug);
+          const placement = BRICK_POSITION_CLASSES[idx] ?? '';
           return (
-            <li key={item.id} role="listitem">
+            <li key={item.id} role="listitem" className={`lg:col-span-2 ${placement}`}>
               <Link
                 href={curatedHref(item)}
                 className="group flex h-full flex-col items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-[var(--primary)]/40 hover:shadow-md"

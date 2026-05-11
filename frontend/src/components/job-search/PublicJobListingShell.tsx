@@ -4,25 +4,52 @@
  * PublicJobListingShell — the shared experience powering /jobs and the
  * curated listing variants under /jobs/[...slug].
  *
+ * Search-bar parity with the private candidate dashboard:
+ *   - keyword       → <SearchBar> (Elasticsearch autosuggest dropdown,
+ *                     search history when signed in, trending searches,
+ *                     keyboard navigation, debounced)
+ *   - location      → <AutoSuggest> (useSuggestLocations) + Popular
+ *                     Locations focus section + Recent Locations
+ *                     focus section (auth-gated)
+ *   - experience    → <ExperienceSelect> (bucket picker + custom range)
+ *   - operator help → <KeywordSyntaxHelp> inline in keyword field
+ *   - geo radius    → <RadiusSlider>
+ *   - filters       → <AdvancedFilters> (left rail) + <ActiveFilterTags>
+ *                     above the results
+ *   - date posted   → 24h / 3d / 7d / 14d / 30d pill row
+ *   - history       → <JobSearchHistoryChips> (existing horizontal
+ *                     scrolling chips — preserved as-is)
+ *
  * Behaviour:
  *   - URL <-> filter state synced via query params.
  *   - Soft-walls guests at 30 results (LoginToContinueBanner shown after
  *     the 30th card, pagination disabled past page 1).
  *   - Records every successful search to SearchHistory (server-side) so
  *     the chip carousel stays warm.
- *   - Multiple guest CTAs interleaved: top sticky banner removed for
- *     simplicity, InlineSignupCard every 8 cards, SidebarSignupCard on
- *     the right rail (lg+), StickyMobileBottomCta on mobile.
+ *   - Multiple guest CTAs interleaved: InlineSignupCard every 8 cards,
+ *     SidebarSignupCard on the right rail (lg+), StickyMobileBottomCta
+ *     on mobile.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Search, MapPin, Loader2, Filter as FilterIcon, SlidersHorizontal } from 'lucide-react';
+import { Search, Loader2, Filter as FilterIcon, SlidersHorizontal, Sparkles } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
+import Card from '@/components/ui/Card';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
+import SearchBar from '@/components/ui/SearchBar';
+import AutoSuggest, {
+  type SuggestOption,
+  type AdditionalSuggestSection,
+} from '@/components/ui/AutoSuggest';
+import ExperienceSelect, { type ExperienceValue } from '@/components/ui/ExperienceSelect';
+import AdvancedFilters, {
+  ActiveFilterTags,
+  type FilterSection,
+} from '@/components/ui/AdvancedFilters';
+import RadiusSlider from '@/components/jobs/RadiusSlider';
 import PublicJobCard from './PublicJobCard';
 import LoginToContinueBanner from './LoginToContinueBanner';
 import InlineSignupCard from './InlineSignupCard';
@@ -35,6 +62,23 @@ import KeywordSyntaxHelp from './KeywordSyntaxHelp';
 import { publicJobsService } from '@/services/public-jobs.service';
 import { searchHistoryService } from '@/services/search-history.service';
 import { useAuthStore } from '@/store/auth.store';
+import { useSuggestLocations } from '@/hooks/use-search';
+import { useStaticSuggestions } from '@/hooks/use-suggestions';
+import {
+  useFieldHistory,
+  useAddToFieldHistory,
+  useClearFieldHistory,
+} from '@/hooks/use-field-history';
+import {
+  WORK_MODE_LABELS,
+  JOB_TYPE_LABELS,
+  EXPERIENCE_LEVEL_LABELS,
+  COMPANY_TYPE_LABELS,
+  EDUCATION_LEVEL_LABELS,
+  SHIFT_TYPE_LABELS,
+} from '@/constants/enums';
+import { cn } from '@/lib/utils';
+import type { AutocompleteResult } from '@/types/search';
 
 interface Props {
   /** Initial filter preset from a curated landing slug (e.g. role+city). */
@@ -55,6 +99,7 @@ const FILTER_KEYS = [
   'designation',
   'experienceMin',
   'experienceMax',
+  'experienceLevel',
   'workMode',
   'jobType',
   'industry',
@@ -62,11 +107,47 @@ const FILTER_KEYS = [
   'category',
   'qualification',
   'shiftType',
+  'companyType',
+  'educationRequired',
   'salaryMin',
   'salaryMax',
+  'salaryBucket',
   'postedAfter',
+  'latitude',
+  'longitude',
+  'radiusKm',
   'sortBy',
 ] as const;
+
+const DATE_POSTED_OPTIONS = [
+  { value: '', label: 'Any time' },
+  { value: '1', label: 'Last 24h' },
+  { value: '3', label: 'Last 3 days' },
+  { value: '7', label: 'Last 7 days' },
+  { value: '14', label: 'Last 14 days' },
+  { value: '30', label: 'Last 30 days' },
+];
+
+const FILTER_SECTIONS: FilterSection[] = [
+  { key: 'workMode', label: 'Work Mode', type: 'multiselect', options: WORK_MODE_LABELS },
+  { key: 'jobType', label: 'Job Type', type: 'multiselect', options: JOB_TYPE_LABELS },
+  {
+    key: 'experienceLevel',
+    label: 'Experience Level',
+    type: 'multiselect',
+    options: EXPERIENCE_LEVEL_LABELS,
+  },
+  { key: 'salary', label: 'Salary Range', type: 'range', rangePrefix: '₹' },
+  { key: 'companyType', label: 'Company Type', type: 'multiselect', options: COMPANY_TYPE_LABELS },
+  { key: 'industry', label: 'Industry', type: 'multiselect' },
+  {
+    key: 'educationRequired',
+    label: 'Education',
+    type: 'multiselect',
+    options: EDUCATION_LEVEL_LABELS,
+  },
+  { key: 'shiftType', label: 'Shift Type', type: 'multiselect', options: SHIFT_TYPE_LABELS },
+];
 
 function paramsToFilters(sp: URLSearchParams): Record<string, string> {
   const filters: Record<string, string> = {};
@@ -102,6 +183,8 @@ export default function PublicJobListingShell({
     ...paramsToFilters(searchParams ?? new URLSearchParams()),
   }));
   const [page, setPage] = useState<number>(() => Number(searchParams?.get('page') ?? '1') || 1);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [locationQuery, setLocationQuery] = useState<string>(filters.location ?? '');
 
   // Sync filters → URL (replaceState — no history pollution).
   useEffect(() => {
@@ -140,19 +223,175 @@ export default function PublicJobListingShell({
       .catch(() => {});
   }, [filters, data]);
 
+  // ── Location autosuggest (mirrors candidate/jobs/page.tsx) ──
+  const { data: locationSuggestions, isLoading: isLoadingLocations } =
+    useSuggestLocations(locationQuery);
+  const { suggestions: popularLocations, isLoading: isLoadingPopular } = useStaticSuggestions(
+    'location',
+    8,
+  );
+  const { data: locationHistory } = useFieldHistory('location');
+  const addLocationHistory = useAddToFieldHistory('location');
+  const clearLocationHistory = useClearFieldHistory('location');
+
+  const locationOptions: SuggestOption[] = useMemo(
+    () =>
+      (locationSuggestions?.data?.suggestions ?? []).map((s) => ({
+        label: s.text,
+        value: s.text,
+        count: s.count,
+      })),
+    [locationSuggestions],
+  );
+
+  const locationFocusSections = useMemo(() => {
+    const sections: AdditionalSuggestSection[] = [];
+    const historyItems = locationHistory?.data?.history ?? [];
+    if (isAuthenticated && historyItems.length > 0) {
+      sections.push({
+        label: 'Recent Locations',
+        options: historyItems.map((h) => ({ label: h.value, value: h.value })),
+        onClear: () => clearLocationHistory.mutate(),
+      });
+    }
+    sections.push({
+      label: 'Popular Locations',
+      options: popularLocations.map((loc) => ({ label: loc, value: loc })),
+      isLoading: isLoadingPopular,
+    });
+    return sections;
+  }, [isAuthenticated, locationHistory, popularLocations, isLoadingPopular, clearLocationHistory]);
+
+  // ── Derived UI state ──
+  const experienceValue: ExperienceValue | null = useMemo(() => {
+    const minRaw = filters.experienceMin;
+    const maxRaw = filters.experienceMax;
+    if (!minRaw && !maxRaw) return null;
+    const min = minRaw ? Number(minRaw) : 0;
+    if (Number.isNaN(min)) return null;
+    if (maxRaw && !Number.isNaN(Number(maxRaw))) {
+      return { min, max: Number(maxRaw) };
+    }
+    return { min };
+  }, [filters.experienceMin, filters.experienceMax]);
+
+  const activeFilterCount = useMemo(
+    () =>
+      FILTER_SECTIONS.reduce((count, section) => {
+        if (section.type === 'range') {
+          if (filters[`${section.key}Min`] || filters[`${section.key}Max`]) return count + 1;
+          return count;
+        }
+        return filters[section.key] ? count + 1 : count;
+      }, 0),
+    [filters],
+  );
+
+  // ── Handlers ──
+  function handleKeywordSearch(q: string) {
+    setFilters((prev) => ({ ...prev, q }));
+    setPage(1);
+  }
+
+  function handleKeywordSelect(item: AutocompleteResult) {
+    setFilters((prev) => ({ ...prev, q: item.text }));
+    setPage(1);
+  }
+
+  function handleLocationChange(v: string | string[]) {
+    const val = Array.isArray(v) ? (v[0] ?? '') : v;
+    setFilters((prev) => ({ ...prev, location: val }));
+    setPage(1);
+    if (val && isAuthenticated) addLocationHistory.mutate(val);
+  }
+
+  function handleExperienceChange(val: ExperienceValue | null) {
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (val) {
+        next.experienceMin = String(val.min);
+        if (val.max !== undefined) {
+          next.experienceMax = String(val.max);
+        } else {
+          delete next.experienceMax;
+        }
+      } else {
+        delete next.experienceMin;
+        delete next.experienceMax;
+      }
+      return next;
+    });
+    setPage(1);
+  }
+
+  function handleDatePosted(value: string) {
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (value) next.postedAfter = value;
+      else delete next.postedAfter;
+      return next;
+    });
+    setPage(1);
+  }
+
+  function handleAdvancedChange(key: string, value: string | undefined) {
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (value === undefined || value === '') delete next[key];
+      else next[key] = value;
+      return next;
+    });
+    setPage(1);
+  }
+
+  function handleClearAdvanced() {
+    setFilters((prev) => {
+      const next = { ...prev };
+      // Strip every key managed by FILTER_SECTIONS (incl. range Min/Max).
+      for (const section of FILTER_SECTIONS) {
+        if (section.type === 'range') {
+          delete next[`${section.key}Min`];
+          delete next[`${section.key}Max`];
+        } else {
+          delete next[section.key];
+        }
+      }
+      return next;
+    });
+    setPage(1);
+  }
+
+  function handleGeoLocation(lat: string, lng: string, cityName?: string) {
+    setFilters((prev) => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      ...(cityName ? { location: cityName } : {}),
+    }));
+    setPage(1);
+  }
+
+  function handleRadiusChange(radiusKm: string) {
+    setFilters((prev) => ({ ...prev, radiusKm }));
+    setPage(1);
+  }
+
+  function handleClearGeo() {
+    setFilters((prev) => {
+      const next = { ...prev };
+      delete next.latitude;
+      delete next.longitude;
+      delete next.radiusKm;
+      return next;
+    });
+    setPage(1);
+  }
+
   const items = data?.items ?? [];
   const total = data?.pagination.total ?? 0;
   const cap = data?.pagination.cap;
   const loginRequired = data?.pagination.loginRequired;
-
-  const onKeywordChange = (q: string) => {
-    setFilters((prev) => ({ ...prev, q }));
-    setPage(1);
-  };
-  const onLocationChange = (loc: string) => {
-    setFilters((prev) => ({ ...prev, location: loc }));
-    setPage(1);
-  };
+  const postedDays = filters.postedAfter ?? '';
 
   const cards = useMemo(() => {
     const out: Array<{ kind: 'job'; data: (typeof items)[number] } | { kind: 'inline-cta' }> = [];
@@ -188,42 +427,98 @@ export default function PublicJobListingShell({
             </p>
           )}
 
-          {/* Search bar — keyword + location + Search button */}
-          <div className="mt-6 grid gap-2 sm:grid-cols-[2fr_1.5fr_auto]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
-              <Input
-                type="search"
-                placeholder="Job title, skills, or company"
-                value={filters.q ?? ''}
-                onChange={(e) => onKeywordChange(e.target.value)}
-                className="pl-9"
+          {/* Search Card — parity with /candidate/jobs */}
+          <Card className="mt-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="relative min-w-0 flex-1">
+                <SearchBar
+                  placeholder="Job title, skills, or company"
+                  searchType="jobs"
+                  defaultValue={filters.q ?? ''}
+                  onSearch={handleKeywordSearch}
+                  onSelect={handleKeywordSelect}
+                  size="md"
+                  fullWidth
+                />
+                <div className="absolute top-1/2 right-2 -translate-y-1/2">
+                  <KeywordSyntaxHelp />
+                </div>
+              </div>
+              <ExperienceSelect
+                value={experienceValue}
+                onChange={handleExperienceChange}
+                size="md"
+                className="w-full shrink-0 sm:w-40"
               />
-              <span className="absolute top-1/2 right-2 -translate-y-1/2">
-                <KeywordSyntaxHelp />
-              </span>
+              <div className="min-w-0 flex-1 sm:max-w-xs">
+                <AutoSuggest
+                  placeholder="City or remote"
+                  value={filters.location ?? ''}
+                  onChange={handleLocationChange}
+                  suggestions={locationOptions}
+                  isLoading={isLoadingLocations}
+                  onInputChange={setLocationQuery}
+                  allowCreate
+                  createLabel={(q) => `Search in "${q}"`}
+                  minChars={2}
+                  inputSize="md"
+                  focusSections={locationFocusSections}
+                />
+              </div>
             </div>
-            <div className="relative">
-              <MapPin className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
-              <Input
-                type="search"
-                placeholder="Location (e.g. Bengaluru)"
-                value={filters.location ?? ''}
-                onChange={(e) => onLocationChange(e.target.value)}
-                className="pl-9"
+
+            {/* Pro tip + geo radius */}
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="hidden items-center gap-1.5 text-[10px] text-[var(--text-muted)] sm:flex">
+                <span>Pro tip:</span>
+                <span className="rounded bg-[var(--bg-secondary)] px-1 py-0.5 font-mono">AND</span>
+                <span className="rounded bg-[var(--bg-secondary)] px-1 py-0.5 font-mono">OR</span>
+                <span className="rounded bg-[var(--bg-secondary)] px-1 py-0.5 font-mono">NOT</span>
+                <span>operators supported</span>
+              </div>
+              <RadiusSlider
+                latitude={filters.latitude}
+                longitude={filters.longitude}
+                radiusKm={filters.radiusKm}
+                onLocationChange={handleGeoLocation}
+                onRadiusChange={handleRadiusChange}
+                onClear={handleClearGeo}
               />
             </div>
-            <Button
-              variant="primary"
-              size="lg"
-              leftIcon={<Search className="h-4 w-4" />}
-              onClick={() => setPage(1)}
-            >
-              Search
-            </Button>
+          </Card>
+
+          {/* Date-posted pill row */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {DATE_POSTED_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleDatePosted(opt.value)}
+                className={cn(
+                  'cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  postedDays === opt.value
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'border border-[var(--border)] bg-white text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
 
-          {/* Search history chips */}
+          {/* Active filter chips */}
+          {activeFilterCount > 0 && (
+            <ActiveFilterTags
+              className="mt-3"
+              sections={FILTER_SECTIONS}
+              values={filters}
+              onChange={handleAdvancedChange}
+              onClear={handleClearAdvanced}
+            />
+          )}
+
+          {/* Search history chips (preserved as-is — complementary to
+              SearchBar's internal dropdown history). */}
           <JobSearchHistoryChips type="JOB" destination="/jobs" className="mt-4" hideWhenEmpty />
         </div>
       </section>
@@ -231,16 +526,36 @@ export default function PublicJobListingShell({
       {/* Results + sidebar */}
       <section className="px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[260px_1fr_300px]">
-          {/* Filters sidebar (left rail) — minimal v1, full filter panel
-              wired in Phase 19 when we extract the candidate-page panel. */}
+          {/* Filters sidebar (left rail) — Advanced filters drawer */}
           <aside className="hidden flex-col gap-3 lg:flex">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text)]">
-              <SlidersHorizontal className="h-4 w-4" /> Filters
+            <div className="flex items-center justify-between text-sm font-semibold text-[var(--text)]">
+              <span className="inline-flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4" /> Filters
+                {activeFilterCount > 0 && (
+                  <span className="bg-primary inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </span>
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAdvanced}
+                  className="text-primary text-xs font-medium hover:underline"
+                >
+                  Clear all
+                </button>
+              )}
             </div>
-            <div className="rounded-xl border border-[var(--border)] bg-white p-4 text-xs text-[var(--text-muted)]">
-              Refine with the search bar above, or tweak the URL params (skills, experienceMin,
-              jobType, workMode, etc.) — full filter panel comes in the next iteration.
-            </div>
+            <AdvancedFilters
+              sections={FILTER_SECTIONS}
+              values={filters}
+              onChange={handleAdvancedChange}
+              onClear={handleClearAdvanced}
+              activeCount={activeFilterCount}
+              layout="sidebar"
+              title="Refine search"
+            />
           </aside>
 
           {/* Results column */}
@@ -268,10 +583,16 @@ export default function PublicJobListingShell({
               <button
                 type="button"
                 aria-label="Open filters"
+                onClick={() => setAdvancedOpen(true)}
                 className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 text-xs text-[var(--text-secondary)] lg:hidden"
               >
                 <FilterIcon className="h-3.5 w-3.5" />
                 Filters
+                {activeFilterCount > 0 && (
+                  <span className="bg-primary inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -358,11 +679,52 @@ export default function PublicJobListingShell({
         </div>
       </section>
 
+      {/* Mobile filter drawer */}
+      {advancedOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end bg-black/40 lg:hidden"
+          onClick={() => setAdvancedOpen(false)}
+        >
+          <div
+            className="max-h-[85vh] w-full overflow-y-auto rounded-t-2xl bg-white p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-[var(--text)]">Filters</h3>
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen(false)}
+                className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+              >
+                Done
+              </button>
+            </div>
+            <AdvancedFilters
+              sections={FILTER_SECTIONS}
+              values={filters}
+              onChange={handleAdvancedChange}
+              onClear={handleClearAdvanced}
+              activeCount={activeFilterCount}
+              layout="panel"
+              title=""
+            />
+          </div>
+        </div>
+      )}
+
       {/* Mobile sticky bottom CTA */}
       <StickyMobileBottomCta />
 
       {/* Exit-intent modal — capped to once per 30 days for guests. */}
       {!isAuthenticated && <ExitIntentSaveSearchModal searchSnapshot={{ type: 'JOB', filters }} />}
+
+      {/* Sparkles import retained for symmetry with did-you-mean — used
+          when public-jobs backend ships a `didYouMean` field. */}
+      <span hidden aria-hidden="true">
+        <Sparkles className="h-3 w-3" />
+      </span>
     </div>
   );
 }
