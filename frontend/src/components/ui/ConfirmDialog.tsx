@@ -34,7 +34,12 @@ export default function ConfirmDialog({
       size="sm"
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose} disabled={isLoading} tooltip="Cancel this action">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={isLoading}
+            tooltip="Cancel this action"
+          >
             {cancelLabel}
           </Button>
           <Button

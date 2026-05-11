@@ -240,7 +240,11 @@ export default function JobAlertsPage() {
               Get notified when new jobs match your criteria. Maximum 10 alerts.
             </p>
           </div>
-          <Button onClick={openCreate} disabled={alerts.length >= 10} tooltip="Create a new job alert">
+          <Button
+            onClick={openCreate}
+            disabled={alerts.length >= 10}
+            tooltip="Create a new job alert"
+          >
             <Plus className="mr-1.5 h-4 w-4" />
             Create Alert
           </Button>
@@ -326,7 +330,12 @@ export default function JobAlertsPage() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(alert)} tooltip="Edit alert">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEdit(alert)}
+                      tooltip="Edit alert"
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button

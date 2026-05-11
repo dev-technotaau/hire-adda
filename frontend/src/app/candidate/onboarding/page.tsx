@@ -2,6 +2,7 @@
 
 import ResumeParseReview from '@/components/common/ResumeParseReview';
 import OnboardingShell, { type OnboardingStep } from '@/components/onboarding/OnboardingShell';
+import AuthSupportFooter from '@/components/support/AuthSupportFooter';
 import Button from '@/components/ui/Button';
 import DatePicker from '@/components/ui/DatePicker';
 import FileUpload from '@/components/ui/FileUpload';
@@ -4717,6 +4718,7 @@ export default function CandidateOnboardingPage() {
       canSkip={canSkip}
     >
       {renderStepContent()}
+      <AuthSupportFooter pageContext="onboarding-candidate" audience="candidate" />
     </OnboardingShell>
   );
 }

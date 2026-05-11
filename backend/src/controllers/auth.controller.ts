@@ -926,8 +926,9 @@ export const getFirebaseToken = async (
 ): Promise<void> => {
   try {
     if (!req.user) throw new AppError('Not authorized', 401);
-    if (!firebaseAuth)
+    if (!firebaseAuth) {
       throw new AppError('Firebase Auth is not configured', 503, 'FIREBASE_UNAVAILABLE');
+    }
 
     const token = await firebaseAuth.createCustomToken(req.user.id);
 

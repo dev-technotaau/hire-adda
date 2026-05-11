@@ -9,7 +9,12 @@ const router = Router();
 
 router.use(protect);
 
-router.get('/jobs', restrictTo(Role.CANDIDATE), cache({ ttl: 300, perUser: true }), recommendationController.getRecommendedJobs);
+router.get(
+  '/jobs',
+  restrictTo(Role.CANDIDATE),
+  cache({ ttl: 300, perUser: true }),
+  recommendationController.getRecommendedJobs
+);
 router.post(
   '/jobs/:jobId/dismiss',
   restrictTo(Role.CANDIDATE),

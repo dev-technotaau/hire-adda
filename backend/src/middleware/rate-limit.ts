@@ -108,3 +108,45 @@ export const searchLimiter = rateLimit({
     message: 'Too many search requests, please slow down.',
   },
 });
+
+/**
+ * Review-submission limiter — caps the same IP at 1 review submission
+ * per company per 24h. The unique-index dedup is the hard guarantee;
+ * this limiter just degrades the abuse signal earlier so the DB
+ * doesn't take the load.
+ */
+export const reviewSubmitLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 5, // 5 submissions per IP per 24h across the platform
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: createRedisStore('review-submit'),
+  message: {
+    status: 'fail',
+    message: 'You have submitted too many reviews recently. Please try again tomorrow.',
+  },
+});
+
+/**
+ * Review-vote limiter — 30 helpful/not-helpful votes per IP per hour.
+ */
+export const reviewVoteLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: createRedisStore('review-vote'),
+  message: { status: 'fail', message: 'Too many votes. Please slow down.' },
+});
+
+/**
+ * Review-report limiter — 5 reports per IP per hour.
+ */
+export const reviewReportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: createRedisStore('review-report'),
+  message: { status: 'fail', message: 'Too many reports. Please slow down.' },
+});

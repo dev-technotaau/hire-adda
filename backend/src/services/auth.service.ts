@@ -161,6 +161,36 @@ export const register = async (
       .catch((err) => logger.error('Failed to create company profile during registration', err));
   }
 
+  // Auto-grant the EMP_FREE plan so new employers see the dashboard with a
+  // working quota on day one, instead of a paywall (per payment.md spec:
+  // "employer shouldn't get access … until he purchase a plan" — EMP_FREE
+  // IS a plan, just zero-priced). Best-effort — never blocks registration.
+  if (role === 'EMPLOYER') {
+    void (async () => {
+      try {
+        const freePlan = await prisma.plan.findUnique({ where: { code: 'EMP_FREE' } });
+        if (!freePlan) {
+          logger.warn('EMP_FREE plan not found in catalog — auto-grant skipped', {
+            userId: user.id,
+          });
+          return;
+        }
+        const { manuallyGrantEntitlement } = await import('./entitlement.service');
+        await manuallyGrantEntitlement({
+          userId: user.id,
+          planId: freePlan.id,
+          validityDays: freePlan.validityDays ?? 7,
+          source: 'BONUS',
+          notes: 'Auto-granted on employer registration',
+          createdBy: 'system',
+        });
+        logger.info(`Auto-granted EMP_FREE to new employer ${user.id}`);
+      } catch (err) {
+        logger.error('Auto-grant EMP_FREE failed (non-fatal)', err);
+      }
+    })();
+  }
+
   // Send verification email with OTP
   try {
     const emailContent = verifyEmailTemplate(verificationOtp);

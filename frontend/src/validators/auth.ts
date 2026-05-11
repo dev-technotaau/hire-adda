@@ -24,7 +24,7 @@ export const registerSchema = z
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
-    role: z.enum(['CANDIDATE', 'EMPLOYER']),
+    role: z.enum(['CANDIDATE', 'EMPLOYER', 'VENDOR']),
     mobileNumber: phoneSchema.optional().or(z.literal('')),
     companyName: z.string().optional(),
     acceptTerms: z.boolean().refine((val) => val === true, {
@@ -37,13 +37,13 @@ export const registerSchema = z
   })
   .refine(
     (data) => {
-      if (data.role === 'EMPLOYER') {
+      if (data.role === 'EMPLOYER' || data.role === 'VENDOR') {
         return !!data.companyName && data.companyName.length >= 2;
       }
       return true;
     },
     {
-      message: 'Company name is required for employer registration',
+      message: 'Business / company name is required',
       path: ['companyName'],
     },
   );
@@ -57,7 +57,7 @@ export function createRegisterSchema(rules: PasswordRules) {
       email: emailSchema,
       password: createPasswordSchema(rules),
       confirmPassword: z.string().min(1, 'Please confirm your password'),
-      role: z.enum(['CANDIDATE', 'EMPLOYER']),
+      role: z.enum(['CANDIDATE', 'EMPLOYER', 'VENDOR']),
       mobileNumber: phoneSchema.optional().or(z.literal('')),
       companyName: z.string().optional(),
       acceptTerms: z.boolean().refine((val) => val === true, {
@@ -70,13 +70,13 @@ export function createRegisterSchema(rules: PasswordRules) {
     })
     .refine(
       (data) => {
-        if (data.role === 'EMPLOYER') {
+        if (data.role === 'EMPLOYER' || data.role === 'VENDOR') {
           return !!data.companyName && data.companyName.length >= 2;
         }
         return true;
       },
       {
-        message: 'Company name is required for employer registration',
+        message: 'Business / company name is required',
         path: ['companyName'],
       },
     );

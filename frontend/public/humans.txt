@@ -4,12 +4,29 @@
     Site: https://technotaau.com
 
 /* SITE */
-    Last update: 2026
-    Language: English (en-IN)
+    Last update: 2026-05
+    Language: English (en-IN), with public-surface FAQ corpus available
+              in Hindi (hi-IN), Tamil (ta-IN), Telugu (te-IN), Bengali
+              (bn-IN), and Marathi (mr-IN)
     Doctype: HTML5
-    Standards: HTML5, CSS3, WCAG 2.1 AA, RFC 8615 (.well-known), IAB ads.txt
+    Standards: HTML5, CSS3, WCAG 2.1 AA, RFC 8615 (.well-known), IAB ads.txt,
+              llmstxt.org (llms.txt), Schema.org JSON-LD (JobPosting,
+              Organization, FAQPage, BreadcrumbList, ItemList, CollectionPage,
+              SpeakableSpecification, WebPage)
     Security: CSP v3 (nonce-based), HSTS preload, SPF + DKIM + DMARC + MTA-STS
               + TLS-RPT + BIMI, WebAuthn/Passkeys, Cloudflare Turnstile, CSRF
+    Public surfaces:
+              /jobs (public job board, all roles + filters), /jobs/{slug}
+              (one job per shortid-suffixed slug), /jobs/in/{city},
+              /jobs/{role}-jobs-in-{city} (gold-standard SEO format),
+              /jobs/category/{x}, /jobs/department/{x},
+              /jobs/qualification/{x}, /jobs/collection/{x},
+              /companies (public company index), /companies/{slug},
+              /companies/category/{x}, /companies/in/{city},
+              /companies/industry/{x}, /companies/collection/{x}.
+              Sitemap shards cover every public job, company, curated
+              landing, cartesian role×city×experience combo, and the
+              popular role+city aggregates from search-history.
 
 
 /* LANGUAGES & RUNTIME */

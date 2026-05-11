@@ -52,7 +52,12 @@ export default function PublicationsSection({ form, updateField }: ProfileSectio
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Publications</h2>
-            <Button size="sm" variant="outline" onClick={addPublication} tooltip="Add a new publication">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={addPublication}
+              tooltip="Add a new publication"
+            >
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>

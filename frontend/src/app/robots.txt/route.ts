@@ -35,6 +35,18 @@ const PUBLIC_ALLOW_PATHS = [
   '/company/',
   '/companies',
   '/companies/',
+  // Pricing pages — public landing surfaces for both the catch-all index
+  // and the audience-split variants. The trailing-slash form covers the
+  // per-plan detail pages at `/pricing/[slug]`.
+  '/pricing',
+  '/pricing/',
+  '/pricing/candidate',
+  '/pricing/employer',
+  // Public vendor directory — `/vendors/*` is the public browse + profile
+  // pages. The `/vendor/*` prefix (no `s`) is the private dashboard and
+  // is disallowed below.
+  '/vendors',
+  '/vendors/',
   '/privacy',
   '/terms',
   '/cookie-policy',
@@ -42,7 +54,13 @@ const PUBLIC_ALLOW_PATHS = [
   '/accessibility',
   '/disclaimer',
   '/auth/login',
+  '/auth/login/candidate',
+  '/auth/login/employer',
+  '/auth/login/vendor',
   '/auth/register',
+  '/auth/register/candidate',
+  '/auth/register/employer',
+  '/auth/register/vendor',
 ];
 
 const PRIVATE_DISALLOW_PATHS = [
@@ -51,6 +69,14 @@ const PRIVATE_DISALLOW_PATHS = [
   '/admin/',
   '/super-admin/',
   '/portal/',
+  // Vendor dashboard — singular `/vendor/*` prefix (DO NOT confuse with
+  // `/vendors/*` which is the PUBLIC vendor directory; the trailing slash
+  // ensures we don't accidentally disallow the public prefix).
+  '/vendor/',
+  // Billing / payment / subscription pages — all auth-required user flows.
+  '/billing/',
+  // Team-invite acceptance flow — signed-token, single-use URL.
+  '/team/',
   '/notifications',
   '/notifications/',
   '/auth/reset-password',
@@ -109,10 +135,13 @@ const AI_TRAINING_BOTS = [
   // Anthropic
   'ClaudeBot',
   'Claude-Web',
+  'ClaudeBot-User',
   'anthropic-ai',
   // Google AI
   'Google-Extended',
   'GoogleOther',
+  'GoogleOther-Image',
+  'GoogleOther-Video',
   // Meta AI
   'Meta-ExternalAgent',
   'Meta-ExternalFetcher',
@@ -124,22 +153,31 @@ const AI_TRAINING_BOTS = [
   // Perplexity
   'PerplexityBot',
   'Perplexity-User',
-  // Cohere / Mistral / misc. labs
+  // Cohere / Mistral / xAI / misc. labs
   'cohere-ai',
   'cohere-training-data-crawler',
   'MistralAI-User',
+  'xAI-Bot',
+  'GrokBot',
   // Common Crawl
   'CCBot',
   // Chinese vendors
   'Bytespider',
   'PetalBot',
   'PanguBot',
-  // Scraping services
+  'Yeti', // Naver
+  'Sogou web spider',
+  'Sogou inst spider',
+  // You.com / Phind / DuckAssist
+  'YouBot',
+  'PhindBot',
+  'DuckAssistBot',
+  // Scraping services + dataset labs
   'Diffbot',
   'Scrapy',
   'DataForSeoBot',
-  'YouBot',
   'AI2Bot',
+  'AI2Bot-Dolma',
   'ImagesiftBot',
   'Omgilibot',
   'omgili',
@@ -150,6 +188,11 @@ const AI_TRAINING_BOTS = [
   'Kangaroo Bot',
   'FriendlyCrawler',
   'VelenPublicWebCrawler',
+  'NovaAct',
+  'Crawlspace',
+  'iaskspider/2.0',
+  'IntelliSeek.ai',
+  'BrightBot',
 ];
 
 // ── Serialisation helpers ───────────────────────────────────────────────
@@ -242,8 +285,20 @@ function buildRobotsTxt(): string {
         '/contact',
         '/help',
         '/site-map',
+        '/pricing',
+        '/pricing/',
+        '/pricing/candidate',
+        '/pricing/employer',
+        '/vendors',
+        '/vendors/',
         '/auth/login',
+        '/auth/login/candidate',
+        '/auth/login/employer',
+        '/auth/login/vendor',
         '/auth/register',
+        '/auth/register/candidate',
+        '/auth/register/employer',
+        '/auth/register/vendor',
         '/privacy',
         '/terms',
         '/cookie-policy',
@@ -261,13 +316,63 @@ function buildRobotsTxt(): string {
     renderRule(AI_TRAINING_BOTS, [], ['/']),
     '',
 
+    // Tier 5b: AI search/answer engines — selective allow on public
+    // job + company surfaces only. This makes our content discoverable
+    // when users query AI search ("find me web developer jobs in noida"
+    // on Perplexity/ChatGPT/Claude/Gemini) WITHOUT opening the rest of
+    // the site for training-data scraping.
+    '# ── Tier 5b: AI search engines — public surfaces only ────────────',
+    renderRule(
+      [
+        'GPTBot',
+        'OAI-SearchBot',
+        'ChatGPT-User',
+        'ClaudeBot',
+        'Claude-Web',
+        'ClaudeBot-User',
+        'PerplexityBot',
+        'Perplexity-User',
+        'Google-Extended',
+        'Applebot-Extended',
+        'YouBot',
+        'PhindBot',
+        'DuckAssistBot',
+        'MistralAI-User',
+        'xAI-Bot',
+      ],
+      [
+        '/',
+        '/about',
+        '/help',
+        '/jobs',
+        '/jobs/',
+        '/companies',
+        '/companies/',
+        '/vendors',
+        '/vendors/',
+        '/pricing',
+        '/pricing/',
+        '/site-map',
+        '/feed.xml',
+        '/feed.atom',
+        '/feed.json',
+        '/llms.txt',
+        '/sitemap.xml',
+      ],
+      [...PRIVATE_DISALLOW_PATHS],
+    ),
+    '',
+
     // Yandex Clean-param: dedupe tracking-parameter URL variants
     '# ── Yandex Clean-param — canonical URL collapsing ────────────────',
     `Clean-param: ${YANDEX_CLEAN_PARAMS.join('&')} /`,
     '',
 
-    // Sitemap reference
+    // Sitemap references — main index + Google News sitemap.
     `Sitemap: ${BASE_URL}/sitemap.xml`,
+    `Sitemap: ${BASE_URL}/sitemap-news.xml`,
+    // Yandex `Host:` directive — explicit canonical-host hint.
+    'Host: hireadda.in',
     '',
   ];
 

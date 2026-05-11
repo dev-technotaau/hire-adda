@@ -75,13 +75,35 @@ class TicketService {
     const ticketNumber = await this.generateTicketNumber();
     const senderName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email;
 
+    // Plan-promise: "Priority Support" / "Priority WhatsApp Support" /
+    // "WhatsApp Support" should actually triage the ticket higher in
+    // the support queue. Bump priority to HIGH when the user holds any
+    // of those entitlements (and no explicit priority was passed by
+    // the caller). Failures degrade silently — we'd rather create the
+    // ticket at MEDIUM than block on entitlement lookup.
+    let resolvedPriority: TicketPriority = data.priority || TicketPriority.MEDIUM;
+    if (!data.priority) {
+      try {
+        const { getActiveEntitlementsForUser } = await import('./entitlement.service');
+        const snapshot = await getActiveEntitlementsForUser(userId);
+        const hasPriority =
+          snapshot.features['feature.priority_support'] ||
+          snapshot.features['feature.whatsapp_priority'] ||
+          snapshot.features['feature.whatsapp_support'] ||
+          snapshot.features['feature.dedicated_support'];
+        if (hasPriority) resolvedPriority = TicketPriority.HIGH;
+      } catch {
+        /* keep MEDIUM */
+      }
+    }
+
     const ticket = await prisma.supportTicket.create({
       data: {
         ticketNumber,
         subject: data.subject,
         description: data.description,
         category: data.category || TicketCategory.GENERAL,
-        priority: data.priority || TicketPriority.MEDIUM,
+        priority: resolvedPriority,
         userId,
         messages: {
           create: {
@@ -700,7 +722,13 @@ class TicketService {
           channels: ['in_app', 'fcm', 'web_push', 'email'],
           emailOptions: {
             to: admin.email,
-            ...ticketNewAdmin(ticket.ticketNumber, ticket.subject, senderName, roleLabel, ticket.id),
+            ...ticketNewAdmin(
+              ticket.ticketNumber,
+              ticket.subject,
+              senderName,
+              roleLabel,
+              ticket.id
+            ),
           },
         })
         .catch(() => {});
@@ -733,7 +761,13 @@ class TicketService {
           channels: ['in_app', 'fcm', 'web_push', 'email'],
           emailOptions: {
             to: admin.email,
-            ...ticketReplyAdmin(ticket.ticketNumber, ticket.subject, senderName, messageBody, ticket.id),
+            ...ticketReplyAdmin(
+              ticket.ticketNumber,
+              ticket.subject,
+              senderName,
+              messageBody,
+              ticket.id
+            ),
           },
         })
         .catch(() => {});
@@ -776,7 +810,14 @@ class TicketService {
           channels: ['in_app', 'fcm', 'web_push', 'email'],
           emailOptions: {
             to: ticket.user.email,
-            ...ticketReplyUser(ticket.ticketNumber, ticket.subject, messageBody, helpPath, ticket.id, replySubject),
+            ...ticketReplyUser(
+              ticket.ticketNumber,
+              ticket.subject,
+              messageBody,
+              helpPath,
+              ticket.id,
+              replySubject
+            ),
           },
         })
         .catch(() => {});
@@ -814,7 +855,12 @@ class TicketService {
 
     // Guest ticket — email only
     if (ticket.guestEmail && !ticket.userId) {
-      const guestEmail = ticketReplyGuest(ticket.ticketNumber, ticket.subject, messageBody, replySubject);
+      const guestEmail = ticketReplyGuest(
+        ticket.ticketNumber,
+        ticket.subject,
+        messageBody,
+        replySubject
+      );
       emailService
         .sendEmail({
           to: ticket.guestEmail,
@@ -857,7 +903,14 @@ class TicketService {
         channels: ['in_app', 'fcm', 'web_push', 'email'],
         emailOptions: {
           to: ticket.user.email,
-          ...ticketStatusChange(ticket.ticketNumber, ticket.subject, statusLabel, helpPath, ticket.id, extraMessage),
+          ...ticketStatusChange(
+            ticket.ticketNumber,
+            ticket.subject,
+            statusLabel,
+            helpPath,
+            ticket.id,
+            extraMessage
+          ),
         },
       })
       .catch(() => {});

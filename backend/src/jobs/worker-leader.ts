@@ -23,6 +23,13 @@ import { createEsReindexWorker } from './es-reindex.worker';
 import { createOnboardingDripWorker } from './onboarding-drip.worker';
 import { createImageProcessingWorker } from './image-processing.worker';
 import { createSchedulerWorker } from './scheduler.worker';
+import { createRazorpayWebhookWorker } from './razorpay-webhook.worker';
+import { createInvoiceGenerationWorker } from './invoice-generation.worker';
+import { createFraudScanWorker } from './fraud-scan.worker';
+import { createBigQueryBillingWorker } from './bigquery-billing-sync.worker';
+import { createPaymentStatusPollWorker } from './payment-status-poll.worker';
+import { createFollowerNotifyWorker } from './follower-notify.worker';
+import { createReviewAggregateWorker } from './review-aggregate.worker';
 import { startKafkaConsumer, stopKafkaConsumer } from '../kafka/consumer';
 import { startDlqConsumer, stopDlqConsumer } from '../kafka/dlq-consumer';
 
@@ -41,6 +48,12 @@ import { esReindexQueue } from './es-reindex.queue';
 import { onboardingDripQueue } from './onboarding-drip.queue';
 import { imageProcessingQueue } from './image-processing.queue';
 import { schedulerQueue } from './scheduler.queue';
+import { razorpayWebhookQueue } from './razorpay-webhook.queue';
+import { invoiceGenerationQueue } from './invoice-generation.queue';
+import { fraudScanQueue } from './fraud-scan.queue';
+import { bigqueryBillingQueue } from './bigquery-billing-sync.queue';
+import { paymentStatusPollQueue } from './payment-status-poll.queue';
+import { reviewAggregateQueue } from './review-aggregate.queue';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ALL_QUEUES: Queue<any>[] = [
@@ -58,6 +71,12 @@ const ALL_QUEUES: Queue<any>[] = [
   onboardingDripQueue,
   imageProcessingQueue,
   schedulerQueue,
+  razorpayWebhookQueue,
+  invoiceGenerationQueue,
+  fraudScanQueue,
+  bigqueryBillingQueue,
+  paymentStatusPollQueue,
+  reviewAggregateQueue,
 ];
 
 const LOCK_KEY = 'ha:worker-leader';
@@ -129,6 +148,13 @@ class WorkerLeaderManager {
       createOnboardingDripWorker(),
       createImageProcessingWorker(),
       createSchedulerWorker(),
+      createRazorpayWebhookWorker(),
+      createInvoiceGenerationWorker(),
+      createFraudScanWorker(),
+      createBigQueryBillingWorker(),
+      createPaymentStatusPollWorker(),
+      createFollowerNotifyWorker(),
+      createReviewAggregateWorker(),
     ];
     logger.info(`Worker leader elected — started ${this.workers.length} BullMQ workers`);
   }

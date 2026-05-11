@@ -17,6 +17,9 @@ export interface Notification {
 export interface NotificationFilters {
   type?: NotificationType;
   isRead?: boolean;
+  /** Free-string category — drives the per-feature filters (e.g.
+   *  "followed_company_new_job", "company_follower"). */
+  category?: string;
   page?: number;
   limit?: number;
 }

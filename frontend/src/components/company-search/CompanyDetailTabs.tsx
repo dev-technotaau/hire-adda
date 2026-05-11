@@ -1,0 +1,209 @@
+'use client';
+
+/**
+ * Tab navigation for the public company-detail page + employer
+ * preview.
+ *
+ * Eight possible tabs (auto-hidden when no data):
+ *   - overview        — company description, industry/size meta
+ *   - why-work-with-us — `whyWorkForUs` editorial pitch
+ *   - culture         — mission / vision / coreValues / diversity / culture / csr
+ *   - benefits        — benefits / structuredPerks / workplacePolicies
+ *   - people          — leadershipTeam / employeeTestimonials
+ *   - gallery         — officePhotos / companyVideoUrl
+ *   - hiring          — interviewProcess
+ *   - jobs            — open public jobs (always shown)
+ *
+ * Tab state is URL-driven via `?tab=key` so external links + the
+ * homepage Featured-Companies slider can deep-link directly.
+ *
+ * The component is a thin tab-bar — content rendering stays in the
+ * host page (server-conditional on /companies/[slug] for SEO,
+ * client-conditional in /employer/profile/preview).
+ */
+
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
+import {
+  FileText,
+  Briefcase,
+  Sparkles,
+  Heart,
+  Gift,
+  Users,
+  Camera,
+  ListChecks,
+  type LucideIcon,
+} from 'lucide-react';
+
+export type CompanyTabKey =
+  | 'overview'
+  | 'why-work-with-us'
+  | 'culture'
+  | 'benefits'
+  | 'people'
+  | 'gallery'
+  | 'hiring'
+  | 'jobs';
+
+interface TabDef {
+  key: CompanyTabKey;
+  label: string;
+  icon: LucideIcon;
+}
+
+const ALL_TABS: TabDef[] = [
+  { key: 'overview', label: 'Overview', icon: FileText },
+  { key: 'why-work-with-us', label: 'Why work with us', icon: Sparkles },
+  { key: 'culture', label: 'Culture', icon: Heart },
+  { key: 'benefits', label: 'Benefits', icon: Gift },
+  { key: 'people', label: 'People', icon: Users },
+  { key: 'gallery', label: 'Gallery', icon: Camera },
+  { key: 'hiring', label: 'Hiring process', icon: ListChecks },
+  { key: 'jobs', label: 'Jobs', icon: Briefcase },
+];
+
+interface Props {
+  /** Open-jobs count for the badge on the Jobs tab. */
+  openJobsCount: number;
+  /**
+   * Set/array of tab keys that should appear. Overview + Jobs are
+   * forced visible inside the component for sane defaults.
+   */
+  available?: ReadonlySet<CompanyTabKey> | CompanyTabKey[];
+}
+
+export default function CompanyDetailTabs({ openJobsCount, available }: Props) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requested = (searchParams?.get('tab') ?? 'overview') as CompanyTabKey;
+
+  // Default to all tabs visible if the host doesn't pass `available`
+  // — keeps backwards-compat with the original 2-tab API.
+  const availableSet = new Set<CompanyTabKey>(
+    available
+      ? available instanceof Set
+        ? Array.from(available)
+        : available
+      : ALL_TABS.map((t) => t.key),
+  );
+  // Always include Overview + Jobs.
+  availableSet.add('overview');
+  availableSet.add('jobs');
+
+  // Defensive — if a deep-link points at a tab the host hides, fall
+  // back to overview so we never render an empty tab body.
+  const active: CompanyTabKey = availableSet.has(requested) ? requested : 'overview';
+
+  const visibleTabs = ALL_TABS.filter((t) => availableSet.has(t.key));
+
+  return (
+    <nav
+      aria-label="Company sections"
+      role="tablist"
+      className="sticky top-0 z-10 -mx-4 mb-6 flex gap-1 overflow-x-auto border-b border-[var(--border)] bg-white/95 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+    >
+      {visibleTabs.map((t) => {
+        const Icon = t.icon;
+        const isActive = active === t.key;
+        const params = new URLSearchParams(searchParams?.toString() ?? '');
+        if (t.key === 'overview') params.delete('tab');
+        else params.set('tab', t.key);
+        const qs = params.toString();
+        const href = qs ? `${pathname}?${qs}` : pathname;
+        return (
+          <Link
+            key={t.key}
+            href={href}
+            role="tab"
+            aria-selected={isActive}
+            scroll={false}
+            replace
+            className={`-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors ${
+              isActive
+                ? 'text-primary border-[var(--primary)]'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]'
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {t.label}
+            {t.key === 'jobs' && openJobsCount > 0 && (
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  isActive
+                    ? 'bg-[var(--primary)] text-white'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-muted)]'
+                }`}
+              >
+                {openJobsCount}
+              </span>
+            )}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+/**
+ * Helper — given a company-shaped object, return the set of tab keys
+ * that have content. Saves the host pages from re-implementing the
+ * same has-data checks. Overview + Jobs are always included; the
+ * other 6 tabs are only emitted when there's data to show.
+ */
+export function deriveAvailableCompanyTabs(c: {
+  description?: string | null;
+  whyWorkForUs?: string | null;
+  missionStatement?: string | null;
+  visionStatement?: string | null;
+  coreValues?: string[] | null;
+  diversityStatement?: string | null;
+  companyCulture?: string | null;
+  csrInitiatives?: string | null;
+  benefits?: string[] | null;
+  structuredPerks?: unknown;
+  workplacePolicies?: unknown;
+  leadershipTeam?: unknown;
+  employeeTestimonials?: unknown;
+  officePhotos?: unknown;
+  companyVideoUrl?: string | null;
+  interviewProcess?: string | null;
+}): Set<CompanyTabKey> {
+  const set = new Set<CompanyTabKey>(['overview', 'jobs']);
+  if (c.whyWorkForUs?.trim()) set.add('why-work-with-us');
+  if (
+    c.missionStatement?.trim() ||
+    c.visionStatement?.trim() ||
+    (c.coreValues?.length ?? 0) > 0 ||
+    c.diversityStatement?.trim() ||
+    c.companyCulture?.trim() ||
+    c.csrInitiatives?.trim()
+  ) {
+    set.add('culture');
+  }
+  if (
+    (c.benefits?.length ?? 0) > 0 ||
+    (Array.isArray(c.structuredPerks) && c.structuredPerks.length > 0) ||
+    (Array.isArray(c.workplacePolicies) && c.workplacePolicies.length > 0) ||
+    (c.workplacePolicies &&
+      typeof c.workplacePolicies === 'object' &&
+      !Array.isArray(c.workplacePolicies) &&
+      Object.keys(c.workplacePolicies as Record<string, unknown>).length > 0)
+  ) {
+    set.add('benefits');
+  }
+  if (
+    (Array.isArray(c.leadershipTeam) && c.leadershipTeam.length > 0) ||
+    (Array.isArray(c.employeeTestimonials) && c.employeeTestimonials.length > 0)
+  ) {
+    set.add('people');
+  }
+  if (
+    (Array.isArray(c.officePhotos) && c.officePhotos.length > 0) ||
+    (typeof c.companyVideoUrl === 'string' && c.companyVideoUrl.trim())
+  ) {
+    set.add('gallery');
+  }
+  if (c.interviewProcess?.trim()) set.add('hiring');
+  return set;
+}

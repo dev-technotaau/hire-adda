@@ -115,7 +115,12 @@ export default function CoursesSection({ form, updateField }: ProfileSectionProp
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Test Scores</h2>
-            <Button size="sm" variant="outline" onClick={addTestScore} tooltip="Add a new test score">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={addTestScore}
+              tooltip="Add a new test score"
+            >
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>

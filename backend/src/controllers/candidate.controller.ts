@@ -190,6 +190,25 @@ export const getDashboard = async (
 };
 
 /**
+ * List available resume templates (free + premium). Frontend picker uses
+ * this to render the gallery and decide which cards are locked behind the
+ * `feature.candidate_ai_resume_premium` upsell.
+ */
+export const listResumeTemplates = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { resumeGenerator } = await import('../services/resume-generator.service');
+    const templates = resumeGenerator.listTemplates();
+    res.status(200).json({ status: 'success', data: templates });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Get resume generation readiness status
  */
 export const getResumeReadiness = async (
@@ -295,7 +314,11 @@ export const generateResumePdf = async (
           }))
         : undefined,
     };
-    const pdfBuffer = await resumeGenerator.generateResume(resumeData);
+    const templateId = typeof req.query.template === 'string' ? req.query.template : undefined;
+    const pdfBuffer = await resumeGenerator.generateResume(resumeData, {
+      templateId,
+      userId: req.user.id,
+    });
 
     // Delete old generated resume from R2
     const { uploadFileToR2, extractR2KeyFromUrl, deleteFileFromR2 } =
@@ -450,7 +473,34 @@ export const searchCandidates = async (req: Request, res: Response, next: NextFu
           : undefined,
       experienceMin: q.experienceMin ? Number(q.experienceMin) : undefined,
       experienceMax: q.experienceMax ? Number(q.experienceMax) : undefined,
-      skills: typeof q.skills === 'string' ? q.skills.split(',') : undefined,
+      // Skills — operator-aware parse (`,` AND, `|` OR, `!` NOT). When no
+      // operators are present the comma-separated array path stays
+      // backwards-compatible with the legacy URL grammar.
+      ...(typeof q.skills === 'string'
+        ? (() => {
+            const { parseMultiValue, hasOperatorChars } =
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
+              require('../lib/operator-parser') as {
+                parseMultiValue: (s: string) => {
+                  must: string[];
+                  should: string[];
+                  mustNot: string[];
+                  op: 'AND' | 'OR';
+                };
+                hasOperatorChars: (s: string) => boolean;
+              };
+            if (!hasOperatorChars(q.skills)) {
+              return {
+                skills: q.skills
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              };
+            }
+            const parsed = parseMultiValue(q.skills);
+            return { skillsBool: parsed };
+          })()
+        : {}),
       salaryMin: q.salaryMin ? Number(q.salaryMin) : undefined,
       salaryMax: q.salaryMax ? Number(q.salaryMax) : undefined,
       salaryCurrency: typeof q.salaryCurrency === 'string' ? q.salaryCurrency : undefined,
@@ -514,7 +564,11 @@ export const searchCandidates = async (req: Request, res: Response, next: NextFu
       limit: q.limit ? Number(q.limit) : 10,
     };
 
-    const result = await candidateService.searchCandidates(filters.keyword || '', filters);
+    const result = await candidateService.searchCandidates(
+      filters.keyword || '',
+      filters,
+      req.user?.id
+    );
 
     const total = result.pagination?.total ?? result.candidates.length;
     const pg = result.pagination ?? { total, page: 1, limit: total || 10, pages: 1 };
@@ -564,12 +618,7 @@ export const triggerResumeParse = async (
         ? 'application/msword'
         : 'application/pdf';
 
-    const flowJobId = await startResumeFlow(
-      req.user.id,
-      profile.id,
-      profile.resume,
-      mimeType
-    );
+    const flowJobId = await startResumeFlow(req.user.id, profile.id, profile.resume, mimeType);
 
     res.status(202).json({
       status: 'success',

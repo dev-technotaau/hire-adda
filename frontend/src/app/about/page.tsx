@@ -1,12 +1,25 @@
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import StatsSection from '@/components/common/StatsSection';
+import PaymentMethodsBar from '@/components/common/PaymentMethodsBar';
+import TrustBadges from '@/components/common/TrustBadges';
 import PublicLayout from '@/components/layout/PublicLayout';
 import JsonLd from '@/components/seo/JsonLd';
 import { generateMetadata as buildMetadata } from '@/components/common/SEO';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
 import { aboutPageSchema, breadcrumbSchema, graph } from '@/lib/json-ld';
-import { ArrowRight, Award, Heart, Lightbulb, Linkedin, ShieldCheck, Twitter } from 'lucide-react';
+import {
+  ArrowRight,
+  Award,
+  CreditCard,
+  FileCheck,
+  Heart,
+  Lightbulb,
+  Linkedin,
+  Lock,
+  ShieldCheck,
+  Twitter,
+} from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -159,6 +172,75 @@ export default function AboutPage() {
             </p>
           </div>
           <StatsSection variant="card" />
+        </div>
+      </section>
+
+      {/* Trust & Security · Payments Accepted */}
+      <section className="from-primary-50 relative overflow-hidden bg-gradient-to-br via-white to-[var(--accent-light)] py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="text-3xl font-bold text-[var(--text)] sm:text-4xl">
+              Trust &amp; Security
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-[var(--text-secondary)]">
+              Built for India, regulated and audited the way enterprise software should be. Every
+              payment runs on Razorpay&apos;s PCI-DSS Level 1 infrastructure — we never see or store
+              your card details.
+            </p>
+          </div>
+
+          {/* Three pillars */}
+          <div className="mb-12 grid gap-6 sm:grid-cols-3">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+              <div className="bg-primary-light mb-4 flex h-12 w-12 items-center justify-center rounded-xl">
+                <Lock className="text-primary h-6 w-6" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold text-[var(--text)]">
+                Bank-grade encryption
+              </h3>
+              <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                256-bit TLS on every request. Card data is tokenised by Razorpay; Hire Adda stores
+                only the last four digits and never your CVV or expiry.
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+              <div className="bg-primary-light mb-4 flex h-12 w-12 items-center justify-center rounded-xl">
+                <FileCheck className="text-primary h-6 w-6" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold text-[var(--text)]">
+                GST-compliant invoicing
+              </h3>
+              <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                FY-aware sequential GST invoices on every order, with CGST/SGST/IGST splits and
+                downloadable PDFs — claim full input-tax-credit without any chase.
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-6">
+              <div className="bg-primary-light mb-4 flex h-12 w-12 items-center justify-center rounded-xl">
+                <CreditCard className="text-primary h-6 w-6" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold text-[var(--text)]">
+                Every payment method
+              </h3>
+              <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                Cards (Visa / Mastercard / Amex / RuPay), UPI, all major Net Banking, top wallets
+                and EMI — pick whatever works on your day.
+              </p>
+            </div>
+          </div>
+
+          {/* Payments accepted */}
+          <div className="mb-10">
+            <h3 className="mb-5 text-center text-sm font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+              Payments we accept
+            </h3>
+            <PaymentMethodsBar />
+          </div>
+
+          {/* Credibility row */}
+          <div className="border-t border-[var(--border)] pt-8">
+            <TrustBadges />
+          </div>
         </div>
       </section>
 

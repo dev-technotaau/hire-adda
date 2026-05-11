@@ -154,6 +154,21 @@ const avatarChangedSchema = baseEventSchema
   })
   .passthrough();
 
+// ─── Billing Events ───────────────────────────────────────────
+// Loose validation — all billing events carry { userId, refType, refId,
+// amountPaise? } in addition to the base envelope. Fraud-scan, BigQuery
+// sync and analytics consumers all read these as passthrough JSON.
+const billingEventSchema = baseEventSchema
+  .extend({
+    userId: z.string().optional(),
+    refType: z.string().optional(),
+    refId: z.string().optional(),
+    amountPaise: z.number().optional(),
+    currency: z.string().optional(),
+    planCode: z.string().optional(),
+  })
+  .passthrough();
+
 /**
  * Maps each event type to its Zod schema for validation.
  */
@@ -180,6 +195,24 @@ export const EventSchemaMap: Partial<Record<KafkaTopics, z.ZodSchema>> = {
   [KafkaTopics.SESSION_REVOKED]: sessionRevokedSchema,
   [KafkaTopics.RESUME_UPLOADED]: resumeUploadedSchema,
   [KafkaTopics.AVATAR_CHANGED]: avatarChangedSchema,
+  [KafkaTopics.BILLING_ORDER_CREATED]: billingEventSchema,
+  [KafkaTopics.BILLING_ORDER_PAID]: billingEventSchema,
+  [KafkaTopics.BILLING_ORDER_REFUNDED]: billingEventSchema,
+  [KafkaTopics.BILLING_PAYMENT_CAPTURED]: billingEventSchema,
+  [KafkaTopics.BILLING_PAYMENT_FAILED]: billingEventSchema,
+  [KafkaTopics.BILLING_SUBSCRIPTION_ACTIVATED]: billingEventSchema,
+  [KafkaTopics.BILLING_SUBSCRIPTION_CHARGED]: billingEventSchema,
+  [KafkaTopics.BILLING_SUBSCRIPTION_CANCELLED]: billingEventSchema,
+  [KafkaTopics.BILLING_SUBSCRIPTION_FAILED]: billingEventSchema,
+  [KafkaTopics.BILLING_INVOICE_ISSUED]: billingEventSchema,
+  [KafkaTopics.BILLING_ENTITLEMENT_GRANTED]: billingEventSchema,
+  [KafkaTopics.BILLING_ENTITLEMENT_CONSUMED]: billingEventSchema,
+  [KafkaTopics.BILLING_ENTITLEMENT_EXPIRED]: billingEventSchema,
+  [KafkaTopics.BILLING_REFUND_PROCESSED]: billingEventSchema,
+  [KafkaTopics.BILLING_FRAUD_FLAGGED]: billingEventSchema,
+  [KafkaTopics.BILLING_COUPON_REDEEMED]: billingEventSchema,
+  [KafkaTopics.BILLING_QUOTE_RECEIVED]: billingEventSchema,
+  [KafkaTopics.BILLING_CUSTOM_OFFER_SENT]: billingEventSchema,
 };
 
 /**
@@ -201,9 +234,7 @@ export function validateEvent(
     return { valid: true };
   }
 
-  const errors = result.error.issues.map(
-    (issue) => `${issue.path.join('.')}: ${issue.message}`
-  );
+  const errors = result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
   logger.warn(`Kafka event validation failed for ${eventType}: ${errors.join(', ')}`);
   return { valid: false, errors };
 }

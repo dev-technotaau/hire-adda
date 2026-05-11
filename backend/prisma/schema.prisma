@@ -14,6 +14,7 @@ enum Role {
   EMPLOYER
   ADMIN
   SUPER_ADMIN
+  VENDOR
 }
 
 model User {
@@ -113,10 +114,26 @@ model User {
   savedCandidates      SavedCandidate[]      @relation("EmployerSavedCandidates")
   savedByEmployers     SavedCandidate[]      @relation("CandidateSavedBy")
   savedSearches        SavedSearch[]
+  searchHistory        SearchHistory[]
+  followedCompanies    CompanyFollow[]
   candidateLists       CandidateList[]       @relation("EmployerCandidateLists")
   candidateListMembers CandidateListMember[] @relation("CandidateInLists")
   addedListMembers     CandidateListMember[] @relation("ListMembersAddedBy")
   jobMatches           JobCandidateMatch[]   @relation("CandidateMatches")
+
+  // Employer multi-seat team
+  employerTeamSeats    EmployerTeamMember[]  @relation("EmployerTeamUser")
+  employerTeamInvites  EmployerTeamMember[]  @relation("EmployerTeamInvitedBy")
+
+  // Vendor Connect
+  vendorProfile        VendorProfile?        @relation("VendorOwner")
+  vendorLeadsAsEmployer VendorLead[]         @relation("VendorLeadEmployer")
+  vendorReviewsLeft    VendorReview[]        @relation("VendorReviewer")
+
+  // Assisted Hiring
+  assistedHiringRequests        AssistedHiringRequest[]        @relation("AssistedHiringEmployer")
+  assistedHiringAssigned        AssistedHiringRequest[]        @relation("AssistedHiringAssignee")
+  assistedHiringMatchedAsCandidate AssistedHiringMatchedProfile[] @relation("AssistedHiringCandidate")
 
   // WebAuthn & Webhooks
   webauthnCredentials WebAuthnCredential[]
@@ -130,6 +147,10 @@ model User {
   profileViews    ProfileView[] @relation("ProfileViewer")
   profileViewedBy ProfileView[] @relation("ProfileViewed")
 
+  // Company Reviews (auth-user authored + helpful-vote dedup)
+  companyReviews     CompanyReview[]
+  companyReviewVotes CompanyReviewVote[]
+
   // Job Alerts & Recommendations
   jobAlerts                JobAlert[]
   dismissedRecommendations DismissedRecommendation[]
@@ -140,6 +161,33 @@ model User {
   loginLocations       LoginLocation[]
   consents             UserConsent[]
   mfaTrustedDevices    MfaTrustedDevice[]
+
+  // Billing / Payments / Subscriptions
+  orders             Order[]
+  payments           Payment[]
+  subscriptions      Subscription[]
+  entitlements       Entitlement[]
+  invoices           Invoice[]
+  couponRedemptions  CouponRedemption[]
+  mandates           Mandate[]
+  paymentMethods     PaymentMethodToken[]
+  quoteRequests      QuoteRequest[]
+  billingAddresses   BillingAddress[]
+  billingLedger      BillingLedger[]
+  resourceLedger     ResourceLedger[]
+  fraudFlags         FraudSignalEvent[]
+  upgradeChanges     UpgradeChange[]
+  billingNotifications BillingNotification[]
+  refundsInitiated   Refund[]            @relation("RefundsInitiatedBy")
+  customPlanOffers   CustomPlanOffer[]   @relation("CustomPlanOffersCreatedBy")
+  plansCreated       Plan[]              @relation("PlansCreatedBy")
+  couponsCreated     Coupon[]            @relation("CouponsCreatedBy")
+  fraudReviews       FraudSignalEvent[]  @relation("FraudReviewedBy")
+  fraudRulesUpdated  FraudRule[]         @relation("FraudRulesUpdatedBy")
+  webhookReplays     RazorpayWebhookEvent[] @relation("WebhookReplayedBy")
+  assignedQuotes     QuoteRequest[]      @relation("QuoteAssignedTo")
+  priceAdjustments   PriceAdjustment[]   @relation("PriceAdjustmentsCreatedBy")
+  planVersions       PlanVersion[]       @relation("PlanVersionsPublishedBy")
 
   @@index([email])
   @@index([role])
@@ -696,6 +744,15 @@ model CompanyProfile {
   id     String @id @default(uuid())
   userId String @unique
 
+  // SEO + public-search slug. Generated from companyName via
+  // buildCompanySlug() with collision suffixing (-2, -3, ...). Used in
+  // the canonical /companies/{slug} URL.
+  slug             String?  @unique
+  // Employer can opt out of the public CV-database / company-directory
+  // surfaces per row. Defaults to true so existing public-by-default
+  // semantics are preserved.
+  publicSearchable Boolean  @default(true)
+
   // Account Classification
   accountType     AccountType? // COMPANY or INDIVIDUAL
   hiringType      HiringType?  // DIRECT (own company) or CONSULTANCY (staffing agency)
@@ -786,9 +843,19 @@ model CompanyProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobs         JobPost[]
-  jobTemplates JobTemplate[]
+  // Default billing address — pointer into BillingAddress (per plan §2.3).
+  // Used by checkout to pre-fill the buyer's GST/legal name + place-of-supply.
+  // Optional: many companies start without a billing address until first paid order.
+  defaultBillingAddressId String?
+
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs                  JobPost[]
+  jobTemplates          JobTemplate[]
+  defaultBillingAddress BillingAddress?  @relation("CompanyDefaultBillingAddress", fields: [defaultBillingAddressId], references: [id], onDelete: SetNull)
+  teamMembers           EmployerTeamMember[] @relation("CompanyTeamMembers")
+  followers             CompanyFollow[]
+  reviews               CompanyReview[]
+  reviewAggregate       CompanyReviewAggregate?
 
   @@index([userId])
   @@index([companyName])
@@ -797,11 +864,23 @@ model CompanyProfile {
   @@index([fundingStage])
   @@index([city, state])
   @@index([latitude, longitude])
+  @@index([defaultBillingAddressId])
+  @@index([slug])
+  @@index([publicSearchable, isVerified])
 }
 
 model JobPost {
   id        String @id @default(uuid())
   companyId String
+
+  // SEO + public-search slug. Generated from
+  // {title-kebab}-{company-or-city-kebab}-{shortid8} via buildJobSlug().
+  // Used in the canonical /jobs/{slug} URL.
+  slug             String?  @unique
+  // Employer can opt out of the public job-board surface per job
+  // (e.g. confidential search). When false, the job is still visible
+  // to invited candidates but excluded from /jobs and search engines.
+  publicSearchable Boolean  @default(true)
 
   // Consultancy / Staffing — the actual client company this job is for
   clientCompanyName String?
@@ -931,6 +1010,8 @@ model JobPost {
   savedBy         SavedJob[]
   dismissedBy     DismissedRecommendation[]
   candidateMatches JobCandidateMatch[]
+  vendorLeads     VendorLead[]
+  assistedHiringRequests AssistedHiringRequest[] @relation("AssistedHiringJob")
 
   @@index([companyId])
   @@index([status])
@@ -959,6 +1040,8 @@ model JobPost {
   @@index([referenceCode])
   @@index([type])
   @@index([status, type])
+  @@index([slug])
+  @@index([publicSearchable, status])
 }
 
 model JobApplication {
@@ -1128,6 +1211,191 @@ model SavedCandidate {
   @@index([candidateId])
 }
 
+// --- Employer team / multi-seat (CV Enterprise feature.multi_seat) ---
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  RECRUITER
+}
+
+enum TeamMemberStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+model EmployerTeamMember {
+  id              String           @id @default(uuid())
+  companyId       String
+  userId          String?          // null until invite is accepted
+  invitedEmail    String
+  role            TeamRole         @default(RECRUITER)
+  status          TeamMemberStatus @default(PENDING)
+  invitedById     String
+  inviteToken     String?          @unique
+  inviteExpiresAt DateTime?
+  invitedAt       DateTime         @default(now())
+  joinedAt        DateTime?
+  revokedAt       DateTime?
+
+  company   CompanyProfile @relation("CompanyTeamMembers", fields: [companyId], references: [id], onDelete: Cascade)
+  user      User?          @relation("EmployerTeamUser", fields: [userId], references: [id], onDelete: SetNull)
+  invitedBy User           @relation("EmployerTeamInvitedBy", fields: [invitedById], references: [id])
+
+  @@unique([companyId, invitedEmail])
+  @@index([companyId])
+  @@index([userId])
+  @@index([inviteToken])
+}
+
+// --- Assisted Hiring fulfilment workflow (₹1499 plan) ---
+
+enum AssistedHiringStatus {
+  PENDING
+  CALL_SCHEDULED
+  IN_PROGRESS
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+model AssistedHiringRequest {
+  id                String               @id @default(uuid())
+  employerId        String
+  orderId           String?              @unique
+  jobPostId         String?
+  roleTitle         String
+  requirementText   String
+  preferredSkills   String[]             @default([])
+  preferredLocation String?
+  budgetRange       String?
+  noticePeriod      String?
+  contactEmail      String
+  contactPhone      String?
+  status            AssistedHiringStatus @default(PENDING)
+  internalNotes     String?
+  callScheduledAt   DateTime?
+  deliveredAt       DateTime?
+  startedAt         DateTime             @default(now())
+  expiresAt         DateTime?
+  assignedAdminId   String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  employer        User                          @relation("AssistedHiringEmployer", fields: [employerId], references: [id], onDelete: Cascade)
+  order           Order?                        @relation("AssistedHiringOrder", fields: [orderId], references: [id], onDelete: SetNull)
+  jobPost         JobPost?                      @relation("AssistedHiringJob", fields: [jobPostId], references: [id], onDelete: SetNull)
+  assignedAdmin   User?                         @relation("AssistedHiringAssignee", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  matchedProfiles AssistedHiringMatchedProfile[]
+
+  @@index([employerId, status])
+  @@index([status, startedAt])
+  @@index([assignedAdminId])
+  @@index([orderId])
+}
+
+/** One row per CV the admin team selects for a request — typically 4-5. */
+model AssistedHiringMatchedProfile {
+  id                  String   @id @default(uuid())
+  requestId           String
+  candidateUserId     String?
+  candidateName       String
+  candidateHeadline   String?
+  candidateExperience String?
+  candidateLocation   String?
+  resumeUrl           String?
+  notes               String?
+  createdAt           DateTime @default(now())
+
+  request   AssistedHiringRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  candidate User?                 @relation("AssistedHiringCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+}
+
+// --- Vendor Connect (recruitment-partner role) ---
+
+enum VendorLeadStatus {
+  PENDING
+  RESPONDED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model VendorProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  businessName    String
+  slug            String   @unique
+  description     String?
+  logo            String?
+  website         String?
+  contactEmail    String
+  contactPhone    String
+  services        String[] @default([]) // e.g. ["IT staffing","Permanent","Contract"]
+  industries      String[] @default([])
+  locations       String[] @default([])
+  yearsInBusiness Int?
+  teamSize        Int?
+  isPublic        Boolean  @default(true)
+  isVerified      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user    User           @relation("VendorOwner", fields: [userId], references: [id], onDelete: Cascade)
+  leads   VendorLead[]
+  reviews VendorReview[]
+
+  @@index([userId])
+  @@index([slug])
+  @@index([isPublic])
+}
+
+model VendorReview {
+  id              String   @id @default(uuid())
+  vendorProfileId String
+  reviewerId      String   // employer userId who left the review
+  rating          Int      // 1-5
+  text            String?
+  /** True when the reviewer had a RESPONDED/ACCEPTED VendorLead with this vendor. */
+  verified        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  vendorProfile VendorProfile @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  reviewer      User          @relation("VendorReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorProfileId, reviewerId])
+  @@index([vendorProfileId, rating])
+  @@index([reviewerId])
+}
+
+model VendorLead {
+  id              String           @id @default(uuid())
+  vendorProfileId String
+  jobPostId       String?          // populated when lead routed from a JobPost
+  employerId      String           // who is asking
+  requirementText String           // free-text describing the role / hiring need
+  contactEmail    String
+  contactPhone    String?
+  status          VendorLeadStatus @default(PENDING)
+  responseText    String?
+  respondedAt     DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime         @default(now())
+
+  vendorProfile VendorProfile @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  jobPost       JobPost?      @relation(fields: [jobPostId], references: [id], onDelete: SetNull)
+  employer      User          @relation("VendorLeadEmployer", fields: [employerId], references: [id], onDelete: Cascade)
+
+  @@index([vendorProfileId, status])
+  @@index([employerId])
+  @@index([jobPostId])
+}
+
 // --- Candidate Lists/Folders (Employer organization) ---
 
 model CandidateList {
@@ -1178,6 +1446,120 @@ model SavedSearch {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, searchType])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Search history — distinct from SavedSearch in that it auto-records
+// every search the user (or guest) runs, supports a "new jobs since
+// last seen" delta count for chip badges, and dedups by deterministic
+// `filtersHash`.
+//
+// Powers the homepage hero chips, the listing-page chip strip, and
+// the candidate dashboard "recent searches" widget.
+// ─────────────────────────────────────────────────────────────────────
+enum SearchHistoryType {
+  JOB
+  CANDIDATE
+  COMPANY
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Curated listings — drive the public-search header mega-menu, footer
+// mega-section, and SEO landing pages (`/jobs/category/it-software`,
+// `/jobs/in/delhi`, etc.). Editable via super-admin (out-of-scope for
+// this delivery — model is ready). Seeded with ~150 entries on first
+// deploy via `scripts/seed-curated-listings.ts`.
+// ─────────────────────────────────────────────────────────────────────
+enum CuratedType {
+  JOB_CATEGORY        // "IT Jobs", "Sales Jobs"
+  JOB_DEMAND          // "Fresher Jobs", "Remote Jobs"
+  JOB_LOCATION        // "Jobs in Delhi"
+  JOB_QUALIFICATION   // "10th Pass Jobs", "BTech Jobs"
+  JOB_DEPARTMENT      // "Engineering Jobs", "Operations Jobs"
+  JOB_COLLECTION      // "Top Companies Hiring", "Trending Now"
+  COMPANY_CATEGORY    // "Unicorn", "MNC", "Startup"
+  COMPANY_COLLECTION  // "Top Companies", "IT Companies"
+}
+
+model CuratedListing {
+  id              String      @id @default(uuid())
+  slug            String      @unique
+  type            CuratedType
+  label           String
+  // Filter preset applied to the search backend when this slug is
+  // visited. Shape mirrors the search-API filter blob for drop-in
+  // application.
+  filterPreset    Json
+  iconKey         String?
+  displayOrder    Int         @default(0)
+  isFeatured      Boolean     @default(false)
+  metaTitle       String?
+  metaDescription String?
+  heroH1          String?
+  heroSubtitle    String?
+  isPublic        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([type, isPublic, displayOrder])
+  @@index([slug])
+}
+
+// --- Company Follow (candidates following companies) ---
+//
+// One row per (candidate, company) pair. Candidates browse the public
+// company directory and click "Follow"; employers see follower counts
+// + a list of their followers in the dashboard.
+//
+// Fan-out notifications (new job from a followed company) read this
+// table via the BullMQ follower-notify worker.
+model CompanyFollow {
+  id        String   @id @default(uuid())
+  /** The candidate who's following. */
+  userId    String
+  /** The CompanyProfile being followed (NOT the employer userId — the
+      profile id, so we can join cleanly to JobPost.companyId). */
+  companyId String
+  createdAt DateTime @default(now())
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([userId, createdAt])
+  @@index([companyId, createdAt])
+}
+
+model SearchHistory {
+  id           String            @id @default(uuid())
+  // Either userId (auth) or sessionId (guest) is set; never both null.
+  userId       String?
+  sessionId    String?
+  searchType   SearchHistoryType
+  // Canonical filter blob, sorted + normalised so equivalent searches
+  // share the same hash regardless of input ordering.
+  filters      Json
+  // SHA-256 of the canonical JSON; used for the (user/session, type, hash)
+  // unique tuple so re-running the same search increments `hits` instead
+  // of inserting a duplicate row.
+  filtersHash  String
+  query        String?
+  location     String?
+  resultsCount Int               @default(0)
+  // When the user last actually ran or viewed this search. Used to
+  // compute "new jobs since" deltas — counts JobPost.createdAt > lastSeenAt.
+  lastSeenAt   DateTime          @default(now())
+  hits         Int               @default(1)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, searchType, filtersHash], name: "user_unique_search")
+  @@unique([sessionId, searchType, filtersHash], name: "session_unique_search")
+  @@index([userId, lastSeenAt])
+  @@index([sessionId, lastSeenAt])
+  @@index([searchType, lastSeenAt])
 }
 
 // --- Profile Views ---
@@ -1629,4 +2011,1486 @@ model KafkaEvent {
 
   @@index([eventType])
   @@index([publishedAt])
+}
+
+// =====================================================================
+// Billing / Payments / Subscriptions / Coupons / Invoices / Entitlements
+// =====================================================================
+// Razorpay-backed payment system. Webhook is source of truth.
+// All amounts stored as integer paise (1 INR = 100 paise) unless noted.
+// Migration: edit schema -> hand-roll SQL into prisma/migrations.
+// =====================================================================
+
+enum PlanCategory {
+  CANDIDATE_PREMIUM
+  EMPLOYER_JOB_POST
+  EMPLOYER_CV_DATABASE
+  EMPLOYER_ASSISTED_HIRING
+  VENDOR_CONNECT
+  EMPLOYER_CV_ENTERPRISE_CUSTOM
+}
+
+enum PlanBillingCycle {
+  ONE_TIME
+  MONTHLY
+  QUARTERLY
+  HALF_YEARLY
+  YEARLY
+  CUSTOM
+}
+
+enum PlanStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  HIDDEN
+}
+
+enum ResourceUnit {
+  JOB_POST
+  JOB_DAYS_LIVE
+  APPLICATIONS
+  CV_UNLOCK
+  SEARCH_RESULT
+  MATCHED_PROFILE_EMAIL
+  FEATURE_FLAG
+  SEAT
+  BOOST_DAYS
+  VENDOR_LEAD
+  CUSTOM
+}
+
+enum PlanFeatureKind {
+  COUNTABLE
+  BOOLEAN
+  ENUM
+  TEXT
+}
+
+enum OrderStatus {
+  CREATED
+  ATTEMPTED
+  PAID
+  FAILED
+  CANCELLED
+  EXPIRED
+  REFUND_PENDING
+  REFUNDED
+  PARTIALLY_REFUNDED
+  DISPUTED
+  FRAUD_FLAGGED
+}
+
+enum PaymentStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  UPI
+  NETBANKING
+  WALLET
+  EMI
+  PAYLATER
+  BANK_TRANSFER
+  INTERNATIONAL
+  UNKNOWN
+}
+
+enum PaymentChannel {
+  CHECKOUT
+  SUBSCRIPTION
+  MANDATE
+  MANUAL_MARK_PAID
+  INTERNAL
+}
+
+enum SubscriptionStatus {
+  CREATED
+  AUTHENTICATED
+  ACTIVE
+  PAUSED
+  HALTED
+  CANCELLED
+  COMPLETED
+  EXPIRED
+  PENDING_CANCEL
+}
+
+enum SubscriptionRenewalMode {
+  AUTO_RENEW
+  MANUAL
+  OFF
+}
+
+enum MandateStatus {
+  PENDING
+  CONFIRMED
+  ACTIVE
+  CANCELLED
+  FAILED
+}
+
+enum MandateMethod {
+  EMANDATE
+  UPI_AUTOPAY
+  CARD
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOIDED
+  REFUNDED
+}
+
+enum InvoiceType {
+  PROFORMA
+  TAX_INVOICE
+  CREDIT_NOTE
+  RECEIPT
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSED
+  FAILED
+  CANCELLED
+}
+
+enum RefundReason {
+  USER_REQUESTED
+  ADMIN_INITIATED
+  FRAUD
+  DUPLICATE
+  CHARGEBACK
+  ERROR_CORRECTION
+  GOODWILL
+}
+
+enum CouponStatus {
+  ACTIVE
+  PAUSED
+  EXPIRED
+  ARCHIVED
+}
+
+enum CouponType {
+  PERCENT
+  FLAT
+  FIRST_MONTH_FREE
+  TRIAL_EXTEND
+  FREE_PLAN
+}
+
+enum CouponScope {
+  GLOBAL
+  ROLE_TARGETED
+  USER_TARGETED
+  PLAN_TARGETED
+  COMBO
+}
+
+enum CouponRedemptionStatus {
+  SUCCESS
+  REFUNDED
+  REVERSED
+}
+
+enum EntitlementSource {
+  PLAN
+  BONUS
+  MANUAL
+  REFUND_CREDIT
+  COUPON
+  MIGRATION
+}
+
+enum EntitlementStatus {
+  ACTIVE
+  EXHAUSTED
+  EXPIRED
+  CANCELLED
+  ON_HOLD
+}
+
+enum SettlementStatus {
+  SCHEDULED
+  PROCESSED
+  FAILED
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  WON
+  LOST
+  ACCEPTED
+}
+
+enum RazorpayWebhookStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  SKIPPED
+  FAILED
+  REPLAYED
+}
+
+enum QuoteRequestStatus {
+  NEW
+  IN_REVIEW
+  CONTACTED
+  NEGOTIATING
+  ACCEPTED
+  REJECTED
+  CONVERTED
+  WITHDRAWN
+}
+
+enum CustomPlanOfferStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  EXPIRED
+  REJECTED
+}
+
+enum PriceAdjustmentReason {
+  PRORATION
+  COUPON
+  GOODWILL_CREDIT
+  MANUAL
+  TAX
+  ROUNDING
+  REFUND_CREDIT
+}
+
+enum LedgerEntryType {
+  ORDER_CHARGE
+  REFUND
+  COUPON_DISCOUNT
+  CARRY_FORWARD
+  MANUAL_CREDIT
+  MANUAL_DEBIT
+  TAX
+  ADJUSTMENT
+}
+
+enum FraudSignal {
+  MULTI_ACCOUNT_SAME_CARD
+  VELOCITY_BURST
+  GEO_MISMATCH
+  EMAIL_DOMAIN_DISPOSABLE
+  IP_BLACKLIST
+  BIN_BLACKLIST
+  CHARGEBACK_RATE
+  MANUAL
+}
+
+enum FraudSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum FraudAction {
+  NONE
+  REVIEW
+  BLOCK
+  REFUND_AND_BLOCK
+}
+
+enum TaxRegion {
+  IN_INTRA_STATE
+  IN_INTER_STATE
+  INTERNATIONAL
+  EXEMPT
+}
+
+enum BillingNotificationKind {
+  ORDER_PLACED
+  PAYMENT_CAPTURED
+  PAYMENT_FAILED
+  SUBSCRIPTION_ACTIVATED
+  SUBSCRIPTION_RENEWED
+  SUBSCRIPTION_FAILED
+  SUBSCRIPTION_CANCELLED
+  REMINDER_7
+  REMINDER_3
+  REMINDER_1
+  PLAN_EXPIRED
+  REFUND_PROCESSED
+  CUSTOM_PLAN_OFFER
+  FRAUD_ALERT
+  QUOTE_RECEIVED
+  UPGRADED
+  DOWNGRADED
+}
+
+enum ResourceLedgerReason {
+  GRANT
+  CONSUME
+  ROLLBACK
+  ADJUSTMENT
+  CARRY_FORWARD
+  EXPIRY
+  REFUND_RESTORE
+  ADMIN_ADJUST
+}
+
+// --- Plans ---
+
+model Plan {
+  id                 String           @id @default(uuid())
+  code               String           @unique // e.g. EMP_PREMIUM
+  name               String
+  slug               String           @unique
+  category           PlanCategory
+  billingCycle       PlanBillingCycle
+  status             PlanStatus       @default(DRAFT)
+  basePricePaise     Int
+  currency           String           @default("INR")
+  gstRatePercent     Int              @default(18)
+  gstInclusive       Boolean          @default(true)
+  hsnCode            String?          @default("998314")
+  validityDays       Int? // null only for true subscriptions
+  trialDays          Int              @default(0)
+  displayOrder       Int              @default(100)
+  highlight          Boolean          @default(false)
+  badgeText          String?
+  shortDescription   String?
+  descriptionHtml    String?
+  isCustom           Boolean          @default(false)
+  requiresQuote      Boolean          @default(false)
+  isPublic           Boolean          @default(true)
+  razorpayPlanId     String? // Razorpay Plan id (only for true subscriptions)
+  metadata           Json?
+  createdById        String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  features           PlanFeature[]
+  resources          PlanResource[]
+  versions           PlanVersion[]
+  orders             Order[]
+  subscriptions      Subscription[]
+  entitlements       Entitlement[]
+  fromUpgrades       UpgradeChange[]  @relation("UpgradeFromPlan")
+  toUpgrades         UpgradeChange[]  @relation("UpgradeToPlan")
+  customPlanOffers   CustomPlanOffer[]
+
+  createdBy          User?            @relation("PlansCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([category, status])
+  @@index([status, displayOrder])
+  @@index([isPublic, status])
+}
+
+model PlanFeature {
+  id              String          @id @default(uuid())
+  planId          String
+  key             String // e.g. "feature.cv_unlock", "feature.bulk_download"
+  label           String
+  kind            PlanFeatureKind @default(BOOLEAN)
+  countableLimit  Int? // when kind=COUNTABLE
+  enumValue       String? // when kind=ENUM
+  textValue       String? // when kind=TEXT
+  included        Boolean         @default(true)
+  displayOrder    Int             @default(100)
+  description     String?
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, key])
+  @@index([planId])
+}
+
+model PlanResource {
+  id              String       @id @default(uuid())
+  planId          String
+  unit            ResourceUnit
+  quantity        Int
+  perPeriodReset  Boolean      @default(true)
+  carryForwardCap Int? // optional cap on carry-forward
+  notes           String?
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, unit])
+  @@index([planId])
+}
+
+model PlanVersion {
+  id            String   @id @default(uuid())
+  planId        String
+  version       Int
+  diff          Json
+  publishedAt   DateTime @default(now())
+  publishedById String?
+
+  plan        Plan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  publishedBy User? @relation("PlanVersionsPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+
+  @@unique([planId, version])
+  @@index([planId])
+}
+
+// --- Billing Address ---
+
+model BillingAddress {
+  id           String   @id @default(uuid())
+  userId       String
+  label        String? // e.g. "Office", "Home"
+  line1        String
+  line2        String?
+  city         String
+  stateName    String
+  stateCode    String // 2-digit GST state code (e.g. "27" for MH)
+  pincode      String
+  country      String   @default("India")
+  countryCode  String   @default("IN") // ISO-3166 alpha-2
+  gstNumber    String?
+  legalName    String?
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders           Order[]
+  invoices         Invoice[]
+  defaultedByCompanies CompanyProfile[] @relation("CompanyDefaultBillingAddress")
+
+  @@index([userId, isDefault])
+  @@index([userId])
+}
+
+// --- Orders ---
+
+model Order {
+  id                  String        @id @default(uuid())
+  userId              String
+  planId              String
+  planSnapshot        Json // freezes plan attributes at order time
+  couponId            String?
+  billingAddressId    String?
+
+  // Pricing breakdown — all integer paise
+  originalAmountPaise Int
+  discountPaise       Int           @default(0)
+  prorationPaise      Int           @default(0) // negative-credit applied (already deducted)
+  taxableAmountPaise  Int
+  cgstPaise           Int           @default(0)
+  sgstPaise           Int           @default(0)
+  igstPaise           Int           @default(0)
+  cessPaise           Int           @default(0)
+  taxPaise            Int           @default(0)
+  totalPaise          Int
+
+  currency            String        @default("INR")
+  taxRegion           TaxRegion     @default(IN_INTRA_STATE)
+  status              OrderStatus   @default(CREATED)
+  channel             PaymentChannel @default(CHECKOUT)
+
+  // Identifiers
+  idempotencyKey      String        @unique
+  receiptNumber       String        @unique
+  razorpayOrderId     String?       @unique
+
+  // Buyer GST / billing details (snapshot)
+  gstNumber           String?
+  legalName           String?
+  placeOfSupplyState  String? // 2-digit GST code
+  buyerEmail          String?
+  buyerPhone          String?
+  buyerCountry        String?       @default("IN")
+
+  // Optional refs
+  upgradeFromOrderId  String?       @unique // self-reference: this order replaces this one
+  parentSubscriptionId String?
+
+  notes               Json?
+  metadata            Json?
+
+  // Risk / device fingerprint
+  ipAddress           String?
+  userAgent           String?
+  deviceFingerprint   String?
+  fraudScore          Int           @default(0)
+  fraudAction         FraudAction   @default(NONE)
+
+  expiresAt           DateTime?
+  paidAt              DateTime?
+  refundedAt          DateTime?
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  // Relations
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan             Plan             @relation(fields: [planId], references: [id])
+  coupon           Coupon?          @relation(fields: [couponId], references: [id])
+  billingAddress   BillingAddress?  @relation(fields: [billingAddressId], references: [id])
+  upgradeFromOrder Order?           @relation("OrderUpgradeChain", fields: [upgradeFromOrderId], references: [id])
+  upgradeToOrder   Order?           @relation("OrderUpgradeChain")
+  parentSubscription Subscription?  @relation(fields: [parentSubscriptionId], references: [id])
+
+  payments         Payment[]
+  paymentAttempts  PaymentAttempt[]
+  invoices         Invoice[]
+  refunds          Refund[]
+  couponRedemption CouponRedemption?
+  priceAdjustments PriceAdjustment[]
+  fraudFlags       FraudSignalEvent[]
+  entitlements     Entitlement[]    @relation("EntitlementSourceOrder")
+  ledgerEntries    BillingLedger[]
+  upgradeChanges   UpgradeChange[]  @relation("UpgradeFromOrder")
+  upgradeChangesTo UpgradeChange[]  @relation("UpgradeToOrder")
+  assistedHiringRequest AssistedHiringRequest? @relation("AssistedHiringOrder")
+
+  @@index([userId, status])
+  @@index([planId, createdAt])
+  @@index([status, createdAt])
+  @@index([razorpayOrderId])
+  @@index([createdAt])
+}
+
+// --- Payments ---
+
+model Payment {
+  id                  String        @id @default(uuid())
+  orderId             String
+  userId              String
+  razorpayPaymentId   String        @unique
+  status              PaymentStatus @default(CREATED)
+  method              PaymentMethod @default(UNKNOWN)
+  amountPaise         Int
+  feePaise            Int           @default(0)
+  taxPaise            Int           @default(0)
+  capturedPaise       Int           @default(0)
+  capturedAt          DateTime?
+  authorizedAt        DateTime?
+
+  // Failure details
+  errorCode           String?
+  errorDescription    String?
+  errorSource         String?
+  errorStep           String?
+  errorReason         String?
+
+  // Method-specific snapshot
+  vpa                 String?
+  bank                String?
+  wallet              String?
+  cardLast4           String?
+  cardNetwork         String? // VISA, MASTERCARD, RUPAY, AMEX, DINERS, MAESTRO
+  cardIssuer          String?
+  cardType            String? // CREDIT, DEBIT, PREPAID
+  cardInternational   Boolean       @default(false)
+  cardFingerprint     String? // SHA-256 of network+last4+issuer for fraud detection
+  emiTenure           Int? // months
+  international       Boolean       @default(false)
+  currency            String        @default("INR")
+
+  // Subscription link
+  subscriptionId      String?
+  invoiceId           String?
+
+  raw                 Json?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  invoice        Invoice?      @relation(fields: [invoiceId], references: [id])
+  refunds        Refund[]
+  disputes       Dispute[]
+  fraudFlags     FraudSignalEvent[]
+  settlementTxns SettlementTransaction[]
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([status, createdAt])
+  @@index([cardFingerprint])
+  @@index([subscriptionId])
+}
+
+model PaymentAttempt {
+  id                String      @id @default(uuid())
+  orderId           String
+  userId            String?
+  status            String // pending, success, failure, dropped, abandoned
+  errorCode         String?
+  errorDescription  String?
+  ipAddress         String?
+  userAgent         String?
+  deviceFingerprint String?
+  attemptedAt       DateTime    @default(now())
+  raw               Json?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([attemptedAt])
+}
+
+// --- Subscriptions ---
+
+model Subscription {
+  id                    String                  @id @default(uuid())
+  userId                String
+  planId                String
+  planSnapshot          Json
+  razorpaySubscriptionId String?                @unique
+  status                SubscriptionStatus      @default(CREATED)
+  renewalMode           SubscriptionRenewalMode @default(AUTO_RENEW)
+  autoRenew             Boolean                 @default(true)
+  cancelAtCycleEnd      Boolean                 @default(false)
+  mandateId             String?
+  currentStart          DateTime?
+  currentEnd            DateTime?
+  nextChargeAt          DateTime?
+  totalCount            Int? // null = until cancelled
+  paidCount             Int                     @default(0)
+  remainingCount        Int?
+  failureCount          Int                     @default(0)
+  gracePeriodUntil      DateTime?
+  pausedAt              DateTime?
+  pausedBy              String?
+  pauseReason           String?
+  cancelledAt           DateTime?
+  cancelledBy           String?
+  cancelReason          String?
+  endedAt               DateTime?
+  shortUrl              String? // Razorpay hosted subscription page
+
+  // For pending plan changes (downgrade/upgrade scheduled at next cycle)
+  pendingPlanChangeId   String?
+  pendingPlanChangeData Json?
+
+  metadata              Json?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan            Plan                  @relation(fields: [planId], references: [id])
+  mandate         Mandate?              @relation(fields: [mandateId], references: [id])
+  payments        Payment[]
+  invoices        Invoice[]
+  events          SubscriptionEvent[]
+  entitlements    Entitlement[]         @relation("EntitlementSourceSubscription")
+  retrySchedule   PaymentRetrySchedule[]
+  orders          Order[] // upgrade/downgrade orders linked to this subscription
+  priceAdjustments PriceAdjustment[]
+
+  @@index([userId, status])
+  @@index([nextChargeAt])
+  @@index([status, currentEnd])
+}
+
+model SubscriptionEvent {
+  id             String   @id @default(uuid())
+  subscriptionId String
+  kind           String // razorpay event name (subscription.activated etc.)
+  happenedAt     DateTime @default(now())
+  payloadHash    String
+  raw            Json
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([kind, happenedAt])
+}
+
+model Mandate {
+  id              String        @id @default(uuid())
+  userId          String
+  razorpayTokenId String        @unique
+  method          MandateMethod
+  status          MandateStatus @default(PENDING)
+  maxAmountPaise  Int
+  frequency       String? // "as_presented", "monthly", etc.
+  vpa             String?
+  bankName        String?
+  bankCode        String?
+  accountLast4    String?
+  cardLast4       String?
+  network         String?
+  mandateUrl      String?
+  startsAt        DateTime?
+  expiresAt       DateTime?
+  raw             Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model PaymentMethodToken {
+  id              String   @id @default(uuid())
+  userId          String
+  type            String // CARD | VPA | NETBANKING | EMI
+  razorpayTokenId String   @unique
+  last4           String?
+  network         String?
+  vpaHandle       String?
+  bankCode        String?
+  expiryMonth     Int?
+  expiryYear      Int?
+  isDefault       Boolean  @default(false)
+  status          String   @default("ACTIVE") // ACTIVE | REMOVED | EXPIRED
+  raw             Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isDefault])
+  @@index([status])
+}
+
+// --- Invoices ---
+
+model Invoice {
+  id                  String        @id @default(uuid())
+  invoiceNumber       String        @unique
+  userId              String
+  orderId             String?
+  subscriptionId      String?
+  billingAddressId    String?
+  type                InvoiceType   @default(TAX_INVOICE)
+  status              InvoiceStatus @default(DRAFT)
+
+  // GST snapshot
+  sellerGstin         String
+  sellerLegalName     String
+  sellerStateCode     String
+  buyerGstin          String?
+  buyerLegalName      String?
+  buyerStateCode      String?
+  placeOfSupply       String
+  taxRegion           TaxRegion
+  hsnCode             String        @default("998314")
+
+  // Pricing snapshot — all paise
+  subtotalPaise       Int
+  discountPaise       Int           @default(0)
+  taxableAmountPaise  Int
+  cgstPaise           Int           @default(0)
+  sgstPaise           Int           @default(0)
+  igstPaise           Int           @default(0)
+  cessPaise           Int           @default(0)
+  totalPaise          Int
+  paidPaise           Int           @default(0)
+  refundedPaise       Int           @default(0)
+  currency            String        @default("INR")
+  gstPercent          Int           @default(18)
+
+  // Period (for subscription invoices)
+  periodStart         DateTime?
+  periodEnd           DateTime?
+
+  // Files
+  pdfUrl              String?
+  jsonUrl             String?
+
+  // E-invoice (IRP)
+  eInvoiceIrn         String?
+  eInvoiceQrUrl       String?
+  eInvoiceAckNo       String?
+  eInvoiceAckDate     DateTime?
+
+  issuedAt            DateTime?
+  voidedAt            DateTime?
+  voidReason          String?
+
+  metadata            Json?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order           Order?            @relation(fields: [orderId], references: [id])
+  subscription    Subscription?     @relation(fields: [subscriptionId], references: [id])
+  billingAddress  BillingAddress?   @relation(fields: [billingAddressId], references: [id])
+  lines           InvoiceLine[]
+  payments        Payment[]
+
+  @@index([userId, issuedAt])
+  @@index([orderId])
+  @@index([subscriptionId])
+  @@index([status])
+}
+
+model InvoiceLine {
+  id                String  @id @default(uuid())
+  invoiceId         String
+  description       String
+  hsnCode           String?
+  sacCode           String?
+  quantity          Int     @default(1)
+  unitPricePaise    Int
+  discountPaise     Int     @default(0)
+  taxableAmountPaise Int
+  gstPercent        Int     @default(18)
+  cgstPaise         Int     @default(0)
+  sgstPaise         Int     @default(0)
+  igstPaise         Int     @default(0)
+  cessPaise         Int     @default(0)
+  totalPaise        Int
+  metadata          Json?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model InvoiceSequence {
+  id             String   @id @default(uuid())
+  financialYear  String // "2026-27"
+  prefix         String   @default("HA")
+  lastNumber     Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  @@unique([financialYear, prefix])
+}
+
+// --- Coupons ---
+
+model Coupon {
+  id                     String      @id @default(uuid())
+  code                   String      @unique
+  name                   String
+  type                   CouponType
+  valuePaise             Int? // for FLAT
+  valuePercent           Int? // for PERCENT (0-100)
+  maxDiscountPaise       Int? // cap for PERCENT
+  trialExtendDays        Int? // for TRIAL_EXTEND
+  scope                  CouponScope @default(GLOBAL)
+  status                 CouponStatus @default(ACTIVE)
+  startsAt               DateTime?
+  endsAt                 DateTime?
+  maxRedemptions         Int? // null = unlimited
+  maxRedemptionsPerUser  Int          @default(1)
+  redemptionsCount       Int          @default(0)
+  minOrderAmountPaise    Int          @default(0)
+  allowedPlanIds         String[]     @default([])
+  excludedPlanIds        String[]     @default([])
+  allowedRoles           Role[]       @default([])
+  allowedUserIds         String[]     @default([])
+  comboAllowed           Boolean      @default(false)
+  stackable              Boolean      @default(false)
+  autoApply              Boolean      @default(false)
+  descriptionHtml        String?
+  internalNotes          String?
+  createdById            String?
+  metadata               Json?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  createdBy   User?              @relation("CouponsCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  redemptions CouponRedemption[]
+  orders      Order[]
+
+  @@index([status, endsAt])
+  @@index([scope])
+}
+
+model CouponRedemption {
+  id             String                  @id @default(uuid())
+  couponId       String
+  userId         String
+  orderId        String?                 @unique
+  subscriptionId String?
+  redeemedAt     DateTime                @default(now())
+  discountPaise  Int
+  status         CouponRedemptionStatus  @default(SUCCESS)
+
+  coupon Coupon @relation(fields: [couponId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order  Order? @relation(fields: [orderId], references: [id])
+
+  @@index([couponId, status])
+  @@index([userId])
+}
+
+// --- Refunds / Settlements / Disputes ---
+
+model Refund {
+  id                String       @id @default(uuid())
+  paymentId         String
+  orderId           String
+  razorpayRefundId  String       @unique
+  amountPaise       Int
+  reason            RefundReason @default(USER_REQUESTED)
+  notes             String?
+  status            RefundStatus @default(PENDING)
+  initiatedById     String?
+  processedAt       DateTime?
+  errorCode         String?
+  errorDescription  String?
+  raw               Json?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  payment       Payment                 @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  order         Order                   @relation(fields: [orderId], references: [id])
+  initiatedBy   User?                   @relation("RefundsInitiatedBy", fields: [initiatedById], references: [id], onDelete: SetNull)
+  settlementTxns SettlementTransaction[]
+
+  @@index([paymentId])
+  @@index([orderId])
+  @@index([status])
+}
+
+model Settlement {
+  id                  String           @id @default(uuid())
+  razorpaySettlementId String          @unique
+  settledOnDate       DateTime
+  amountPaise         Int
+  feesPaise           Int              @default(0)
+  taxPaise            Int              @default(0)
+  netPaise            Int              @default(0)
+  utr                 String?
+  status              SettlementStatus @default(PROCESSED)
+  raw                 Json?
+  createdAt           DateTime         @default(now())
+
+  transactions SettlementTransaction[]
+
+  @@index([settledOnDate])
+  @@index([status])
+}
+
+model SettlementTransaction {
+  id            String   @id @default(uuid())
+  settlementId  String
+  paymentId     String?
+  refundId      String?
+  type          String // payment | refund | adjustment | tax
+  amountPaise   Int
+  feePaise      Int      @default(0)
+  taxPaise      Int      @default(0)
+  raw           Json?
+
+  settlement Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  payment    Payment?   @relation(fields: [paymentId], references: [id])
+  refund     Refund?    @relation(fields: [refundId], references: [id])
+
+  @@index([settlementId])
+  @@index([paymentId])
+  @@index([refundId])
+}
+
+model Dispute {
+  id                String        @id @default(uuid())
+  paymentId         String
+  razorpayDisputeId String        @unique
+  status            DisputeStatus @default(OPEN)
+  reasonCode        String?
+  reasonDescription String?
+  amountPaise       Int
+  dueByAt           DateTime?
+  raw               Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([status, dueByAt])
+}
+
+// --- Entitlements / Resources / Ledgers ---
+
+model Entitlement {
+  id                   String              @id @default(uuid())
+  userId               String
+  planId               String
+  source               EntitlementSource   @default(PLAN)
+  sourceOrderId        String?
+  sourceSubscriptionId String?
+  sourceCouponId       String?
+  status               EntitlementStatus   @default(ACTIVE)
+  validFrom            DateTime
+  validUntil           DateTime
+  autoRenew            Boolean             @default(false)
+  gracePeriodUntil     DateTime?
+  cancelledAt          DateTime?
+  metadata             Json?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan         Plan                 @relation(fields: [planId], references: [id])
+  sourceOrder  Order?               @relation("EntitlementSourceOrder", fields: [sourceOrderId], references: [id])
+  sourceSubscription Subscription?  @relation("EntitlementSourceSubscription", fields: [sourceSubscriptionId], references: [id])
+  resources    EntitlementResource[]
+  upgradesFrom UpgradeChange[]      @relation("UpgradeFromEntitlement")
+  upgradesTo   UpgradeChange[]      @relation("UpgradeToEntitlement")
+
+  @@index([userId, status])
+  @@index([validUntil])
+  @@index([planId])
+}
+
+model EntitlementResource {
+  id              String       @id @default(uuid())
+  entitlementId   String
+  unit            ResourceUnit
+  allocated       Int          @default(0)
+  consumed        Int          @default(0)
+  carriedForward  Int          @default(0)
+  lastConsumedAt  DateTime?
+
+  entitlement Entitlement     @relation(fields: [entitlementId], references: [id], onDelete: Cascade)
+  ledger      ResourceLedger[]
+
+  @@unique([entitlementId, unit])
+  @@index([entitlementId])
+}
+
+model ResourceLedger {
+  id                    String               @id @default(uuid())
+  entitlementResourceId String
+  userId                String
+  delta                 Int // positive = credit, negative = debit
+  reason                ResourceLedgerReason
+  refType               String? // "JOB_POST" | "CV_UNLOCK" | "SEARCH" | "MANUAL" | "UPGRADE_CARRY" | "REFUND" | "ADMIN"
+  refId                 String?
+  notes                 String?
+  ipAddress             String?
+  userAgent             String?
+  createdAt             DateTime             @default(now())
+
+  entitlementResource EntitlementResource @relation(fields: [entitlementResourceId], references: [id], onDelete: Cascade)
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([entitlementResourceId])
+  @@index([userId, createdAt])
+  @@index([refType, refId])
+}
+
+model BillingLedger {
+  id          String          @id @default(uuid())
+  userId      String
+  type        LedgerEntryType
+  amountPaise Int
+  currency    String          @default("INR")
+  refType     String?
+  refId       String?
+  orderId     String?
+  narration   String?
+  metadata    Json?
+  createdAt   DateTime        @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@index([refType, refId])
+}
+
+model PriceAdjustment {
+  id              String                 @id @default(uuid())
+  orderId         String?
+  subscriptionId  String?
+  reason          PriceAdjustmentReason
+  amountPaise     Int
+  narration       String?
+  createdById     String?
+  metadata        Json?
+  createdAt       DateTime               @default(now())
+
+  order        Order?        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  createdBy    User?         @relation("PriceAdjustmentsCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([subscriptionId])
+}
+
+// --- Razorpay Webhook Event Log ---
+
+model RazorpayWebhookEvent {
+  id              String                @id @default(uuid())
+  razorpayEventId String                @unique
+  event           String // e.g. "payment.captured"
+  accountId       String?
+  signatureValid  Boolean               @default(false)
+  receivedAt      DateTime              @default(now())
+  processedAt     DateTime?
+  status          RazorpayWebhookStatus @default(RECEIVED)
+  retryCount      Int                   @default(0)
+  errorMessage    String?
+  payload         Json
+  payloadHash     String
+  replayCount     Int                   @default(0)
+  lastReplayedAt  DateTime?
+  lastReplayedById String?
+
+  lastReplayedBy User? @relation("WebhookReplayedBy", fields: [lastReplayedById], references: [id], onDelete: SetNull)
+
+  @@index([event, status])
+  @@index([receivedAt])
+  @@index([status, retryCount])
+}
+
+// --- CV Enterprise Quote Requests + Custom Plan Offers ---
+
+model QuoteRequest {
+  id               String             @id @default(uuid())
+  userId           String
+  companyName      String
+  contactPerson    String
+  designation      String?
+  email            String
+  phone            String
+  employeeRange    String?
+  hiringNeed       String?
+  requiredCvCount  Int?
+  validityDays     Int?
+  expectedSeats    Int?
+  currentToolStack String?
+  budgetRange      String?
+  additionalNotes  String?
+  status           QuoteRequestStatus @default(NEW)
+  assignedToId     String?
+  slaDueAt         DateTime?
+  contactedAt      DateTime?
+  ipAddress        String?
+  userAgent        String?
+  metadata         Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedTo  User?             @relation("QuoteAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  offers      CustomPlanOffer[]
+
+  @@index([userId])
+  @@index([status, slaDueAt])
+  @@index([assignedToId])
+}
+
+model CustomPlanOffer {
+  id              String                @id @default(uuid())
+  quoteRequestId  String
+  planId          String? // created plan id once accepted
+  basePricePaise  Int
+  validityDays    Int
+  cvUnlocks       Int                   @default(0)
+  seats           Int                   @default(1)
+  features        Json?
+  resources       Json?
+  status          CustomPlanOfferStatus @default(DRAFT)
+  expiresAt       DateTime?
+  createdById     String?
+  acceptedAt      DateTime?
+  acceptedOrderId String?
+  metadata        Json?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  quoteRequest QuoteRequest @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+  plan         Plan?        @relation(fields: [planId], references: [id])
+  createdBy    User?        @relation("CustomPlanOffersCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([quoteRequestId])
+  @@index([status, expiresAt])
+}
+
+// --- Fraud Detection ---
+
+model FraudSignalEvent {
+  id          String        @id @default(uuid())
+  userId      String?
+  orderId     String?
+  paymentId   String?
+  signal      FraudSignal
+  severity    FraudSeverity @default(LOW)
+  evidence    Json?
+  action      FraudAction   @default(NONE)
+  reviewedById String?
+  reviewedAt  DateTime?
+  notes       String?
+  createdAt   DateTime      @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  payment    Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  reviewedBy User?    @relation("FraudReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([severity, action])
+  @@index([signal])
+  @@index([createdAt])
+}
+
+model FraudRule {
+  id            String        @id @default(uuid())
+  name          String        @unique
+  signal        FraudSignal
+  threshold     Int
+  windowSeconds Int
+  action        FraudAction   @default(REVIEW)
+  severity      FraudSeverity @default(MEDIUM)
+  enabled       Boolean       @default(true)
+  notes         String?
+  updatedById   String?
+  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime      @default(now())
+
+  updatedBy User? @relation("FraudRulesUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([enabled, signal])
+}
+
+// --- Payment Retry / Dunning Ladder ---
+
+model PaymentRetrySchedule {
+  id             String    @id @default(uuid())
+  subscriptionId String
+  attemptNumber  Int
+  scheduledAt    DateTime
+  executed       Boolean   @default(false)
+  executedAt     DateTime?
+  succeeded      Boolean   @default(false)
+  errorCode      String?
+  paymentId      String?
+  metadata       Json?
+  createdAt      DateTime  @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, attemptNumber])
+  @@index([scheduledAt, executed])
+}
+
+// --- Multi-channel Notification Dedup ---
+
+model BillingNotification {
+  id        String                  @id @default(uuid())
+  userId    String
+  channel   String // EMAIL | SMS | WHATSAPP | FCM | WEBPUSH | INAPP
+  kind      BillingNotificationKind
+  refType   String? // ORDER | SUBSCRIPTION | INVOICE | REFUND | ENTITLEMENT
+  refId     String?
+  sentAt    DateTime                @default(now())
+  ackAt     DateTime?
+  metadata  Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, refType, refId, channel])
+  @@index([userId, sentAt])
+  @@index([kind])
+}
+
+// --- Upgrade audit ---
+
+model UpgradeChange {
+  id                  String   @id @default(uuid())
+  userId              String
+  fromEntitlementId   String?
+  toEntitlementId     String?
+  fromPlanId          String
+  toPlanId            String
+  fromOrderId         String?
+  toOrderId           String?
+  prorationPaise      Int      @default(0)
+  carryForward        Json? // { unit: amount, ... }
+  snapshot            Json
+  executedAt          DateTime @default(now())
+  createdById         String?
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromEntitlement Entitlement? @relation("UpgradeFromEntitlement", fields: [fromEntitlementId], references: [id], onDelete: SetNull)
+  toEntitlement   Entitlement? @relation("UpgradeToEntitlement", fields: [toEntitlementId], references: [id], onDelete: SetNull)
+  fromPlan        Plan         @relation("UpgradeFromPlan", fields: [fromPlanId], references: [id])
+  toPlan          Plan         @relation("UpgradeToPlan", fields: [toPlanId], references: [id])
+  fromOrder       Order?       @relation("UpgradeFromOrder", fields: [fromOrderId], references: [id], onDelete: SetNull)
+  toOrder         Order?       @relation("UpgradeToOrder", fields: [toOrderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, executedAt])
+  @@index([fromPlanId, toPlanId])
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// Company Ratings + Reviews
+//
+// Anyone (auth or guest) can leave one review per company. Auth users
+// dedup on (userId, companyId); guests dedup on (fingerprintHash,
+// companyId) where fingerprintHash = SHA-256(IP + UA + day-bucket +
+// companyId). Engagement (helpful votes / reports) is denormalised on
+// the review row for cheap card render. The CompanyReviewAggregate
+// table holds derived stats refreshed by a BullMQ worker.
+// ────────────────────────────────────────────────────────────────────────
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  FLAGGED
+  REJECTED
+  DELETED
+}
+
+enum ReviewEmploymentType {
+  PERMANENT
+  INTERNSHIP
+  CONTRACT
+  TEMPORARY
+  FREELANCE
+  PART_TIME
+  TRAINEE
+}
+
+enum ReviewWorkPolicy {
+  PERMANENT_WFH
+  WORKING_FROM_OFFICE
+  HYBRID
+}
+
+enum ReviewGender {
+  FEMALE
+  MALE
+  TRANSGENDER
+  PREFER_NOT_TO_SAY
+}
+
+model CompanyReview {
+  id              String  @id @default(uuid())
+  companyId       String
+  userId          String?
+  guestEmail      String?
+  fingerprintHash String
+
+  overallRating          Int
+  ratingWorkLifeBalance  Int
+  ratingSalary           Int
+  ratingPromotions       Int
+  ratingJobSecurity      Int
+  ratingSkillDev         Int
+  ratingWorkSatisfaction Int
+  ratingCompanyCulture   Int
+
+  gender           ReviewGender?
+  workPolicy       ReviewWorkPolicy
+  currentlyWorking Boolean
+  startedWorkingAt DateTime?
+  endedWorkingAt   DateTime?
+  designation      String
+  employmentType   ReviewEmploymentType
+  department       String
+  workLocation     String?
+
+  likes       String?
+  dislikes    String?
+  workDetails String?
+  isDetailed  Boolean @default(false)
+
+  status           ReviewStatus @default(APPROVED)
+  moderationReason String?
+  moderatedBy      String?
+  moderatedAt      DateTime?
+  reportedCount    Int          @default(0)
+
+  helpfulCount    Int @default(0)
+  notHelpfulCount Int @default(0)
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  company CompanyProfile       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  votes   CompanyReviewVote[]
+  reports CompanyReviewReport[]
+
+  @@unique([userId, companyId], name: "uq_review_user_company")
+  @@unique([fingerprintHash, companyId], name: "uq_review_fp_company")
+  @@index([companyId, status, createdAt])
+  @@index([companyId, overallRating, status])
+  @@index([companyId, isDetailed])
+  @@index([status, reportedCount])
+  @@index([userId, createdAt])
+}
+
+model CompanyReviewVote {
+  id              String   @id @default(uuid())
+  reviewId        String
+  userId          String?
+  fingerprintHash String
+  helpful         Boolean
+  createdAt       DateTime @default(now())
+
+  review CompanyReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([reviewId, userId], name: "uq_vote_user_review")
+  @@unique([reviewId, fingerprintHash], name: "uq_vote_fp_review")
+  @@index([reviewId])
+}
+
+model CompanyReviewReport {
+  id             String    @id @default(uuid())
+  reviewId       String
+  reporterUserId String?
+  reporterFp     String
+  reason         String
+  details        String?
+  resolved       Boolean   @default(false)
+  resolvedBy     String?
+  resolvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  review CompanyReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([resolved, createdAt])
+}
+
+model CompanyReviewAggregate {
+  companyId               String   @id
+  totalReviews            Int      @default(0)
+  averageOverall          Float    @default(0)
+  averageWorkLifeBalance  Float    @default(0)
+  averageSalary           Float    @default(0)
+  averagePromotions       Float    @default(0)
+  averageJobSecurity      Float    @default(0)
+  averageSkillDev         Float    @default(0)
+  averageWorkSatisfaction Float    @default(0)
+  averageCompanyCulture   Float    @default(0)
+  count5                  Int      @default(0)
+  count4                  Int      @default(0)
+  count3                  Int      @default(0)
+  count2                  Int      @default(0)
+  count1                  Int      @default(0)
+  averageMen              Float?
+  countMen                Int      @default(0)
+  averageWomen            Float?
+  countWomen              Int      @default(0)
+  topJobProfiles          Json?
+  industryAverage         Float?
+  industryName            String?
+  refreshedAt             DateTime @default(now())
+
+  company CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([averageOverall])
+  @@index([refreshedAt])
 }

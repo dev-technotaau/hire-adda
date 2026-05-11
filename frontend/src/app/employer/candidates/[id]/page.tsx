@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useParams, useRouter, notFound } from 'next/navigation';
+import { useParams, useRouter, notFound, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -49,6 +49,15 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Tag from '@/components/ui/Tag';
+import UnlockContactButton from '@/components/billing/UnlockContactButton';
+import VerifiedBadge from '@/components/billing/VerifiedBadge';
+import CandidateDetailTabs, {
+  deriveAvailableCandidateTabs,
+  type CandidateTabKey,
+} from '@/components/candidate-search/CandidateDetailTabs';
+import SocialLinksBento, { candidateSocialLinks } from '@/components/common/SocialLinksBento';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { cvUnlockService, type UnlockResult } from '@/services/cv-unlock.service';
 import Skeleton from '@/components/ui/Skeleton';
 import PresenceIndicator from '@/components/ui/PresenceIndicator';
 import { showToast } from '@/components/ui/Toast';
@@ -107,6 +116,8 @@ const statusColorMap: Record<string, BadgeVariant> = {
 export default function EmployerCandidateDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedTab = (searchParams?.get('tab') ?? 'overview') as CandidateTabKey;
   const queryClient = useQueryClient();
   const id = params.id as string;
 
@@ -121,6 +132,8 @@ export default function EmployerCandidateDetailPage() {
   const [jobSearch, setJobSearch] = useState('');
   const [contactOpen, setContactOpen] = useState(false);
   const [actionedStatus, setActionedStatus] = useState<'shortlisted' | 'selected' | null>(null);
+  const { hasFeature } = useEntitlements();
+  const [unlockedContact, setUnlockedContact] = useState<UnlockResult | null>(null);
 
   const { data: myJobsData } = useQuery({
     queryKey: [...QUERY_KEYS.JOBS.MY_JOBS, 'picker'],
@@ -181,6 +194,12 @@ export default function EmployerCandidateDetailPage() {
 
   const profile = data?.data as CandidateProfile | undefined;
   const candidateApplications = (candidateAppsData?.data?.items || []) as JobApplication[];
+
+  // Tab availability derived from candidate data — auto-hides empty tabs.
+  const availableTabs = profile
+    ? deriveAvailableCandidateTabs(profile)
+    : new Set<CandidateTabKey>(['overview']);
+  const activeTab: CandidateTabKey = availableTabs.has(requestedTab) ? requestedTab : 'overview';
   const name = profile?.user
     ? `${profile.user.firstName || ''} ${profile.user.lastName || ''}`.trim()
     : 'Candidate';
@@ -217,19 +236,30 @@ export default function EmployerCandidateDetailPage() {
             <Button
               size="sm"
               variant={actionedStatus === 'shortlisted' ? 'outline' : 'primary'}
-              className={actionedStatus === 'shortlisted' ? 'text-[var(--success)] border-[var(--success)]/30' : ''}
+              className={
+                actionedStatus === 'shortlisted'
+                  ? 'border-[var(--success)]/30 text-[var(--success)]'
+                  : ''
+              }
               onClick={() => {
                 setJobPickerAction('shortlist');
                 setJobPickerOpen(true);
               }}
               tooltip="Shortlist for a job"
             >
-              <Star className={`mr-1.5 h-4 w-4${actionedStatus === 'shortlisted' ? ' fill-current' : ''}`} /> Shortlist
+              <Star
+                className={`mr-1.5 h-4 w-4${actionedStatus === 'shortlisted' ? 'fill-current' : ''}`}
+              />{' '}
+              Shortlist
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className={actionedStatus === 'selected' ? 'text-[var(--success)] border-[var(--success)]/30' : ''}
+              className={
+                actionedStatus === 'selected'
+                  ? 'border-[var(--success)]/30 text-[var(--success)]'
+                  : ''
+              }
               onClick={() => {
                 setJobPickerAction('select');
                 setJobPickerOpen(true);
@@ -241,47 +271,74 @@ export default function EmployerCandidateDetailPage() {
 
             {/* Contact dropdown */}
             <div className="relative">
-              <Button variant="outline" size="sm" onClick={() => setContactOpen(!contactOpen)} tooltip="Contact candidate">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setContactOpen(!contactOpen)}
+                tooltip="Contact candidate"
+              >
                 <Phone className="mr-1.5 h-4 w-4" /> Contact{' '}
                 <ChevronDown className="ml-1 h-3 w-3" />
               </Button>
               {contactOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setContactOpen(false)} />
-                  <div className="absolute top-full right-0 z-50 mt-1 w-52 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-1 shadow-lg">
-                    {profile?.user?.email && (
-                      <a
-                        href={`mailto:${profile.user.email}`}
-                        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
-                        onClick={() => setContactOpen(false)}
-                      >
-                        <Mail className="h-4 w-4" /> Email
-                      </a>
-                    )}
-                    {(profile?.user?.mobileNumber || profile?.phone) && (
-                      <a
-                        href={`tel:${profile.user?.mobileNumber || profile.phone}`}
-                        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
-                        onClick={() => setContactOpen(false)}
-                      >
-                        <Phone className="h-4 w-4" /> Call
-                      </a>
-                    )}
-                    {(profile?.user?.whatsappNumber ||
-                      profile?.user?.mobileNumber ||
-                      profile?.phone) && (
-                      <a
-                        href={`https://wa.me/${(profile.user?.whatsappNumber || profile.user?.mobileNumber || profile.phone || '').replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
-                        onClick={() => setContactOpen(false)}
-                      >
-                        <MessageCircle className="h-4 w-4" /> WhatsApp
-                      </a>
-                    )}
-                    {!profile?.user?.email && !profile?.phone && !profile?.user?.mobileNumber && !profile?.user?.whatsappNumber && (
-                      <p className="px-3 py-2 text-sm text-[var(--text-muted)]">No contact info available</p>
+                  <div className="absolute top-full right-0 z-50 mt-1 w-72 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2 shadow-lg">
+                    {unlockedContact ? (
+                      <div className="space-y-1.5">
+                        {unlockedContact.email && (
+                          <a
+                            href={`mailto:${unlockedContact.email}`}
+                            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                            onClick={() => setContactOpen(false)}
+                          >
+                            <Mail className="h-4 w-4 flex-shrink-0" /> {unlockedContact.email}
+                          </a>
+                        )}
+                        {unlockedContact.phone && (
+                          <a
+                            href={`tel:${unlockedContact.phone}`}
+                            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                            onClick={() => setContactOpen(false)}
+                          >
+                            <Phone className="h-4 w-4 flex-shrink-0" /> {unlockedContact.phone}
+                          </a>
+                        )}
+                        {unlockedContact.phone && (
+                          <a
+                            href={`https://wa.me/${unlockedContact.phone.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                            onClick={() => setContactOpen(false)}
+                          >
+                            <MessageCircle className="h-4 w-4 flex-shrink-0" /> WhatsApp
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2 p-2">
+                        <p className="text-xs text-[var(--text-secondary)]">
+                          Unlock this candidate&apos;s contact details using 1 CV unlock from your
+                          plan.
+                        </p>
+                        <UnlockContactButton candidateId={String(id)} />
+                        {hasFeature('feature.cv_db_access') ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                const res = await cvUnlockService.unlock(String(id));
+                                setUnlockedContact(res);
+                              } catch {
+                                /* error surfaced by UnlockContactButton retry */
+                              }
+                            }}
+                            className="hidden"
+                            aria-hidden
+                          />
+                        ) : null}
+                      </div>
                     )}
                   </div>
                 </>
@@ -349,7 +406,15 @@ export default function EmployerCandidateDetailPage() {
 
                 <div className="flex-1 space-y-3">
                   <div>
-                    <h1 className="text-2xl font-bold text-[var(--text)]">{name}</h1>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="text-2xl font-bold text-[var(--text)]">{name}</h1>
+                      <VerifiedBadge
+                        isVerified={Boolean(
+                          (profile as unknown as { hasVerifiedBadge?: boolean }).hasVerifiedBadge,
+                        )}
+                        size="md"
+                      />
+                    </div>
                     {profile.pronouns && (
                       <span className="text-sm text-[var(--text-muted)]">({profile.pronouns})</span>
                     )}
@@ -498,11 +563,15 @@ export default function EmployerCandidateDetailPage() {
               </div>
             </Card>
 
+            {/* Tab nav — same 7 tabs candidates see in their own
+                preview. Auto-hides empty tabs. */}
+            <CandidateDetailTabs available={availableTabs} />
+
             <div className="grid gap-6 lg:grid-cols-3">
               {/* Main Content (left 2/3) */}
               <div className="space-y-6 lg:col-span-2">
-                {/* About / Bio */}
-                {profile.bio && (
+                {/* About / Bio — Overview tab */}
+                {activeTab === 'overview' && profile.bio && (
                   <Card>
                     <h2 className="mb-3 text-lg font-semibold text-[var(--text)]">About</h2>
                     <p className="text-sm leading-relaxed whitespace-pre-line text-[var(--text-secondary)]">
@@ -511,125 +580,128 @@ export default function EmployerCandidateDetailPage() {
                   </Card>
                 )}
 
-                {/* Experience */}
-                {profile.experience && profile.experience.length > 0 && (
-                  <Card>
-                    <div className="mb-4 flex items-center gap-2">
-                      <Briefcase className="h-5 w-5 text-[var(--info)]" />
-                      <h2 className="text-lg font-semibold text-[var(--text)]">Experience</h2>
-                    </div>
-                    <div className="space-y-6">
-                      {profile.experience.map((exp, i) => (
-                        <div key={i} className="relative border-l-2 border-[var(--border)] pl-6">
-                          <div className="absolute top-1 -left-[7px] h-3 w-3 rounded-full border-2 border-[var(--border)] bg-white" />
-                          <h3 className="font-semibold text-[var(--text)]">{exp.role}</h3>
-                          <p className="text-sm text-[var(--text-secondary)]">
-                            {exp.company}
-                            {exp.location && ` · ${exp.location}`}
-                            {exp.employmentType && ` · ${exp.employmentType}`}
-                          </p>
-                          <p className="text-xs text-[var(--text-muted)]">
-                            {formatDate(exp.startDate)} —{' '}
-                            {exp.isCurrent ? 'Present' : formatDate(exp.endDate)}
-                          </p>
-                          {(exp.industry || exp.department) && (
-                            <p className="mt-1 text-xs text-[var(--text-muted)]">
-                              {exp.industry && `Industry: ${exp.industry}`}
-                              {exp.industry && exp.department && ' · '}
-                              {exp.department && `Dept: ${exp.department}`}
+                {/* Experience — Experience tab */}
+                {activeTab === 'experience' &&
+                  profile.experience &&
+                  profile.experience.length > 0 && (
+                    <Card>
+                      <div className="mb-4 flex items-center gap-2">
+                        <Briefcase className="h-5 w-5 text-[var(--info)]" />
+                        <h2 className="text-lg font-semibold text-[var(--text)]">Experience</h2>
+                      </div>
+                      <div className="space-y-6">
+                        {profile.experience.map((exp, i) => (
+                          <div key={i} className="relative border-l-2 border-[var(--border)] pl-6">
+                            <div className="absolute top-1 -left-[7px] h-3 w-3 rounded-full border-2 border-[var(--border)] bg-white" />
+                            <h3 className="font-semibold text-[var(--text)]">{exp.role}</h3>
+                            <p className="text-sm text-[var(--text-secondary)]">
+                              {exp.company}
+                              {exp.location && ` · ${exp.location}`}
+                              {exp.employmentType && ` · ${exp.employmentType}`}
                             </p>
-                          )}
-                          {(exp.teamSize || exp.reportingTo) && (
                             <p className="text-xs text-[var(--text-muted)]">
-                              {exp.teamSize && `Team size: ${exp.teamSize}`}
-                              {exp.teamSize && exp.reportingTo && ' · '}
-                              {exp.reportingTo && `Reporting to: ${exp.reportingTo}`}
+                              {formatDate(exp.startDate)} —{' '}
+                              {exp.isCurrent ? 'Present' : formatDate(exp.endDate)}
                             </p>
-                          )}
-                          {exp.description && (
-                            <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                              {exp.description}
-                            </p>
-                          )}
-                          {exp.keyAchievements && exp.keyAchievements.length > 0 && (
-                            <ul className="mt-2 list-inside list-disc text-sm text-[var(--text-secondary)]">
-                              {exp.keyAchievements.map((a, j) => (
-                                <li key={j}>{a}</li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                )}
+                            {(exp.industry || exp.department) && (
+                              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                                {exp.industry && `Industry: ${exp.industry}`}
+                                {exp.industry && exp.department && ' · '}
+                                {exp.department && `Dept: ${exp.department}`}
+                              </p>
+                            )}
+                            {(exp.teamSize || exp.reportingTo) && (
+                              <p className="text-xs text-[var(--text-muted)]">
+                                {exp.teamSize && `Team size: ${exp.teamSize}`}
+                                {exp.teamSize && exp.reportingTo && ' · '}
+                                {exp.reportingTo && `Reporting to: ${exp.reportingTo}`}
+                              </p>
+                            )}
+                            {exp.description && (
+                              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                {exp.description}
+                              </p>
+                            )}
+                            {exp.keyAchievements && exp.keyAchievements.length > 0 && (
+                              <ul className="mt-2 list-inside list-disc text-sm text-[var(--text-secondary)]">
+                                {exp.keyAchievements.map((a, j) => (
+                                  <li key={j}>{a}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
 
                 {/* Education */}
-                {(profile.education && profile.education.length > 0) ||
-                profile.highestEducationLevel ||
-                profile.highestDegree ? (
-                  <Card>
-                    <div className="mb-4 flex items-center gap-2">
-                      <GraduationCap className="h-5 w-5 text-[var(--warning)]" />
-                      <h2 className="text-lg font-semibold text-[var(--text)]">Education</h2>
-                    </div>
-                    {(profile.highestEducationLevel || profile.highestDegree) && (
-                      <div className="mb-4 flex flex-wrap gap-2">
-                        {profile.highestEducationLevel && (
-                          <Badge variant="info" size="sm">
-                            {EDUCATION_LEVEL_LABELS[profile.highestEducationLevel]}
-                          </Badge>
-                        )}
-                        {profile.highestDegree && (
-                          <Badge variant="neutral" size="sm">
-                            {SPECIFIC_DEGREE_LABELS[profile.highestDegree]}
-                          </Badge>
-                        )}
+                {activeTab === 'education' &&
+                  ((profile.education && profile.education.length > 0) ||
+                  profile.highestEducationLevel ||
+                  profile.highestDegree ? (
+                    <Card>
+                      <div className="mb-4 flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5 text-[var(--warning)]" />
+                        <h2 className="text-lg font-semibold text-[var(--text)]">Education</h2>
                       </div>
-                    )}
-                    <div className="space-y-4">
-                      {(profile.education || []).map((edu, i) => (
-                        <div key={i} className="flex gap-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
-                            <GraduationCap className="h-5 w-5 text-[var(--warning)]" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-[var(--text)]">
-                              {edu.degree} {edu.field ? `in ${edu.field}` : ''}
-                            </h3>
-                            <p className="text-sm text-[var(--text-secondary)]">
-                              {edu.institution}
-                            </p>
-                            <p className="text-xs text-[var(--text-muted)]">
-                              {formatDate(edu.startDate)} — {formatDate(edu.endDate)}
-                              {edu.grade &&
-                                ` · ${edu.gradeType ? GRADE_TYPE_LABELS[edu.gradeType] || edu.gradeType : 'Grade'}: ${edu.grade}`}
-                              {edu.courseType && ` · ${COURSE_TYPE_LABELS[edu.courseType]}`}
-                            </p>
-                            {edu.specialization && (
-                              <p className="text-xs text-[var(--text-muted)]">
-                                Specialization: {edu.specialization}
-                              </p>
-                            )}
-                            {edu.activities && (
-                              <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                                {edu.activities}
-                              </p>
-                            )}
-                            {edu.description && (
-                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                                {edu.description}
-                              </p>
-                            )}
-                          </div>
+                      {(profile.highestEducationLevel || profile.highestDegree) && (
+                        <div className="mb-4 flex flex-wrap gap-2">
+                          {profile.highestEducationLevel && (
+                            <Badge variant="info" size="sm">
+                              {EDUCATION_LEVEL_LABELS[profile.highestEducationLevel]}
+                            </Badge>
+                          )}
+                          {profile.highestDegree && (
+                            <Badge variant="neutral" size="sm">
+                              {SPECIFIC_DEGREE_LABELS[profile.highestDegree]}
+                            </Badge>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </Card>
-                ) : null}
+                      )}
+                      <div className="space-y-4">
+                        {(profile.education || []).map((edu, i) => (
+                          <div key={i} className="flex gap-4">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--warning-light)]">
+                              <GraduationCap className="h-5 w-5 text-[var(--warning)]" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-[var(--text)]">
+                                {edu.degree} {edu.field ? `in ${edu.field}` : ''}
+                              </h3>
+                              <p className="text-sm text-[var(--text-secondary)]">
+                                {edu.institution}
+                              </p>
+                              <p className="text-xs text-[var(--text-muted)]">
+                                {formatDate(edu.startDate)} — {formatDate(edu.endDate)}
+                                {edu.grade &&
+                                  ` · ${edu.gradeType ? GRADE_TYPE_LABELS[edu.gradeType] || edu.gradeType : 'Grade'}: ${edu.grade}`}
+                                {edu.courseType && ` · ${COURSE_TYPE_LABELS[edu.courseType]}`}
+                              </p>
+                              {edu.specialization && (
+                                <p className="text-xs text-[var(--text-muted)]">
+                                  Specialization: {edu.specialization}
+                                </p>
+                              )}
+                              {edu.activities && (
+                                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                  {edu.activities}
+                                </p>
+                              )}
+                              {edu.description && (
+                                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                  {edu.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  ) : null)}
 
                 {/* Projects */}
-                {profile.projects && profile.projects.length > 0 && (
+                {activeTab === 'projects' && profile.projects && profile.projects.length > 0 && (
                   <Card>
                     <div className="mb-4 flex items-center gap-2">
                       <FolderKanban className="text-primary h-5 w-5" />
@@ -688,147 +760,152 @@ export default function EmployerCandidateDetailPage() {
                 )}
 
                 {/* Certifications */}
-                {profile.certifications && profile.certifications.length > 0 && (
-                  <Card>
-                    <div className="mb-4 flex items-center gap-2">
-                      <Award className="h-5 w-5 text-[var(--success)]" />
-                      <h2 className="text-lg font-semibold text-[var(--text)]">Certifications</h2>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {profile.certifications.map((cert, i) => (
-                        <div key={i} className="rounded-lg border border-[var(--border)] p-3">
-                          <h3 className="font-medium text-[var(--text)]">{cert.name}</h3>
-                          <p className="text-sm text-[var(--text-secondary)]">{cert.issuer}</p>
-                          <p className="text-xs text-[var(--text-muted)]">
-                            {cert.issueDate && formatDate(cert.issueDate)}
-                            {cert.expiryDate && !cert.doesNotExpire
-                              ? ` — ${formatDate(cert.expiryDate)}`
-                              : ''}
-                            {cert.doesNotExpire ? ' · No expiry' : ''}
-                          </p>
-                          {cert.credentialId && (
+                {activeTab === 'achievements' &&
+                  profile.certifications &&
+                  profile.certifications.length > 0 && (
+                    <Card>
+                      <div className="mb-4 flex items-center gap-2">
+                        <Award className="h-5 w-5 text-[var(--success)]" />
+                        <h2 className="text-lg font-semibold text-[var(--text)]">Certifications</h2>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {profile.certifications.map((cert, i) => (
+                          <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                            <h3 className="font-medium text-[var(--text)]">{cert.name}</h3>
+                            <p className="text-sm text-[var(--text-secondary)]">{cert.issuer}</p>
                             <p className="text-xs text-[var(--text-muted)]">
-                              ID: {cert.credentialId}
+                              {cert.issueDate && formatDate(cert.issueDate)}
+                              {cert.expiryDate && !cert.doesNotExpire
+                                ? ` — ${formatDate(cert.expiryDate)}`
+                                : ''}
+                              {cert.doesNotExpire ? ' · No expiry' : ''}
                             </p>
-                          )}
-                          {cert.url && (
-                            <a
-                              href={cert.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary mt-1 inline-flex items-center gap-1 text-xs hover:underline"
-                            >
-                              <ExternalLink className="h-3 w-3" /> Verify
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                )}
-
-                {/* Publications & Patents */}
-                {((profile.publications && profile.publications.length > 0) ||
-                  (profile.patents && profile.patents.length > 0)) && (
-                  <Card>
-                    <div className="mb-4 flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-[#8B5CF6]" />
-                      <h2 className="text-lg font-semibold text-[var(--text)]">
-                        Publications & Patents
-                      </h2>
-                    </div>
-                    <div className="space-y-3">
-                      {profile.publications?.map((pub, i) => (
-                        <div
-                          key={`pub-${i}`}
-                          className="rounded-lg border border-[var(--border)] p-3"
-                        >
-                          <h3 className="font-medium text-[var(--text)]">{pub.title}</h3>
-                          {pub.publisher && (
-                            <p className="text-sm text-[var(--text-secondary)]">{pub.publisher}</p>
-                          )}
-                          {pub.authors && (
-                            <p className="text-xs text-[var(--text-muted)]">
-                              Authors: {pub.authors}
-                            </p>
-                          )}
-                          {pub.publicationDate && (
-                            <p className="text-xs text-[var(--text-muted)]">
-                              {formatDate(pub.publicationDate)}
-                            </p>
-                          )}
-                          {pub.description && (
-                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                              {pub.description}
-                            </p>
-                          )}
-                          {pub.url && (
-                            <a
-                              href={pub.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary mt-1 inline-flex items-center gap-1 text-xs hover:underline"
-                            >
-                              <ExternalLink className="h-3 w-3" /> View
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                      {profile.patents?.map((pat, i) => (
-                        <div
-                          key={`pat-${i}`}
-                          className="rounded-lg border border-[var(--border)] p-3"
-                        >
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium text-[var(--text)]">{pat.title}</h3>
-                            {pat.status && (
-                              <Badge variant="info" size="sm">
-                                {PATENT_STATUS_LABELS[pat.status] || pat.status}
-                              </Badge>
+                            {cert.credentialId && (
+                              <p className="text-xs text-[var(--text-muted)]">
+                                ID: {cert.credentialId}
+                              </p>
+                            )}
+                            {cert.url && (
+                              <a
+                                href={cert.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary mt-1 inline-flex items-center gap-1 text-xs hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" /> Verify
+                              </a>
                             )}
                           </div>
-                          {pat.patentOffice && (
-                            <p className="text-sm text-[var(--text-secondary)]">
-                              {pat.patentOffice}
-                            </p>
-                          )}
-                          {pat.patentNumber && (
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+
+                {/* Publications & Patents */}
+                {activeTab === 'projects' &&
+                  ((profile.publications && profile.publications.length > 0) ||
+                    (profile.patents && profile.patents.length > 0)) && (
+                    <Card>
+                      <div className="mb-4 flex items-center gap-2">
+                        <BookOpen className="h-5 w-5 text-[#8B5CF6]" />
+                        <h2 className="text-lg font-semibold text-[var(--text)]">
+                          Publications & Patents
+                        </h2>
+                      </div>
+                      <div className="space-y-3">
+                        {profile.publications?.map((pub, i) => (
+                          <div
+                            key={`pub-${i}`}
+                            className="rounded-lg border border-[var(--border)] p-3"
+                          >
+                            <h3 className="font-medium text-[var(--text)]">{pub.title}</h3>
+                            {pub.publisher && (
+                              <p className="text-sm text-[var(--text-secondary)]">
+                                {pub.publisher}
+                              </p>
+                            )}
+                            {pub.authors && (
+                              <p className="text-xs text-[var(--text-muted)]">
+                                Authors: {pub.authors}
+                              </p>
+                            )}
+                            {pub.publicationDate && (
+                              <p className="text-xs text-[var(--text-muted)]">
+                                {formatDate(pub.publicationDate)}
+                              </p>
+                            )}
+                            {pub.description && (
+                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                {pub.description}
+                              </p>
+                            )}
+                            {pub.url && (
+                              <a
+                                href={pub.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary mt-1 inline-flex items-center gap-1 text-xs hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" /> View
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                        {profile.patents?.map((pat, i) => (
+                          <div
+                            key={`pat-${i}`}
+                            className="rounded-lg border border-[var(--border)] p-3"
+                          >
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-[var(--text)]">{pat.title}</h3>
+                              {pat.status && (
+                                <Badge variant="info" size="sm">
+                                  {PATENT_STATUS_LABELS[pat.status] || pat.status}
+                                </Badge>
+                              )}
+                            </div>
+                            {pat.patentOffice && (
+                              <p className="text-sm text-[var(--text-secondary)]">
+                                {pat.patentOffice}
+                              </p>
+                            )}
+                            {pat.patentNumber && (
+                              <p className="text-xs text-[var(--text-muted)]">
+                                Patent #{pat.patentNumber}
+                              </p>
+                            )}
+                            {pat.inventors && (
+                              <p className="text-xs text-[var(--text-muted)]">
+                                Inventors: {pat.inventors}
+                              </p>
+                            )}
                             <p className="text-xs text-[var(--text-muted)]">
-                              Patent #{pat.patentNumber}
+                              {pat.filingDate && `Filed: ${formatFullDate(pat.filingDate)}`}
+                              {pat.issueDate && ` · Issued: ${formatFullDate(pat.issueDate)}`}
                             </p>
-                          )}
-                          {pat.inventors && (
-                            <p className="text-xs text-[var(--text-muted)]">
-                              Inventors: {pat.inventors}
-                            </p>
-                          )}
-                          <p className="text-xs text-[var(--text-muted)]">
-                            {pat.filingDate && `Filed: ${formatFullDate(pat.filingDate)}`}
-                            {pat.issueDate && ` · Issued: ${formatFullDate(pat.issueDate)}`}
-                          </p>
-                          {pat.description && (
-                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                              {pat.description}
-                            </p>
-                          )}
-                          {pat.url && (
-                            <a
-                              href={pat.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary mt-1 inline-flex items-center gap-1 text-xs hover:underline"
-                            >
-                              <ExternalLink className="h-3 w-3" /> View
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                )}
+                            {pat.description && (
+                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                {pat.description}
+                              </p>
+                            )}
+                            {pat.url && (
+                              <a
+                                href={pat.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary mt-1 inline-flex items-center gap-1 text-xs hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" /> View
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
 
                 {/* Awards */}
-                {profile.awards && profile.awards.length > 0 && (
+                {activeTab === 'achievements' && profile.awards && profile.awards.length > 0 && (
                   <Card>
                     <div className="mb-4 flex items-center gap-2">
                       <Trophy className="h-5 w-5 text-[var(--warning)]" />
@@ -858,153 +935,307 @@ export default function EmployerCandidateDetailPage() {
                 )}
 
                 {/* Courses & Test Scores */}
-                {((profile.courses && profile.courses.length > 0) ||
-                  (profile.testScores && profile.testScores.length > 0)) && (
-                  <Card>
-                    <div className="mb-4 flex items-center gap-2">
-                      <GraduationCap className="text-primary h-5 w-5" />
-                      <h2 className="text-lg font-semibold text-[var(--text)]">
-                        Courses & Test Scores
-                      </h2>
-                    </div>
-                    {profile.courses && profile.courses.length > 0 && (
-                      <div className="space-y-2">
-                        <h3 className="text-sm font-medium text-[var(--text)]">
-                          Courses Completed
-                        </h3>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {profile.courses.map((course, i) => (
-                            <div key={i} className="rounded border border-[var(--border)] p-2.5">
-                              <p className="text-sm font-medium text-[var(--text)]">
-                                {course.name}
-                              </p>
-                              {course.provider && (
-                                <p className="text-xs text-[var(--text-secondary)]">
-                                  {course.provider}
-                                </p>
-                              )}
-                              {course.completionDate && (
-                                <p className="text-xs text-[var(--text-muted)]">
-                                  {formatDate(course.completionDate)}
-                                </p>
-                              )}
-                              {course.url && (
-                                <a
-                                  href={course.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-primary text-xs hover:underline"
-                                >
-                                  View
-                                </a>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                {activeTab === 'achievements' &&
+                  ((profile.courses && profile.courses.length > 0) ||
+                    (profile.testScores && profile.testScores.length > 0)) && (
+                    <Card>
+                      <div className="mb-4 flex items-center gap-2">
+                        <GraduationCap className="text-primary h-5 w-5" />
+                        <h2 className="text-lg font-semibold text-[var(--text)]">
+                          Courses & Test Scores
+                        </h2>
                       </div>
-                    )}
-                    {profile.testScores && profile.testScores.length > 0 && (
-                      <div
-                        className={`space-y-2 ${profile.courses && profile.courses.length > 0 ? 'mt-4' : ''}`}
-                      >
-                        <h3 className="text-sm font-medium text-[var(--text)]">Test Scores</h3>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {profile.testScores.map((test, i) => (
-                            <div key={i} className="rounded border border-[var(--border)] p-2.5">
-                              <p className="text-sm font-medium text-[var(--text)]">
-                                {test.testName}
-                              </p>
-                              <p className="text-primary text-sm font-semibold">
-                                Score: {test.score}
-                              </p>
-                              {test.dateOfExam && (
-                                <p className="text-xs text-[var(--text-muted)]">
-                                  {formatFullDate(test.dateOfExam)}
+                      {profile.courses && profile.courses.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-medium text-[var(--text)]">
+                            Courses Completed
+                          </h3>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {profile.courses.map((course, i) => (
+                              <div key={i} className="rounded border border-[var(--border)] p-2.5">
+                                <p className="text-sm font-medium text-[var(--text)]">
+                                  {course.name}
                                 </p>
-                              )}
-                              {test.description && (
-                                <p className="text-xs text-[var(--text-secondary)]">
-                                  {test.description}
-                                </p>
-                              )}
-                            </div>
-                          ))}
+                                {course.provider && (
+                                  <p className="text-xs text-[var(--text-secondary)]">
+                                    {course.provider}
+                                  </p>
+                                )}
+                                {course.completionDate && (
+                                  <p className="text-xs text-[var(--text-muted)]">
+                                    {formatDate(course.completionDate)}
+                                  </p>
+                                )}
+                                {course.url && (
+                                  <a
+                                    href={course.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary text-xs hover:underline"
+                                  >
+                                    View
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </Card>
-                )}
+                      )}
+                      {profile.testScores && profile.testScores.length > 0 && (
+                        <div
+                          className={`space-y-2 ${profile.courses && profile.courses.length > 0 ? 'mt-4' : ''}`}
+                        >
+                          <h3 className="text-sm font-medium text-[var(--text)]">Test Scores</h3>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {profile.testScores.map((test, i) => (
+                              <div key={i} className="rounded border border-[var(--border)] p-2.5">
+                                <p className="text-sm font-medium text-[var(--text)]">
+                                  {test.testName}
+                                </p>
+                                <p className="text-primary text-sm font-semibold">
+                                  Score: {test.score}
+                                </p>
+                                {test.dateOfExam && (
+                                  <p className="text-xs text-[var(--text-muted)]">
+                                    {formatFullDate(test.dateOfExam)}
+                                  </p>
+                                )}
+                                {test.description && (
+                                  <p className="text-xs text-[var(--text-secondary)]">
+                                    {test.description}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  )}
 
                 {/* Volunteering */}
-                {profile.volunteerExperience && profile.volunteerExperience.length > 0 && (
+                {activeTab === 'more' &&
+                  profile.volunteerExperience &&
+                  profile.volunteerExperience.length > 0 && (
+                    <Card>
+                      <div className="mb-4 flex items-center gap-2">
+                        <Heart className="h-5 w-5 text-[var(--error)]" />
+                        <h2 className="text-lg font-semibold text-[var(--text)]">Volunteering</h2>
+                      </div>
+                      <div className="space-y-3">
+                        {profile.volunteerExperience.map((vol, i) => (
+                          <div key={i} className="border-l-2 border-[var(--border)] pl-4">
+                            <h3 className="font-medium text-[var(--text)]">{vol.role}</h3>
+                            <p className="text-sm text-[var(--text-secondary)]">
+                              {vol.organization}
+                            </p>
+                            {vol.cause && (
+                              <p className="text-xs text-[var(--text-muted)]">Cause: {vol.cause}</p>
+                            )}
+                            <p className="text-xs text-[var(--text-muted)]">
+                              {vol.startDate && formatDate(vol.startDate)}
+                              {vol.startDate &&
+                                (vol.isCurrent
+                                  ? ' — Present'
+                                  : vol.endDate
+                                    ? ` — ${formatDate(vol.endDate)}`
+                                    : '')}
+                            </p>
+                            {vol.description && (
+                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                {vol.description}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+
+                {/* Professional Memberships */}
+                {activeTab === 'more' &&
+                  profile.professionalMemberships &&
+                  profile.professionalMemberships.length > 0 && (
+                    <Card>
+                      <div className="mb-4 flex items-center gap-2">
+                        <Users className="h-5 w-5 text-[var(--info)]" />
+                        <h2 className="text-lg font-semibold text-[var(--text)]">
+                          Professional Memberships
+                        </h2>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {profile.professionalMemberships.map((mem, i) => (
+                          <div key={i} className="rounded-lg border border-[var(--border)] p-3">
+                            <h3 className="font-medium text-[var(--text)]">{mem.organization}</h3>
+                            {mem.role && (
+                              <p className="text-sm text-[var(--text-secondary)]">{mem.role}</p>
+                            )}
+                            <p className="text-xs text-[var(--text-muted)]">
+                              {mem.startDate && formatDate(mem.startDate)}
+                              {mem.endDate && ` — ${formatDate(mem.endDate)}`}
+                            </p>
+                            {mem.membershipId && (
+                              <p className="text-xs text-[var(--text-muted)]">
+                                ID: {mem.membershipId}
+                              </p>
+                            )}
+                            {mem.description && (
+                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                {mem.description}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+
+                {/* References — More tab */}
+                {activeTab === 'more' && profile.references && profile.references.length > 0 && (
                   <Card>
-                    <div className="mb-4 flex items-center gap-2">
-                      <Heart className="h-5 w-5 text-[var(--error)]" />
-                      <h2 className="text-lg font-semibold text-[var(--text)]">Volunteering</h2>
+                    <div className="mb-3 flex items-center gap-2">
+                      <Users className="text-primary h-5 w-5" />
+                      <h2 className="text-lg font-semibold text-[var(--text)]">References</h2>
                     </div>
-                    <div className="space-y-3">
-                      {profile.volunteerExperience.map((vol, i) => (
-                        <div key={i} className="border-l-2 border-[var(--border)] pl-4">
-                          <h3 className="font-medium text-[var(--text)]">{vol.role}</h3>
-                          <p className="text-sm text-[var(--text-secondary)]">{vol.organization}</p>
-                          {vol.cause && (
-                            <p className="text-xs text-[var(--text-muted)]">Cause: {vol.cause}</p>
-                          )}
-                          <p className="text-xs text-[var(--text-muted)]">
-                            {vol.startDate && formatDate(vol.startDate)}
-                            {vol.startDate &&
-                              (vol.isCurrent
-                                ? ' — Present'
-                                : vol.endDate
-                                  ? ` — ${formatDate(vol.endDate)}`
-                                  : '')}
-                          </p>
-                          {vol.description && (
-                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                              {vol.description}
+                    <ul className="space-y-3">
+                      {profile.references.map((r, i) => (
+                        <li
+                          key={`ref-${i}`}
+                          className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-3 text-sm"
+                        >
+                          <p className="font-semibold text-[var(--text)]">{r.name}</p>
+                          {(r.designation || r.organization) && (
+                            <p className="text-xs text-[var(--text-muted)]">
+                              {r.designation}
+                              {r.designation && r.organization ? ' · ' : ''}
+                              {r.organization}
                             </p>
                           )}
-                        </div>
+                          {r.relationship && (
+                            <p className="text-xs text-[var(--text-secondary)]">{r.relationship}</p>
+                          )}
+                          {(r.email || r.phone) && (
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">
+                              {r.email}
+                              {r.email && r.phone ? ' · ' : ''}
+                              {r.phone}
+                            </p>
+                          )}
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   </Card>
                 )}
 
-                {/* Professional Memberships */}
-                {profile.professionalMemberships && profile.professionalMemberships.length > 0 && (
-                  <Card>
-                    <div className="mb-4 flex items-center gap-2">
-                      <Users className="h-5 w-5 text-[var(--info)]" />
-                      <h2 className="text-lg font-semibold text-[var(--text)]">
-                        Professional Memberships
-                      </h2>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {profile.professionalMemberships.map((mem, i) => (
-                        <div key={i} className="rounded-lg border border-[var(--border)] p-3">
-                          <h3 className="font-medium text-[var(--text)]">{mem.organization}</h3>
-                          {mem.role && (
-                            <p className="text-sm text-[var(--text-secondary)]">{mem.role}</p>
-                          )}
-                          <p className="text-xs text-[var(--text-muted)]">
-                            {mem.startDate && formatDate(mem.startDate)}
-                            {mem.endDate && ` — ${formatDate(mem.endDate)}`}
-                          </p>
-                          {mem.membershipId && (
-                            <p className="text-xs text-[var(--text-muted)]">
-                              ID: {mem.membershipId}
-                            </p>
-                          )}
-                          {mem.description && (
-                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                              {mem.description}
-                            </p>
-                          )}
+                {/* Skills — Skills tab (full main-column view) */}
+                {activeTab === 'skills' && (
+                  <>
+                    {profile.skills.length > 0 && (
+                      <Card>
+                        <div className="mb-3 flex items-center gap-2">
+                          <Code className="text-primary h-5 w-5" />
+                          <h2 className="text-lg font-semibold text-[var(--text)]">Skills</h2>
                         </div>
-                      ))}
-                    </div>
-                  </Card>
+                        <div className="flex flex-wrap gap-1.5">
+                          {profile.skills.map((skill) => (
+                            <Tag key={skill} label={skill} variant="primary" />
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+                    {profile.skillsWithProficiency && profile.skillsWithProficiency.length > 0 && (
+                      <Card>
+                        <h2 className="mb-3 text-lg font-semibold text-[var(--text)]">
+                          Skill proficiency
+                        </h2>
+                        <ul className="space-y-2">
+                          {profile.skillsWithProficiency.map((s, i) => (
+                            <li
+                              key={`prof-${i}`}
+                              className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-sm"
+                            >
+                              <span className="font-medium text-[var(--text)]">{s.skill}</span>
+                              <span className="flex items-center gap-2">
+                                {typeof s.yearsOfExperience === 'number' && (
+                                  <span className="text-xs text-[var(--text-muted)]">
+                                    {s.yearsOfExperience} yrs
+                                  </span>
+                                )}
+                                <Badge variant="info" size="sm">
+                                  {s.proficiency}
+                                </Badge>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </Card>
+                    )}
+                    {profile.itSkills && profile.itSkills.length > 0 && (
+                      <Card>
+                        <h2 className="mb-3 text-lg font-semibold text-[var(--text)]">IT skills</h2>
+                        <ul className="space-y-2">
+                          {profile.itSkills.map((it, i) => (
+                            <li
+                              key={`it-${i}`}
+                              className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-sm"
+                            >
+                              <p className="font-medium text-[var(--text)]">
+                                {it.technology}
+                                {it.version ? ` (${it.version})` : ''}
+                              </p>
+                              <p className="text-xs text-[var(--text-muted)]">
+                                {typeof it.experienceYears === 'number'
+                                  ? `${it.experienceYears} years`
+                                  : ''}
+                                {it.proficiency ? ` · ${it.proficiency}` : ''}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </Card>
+                    )}
+                    {profile.languageProficiency && profile.languageProficiency.length > 0 && (
+                      <Card>
+                        <h2 className="mb-3 text-lg font-semibold text-[var(--text)]">Languages</h2>
+                        <ul className="space-y-2">
+                          {profile.languageProficiency.map((l, i) => (
+                            <li
+                              key={`lang-${i}`}
+                              className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-sm"
+                            >
+                              <span className="font-medium text-[var(--text)]">{l.language}</span>
+                              <Badge variant="info" size="sm">
+                                {l.proficiency}
+                                {l.readWrite ? ' · R/W' : ''}
+                              </Badge>
+                            </li>
+                          ))}
+                        </ul>
+                      </Card>
+                    )}
+                  </>
                 )}
+
+                {/* Hobbies & Interests — More tab */}
+                {activeTab === 'more' &&
+                  ((profile.interests?.length ?? 0) > 0 || (profile.hobbies?.length ?? 0) > 0) && (
+                    <Card>
+                      <div className="mb-3 flex items-center gap-2">
+                        <Heart className="text-primary h-5 w-5" />
+                        <h2 className="text-lg font-semibold text-[var(--text)]">
+                          Interests & hobbies
+                        </h2>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {profile.interests.map((it) => (
+                          <Tag key={`i-${it}`} label={it} variant="default" />
+                        ))}
+                        {profile.hobbies.map((h) => (
+                          <Tag key={`h-${h}`} label={h} variant="default" />
+                        ))}
+                      </div>
+                    </Card>
+                  )}
               </div>
 
               {/* Sidebar (right 1/3) */}
@@ -1363,126 +1594,8 @@ export default function EmployerCandidateDetailPage() {
                   </Card>
                 )}
 
-                {/* Social Links */}
-                {(profile.linkedinProfile ||
-                  profile.githubProfile ||
-                  profile.portfolioUrl ||
-                  profile.stackOverflowProfile ||
-                  profile.twitterProfile ||
-                  profile.personalBlogUrl ||
-                  profile.dribbbleProfile ||
-                  profile.behanceProfile ||
-                  profile.mediumProfile ||
-                  profile.youtubeChannel) && (
-                  <Card>
-                    <div className="mb-3 flex items-center gap-2">
-                      <Globe className="text-primary h-5 w-5" />
-                      <h2 className="text-base font-semibold text-[var(--text)]">Social Links</h2>
-                    </div>
-                    <div className="space-y-2">
-                      {profile.linkedinProfile && (
-                        <a
-                          href={profile.linkedinProfile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
-                        >
-                          <Linkedin className="h-4 w-4 text-[#0A66C2]" /> LinkedIn
-                        </a>
-                      )}
-                      {profile.githubProfile && (
-                        <a
-                          href={profile.githubProfile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
-                        >
-                          <Github className="h-4 w-4" /> GitHub
-                        </a>
-                      )}
-                      {profile.portfolioUrl && (
-                        <a
-                          href={profile.portfolioUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
-                        >
-                          <Globe className="text-primary h-4 w-4" /> Portfolio
-                        </a>
-                      )}
-                      {profile.stackOverflowProfile && (
-                        <a
-                          href={profile.stackOverflowProfile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
-                        >
-                          <Code className="h-4 w-4 text-[#F48024]" /> Stack Overflow
-                        </a>
-                      )}
-                      {profile.twitterProfile && (
-                        <a
-                          href={profile.twitterProfile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
-                        >
-                          <ExternalLink className="h-4 w-4" /> Twitter/X
-                        </a>
-                      )}
-                      {profile.personalBlogUrl && (
-                        <a
-                          href={profile.personalBlogUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
-                        >
-                          <ExternalLink className="h-4 w-4" /> Blog
-                        </a>
-                      )}
-                      {profile.dribbbleProfile && (
-                        <a
-                          href={profile.dribbbleProfile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
-                        >
-                          <Palette className="h-4 w-4 text-[#EA4C89]" /> Dribbble
-                        </a>
-                      )}
-                      {profile.behanceProfile && (
-                        <a
-                          href={profile.behanceProfile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
-                        >
-                          <Palette className="h-4 w-4 text-[#1769FF]" /> Behance
-                        </a>
-                      )}
-                      {profile.mediumProfile && (
-                        <a
-                          href={profile.mediumProfile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
-                        >
-                          <BookOpen className="h-4 w-4" /> Medium
-                        </a>
-                      )}
-                      {profile.youtubeChannel && (
-                        <a
-                          href={profile.youtubeChannel}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary flex items-center gap-2 text-sm text-[var(--text-secondary)]"
-                        >
-                          <Video className="h-4 w-4 text-[#FF0000]" /> YouTube
-                        </a>
-                      )}
-                    </div>
-                  </Card>
-                )}
+                {/* Social Links — bento-grid via shared component. */}
+                <SocialLinksBento heading="Social links" links={candidateSocialLinks(profile)} />
 
                 {/* Resume & Video */}
                 {(profile.resume || profile.videoResumeUrl) && (
@@ -1494,7 +1607,7 @@ export default function EmployerCandidateDetailPage() {
                           type="button"
                           onClick={() => handleResumeDownload()}
                           title="Download resume"
-                          className="cursor-pointer flex w-full items-center gap-2 rounded-lg border border-[var(--border)] p-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                          className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] p-3 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
                         >
                           <FileText className="text-primary h-4 w-4" />
                           <span className="flex-1 text-left">

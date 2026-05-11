@@ -3,6 +3,13 @@ import handlebars from 'handlebars';
 import fs from 'fs';
 import path from 'path';
 import logger from '../config/logger';
+import { AppError } from '../exceptions';
+import {
+  RESUME_TEMPLATES,
+  DEFAULT_RESUME_TEMPLATE_ID,
+  getResumeTemplate,
+  type ResumeTemplateConfig,
+} from '../config/resume-templates';
 
 export interface ResumeData {
   fullName: string;
@@ -70,9 +77,24 @@ export interface ResumeReadiness {
   suggestions: ResumeReadinessItem[];
 }
 
+export interface GenerateResumeOptions {
+  /**
+   * Template id from `RESUME_TEMPLATES`. Falls back to the free default
+   * (`classic`) when omitted.
+   */
+  templateId?: string;
+  /**
+   * Caller's user id — used to verify the candidate-Premium entitlement
+   * when a paid template is requested. Required for paid templates,
+   * optional for the free default.
+   */
+  userId?: string;
+}
+
 export class ResumeGeneratorService {
   private static instance: ResumeGeneratorService;
-  private readonly templatePath = path.join(__dirname, '../templates/resume/default.hbs');
+  private readonly templateDir = path.join(__dirname, '../templates/resume');
+  private compiledCache = new Map<string, HandlebarsTemplateDelegate>();
 
   private constructor() {}
 
@@ -81,6 +103,45 @@ export class ResumeGeneratorService {
       ResumeGeneratorService.instance = new ResumeGeneratorService();
     }
     return ResumeGeneratorService.instance;
+  }
+
+  /** All available templates (used by the picker UI on the candidate profile). */
+  public listTemplates(): ResumeTemplateConfig[] {
+    return RESUME_TEMPLATES;
+  }
+
+  private async assertCanUseTemplate(
+    template: ResumeTemplateConfig,
+    userId: string | undefined
+  ): Promise<void> {
+    if (!template.requiresPremium) return;
+    if (!userId) {
+      throw new AppError(
+        `Template "${template.name}" requires the Candidate Premium plan`,
+        402,
+        'PAYMENT_REQUIRED'
+      );
+    }
+    // Lazy import to avoid circular dependency (entitlement.service ↔ this).
+    const { getActiveEntitlementsForUser } = await import('./entitlement.service');
+    const snapshot = await getActiveEntitlementsForUser(userId);
+    if (!snapshot.features['feature.candidate_ai_resume_premium']) {
+      throw new AppError(
+        `Template "${template.name}" requires the Candidate Premium plan (₹199/mo).`,
+        402,
+        'PAYMENT_REQUIRED'
+      );
+    }
+  }
+
+  private getCompiledTemplate(template: ResumeTemplateConfig): HandlebarsTemplateDelegate {
+    const cached = this.compiledCache.get(template.id);
+    if (cached) return cached;
+    const filePath = path.join(this.templateDir, `${template.file}.hbs`);
+    const html = fs.readFileSync(filePath, 'utf8');
+    const compiled = handlebars.compile(html);
+    this.compiledCache.set(template.id, compiled);
+    return compiled;
   }
 
   /**
@@ -204,42 +265,46 @@ export class ResumeGeneratorService {
   }
 
   /**
-   * Generates a PDF resume from the provided data
+   * Generates a PDF resume from the provided data using the requested template.
+   *
+   * Free template (`classic`) is available to every candidate. Paid templates
+   * require an active `feature.candidate_ai_resume_premium` entitlement —
+   * verified per-call against the latest snapshot.
    */
-  public async generateResume(data: ResumeData): Promise<Buffer> {
-    try {
-      const templateHtml = fs.readFileSync(this.templatePath, 'utf8');
-      const template = handlebars.compile(templateHtml);
-      const htmlContent = template(data);
+  public async generateResume(
+    data: ResumeData,
+    options: GenerateResumeOptions = {}
+  ): Promise<Buffer> {
+    const template = getResumeTemplate(options.templateId ?? DEFAULT_RESUME_TEMPLATE_ID);
+    await this.assertCanUseTemplate(template, options.userId);
 
-      const browser = await puppeteer.launch({
+    let browser;
+    try {
+      const compiled = this.getCompiledTemplate(template);
+      const htmlContent = compiled(data);
+
+      browser = await puppeteer.launch({
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
         headless: true,
       });
 
       const page = await browser.newPage();
-
-      await page.setContent(htmlContent, {
-        waitUntil: 'networkidle0',
-      });
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
-        margin: {
-          top: '20px',
-          right: '20px',
-          bottom: '20px',
-          left: '20px',
-        },
+        margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
       });
-
-      await browser.close();
 
       return Buffer.from(pdfBuffer);
     } catch (error) {
+      // Re-throw plan-gate errors so the controller maps them to 402.
+      if (error instanceof AppError) throw error;
       logger.error('Error generating resume PDF:', error);
       throw new Error('Failed to generate resume PDF');
+    } finally {
+      if (browser) await browser.close().catch(() => {});
     }
   }
 }

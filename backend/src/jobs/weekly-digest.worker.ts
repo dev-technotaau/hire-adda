@@ -57,7 +57,12 @@ export async function handleWeeklyDigest(job: Job) {
       const name = employer.user.firstName || 'Hiring Manager';
       const company = employer.companyName || 'your company';
 
-      const digest = weeklyHiringDigest(name, company, { newApplications, activeJobs, interviewsScheduled, hires });
+      const digest = weeklyHiringDigest(name, company, {
+        newApplications,
+        activeJobs,
+        interviewsScheduled,
+        hires,
+      });
       await emailQueue.add('send-email', {
         to: employer.user.email,
         subject: digest.subject,

@@ -12,6 +12,7 @@ import { ROLE_DASHBOARDS } from '@/constants/routes';
 import { ROLE_LABELS } from '@/constants/enums';
 import { QUERY_KEYS } from '@/constants/config';
 import { employerService } from '@/services/employer.service';
+import { useEntitlements } from '@/hooks/use-entitlements';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
 import Tooltip from '@/components/ui/Tooltip';
@@ -40,7 +41,10 @@ export default function MobileSidebar() {
   const companyLogo = companyData?.data?.logo;
 
   const dashboardPath = user?.role ? ROLE_DASHBOARDS[user.role as Role] : '/';
-  const navItems = getNavItems(user?.role);
+  const { hasFeature, isLoading: entitlementsLoading } = useEntitlements();
+  const navItems = getNavItems(user?.role).filter(
+    (it) => !it.requiresFeature || entitlementsLoading || hasFeature(it.requiresFeature),
+  );
 
   // Close on route change
   useEffect(() => {

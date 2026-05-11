@@ -458,7 +458,11 @@ export default function JobModerationPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" tooltip="Cancel deletion" onClick={() => setDeleteTarget(null)}>
+              <Button
+                variant="outline"
+                tooltip="Cancel deletion"
+                onClick={() => setDeleteTarget(null)}
+              >
                 Cancel
               </Button>
               <Button

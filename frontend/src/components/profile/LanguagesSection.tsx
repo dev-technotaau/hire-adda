@@ -54,7 +54,12 @@ export default function LanguagesSection({ form, updateField }: ProfileSectionPr
             <h2 className="text-lg font-semibold text-[var(--text)]">
               Language Proficiency (Detailed)
             </h2>
-            <Button size="sm" variant="outline" onClick={addLanguage} tooltip="Add a new language proficiency">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={addLanguage}
+              tooltip="Add a new language proficiency"
+            >
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
@@ -62,45 +67,45 @@ export default function LanguagesSection({ form, updateField }: ProfileSectionPr
       >
         <div className="space-y-4">
           {(form.languageProficiency || []).length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--text-muted)]">
-            No languages added. Click &quot;Add&quot; to add your language proficiencies.
-          </p>
-        ) : (
-          (form.languageProficiency || []).map((lang, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="flex-1">
-                <ServerSuggestionInput
-                  category="language"
-                  label={i === 0 ? 'Language' : undefined}
-                  placeholder="e.g. English, Hindi"
-                  value={lang.language}
-                  onChange={(val) => updateLanguage(i, 'language', val)}
-                />
+            <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+              No languages added. Click &quot;Add&quot; to add your language proficiencies.
+            </p>
+          ) : (
+            (form.languageProficiency || []).map((lang, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="flex-1">
+                  <ServerSuggestionInput
+                    category="language"
+                    label={i === 0 ? 'Language' : undefined}
+                    placeholder="e.g. English, Hindi"
+                    value={lang.language}
+                    onChange={(val) => updateLanguage(i, 'language', val)}
+                  />
+                </div>
+                <div className="w-44">
+                  <Select
+                    label={i === 0 ? 'Proficiency' : undefined}
+                    options={[
+                      { value: 'BASIC', label: 'Basic' },
+                      { value: 'INTERMEDIATE', label: 'Intermediate' },
+                      { value: 'FLUENT', label: 'Fluent' },
+                      { value: 'NATIVE', label: 'Native' },
+                    ]}
+                    value={lang.proficiency}
+                    onChange={(v) => updateLanguage(i, 'proficiency', v)}
+                  />
+                </div>
+                <Tooltip content="Remove this language">
+                  <button
+                    onClick={() => removeLanguage(i)}
+                    className={`cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)] ${i === 0 ? 'mt-6' : ''}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               </div>
-              <div className="w-44">
-                <Select
-                  label={i === 0 ? 'Proficiency' : undefined}
-                  options={[
-                    { value: 'BASIC', label: 'Basic' },
-                    { value: 'INTERMEDIATE', label: 'Intermediate' },
-                    { value: 'FLUENT', label: 'Fluent' },
-                    { value: 'NATIVE', label: 'Native' },
-                  ]}
-                  value={lang.proficiency}
-                  onChange={(v) => updateLanguage(i, 'proficiency', v)}
-                />
-              </div>
-              <Tooltip content="Remove this language">
-                <button
-                  onClick={() => removeLanguage(i)}
-                  className={`cursor-pointer text-[var(--error)] hover:text-[var(--error-dark)] ${i === 0 ? 'mt-6' : ''}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </Tooltip>
-            </div>
-          ))
-        )}
+            ))
+          )}
         </div>
       </Card>
     </>

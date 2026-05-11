@@ -375,7 +375,6 @@ export default function EmployerApplicationDetailPage() {
                 </div>
               </Card>
             )}
-
           </div>
 
           {/* Right Column (Sidebar) */}
@@ -506,7 +505,12 @@ export default function EmployerApplicationDetailPage() {
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleReject} isLoading={updateStatus.isPending} tooltip="Confirm application rejection">
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              isLoading={updateStatus.isPending}
+              tooltip="Confirm application rejection"
+            >
               Reject
             </Button>
           </div>

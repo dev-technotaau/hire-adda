@@ -29,13 +29,15 @@ function usePageVisible() {
   return visible;
 }
 
-export function useUnreadCount() {
+export function useUnreadCount(category?: string) {
   const isVisible = usePageVisible();
   const { isAuthenticated } = useAuth();
 
   return useQuery({
-    queryKey: QUERY_KEYS.NOTIFICATIONS.UNREAD_COUNT,
-    queryFn: () => notificationService.getUnreadCount(),
+    queryKey: category
+      ? [...QUERY_KEYS.NOTIFICATIONS.UNREAD_COUNT, category]
+      : QUERY_KEYS.NOTIFICATIONS.UNREAD_COUNT,
+    queryFn: () => notificationService.getUnreadCount(category),
     enabled: isAuthenticated,
     // Poll every 30s when tab is visible, pause when hidden
     refetchInterval: isVisible ? 30_000 : false,

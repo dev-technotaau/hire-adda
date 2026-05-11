@@ -1,16 +1,43 @@
 # ai.txt — opt-out signal for AI training data collection
 # https://spawning.ai/ai-txt
 #
-# This file instructs AI training crawlers (Spawning.ai / Have I Been
-# Trained?) which content may not be used to train generative AI models.
-# It complements robots.txt (which covers general crawler access) by
-# addressing the specific case of AI training data ingestion.
+# This file instructs AI crawlers (Spawning.ai / Have I Been Trained?
+# / similar registries) which content may be ingested for what purpose.
+# It complements robots.txt (general crawler access) by addressing the
+# specific case of AI training data ingestion vs AI search-engine
+# answer-composition.
 #
-# Policy: no content on hireadda.in may be used for AI model training
-# without an explicit commercial licence agreement.
+# Policy summary
+# ──────────────
+#   - TRAINING:  No content on hireadda.in may be used to train a
+#                generative AI model without an explicit commercial
+#                licence agreement. Training-usage is denied wholesale
+#                (default Disallow below).
+#   - AI SEARCH (RAG / answer-composition): Public job + company
+#                surfaces (`/jobs/*`, `/companies/*`) are explicitly
+#                allowed for citation + summarisation by AI search
+#                engines (ChatGPT search, Perplexity, Claude search,
+#                Gemini, etc.). The selective allow-list lives in
+#                /robots.txt under "Tier 5b" — see that file for the
+#                exact User-agent matchers.
+#   - llms.txt:  /llms.txt provides the canonical site overview, primary
+#                surfaces, structured-data hints, and attribution
+#                preferences for AI-composed answers. AI engines should
+#                fetch /llms.txt for context when surfacing Hire Adda
+#                results.
 #
 # Contact: engineering@hireadda.in
-# Updated: 2026-04
+# Updated: 2026-05
 
 User-Agent: *
 Disallow: /
+
+# Public job + company surfaces — selective allow for AI search engines
+# (NOT training crawlers). The actual per-User-agent allow-list is in
+# /robots.txt Tier 5b — kept there because robots.txt has stricter
+# per-bot User-agent matching than ai.txt.
+#
+# Note: ai.txt syntax doesn't support per-bot Allow rules; the wholesale
+# Disallow above remains the default for any bot consulting only ai.txt.
+# AI search engines that want to cite our public surfaces must obey
+# /robots.txt Tier 5b instead.

@@ -109,6 +109,11 @@ services:
       - BFF_SECRET=${BFF_SECRET}
       - COOKIE_ACCESS_MAX_AGE_DAYS=${COOKIE_ACCESS_MAX_AGE_DAYS:-7}
       - COOKIE_REFRESH_MAX_AGE_DAYS=${COOKIE_REFRESH_MAX_AGE_DAYS:-30}
+      # IndexNow — site key + bearer token gating /api/indexnow-ping.
+      # Backend mutation paths ping api.indexnow.org directly; this
+      # token is for the optional CI bulk-ping after each deploy.
+      - INDEXNOW_KEY=${INDEXNOW_KEY}
+      - INDEXNOW_PING_TOKEN=${INDEXNOW_PING_TOKEN}
       - OTEL_ENABLED=true
       - OTEL_SERVICE_NAME=hire-adda-frontend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
@@ -150,6 +155,11 @@ services:
       - BFF_SECRET=${BFF_SECRET}
       - COOKIE_ACCESS_MAX_AGE_DAYS=${COOKIE_ACCESS_MAX_AGE_DAYS:-7}
       - COOKIE_REFRESH_MAX_AGE_DAYS=${COOKIE_REFRESH_MAX_AGE_DAYS:-30}
+      # IndexNow — site key + bearer token gating /api/indexnow-ping.
+      # Backend mutation paths ping api.indexnow.org directly; this
+      # token is for the optional CI bulk-ping after each deploy.
+      - INDEXNOW_KEY=${INDEXNOW_KEY}
+      - INDEXNOW_PING_TOKEN=${INDEXNOW_PING_TOKEN}
       - OTEL_ENABLED=true
       - OTEL_SERVICE_NAME=hire-adda-frontend
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces

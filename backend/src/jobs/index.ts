@@ -16,6 +16,19 @@ import './expiration-warning.queue';
 import './review-reminder.queue';
 import './stale-profile.queue';
 import './view-counter-flush.queue';
+import './billing-reminder.queue';
+import './invoice-generation.queue';
+import './entitlement-expiry.queue';
+import './settlement-sync.queue';
+import './dispute-sync.queue';
+import './subscription-renewal.queue';
+import './payment-status-poll.queue';
+import './payment-retry.queue';
+import './webhook-retry-sweep.queue';
+import './vendor-lead-expiry.queue';
+import './search-history.queue';
+import './follower-notify.queue';
+import './review-cron.queue';
 
 // Scheduler queue for stale job cleanup
 import { schedulerQueue } from './scheduler.queue';

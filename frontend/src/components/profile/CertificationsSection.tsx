@@ -34,7 +34,12 @@ export default function CertificationsSection({ form, updateField }: ProfileSect
       header={
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--text)]">Certifications</h2>
-          <Button size="sm" variant="outline" onClick={addCertification} tooltip="Add a new certification">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={addCertification}
+            tooltip="Add a new certification"
+          >
             <Plus className="mr-1 h-4 w-4" /> Add
           </Button>
         </div>

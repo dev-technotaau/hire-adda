@@ -369,11 +369,19 @@ export default function ResumeParseReview({
 
       {/* Action bar */}
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        <Button onClick={handleApply} disabled={noneSelected} tooltip="Apply selected fields to your profile">
+        <Button
+          onClick={handleApply}
+          disabled={noneSelected}
+          tooltip="Apply selected fields to your profile"
+        >
           <CheckCircle2 className="mr-1.5 h-4 w-4" />
           Apply Selected ({selected.size})
         </Button>
-        <Button variant="outline" onClick={handleApplyAll} tooltip="Apply all parsed fields to your profile">
+        <Button
+          variant="outline"
+          onClick={handleApplyAll}
+          tooltip="Apply all parsed fields to your profile"
+        >
           Apply All
         </Button>
         <Button variant="ghost" onClick={onCancel} tooltip="Cancel and discard parsed data">

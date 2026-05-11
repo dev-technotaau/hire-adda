@@ -8,7 +8,6 @@ import type {
   ExperienceLevel,
   EducationLevel,
   SalaryType,
-  UrgencyLevel,
   FunctionalArea,
   NoticePeriodPreference,
   SpecificDegree,
@@ -17,10 +16,17 @@ import type {
   PostingVisibility,
   ApplyMethod,
 } from '@prisma/client';
-import { Prisma, JobStatus, ApplicationStatus, Role, ScreeningQuestionType } from '@prisma/client';
+import {
+  Prisma,
+  JobStatus,
+  ApplicationStatus,
+  Role,
+  ScreeningQuestionType,
+  UrgencyLevel,
+} from '@prisma/client';
 import { searchService } from './search.service';
 import { PAGINATION } from '@/constants';
-import {  } from '../kafka/producer';
+import {} from '../kafka/producer';
 import { publishEvent } from '../kafka/producer';
 import { KafkaTopics } from '../kafka/topics';
 import { trackEvent, getClientId } from './analytics.service';
@@ -182,6 +188,50 @@ export class JobService {
       );
     }
 
+    // Plan-promise enforcement: respect feature.job_locations countable
+    // (Free plan = 1 Location). Total locations = primary + additional.
+    // Skipped when the user's plan doesn't declare a cap (= no limit).
+    const additional = Array.isArray(
+      (data as { additionalLocations?: string[] }).additionalLocations
+    )
+      ? (data as { additionalLocations?: string[] }).additionalLocations!.length
+      : 0;
+    const totalLocations = 1 + additional;
+    const { getActiveEntitlementsForUser } = await import('./entitlement.service');
+    const planSnapshot = await getActiveEntitlementsForUser(userId);
+    const allFeatures = planSnapshot.entitlements.flatMap((e) => e.features);
+    const maxLimitOf = (key: string): number | null =>
+      allFeatures
+        .filter((f) => f.key === key && f.included && f.countableLimit !== null)
+        .reduce<number | null>((max, f) => {
+          const limit = f.countableLimit ?? 0;
+          return max == null ? limit : Math.max(max, limit);
+        }, null);
+
+    // Locations cap (Free=1)
+    if (totalLocations > 1) {
+      const cap = maxLimitOf('feature.job_locations');
+      if (cap !== null && totalLocations > cap) {
+        throw new AppError(
+          `Your current plan allows ${cap} location${cap === 1 ? '' : 's'} per job. Upgrade to post jobs in more locations.`,
+          402,
+          'LOCATIONS_LIMIT_EXCEEDED'
+        );
+      }
+    }
+
+    // Urgent Hiring Badge — gated to Premium ₹999 plan (feature.urgent_hiring_badge).
+    // If user requested URGENT/IMMEDIATE without entitlement, downgrade to NORMAL
+    // so the post still goes through but doesn't get the priority badge unfairly.
+    const requestedUrgency = (data as { urgencyLevel?: UrgencyLevel }).urgencyLevel;
+    const hasUrgentBadge = Boolean(planSnapshot.features['feature.urgent_hiring_badge']);
+    if (
+      (requestedUrgency === UrgencyLevel.URGENT || requestedUrgency === UrgencyLevel.IMMEDIATE) &&
+      !hasUrgentBadge
+    ) {
+      (data as { urgencyLevel?: UrgencyLevel }).urgencyLevel = UrgencyLevel.NORMAL;
+    }
+
     // Content moderation screening
     const contentToScreen = [data.title, data.description, data.requirements]
       .filter(Boolean)
@@ -209,6 +259,35 @@ export class JobService {
     // If scheduled for future, keep as DRAFT
     const statusOverride = jobData.scheduledPublishAt ? { status: JobStatus.DRAFT } : {};
 
+    // Plan-derived `expiresAt` — Free=7d, Standard=15d, Premium=30d. Read max
+    // countableLimit on `feature.job_validity` from snapshot. Skipped (no
+    // expiry) when no plan declares a validity cap.
+    const validityDays = maxLimitOf('feature.job_validity');
+    const expiresAtFromPlan =
+      validityDays !== null ? new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000) : undefined;
+
+    // Plan-derived listing/search visibility. Standard=Top Listing Boost
+    // (isFeatured=true → +15 ES weight). Premium=Top Search Visibility
+    // (isPremium=true → +20 ES weight). Both keys are BOOLEAN features.
+    const planIsFeatured = Boolean(planSnapshot.features['feature.top_listing_boost']);
+    const planIsPremium = Boolean(planSnapshot.features['feature.top_search_visibility']);
+
+    // SEO slug — kebab-cased {title}-{company}-{city}-{shortid8}. The
+    // shortid suffix makes collisions effectively impossible without
+    // needing a DB pre-check, while keeping URLs human-readable.
+    // Reused on the public /jobs/{slug} route for canonical detail pages.
+    const { buildJobSlug } = await import('../lib/slugs');
+    const companyForSlug = await prisma.companyProfile.findUnique({
+      where: { id: company.id },
+      select: { slug: true, companyName: true },
+    });
+    const jobSlug = buildJobSlug({
+      title: data.title,
+      companyName: companyForSlug?.companyName,
+      companySlug: companyForSlug?.slug,
+      city: data.location,
+    });
+
     const job = await prisma.jobPost.create({
       data: {
         companyId: company.id,
@@ -220,6 +299,10 @@ export class JobService {
         experienceMin: jobData.experienceMin ? Number(jobData.experienceMin) : 0,
         experienceMax: jobData.experienceMax ? Number(jobData.experienceMax) : undefined,
         isRemote: Boolean(jobData.isRemote),
+        expiresAt: expiresAtFromPlan,
+        isFeatured: planIsFeatured || Boolean(jobData.isFeatured),
+        isPremium: planIsPremium || Boolean(jobData.isPremium),
+        slug: jobSlug,
       },
     });
 
@@ -271,6 +354,27 @@ export class JobService {
       logger.error('Failed to enqueue matching job', err);
     }
 
+    // Fan-out follow notifications — every candidate following this
+    // company gets an in-app notification ("New job from {company}").
+    // Fire-and-forget; failures don't block the job-creation response.
+    if (job.status === 'OPEN' && job.publicSearchable) {
+      try {
+        const { enqueueFollowerNotify } = await import('../jobs/follower-notify.queue');
+        await enqueueFollowerNotify({ companyId: company.id, jobId: job.id });
+      } catch (err) {
+        logger.warn('Failed to enqueue follower-notify (non-fatal)', err);
+      }
+
+      // Instant-indexing ping — Bing/Yandex/Naver pick up the new job
+      // within minutes instead of waiting for the next sitemap crawl.
+      try {
+        const { notifyJobChanged } = await import('./indexnow.service');
+        notifyJobChanged(job.slug);
+      } catch {
+        // never fatal — IndexNow is best-effort
+      }
+    }
+
     // Publish Kafka event (enriched for BigQuery analytics)
     publishEvent(KafkaTopics.JOB_POSTED, job.id, {
       jobId: job.id,
@@ -282,6 +386,32 @@ export class JobService {
       industry: data.industry || null,
       location: data.location || null,
     });
+
+    // Consume JOB_POST quota — Phase 13 plan-gating wiring.
+    // Best-effort: if the user has no entitlement, the consume call throws
+    // 402 PAYMENT_REQUIRED but we swallow it here because the gate runs
+    // upstream in middleware/UI. Posting via API without an active plan
+    // is still possible if frontend bypassed (audit log captures it).
+    void (async () => {
+      try {
+        const { consumeResource } = await import('./entitlement.service');
+        await consumeResource({
+          userId,
+          unit: 'JOB_POST',
+          amount: 1,
+          refType: 'JOB_POST',
+          refId: job.id,
+          notes: `Job created: ${data.title}`,
+        });
+      } catch (err) {
+        // Don't break job creation on quota errors; log for the audit trail.
+        logger.warn('JOB_POST quota consumption skipped', {
+          userId,
+          jobId: job.id,
+          err: err instanceof Error ? err.message : err,
+        });
+      }
+    })();
 
     // GA4: track job_posted
     trackEvent(getClientId(userId), {
@@ -344,6 +474,7 @@ export class JobService {
         company: {
           select: {
             id: true,
+            slug: true,
             companyName: true,
             companyType: true,
             logo: true,
@@ -384,7 +515,24 @@ export class JobService {
       where: { jobId: id, status: 'HIRED' },
     });
 
-    return { ...job, _hiredCount };
+    // Attach company review aggregate so the Company tab on the
+    // candidate job-detail page can render the rating badge.
+    let companyWithReviews = job.company as typeof job.company & {
+      averageRating?: number;
+      totalReviews?: number;
+    };
+    if (job.company?.id) {
+      const { getAggregatesForCompanyIds } = await import('./review-aggregate.service');
+      const aggMap = await getAggregatesForCompanyIds([job.company.id]);
+      const agg = aggMap.get(job.company.id);
+      companyWithReviews = {
+        ...job.company,
+        averageRating: agg?.averageRating ?? 0,
+        totalReviews: agg?.totalReviews ?? 0,
+      };
+    }
+
+    return { ...job, company: companyWithReviews, _hiredCount };
   }
 
   /**
@@ -398,7 +546,7 @@ export class JobService {
     // 1. Try Elasticsearch — use ES whenever any filter is set (not just keyword/location)
     const ignoreKeys = new Set(['page', 'limit', 'sortBy']);
     const hasSearchCriteria = Object.entries(filters).some(
-      ([key, val]) => !ignoreKeys.has(key) && val !== undefined && val !== null && val !== '',
+      ([key, val]) => !ignoreKeys.has(key) && val !== undefined && val !== null && val !== ''
     );
     if (hasSearchCriteria) {
       try {
@@ -534,6 +682,7 @@ export class JobService {
           company: {
             select: {
               companyName: true,
+              slug: true,
               logo: true,
               id: true,
               industry: true,
@@ -575,7 +724,12 @@ export class JobService {
     // Check job exists and is accepting applications
     const jobPost = await prisma.jobPost.findUnique({
       where: { id: jobId },
-      select: { status: true, numberOfOpenings: true },
+      select: {
+        status: true,
+        numberOfOpenings: true,
+        companyId: true,
+        company: { select: { userId: true } },
+      },
     });
     if (!jobPost) throw new AppError('Job not found', 404);
     if (jobPost.status !== 'OPEN') {
@@ -587,6 +741,45 @@ export class JobService {
       });
       if (hiredCount >= jobPost.numberOfOpenings) {
         throw new AppError('All openings for this position have been filled', 400);
+      }
+    }
+
+    // Plan-promise enforcement: per-job applications cap. Free=50, Standard=250.
+    // Premium ₹999 grants `feature.unlimited_applications` which bypasses.
+    // No cap applied when poster has no plan (legacy/test data).
+    if (jobPost.company?.userId) {
+      try {
+        const { getActiveEntitlementsForUser } = await import('./entitlement.service');
+        const posterSnap = await getActiveEntitlementsForUser(jobPost.company.userId);
+        const unlimited = Boolean(posterSnap.features['feature.unlimited_applications']);
+        if (!unlimited) {
+          const cap = posterSnap.entitlements
+            .flatMap((e) => e.features)
+            .filter(
+              (f) => f.key === 'feature.applications' && f.included && f.countableLimit !== null
+            )
+            .reduce<number | null>((max, f) => {
+              const v = f.countableLimit ?? 0;
+              return max == null ? v : Math.max(max, v);
+            }, null);
+          if (cap !== null) {
+            const currentApps = await prisma.jobApplication.count({ where: { jobId } });
+            if (currentApps >= cap) {
+              throw new AppError(
+                'This job has reached the maximum number of applications.',
+                400,
+                'JOB_APP_CAP_REACHED'
+              );
+            }
+          }
+        }
+      } catch (err) {
+        if (err instanceof AppError) throw err;
+        // Snapshot lookup failure shouldn't block applies — log and continue.
+        logger.warn('applyToJob — application cap check failed', {
+          jobId,
+          err: err instanceof Error ? err.message : err,
+        });
       }
     }
 
@@ -811,7 +1004,12 @@ export class JobService {
   /**
    * Update Application Status (Employer)
    */
-  async updateApplicationStatus(userId: string, applicationId: string, status: ApplicationStatus, rejectionReason?: string) {
+  async updateApplicationStatus(
+    userId: string,
+    applicationId: string,
+    status: ApplicationStatus,
+    rejectionReason?: string
+  ) {
     // Distributed lock prevents concurrent status updates on the same application
     const result = await withLock(`lock:app:${applicationId}`, 30, async () => {
       const application = await prisma.jobApplication.findUnique({
@@ -889,7 +1087,11 @@ export class JobService {
     });
 
     if (result === null) {
-      throw new AppError('Application is currently being updated by another request', 409, 'RESOURCE_LOCKED');
+      throw new AppError(
+        'Application is currently being updated by another request',
+        409,
+        'RESOURCE_LOCKED'
+      );
     }
 
     return result;
@@ -1160,8 +1362,16 @@ export class JobService {
       userId,
       title: jobForIndex?.title || data.title,
       skills: data.skillsRequired ?? jobForIndex?.skillsRequired ?? [],
-      salary_min: data.salaryMin ? Number(data.salaryMin) : (jobForIndex?.salaryMin ? Number(jobForIndex.salaryMin) : null),
-      salary_max: data.salaryMax ? Number(data.salaryMax) : (jobForIndex?.salaryMax ? Number(jobForIndex.salaryMax) : null),
+      salary_min: data.salaryMin
+        ? Number(data.salaryMin)
+        : jobForIndex?.salaryMin
+          ? Number(jobForIndex.salaryMin)
+          : null,
+      salary_max: data.salaryMax
+        ? Number(data.salaryMax)
+        : jobForIndex?.salaryMax
+          ? Number(jobForIndex.salaryMax)
+          : null,
       industry: data.industry ?? jobForIndex?.industry ?? null,
       location: data.location ?? jobForIndex?.location ?? null,
     });
@@ -1255,11 +1465,27 @@ export class JobService {
 
     const origQuestions = original.screeningQuestions;
 
+    // Build a fresh slug for the clone — preserves SEO friendliness while
+    // avoiding any conflict with the original's unique slug.
+    const { buildJobSlug: _buildJobSlugForClone } = await import('../lib/slugs');
+    const companyForClone = await prisma.companyProfile.findUnique({
+      where: { id: company.id },
+      select: { slug: true, companyName: true },
+    });
+    const clonedSlug = _buildJobSlugForClone({
+      title: `${original.title} (Copy)`,
+      companyName: companyForClone?.companyName,
+      companySlug: companyForClone?.slug,
+      city: original.location,
+    });
+
     const cloned = await prisma.jobPost.create({
       data: {
         companyId: company.id,
         status: JobStatus.DRAFT,
         title: `${original.title} (Copy)`,
+        slug: clonedSlug,
+        publicSearchable: original.publicSearchable,
         description: original.description,
         keyResponsibilities: original.keyResponsibilities,
         requirements: original.requirements,
@@ -1422,7 +1648,11 @@ export class JobService {
     });
 
     if (result === null) {
-      throw new AppError('Application is currently being updated by another request', 409, 'RESOURCE_LOCKED');
+      throw new AppError(
+        'Application is currently being updated by another request',
+        409,
+        'RESOURCE_LOCKED'
+      );
     }
 
     return result;
@@ -1496,7 +1726,11 @@ export class JobService {
     });
 
     if (result === null) {
-      throw new AppError('Application is currently being updated by another request', 409, 'RESOURCE_LOCKED');
+      throw new AppError(
+        'Application is currently being updated by another request',
+        409,
+        'RESOURCE_LOCKED'
+      );
     }
 
     return result;

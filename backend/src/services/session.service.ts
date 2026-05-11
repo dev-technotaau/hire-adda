@@ -2,7 +2,7 @@ import { prisma } from '../config/prisma';
 import redis from '../config/redis';
 import logger from '../config/logger';
 import { AppError } from '../middleware/error';
-import {  } from '../kafka/producer';
+import {} from '../kafka/producer';
 import { publishEvent } from '../kafka/producer';
 import { KafkaTopics } from '../kafka/topics';
 
@@ -36,7 +36,9 @@ class SessionService {
       createdAt: session.createdAt.toISOString(),
       lastSeenAt: session.lastSeenAt.toISOString(),
     };
-    redis.set(fullSessionKey(session.id), JSON.stringify(sessionData), 'EX', FULL_SESSION_TTL).catch(() => {});
+    redis
+      .set(fullSessionKey(session.id), JSON.stringify(sessionData), 'EX', FULL_SESSION_TTL)
+      .catch(() => {});
 
     return session;
   }
@@ -75,12 +77,21 @@ class SessionService {
 
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
-      select: { isActive: true, userId: true, userAgent: true, ipAddress: true, createdAt: true, lastSeenAt: true },
+      select: {
+        isActive: true,
+        userId: true,
+        userAgent: true,
+        ipAddress: true,
+        createdAt: true,
+        lastSeenAt: true,
+      },
     });
     const active = !!session?.isActive;
 
     // Cache the results (fire-and-forget)
-    redis.set(sessionCacheKey(sessionId), active ? '1' : '0', 'EX', SESSION_CACHE_TTL).catch(() => {});
+    redis
+      .set(sessionCacheKey(sessionId), active ? '1' : '0', 'EX', SESSION_CACHE_TTL)
+      .catch(() => {});
     if (session) {
       const sessionData: CachedSessionData = {
         userId: session.userId,
@@ -90,7 +101,9 @@ class SessionService {
         createdAt: session.createdAt.toISOString(),
         lastSeenAt: session.lastSeenAt.toISOString(),
       };
-      redis.set(fullSessionKey(sessionId), JSON.stringify(sessionData), 'EX', FULL_SESSION_TTL).catch(() => {});
+      redis
+        .set(fullSessionKey(sessionId), JSON.stringify(sessionData), 'EX', FULL_SESSION_TTL)
+        .catch(() => {});
     }
 
     return active;

@@ -365,7 +365,9 @@ export default function JobDetailPage() {
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-5 w-5 shrink-0 text-[var(--warning)]" />
                   <p className="text-sm text-[var(--text)]">
-                    All <strong>{job.numberOfOpenings}</strong> opening{job.numberOfOpenings > 1 ? 's have' : ' has'} been filled. Consider closing this job to stop receiving new applications.
+                    All <strong>{job.numberOfOpenings}</strong> opening
+                    {job.numberOfOpenings > 1 ? 's have' : ' has'} been filled. Consider closing
+                    this job to stop receiving new applications.
                   </p>
                 </div>
                 <Button
@@ -1081,7 +1083,12 @@ export default function JobDetailPage() {
             <h2 className="text-base font-semibold text-[var(--text)]">Recent Applications</h2>
             <Tooltip content="View all applications for this job">
               <Link href={ROUTES.EMPLOYER.JOB_APPLICATIONS(job.id)}>
-                <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="h-4 w-4" />} tooltip="View all applications">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  rightIcon={<ChevronRight className="h-4 w-4" />}
+                  tooltip="View all applications"
+                >
                   View All
                 </Button>
               </Link>
@@ -1199,7 +1206,11 @@ export default function JobDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDeactivateModal(false)} tooltip="Cancel deactivation">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeactivateModal(false)}
+                tooltip="Cancel deactivation"
+              >
                 Cancel
               </Button>
               <Button

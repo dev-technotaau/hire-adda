@@ -14,7 +14,7 @@ export const registerSchema = z.object({
         .max(128, 'Password must be at most 128 characters'),
       firstName: z.string().min(1, 'First name is required').max(50),
       lastName: z.string().min(1, 'Last name is required').max(50),
-      role: z.enum([Role.CANDIDATE, Role.EMPLOYER]).default(Role.CANDIDATE),
+      role: z.enum([Role.CANDIDATE, Role.EMPLOYER, Role.VENDOR]).default(Role.CANDIDATE),
       mobileNumber: z
         .string()
         .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number')
@@ -338,12 +338,18 @@ export const updateProfileSchema = z.object({
       .string()
       .min(1, 'First name is required')
       .max(50, 'First name must be at most 50 characters')
-      .regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes'),
+      .regex(
+        /^[a-zA-Z\s'-]+$/,
+        'First name can only contain letters, spaces, hyphens, and apostrophes'
+      ),
     lastName: z
       .string()
       .min(1, 'Last name is required')
       .max(50, 'Last name must be at most 50 characters')
-      .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
+      .regex(
+        /^[a-zA-Z\s'-]+$/,
+        'Last name can only contain letters, spaces, hyphens, and apostrophes'
+      ),
   }),
 });
 

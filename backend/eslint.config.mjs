@@ -47,7 +47,8 @@ export default tseslint.config(
             'no-return-await': 'warn',
             'prefer-const': 'error',
             'no-var': 'error',
-            eqeqeq: ['error', 'always'],
+            // Allow `== null` / `!= null` — idiomatic null-or-undefined check.
+            eqeqeq: ['error', 'always', { null: 'ignore' }],
             curly: ['warn', 'multi-line'],
 
             // Node

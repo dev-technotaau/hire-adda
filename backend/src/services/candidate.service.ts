@@ -429,11 +429,33 @@ export class CandidateService {
       sortBy?: string;
       page?: number;
       limit?: number;
-    }
+    },
+    /**
+     * Searcher's userId — used to enforce the plan-level
+     * `feature.search_result` countable cap. CV Lite caps at 500 results,
+     * CV Pro at 1500, CV Enterprise unlimited (`feature.search_unlimited`).
+     * Optional so super-admin / internal callers stay uncapped.
+     */
+    searcherUserId?: string
   ) {
     const page = filters.page || PAGINATION.DEFAULT_PAGE;
     const cappedLimit = Math.min(filters.limit || PAGINATION.DEFAULT_LIMIT, PAGINATION.MAX_LIMIT);
     const skip = (page - 1) * cappedLimit;
+
+    // Resolve the searcher's plan-level result cap. Returns `null` when
+    // no cap applies (no plan, or plan grants `feature.search_unlimited`).
+    const resultCap = searcherUserId ? await getSearchResultCap(searcherUserId) : null;
+
+    // CV Pro / Enterprise unlock advanced filters (age, salary, current
+    // company, last active, etc.). CV Lite or no-plan callers get the
+    // basic filter set — advanced keys are stripped silently before they
+    // reach ES / Prisma so results are correct for the plan they bought.
+    if (searcherUserId) {
+      const canUseAdvanced = await hasAdvancedFilters(searcherUserId);
+      if (!canUseAdvanced) {
+        filters = stripAdvancedFilters(filters) as typeof filters;
+      }
+    }
 
     // 1. Try Elasticsearch — only when actual search criteria exist (not just page/limit/sortBy)
     const ignoreKeys = new Set(['page', 'limit', 'sortBy']);
@@ -451,13 +473,21 @@ export class CandidateService {
           }
         );
 
+        // Inject Premium markers for each candidate hit (single batch query).
+        // ES hits include `userId` per the existing serialiser.
+        const enrichedHits = await enrichWithVerifiedBadge(hits);
+
+        // Plan-level result cap — if the searcher's plan limits
+        // SEARCH_RESULT, clamp total + pages so they can't paginate past it.
+        const cappedTotal = resultCap !== null ? Math.min(total, resultCap) : total;
         return {
-          candidates: hits,
+          candidates: enrichedHits,
           pagination: {
-            total,
+            total: cappedTotal,
             page,
             limit: cappedLimit,
-            pages: Math.ceil(total / cappedLimit),
+            pages: Math.ceil(cappedTotal / cappedLimit) || 1,
+            cap: resultCap,
           },
           facets,
         };
@@ -666,10 +696,19 @@ export class CandidateService {
         generatedResumeUrl: c.generatedResumeUrl ? true : null,
       }));
 
-      const totalPages = Math.ceil(total / cappedLimit) || 1;
+      const enriched = await enrichWithVerifiedBadge(sanitized);
+
+      const cappedTotal = resultCap !== null ? Math.min(total, resultCap) : total;
+      const totalPages = Math.ceil(cappedTotal / cappedLimit) || 1;
       return {
-        candidates: sanitized,
-        pagination: { total, page, limit: cappedLimit, pages: totalPages },
+        candidates: enriched,
+        pagination: {
+          total: cappedTotal,
+          page,
+          limit: cappedLimit,
+          pages: totalPages,
+          cap: resultCap,
+        },
       };
     }
   }
@@ -1006,11 +1045,27 @@ export class CandidateService {
     });
     if (!profile) throw new AppError('Candidate not found', 404);
 
+    // Resolve Premium markers (verified badge, profile boost) so employers
+    // see the trust signal on candidate detail. Best-effort — if the
+    // entitlement service errors we still return the profile.
+    let hasVerifiedBadge = false;
+    let hasProfileBoost = false;
+    try {
+      const { getActiveEntitlementsForUser } = await import('./entitlement.service');
+      const snapshot = await getActiveEntitlementsForUser(profile.userId);
+      hasVerifiedBadge = Boolean(snapshot.features['feature.candidate_verified_badge']);
+      hasProfileBoost = Boolean(snapshot.features['feature.candidate_profile_boost']);
+    } catch {
+      /* non-critical */
+    }
+
     // Strip raw R2 URLs — employers must use the signed download endpoint
     return {
       ...profile,
       resume: profile.resume ? true : null,
       generatedResumeUrl: profile.generatedResumeUrl ? true : null,
+      hasVerifiedBadge,
+      hasProfileBoost,
     };
   }
 }
@@ -1019,5 +1074,137 @@ export class CandidateService {
 const profileImageBufferOrPath = (file: Express.Multer.File): string | Buffer => {
   return file.buffer;
 };
+
+/**
+ * Resolves the searcher's plan-level cap on candidate search results.
+ *
+ *   - Returns `null` (no cap) when the user has `feature.search_unlimited`
+ *     from CV Enterprise, or no entitlement at all (free / unauthenticated
+ *     callers — handled by the controller's role gate elsewhere).
+ *   - Otherwise picks the highest declared `feature.search_result`
+ *     countable across active entitlements. CV Lite = 500, CV Pro = 1500.
+ *
+ * Failures degrade gracefully — we'd rather return the full result set
+ * than block users on a flaky entitlement read.
+ */
+async function getSearchResultCap(userId: string): Promise<number | null> {
+  try {
+    const { getActiveEntitlementsForUser } = await import('./entitlement.service');
+    const snapshot = await getActiveEntitlementsForUser(userId);
+    if (snapshot.features['feature.search_unlimited']) return null;
+    const caps = snapshot.entitlements
+      .flatMap((e) => e.features)
+      .filter((f) => f.key === 'feature.search_result' && f.included && f.countableLimit !== null)
+      .map((f) => f.countableLimit ?? 0)
+      .filter((n) => n > 0);
+    return caps.length === 0 ? null : Math.max(...caps);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Filter keys treated as "advanced" by the CV Pro plan promise.
+ * CV Lite (basic filters) gets keyword/location/experience/skills/sortBy.
+ * CV Pro / Enterprise unlock the full filter set below. Stripping an
+ * advanced filter when the searcher lacks `feature.advanced_filters`
+ * silently downgrades the search rather than rejecting it.
+ */
+const ADVANCED_FILTER_KEYS = new Set<string>([
+  'salaryMin',
+  'salaryMax',
+  'salaryCurrency',
+  'includeSalaryNotDisclosed',
+  'workStatus',
+  'noticePeriod',
+  'servingNoticePeriod',
+  'gender',
+  'willingToRelocate',
+  'lastActiveWithin',
+  'currentIndustry',
+  'currentCompany',
+  'excludeCompany',
+  'designation',
+  'department',
+  'ageMin',
+  'ageMax',
+  'hasCareerBreak',
+  'careerBreakType',
+  'verifiedMobile',
+  'verifiedEmail',
+  'registeredAfter',
+  'modifiedAfter',
+  'certifications',
+  'disabilityType',
+  'openToWork',
+  'category',
+  'isVeteran',
+  'itSkill',
+  'workPermit',
+  'highestEducationLevel',
+  'drivingLicenseType',
+  'preferredJobType',
+  'preferredWorkMode',
+  'excludeKeywords',
+  'keywordOperator',
+  'keywordScope',
+  'functionalArea',
+  'radiusKm',
+]);
+
+async function hasAdvancedFilters(userId: string): Promise<boolean> {
+  try {
+    const { getActiveEntitlementsForUser } = await import('./entitlement.service');
+    const snapshot = await getActiveEntitlementsForUser(userId);
+    return Boolean(
+      snapshot.features['feature.advanced_filters'] || snapshot.features['feature.search_unlimited'] // Enterprise gets all filters
+    );
+  } catch {
+    // On lookup failure, allow filters through — better UX than blocking.
+    return true;
+  }
+}
+
+function stripAdvancedFilters<T extends Record<string, unknown>>(filters: T): T {
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(filters)) {
+    if (!ADVANCED_FILTER_KEYS.has(key)) cleaned[key] = value;
+  }
+  return cleaned as T;
+}
+
+/**
+ * Adds `hasVerifiedBadge` (and `hasProfileBoost`) booleans to each candidate
+ * row in a list. Uses a single batch query against the entitlement service
+ * — safe at any list size. Best-effort: any failure just leaves the flags
+ * as `false` rather than blowing up the search.
+ */
+async function enrichWithVerifiedBadge<
+  T extends { userId?: string | null; user?: { id?: string } | null },
+>(rows: T[]): Promise<(T & { hasVerifiedBadge: boolean; hasProfileBoost: boolean })[]> {
+  const userIds = rows
+    .map((r) => r.userId ?? r.user?.id ?? null)
+    .filter((v): v is string => typeof v === 'string');
+  if (userIds.length === 0) {
+    return rows.map((r) => ({ ...r, hasVerifiedBadge: false, hasProfileBoost: false }));
+  }
+  try {
+    const { getUsersWithFeature } = await import('./entitlement.service');
+    const [verifiedSet, boostSet] = await Promise.all([
+      getUsersWithFeature(userIds, 'feature.candidate_verified_badge'),
+      getUsersWithFeature(userIds, 'feature.candidate_profile_boost'),
+    ]);
+    return rows.map((r) => {
+      const uid = r.userId ?? r.user?.id ?? '';
+      return {
+        ...r,
+        hasVerifiedBadge: verifiedSet.has(uid),
+        hasProfileBoost: boostSet.has(uid),
+      };
+    });
+  } catch {
+    return rows.map((r) => ({ ...r, hasVerifiedBadge: false, hasProfileBoost: false }));
+  }
+}
 
 export const candidateService = new CandidateService();

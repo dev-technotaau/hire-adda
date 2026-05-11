@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Hire Adda Backend API",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon",
@@ -102,6 +105,7 @@
     "puppeteer": "^24.37.2",
     "qrcode": "^1.5.4",
     "rate-limit-redis": "^4.3.1",
+    "razorpay": "^2.9.6",
     "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
     "speakeasy": "^2.0.0",

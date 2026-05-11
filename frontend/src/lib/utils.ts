@@ -16,6 +16,12 @@ export function formatRelativeDate(date: string | Date): string {
   return formatDistanceToNow(d, { addSuffix: true });
 }
 
+/** Check if a date is within the last N hours from now. */
+export function isPostedWithin(createdAt: string | Date, hours: number): boolean {
+  const t = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
+  return Date.now() - t < hours * 3_600_000;
+}
+
 export function formatCurrency(amount: number, currency: string = 'INR'): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',

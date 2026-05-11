@@ -50,7 +50,12 @@ export default function VolunteeringSection({ form, updateField }: ProfileSectio
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Volunteer Experience</h2>
-            <Button size="sm" variant="outline" onClick={addVolunteer} tooltip="Add a new volunteer experience">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={addVolunteer}
+              tooltip="Add a new volunteer experience"
+            >
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
@@ -145,7 +150,12 @@ export default function VolunteeringSection({ form, updateField }: ProfileSectio
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">References</h2>
-            <Button size="sm" variant="outline" onClick={addReference} tooltip="Add a new reference">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={addReference}
+              tooltip="Add a new reference"
+            >
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>

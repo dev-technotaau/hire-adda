@@ -328,9 +328,25 @@ router.post('/firebase-login', validate(firebaseLoginSchema), firebaseAuthContro
 // Social Auth Routes
 // ===============================
 
-// Google (pass ?role=EMPLOYER to register as employer)
+// OAuth role allow-list — used both at init time and on the callback
+// to map the `state` query back to a Role enum value. New roles get
+// added here once.
+const OAUTH_ROLE_VALUES = ['CANDIDATE', 'EMPLOYER', 'VENDOR'] as const;
+type OAuthRole = (typeof OAUTH_ROLE_VALUES)[number];
+
+function pickOAuthRole(input: unknown): OAuthRole {
+  if (typeof input === 'string') {
+    const upper = input.toUpperCase();
+    if ((OAUTH_ROLE_VALUES as readonly string[]).includes(upper)) return upper as OAuthRole;
+  }
+  return 'CANDIDATE';
+}
+
+// Google (pass ?role=EMPLOYER or ?role=VENDOR to register accordingly).
+// `state` doubles as the OAuth-spec CSRF guard plus the role hint —
+// passport echoes it back to the callback unchanged.
 router.get('/google', (req, res, next) => {
-  const role = req.query.role === 'EMPLOYER' ? 'EMPLOYER' : 'CANDIDATE';
+  const role = pickOAuthRole(req.query.role);
   passport.authenticate('google', { scope: ['profile', 'email'], state: role })(req, res, next);
 });
 router.get(
@@ -339,9 +355,13 @@ router.get(
   authController.socialCallback
 );
 
-// LinkedIn
+// LinkedIn — encode role into a `<ROLE>:<nonce>` state so first-time
+// signups via LinkedIn respect ?role=… the same way Google does. The
+// random nonce preserves CSRF protection.
 router.get('/linkedin', (req, res, next) => {
-  const state = crypto.randomBytes(16).toString('hex');
+  const role = pickOAuthRole(req.query.role);
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const state = `${role}:${nonce}`;
   passport.authenticate('linkedin', { state })(req, res, next);
 });
 router.get(

@@ -41,11 +41,7 @@ export default function BackToTop() {
         }`}
       >
         {/* Progress ring */}
-        <svg
-          className="absolute inset-0 h-full w-full -rotate-90"
-          viewBox="0 0 44 44"
-          fill="none"
-        >
+        <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 44 44" fill="none">
           {/* Background track */}
           <circle
             cx="22"

@@ -3,7 +3,15 @@ import { Router } from 'express';
 import { prisma } from '../config/prisma';
 import { JobStatus } from '@prisma/client';
 import { cache } from '../middleware/cache';
+import { etagCache } from '../middleware/etag';
+import { optionalAuth } from '../middleware/auth';
+import { publicLimiter } from '../middleware/rate-limit';
 import { getTrendingJobs, getTrendingSearches } from '../utils/trending';
+import * as publicCtrl from '../controllers/public.controller';
+import * as searchHistoryCtrl from '../controllers/search-history.controller';
+import * as curatedCtrl from '../controllers/curated.controller';
+import * as publicStatsCtrl from '../controllers/public-stats.controller';
+import { protect } from '../middleware/auth';
 
 const router = Router();
 
@@ -70,18 +78,19 @@ router.get(
 
       // Enrich trending jobs with basic info
       const jobIds = trendingJobs.map((t) => t.jobId);
-      const jobs = jobIds.length > 0
-        ? await prisma.jobPost.findMany({
-            where: { id: { in: jobIds }, status: JobStatus.OPEN },
-            select: {
-              id: true,
-              title: true,
-              location: true,
-              type: true,
-              company: { select: { companyName: true, logo: true } },
-            },
-          })
-        : [];
+      const jobs =
+        jobIds.length > 0
+          ? await prisma.jobPost.findMany({
+              where: { id: { in: jobIds }, status: JobStatus.OPEN },
+              select: {
+                id: true,
+                title: true,
+                location: true,
+                type: true,
+                company: { select: { companyName: true, logo: true } },
+              },
+            })
+          : [];
       const jobMap = new Map(jobs.map((j) => [j.id, j]));
 
       const enrichedJobs = trendingJobs
@@ -100,6 +109,147 @@ router.get(
       next(error);
     }
   }
+);
+
+// ───────────────────────────────────────────────────────────────────────
+// Public job-board + company-directory surfaces (added Phase 2 of the
+// Public Jobs + Companies plan). Optional auth so authenticated users
+// see the same surfaces without the guest-result soft-wall, and IP
+// rate-limit so anonymous callers can't DDoS the search backend.
+// ───────────────────────────────────────────────────────────────────────
+
+router.get(
+  '/jobs',
+  publicLimiter,
+  optionalAuth,
+  etagCache({ ttl: 60, publicCdnCache: true }),
+  // Cache key fragments by auth-state bucket — guests see the
+  // 30-result soft-walled response, authed users see the uncapped
+  // version. Without this fragment a guest could pull an auth-user's
+  // cached uncapped response (and vice versa).
+  cache({
+    ttl: 60,
+    keyGenerator: (req) => {
+      const isAuthed = !!(req as any).user?.id;
+      return `${req.originalUrl}::a${isAuthed ? '1' : '0'}`;
+    },
+  }),
+  publicCtrl.searchJobs
+);
+router.get(
+  '/jobs/:slug',
+  publicLimiter,
+  optionalAuth,
+  etagCache({ ttl: 300, publicCdnCache: true }),
+  cache({ ttl: 300 }),
+  publicCtrl.getJobBySlug
+);
+router.get(
+  '/companies',
+  publicLimiter,
+  optionalAuth,
+  etagCache({ ttl: 60, publicCdnCache: true }),
+  cache({
+    ttl: 60,
+    keyGenerator: (req) => {
+      const isAuthed = !!(req as any).user?.id;
+      return `${req.originalUrl}::a${isAuthed ? '1' : '0'}`;
+    },
+  }),
+  publicCtrl.searchCompanies
+);
+router.get(
+  '/companies/:slug',
+  publicLimiter,
+  optionalAuth,
+  etagCache({ ttl: 300, publicCdnCache: true }),
+  cache({ ttl: 300 }),
+  publicCtrl.getCompanyBySlug
+);
+// Filterable + paginated jobs feed for the Jobs tab on the company
+// detail page. Shorter TTL since this drives interactive filter UX.
+router.get(
+  '/companies/:slug/jobs',
+  publicLimiter,
+  optionalAuth,
+  etagCache({ ttl: 60, publicCdnCache: true }),
+  cache({ ttl: 60 }),
+  publicCtrl.getCompanyJobsBySlug
+);
+
+// ─── Search history (guest + auth) ─────────────────────────────────────
+// Fed by the chip carousel on the homepage hero, listing pages, and
+// candidate dashboard. Migration endpoint runs on login to promote
+// guest sessions into the user's bound history.
+router.get('/search-history', publicLimiter, optionalAuth, searchHistoryCtrl.list);
+router.post('/search-history', publicLimiter, optionalAuth, searchHistoryCtrl.record);
+router.delete('/search-history/:id', publicLimiter, optionalAuth, searchHistoryCtrl.remove);
+router.post('/search-history/migrate', protect, searchHistoryCtrl.migrate);
+
+// Aggregate popular searches across all owners — used by the sitemap
+// popular-aggregates shard. Cached for 24h since it's a heavy GROUP BY.
+router.get(
+  '/search-aggregates',
+  publicLimiter,
+  etagCache({ ttl: 24 * 60 * 60, publicCdnCache: true }),
+  cache({ ttl: 24 * 60 * 60 }),
+  searchHistoryCtrl.aggregates
+);
+
+// ─── Curated listings (mega-menu + footer + SEO landings) ──────────────
+router.get(
+  '/curated/menu',
+  publicLimiter,
+  etagCache({ ttl: 600, publicCdnCache: true }),
+  cache({ ttl: 600 }),
+  curatedCtrl.listAllForMenu
+);
+router.get(
+  '/curated/footer',
+  publicLimiter,
+  etagCache({ ttl: 600, publicCdnCache: true }),
+  cache({ ttl: 600 }),
+  curatedCtrl.listForFooter
+);
+router.get(
+  '/curated/by-slug/:slug',
+  publicLimiter,
+  etagCache({ ttl: 300, publicCdnCache: true }),
+  cache({ ttl: 300 }),
+  curatedCtrl.getBySlug
+);
+router.get(
+  '/curated/:type',
+  publicLimiter,
+  etagCache({ ttl: 600, publicCdnCache: true }),
+  cache({ ttl: 600 }),
+  curatedCtrl.listByType
+);
+
+// ─── Homepage discovery widgets — public-stats aggregates ───────────────
+// Section 2: per-COMPANY_CATEGORY hiring stats (totals + sample logos).
+router.get(
+  '/company-categories/stats',
+  publicLimiter,
+  etagCache({ ttl: 60 * 60, publicCdnCache: true }),
+  cache({ ttl: 60 * 60 }),
+  publicStatsCtrl.companyCategoryStats
+);
+// Section 3: featured companies, ranked by recent posting activity.
+router.get(
+  '/companies/featured',
+  publicLimiter,
+  etagCache({ ttl: 30 * 60, publicCdnCache: true }),
+  cache({ ttl: 30 * 60 }),
+  publicStatsCtrl.featuredCompanies
+);
+// Section 4: per-role public-job counts (batched).
+router.get(
+  '/role-counts',
+  publicLimiter,
+  etagCache({ ttl: 30 * 60, publicCdnCache: true }),
+  cache({ ttl: 30 * 60 }),
+  publicStatsCtrl.roleCounts
 );
 
 export default router;

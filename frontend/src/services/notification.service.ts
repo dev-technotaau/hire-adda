@@ -23,8 +23,9 @@ export const notificationService = {
     return res.data;
   },
 
-  async getUnreadCount(): Promise<ApiResponse<UnreadCount>> {
-    const res = await api.get(API.NOTIFICATIONS.UNREAD_COUNT);
+  async getUnreadCount(category?: string): Promise<ApiResponse<UnreadCount>> {
+    const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+    const res = await api.get(`${API.NOTIFICATIONS.UNREAD_COUNT}${qs}`);
     return res.data;
   },
 };

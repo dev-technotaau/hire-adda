@@ -1,4 +1,4 @@
-export type Role = 'CANDIDATE' | 'EMPLOYER' | 'ADMIN' | 'SUPER_ADMIN';
+export type Role = 'CANDIDATE' | 'EMPLOYER' | 'ADMIN' | 'SUPER_ADMIN' | 'VENDOR';
 
 export interface User {
   id: string;
@@ -37,7 +37,7 @@ export interface RegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
-  role: 'CANDIDATE' | 'EMPLOYER';
+  role: 'CANDIDATE' | 'EMPLOYER' | 'VENDOR';
   mobileNumber?: string;
   companyName?: string;
 }

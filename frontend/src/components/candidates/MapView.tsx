@@ -218,7 +218,9 @@ export default function CandidateMapView({
                       📍 {candidate.currentLocation}
                     </span>
                   )}
-                  <Tooltip content={isSaved ? 'Remove from saved candidates' : 'Save this candidate'}>
+                  <Tooltip
+                    content={isSaved ? 'Remove from saved candidates' : 'Save this candidate'}
+                  >
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

@@ -123,7 +123,8 @@ router.get('/kafka-dlq', async (req, res, next) => {
     const { kafkaReplayService } = await import('../services/kafka-replay.service');
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
-    const replayed = req.query.replayed === 'true' ? true : req.query.replayed === 'false' ? false : undefined;
+    const replayed =
+      req.query.replayed === 'true' ? true : req.query.replayed === 'false' ? false : undefined;
     const data = await kafkaReplayService.getDlqMessages(page, limit, replayed);
     res.status(200).json({ status: 'success', data });
   } catch (error) {
@@ -148,7 +149,9 @@ router.post('/kafka-replay', async (req, res, next) => {
     const { kafkaReplayService } = await import('../services/kafka-replay.service');
     const { startTime, endTime, eventTypes } = req.body;
     if (!startTime || !endTime) {
-      res.status(400).json({ status: 'error', error: { message: 'startTime and endTime required' } });
+      res
+        .status(400)
+        .json({ status: 'error', error: { message: 'startTime and endTime required' } });
       return;
     }
     const result = await kafkaReplayService.replayEvents(

@@ -4795,7 +4795,6 @@ export const HOBBY_SUGGESTIONS = [
   'Animation',
   'Short Films',
   'Film Editing',
-
 ] as const;
 
 export const INTEREST_SUGGESTIONS = [

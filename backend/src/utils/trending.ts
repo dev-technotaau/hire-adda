@@ -16,7 +16,9 @@ export async function trackJobView(jobId: string): Promise<void> {
  * Get trending jobs (most viewed in last 24h).
  * Returns array of { jobId, score } sorted by score desc.
  */
-export async function getTrendingJobs(limit = 10): Promise<Array<{ jobId: string; score: number }>> {
+export async function getTrendingJobs(
+  limit = 10
+): Promise<Array<{ jobId: string; score: number }>> {
   const results = await redis.zrevrange(TRENDING_JOBS_KEY, 0, limit - 1, 'WITHSCORES');
   const items: Array<{ jobId: string; score: number }> = [];
   for (let i = 0; i < results.length; i += 2) {
@@ -38,7 +40,9 @@ export async function trackSearch(query: string): Promise<void> {
  * Get trending searches (most popular in last 24h).
  * Returns array of { query, score } sorted by score desc.
  */
-export async function getTrendingSearches(limit = 10): Promise<Array<{ query: string; score: number }>> {
+export async function getTrendingSearches(
+  limit = 10
+): Promise<Array<{ query: string; score: number }>> {
   const results = await redis.zrevrange(TRENDING_SEARCHES_KEY, 0, limit - 1, 'WITHSCORES');
   const items: Array<{ query: string; score: number }> = [];
   for (let i = 0; i < results.length; i += 2) {

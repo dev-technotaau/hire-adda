@@ -45,10 +45,22 @@ export default function CompareBar({ jobs, onRemove, onClear, onCompare }: Compa
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onClear} className="text-xs" tooltip="Clear all selected jobs">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            className="text-xs"
+            tooltip="Clear all selected jobs"
+          >
             Clear
           </Button>
-          <Button size="sm" onClick={onCompare} disabled={jobs.length < 2} className="text-xs" tooltip="Compare selected jobs side by side">
+          <Button
+            size="sm"
+            onClick={onCompare}
+            disabled={jobs.length < 2}
+            className="text-xs"
+            tooltip="Compare selected jobs side by side"
+          >
             Compare
           </Button>
         </div>

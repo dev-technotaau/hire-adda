@@ -190,6 +190,8 @@ export interface Job {
 export interface JobCompany {
   id: string;
   userId?: string;
+  /** Public SEO slug — present when the company has been backfilled. */
+  slug?: string | null;
   companyName: string;
   logo: string | null;
   coverImage?: string | null;
@@ -207,6 +209,10 @@ export interface JobCompany {
   locations: string[];
   description: string | null;
   isVerified: boolean;
+  /** Optional — present when the backend has a review aggregate row. */
+  averageRating?: number;
+  /** Optional — present when the backend has a review aggregate row. */
+  totalReviews?: number;
 }
 
 export interface JobApplication {

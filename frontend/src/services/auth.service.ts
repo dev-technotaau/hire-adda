@@ -76,13 +76,12 @@ export const authService = {
         { withCredentials: true },
       );
       return res.data;
-    } catch (err) { toBffError(err); }
+    } catch (err) {
+      toBffError(err);
+    }
   },
 
-  async login(
-    data: LoginRequest,
-    turnstileToken?: string,
-  ): Promise<ApiResponse<BffAuthResponse>> {
+  async login(data: LoginRequest, turnstileToken?: string): Promise<ApiResponse<BffAuthResponse>> {
     try {
       const res = await axios.post(
         '/api/auth/login',
@@ -96,28 +95,36 @@ export const authService = {
         },
       );
       return res.data;
-    } catch (err) { toBffError(err); }
+    } catch (err) {
+      toBffError(err);
+    }
   },
 
   async logout(): Promise<ApiResponse<null>> {
     try {
       const res = await axios.post('/api/auth/logout', {}, { withCredentials: true });
       return res.data;
-    } catch (err) { toBffError(err); }
+    } catch (err) {
+      toBffError(err);
+    }
   },
 
   async getMe(): Promise<ApiResponse<User>> {
     try {
       const res = await axios.get('/api/auth/me', { withCredentials: true });
       return res.data;
-    } catch (err) { toBffError(err); }
+    } catch (err) {
+      toBffError(err);
+    }
   },
 
   async refresh(): Promise<ApiResponse<null>> {
     try {
       const res = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
       return res.data;
-    } catch (err) { toBffError(err); }
+    } catch (err) {
+      toBffError(err);
+    }
   },
 
   async firebaseLogin(
@@ -131,7 +138,9 @@ export const authService = {
         { withCredentials: true },
       );
       return res.data;
-    } catch (err) { toBffError(err); }
+    } catch (err) {
+      toBffError(err);
+    }
   },
 
   // ─── Non-token endpoints go through the generic proxy ───
@@ -140,7 +149,9 @@ export const authService = {
     try {
       const res = await axios.post('/api/auth/verify-email', data, { withCredentials: true });
       return res.data;
-    } catch (err) { toBffError(err); }
+    } catch (err) {
+      toBffError(err);
+    }
   },
 
   async resendEmailVerification(email: string): Promise<ApiResponse<null>> {
@@ -164,9 +175,7 @@ export const authService = {
     return res.data;
   },
 
-  async initiateChangePassword(data: {
-    currentPassword: string;
-  }): Promise<ApiResponse<null>> {
+  async initiateChangePassword(data: { currentPassword: string }): Promise<ApiResponse<null>> {
     const res = await api.post(API.AUTH.CHANGE_PASSWORD_INITIATE, data);
     return res.data;
   },
@@ -225,7 +234,9 @@ export const authService = {
     try {
       const res = await axios.post('/api/auth/mfa-recovery', data, { withCredentials: true });
       return res.data;
-    } catch (err) { toBffError(err); }
+    } catch (err) {
+      toBffError(err);
+    }
   },
 
   async initiateChangeEmail(data: {
@@ -312,7 +323,9 @@ export const authService = {
     try {
       const res = await axios.patch('/api/auth/me/profile', data, { withCredentials: true });
       return res.data;
-    } catch (err) { toBffError(err); }
+    } catch (err) {
+      toBffError(err);
+    }
   },
 
   // ─── Social auth URLs (still point to backend for OAuth redirects) ───

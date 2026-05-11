@@ -44,6 +44,7 @@ export const API = {
     RESUME: '/candidates/me/resume',
     RESUME_GENERATE: '/candidates/me/resume/generate',
     RESUME_READINESS: '/candidates/me/resume/readiness',
+    RESUME_TEMPLATES: '/candidates/me/resume/templates',
     RESUME_USE_GENERATED: '/candidates/me/resume/use-generated',
     AVATAR: '/candidates/me/avatar',
     PROFILE_VIEWS: '/candidates/me/profile-views',

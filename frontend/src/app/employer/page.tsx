@@ -43,6 +43,10 @@ import Skeleton from '@/components/ui/Skeleton';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import Tooltip from '@/components/ui/Tooltip';
+import PlanStatusBanner from '@/components/billing/PlanStatusBanner';
+import EmployerSupportCard from '@/components/support/EmployerSupportCard';
+import EmployerHelplineBanner from '@/components/support/EmployerHelplineBanner';
+import WhatsappSupportCard from '@/components/support/WhatsappSupportCard';
 import BarChart from '@/components/charts/BarChart';
 import AreaChart from '@/components/charts/AreaChart';
 import PieChart from '@/components/charts/PieChart';
@@ -357,6 +361,12 @@ export default function EmployerDashboard() {
   return (
     <DashboardLayout requiredRole={['EMPLOYER']}>
       <div className="space-y-6">
+        <EmployerHelplineBanner compact variant="rounded" />
+        {/* WhatsApp support — auto-shown to plans that include WhatsApp
+            support (Standard, Premium, CV Pro, Assisted Hiring). Hidden
+            for free-tier employers. */}
+        <WhatsappSupportCard />
+        <EmployerSupportCard />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[var(--text)]">
@@ -374,6 +384,9 @@ export default function EmployerDashboard() {
             </Link>
           </Tooltip>
         </div>
+
+        {/* Active plan summary + quotas — or "Choose a plan" CTA */}
+        <PlanStatusBanner highlightUnits={['JOB_POST', 'CV_UNLOCK', 'APPLICATIONS']} />
 
         {/* Account Type Setup Prompt */}
         {companyData?.data && !companyData.data.accountType && (

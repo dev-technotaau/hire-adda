@@ -39,6 +39,9 @@ import {
   FileDown,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import PlanGate from '@/components/billing/PlanGate';
+import PremiumLockBadge from '@/components/billing/PremiumLockBadge';
+import VerifiedBadge from '@/components/billing/VerifiedBadge';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -71,7 +74,11 @@ import {
   useDidYouMean,
 } from '@/hooks/use-search';
 import { useSuggest, useStaticSuggestions } from '@/hooks/use-suggestions';
-import { useFieldHistory, useAddToFieldHistory, useClearFieldHistory } from '@/hooks/use-field-history';
+import {
+  useFieldHistory,
+  useAddToFieldHistory,
+  useClearFieldHistory,
+} from '@/hooks/use-field-history';
 import { useAuthStore } from '@/store/auth.store';
 import {
   WORK_MODE_LABELS,
@@ -109,7 +116,6 @@ import type { ApiError, SearchFacets } from '@/types/api';
 import dynamic from 'next/dynamic';
 
 const CandidateMapView = dynamic(() => import('@/components/candidates/MapView'), { ssr: false });
-
 
 const toSelectOptions = (map: Record<string, string>) =>
   Object.entries(map).map(([value, label]) => ({ value, label }));
@@ -437,7 +443,9 @@ export default function CandidateSearchPage() {
   const [jobPickerCandidateId, setJobPickerCandidateId] = useState('');
   const [jobSearch, setJobSearch] = useState('');
   // Track candidates that have been actioned in this session (candidateId → last action)
-  const [actionedCandidates, setActionedCandidates] = useState<Record<string, 'shortlisted' | 'selected'>>({});
+  const [actionedCandidates, setActionedCandidates] = useState<
+    Record<string, 'shortlisted' | 'selected'>
+  >({});
   const [viewMode, setViewMode] = useState<'list' | 'compact' | 'map'>(() => {
     if (typeof window !== 'undefined') {
       return (
@@ -475,13 +483,22 @@ export default function CandidateSearchPage() {
 
   // ES suggestions index — additive sections for search dropdowns
   const { suggestions: esLocationSugs, isLoading: esLocLoading } = useSuggest({
-    category: 'location', query: locationQuery, limit: 10, minChars: 2,
+    category: 'location',
+    query: locationQuery,
+    limit: 10,
+    minChars: 2,
   });
   const { suggestions: esSkillSugs, isLoading: esSkillLoading } = useSuggest({
-    category: 'skill', query: skillsQuery, limit: 10, minChars: 1,
+    category: 'skill',
+    query: skillsQuery,
+    limit: 10,
+    minChars: 1,
   });
   const { suggestions: esCompanySugs, isLoading: esCompanyLoading } = useSuggest({
-    category: 'company', query: companyQuery, limit: 10, minChars: 2,
+    category: 'company',
+    query: companyQuery,
+    limit: 10,
+    minChars: 2,
   });
 
   // Pre-populate saved candidate IDs on mount
@@ -712,8 +729,10 @@ export default function CandidateSearchPage() {
   const { data: locationHistory } = useFieldHistory('location');
   const addLocationHistory = useAddToFieldHistory('location');
   const clearLocationHistory = useClearFieldHistory('location');
-  const { suggestions: popularLocations, isLoading: isLoadingPopular } =
-    useStaticSuggestions('location', 8);
+  const { suggestions: popularLocations, isLoading: isLoadingPopular } = useStaticSuggestions(
+    'location',
+    8,
+  );
 
   const handleKeywordSearch = useCallback((query: string) => {
     setKeyword(query);
@@ -955,8 +974,13 @@ export default function CandidateSearchPage() {
     ([key, val]) =>
       val &&
       ![
-        'page', 'limit', 'sortBy', 'keyword', 'location',
-        'experienceBucket', 'salaryBucket',
+        'page',
+        'limit',
+        'sortBy',
+        'keyword',
+        'location',
+        'experienceBucket',
+        'salaryBucket',
       ].includes(key),
   ).length;
 
@@ -1113,1246 +1137,1268 @@ export default function CandidateSearchPage() {
 
   return (
     <DashboardLayout requiredRole={['EMPLOYER']}>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Search Candidates</h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Find the right talent for your openings
-          </p>
-        </div>
-
-        {/* Search Bar */}
-        <Card>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <SearchBar
-              placeholder="Skills, designation, or company..."
-              searchType="candidates"
-              defaultValue={keyword}
-              onSearch={handleKeywordSearch}
-              size="md"
-              fullWidth
-              className="flex-1"
-            />
-            <ExperienceSelect
-              value={experienceValue}
-              onChange={handleExperienceChange}
-              size="md"
-              className="w-full shrink-0 sm:w-40"
-            />
-            <div className="flex-1 sm:max-w-xs">
-              <AutoSuggest
-                placeholder="City or location"
-                value={filters.location || ''}
-                onChange={handleLocationChange}
-                suggestions={locationOptions}
-                isLoading={isLoadingLocations}
-                onInputChange={setLocationQuery}
-                allowCreate
-                createLabel={(q) => `Search in "${q}"`}
-                minChars={2}
-                inputSize="md"
-                additionalSections={locationAdditionalSections}
-                focusSections={locationFocusSections}
-              />
-            </div>
+      <PlanGate require={['feature.cv_db_access']} feature="CV Database">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--text)]">Search Candidates</h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              Find the right talent for your openings
+            </p>
           </div>
 
-          {/* Radius Slider for Geo-Search */}
-          <div className="mt-3">
-            <RadiusSlider
-              latitude={filters.latitude}
-              longitude={filters.longitude}
-              radiusKm={filters.radiusKm}
-              onLocationChange={handleRadiusLocationChange}
-              onRadiusChange={handleRadiusChange}
-              onClear={handleClearGeoLocation}
+          {/* Search Bar */}
+          <Card>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <SearchBar
+                placeholder="Skills, designation, or company..."
+                searchType="candidates"
+                defaultValue={keyword}
+                onSearch={handleKeywordSearch}
+                size="md"
+                fullWidth
+                className="flex-1"
+              />
+              <ExperienceSelect
+                value={experienceValue}
+                onChange={handleExperienceChange}
+                size="md"
+                className="w-full shrink-0 sm:w-40"
+              />
+              <div className="flex-1 sm:max-w-xs">
+                <AutoSuggest
+                  placeholder="City or location"
+                  value={filters.location || ''}
+                  onChange={handleLocationChange}
+                  suggestions={locationOptions}
+                  isLoading={isLoadingLocations}
+                  onInputChange={setLocationQuery}
+                  allowCreate
+                  createLabel={(q) => `Search in "${q}"`}
+                  minChars={2}
+                  inputSize="md"
+                  additionalSections={locationAdditionalSections}
+                  focusSections={locationFocusSections}
+                />
+              </div>
+            </div>
+
+            {/* Radius Slider for Geo-Search */}
+            <div className="mt-3">
+              <RadiusSlider
+                latitude={filters.latitude}
+                longitude={filters.longitude}
+                radiusKm={filters.radiusKm}
+                onLocationChange={handleRadiusLocationChange}
+                onRadiusChange={handleRadiusChange}
+                onClear={handleClearGeoLocation}
+              />
+              {geoLocationName && (
+                <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                  📍 Searching near {geoLocationName}
+                </p>
+              )}
+            </div>
+
+            {/* Keyword Scope + Operator */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-[var(--text-muted)]">Search in:</span>
+              {(['all', 'title', 'skills', 'designation', 'company'] as const).map((scope) => (
+                <button
+                  key={scope}
+                  type="button"
+                  onClick={() =>
+                    handleFilterChange('keywordScope', scope === 'all' ? undefined : scope)
+                  }
+                  className={`rounded-full px-2.5 py-1 transition-colors ${
+                    (filters.keywordScope || 'all') === scope
+                      ? 'bg-primary text-white'
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]'
+                  }`}
+                >
+                  {scope.charAt(0).toUpperCase() + scope.slice(1)}
+                </button>
+              ))}
+              <span className="mx-1 h-4 w-px bg-[var(--border)]" />
+              <span className="text-[var(--text-muted)]">Match:</span>
+              {(['or', 'and'] as const).map((op) => (
+                <button
+                  key={op}
+                  type="button"
+                  onClick={() =>
+                    handleFilterChange('keywordOperator', op === 'or' ? undefined : op)
+                  }
+                  className={`rounded-full px-2.5 py-1 transition-colors ${
+                    (filters.keywordOperator || 'or') === op
+                      ? 'bg-primary text-white'
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]'
+                  }`}
+                >
+                  {KEYWORD_OPERATOR_LABELS[op]}
+                </button>
+              ))}
+            </div>
+
+            {/* Did you mean? */}
+            {didYouMean && didYouMean !== keyword && (
+              <div className="mt-3 flex items-center gap-2 text-sm">
+                <Sparkles className="h-4 w-4 text-[var(--warning)]" />
+                <span className="text-[var(--text-secondary)]">Did you mean:</span>
+                <button
+                  type="button"
+                  onClick={() => handleKeywordSearch(didYouMean)}
+                  className="text-primary font-medium hover:underline"
+                >
+                  {didYouMean}
+                </button>
+              </div>
+            )}
+          </Card>
+
+          {/* Inline skill/company/designation/IT skill autosuggests */}
+          <Card>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <AutoSuggest
+                label="Skills"
+                placeholder="e.g. React, Node.js"
+                value={filters.skills?.split(',').filter(Boolean) ?? []}
+                onChange={(val) => {
+                  const str = Array.isArray(val) ? val.join(',') : val;
+                  handleFilterChange('skills', str || undefined);
+                }}
+                suggestions={skillOptions}
+                isLoading={isLoadingSkills}
+                onInputChange={setSkillsQuery}
+                multiple
+                allowCreate
+                createLabel={(q) => `Add "${q}"`}
+                maxSelections={15}
+                minChars={1}
+                inputSize="sm"
+                additionalSections={skillAdditionalSections}
+              />
+              <AutoSuggest
+                label="Current Company"
+                placeholder="e.g. Google"
+                value={filters.currentCompany || ''}
+                onChange={(val) =>
+                  handleFilterChange(
+                    'currentCompany',
+                    (typeof val === 'string' ? val : val[0]) || undefined,
+                  )
+                }
+                suggestions={companyOptions}
+                isLoading={isLoadingCompanies}
+                onInputChange={setCompanyQuery}
+                allowCreate
+                createLabel={(q) => `Search "${q}"`}
+                minChars={2}
+                inputSize="sm"
+                additionalSections={companyAdditionalSections}
+              />
+              <ServerAutoSuggest
+                category="role_category"
+                label="Designation"
+                placeholder="e.g. Senior Developer"
+                value={filters.designation || ''}
+                onChange={(v) =>
+                  handleFilterChange('designation', (typeof v === 'string' ? v : v[0]) || undefined)
+                }
+                allowCreate
+                inputSize="sm"
+              />
+              <ServerAutoSuggest
+                category="skill"
+                label="IT Skill / Technology"
+                placeholder="e.g. Docker, AWS"
+                value={filters.itSkill || ''}
+                onChange={(v) =>
+                  handleFilterChange('itSkill', (typeof v === 'string' ? v : v[0]) || undefined)
+                }
+                allowCreate
+                inputSize="sm"
+              />
+            </div>
+          </Card>
+
+          {/* Exclusion filters */}
+          <Card>
+            <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
+              Exclude from results
+            </p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input
+                label="Exclude Keywords"
+                placeholder="e.g. intern, fresher"
+                value={filters.excludeKeywords || ''}
+                onChange={(e) => handleFilterChange('excludeKeywords', e.target.value || undefined)}
+                inputSize="sm"
+              />
+              <ServerAutoSuggest
+                category="company"
+                label="Exclude Company"
+                placeholder="e.g. CompetitorCo"
+                value={filters.excludeCompany || ''}
+                onChange={(v) =>
+                  handleFilterChange(
+                    'excludeCompany',
+                    (typeof v === 'string' ? v : v[0]) || undefined,
+                  )
+                }
+                allowCreate
+                inputSize="sm"
+              />
+              <ServerAutoSuggest
+                category="location"
+                label="Exclude Location"
+                placeholder="e.g. City to exclude"
+                value={filters.excludeLocation || ''}
+                onChange={(v) =>
+                  handleFilterChange(
+                    'excludeLocation',
+                    (typeof v === 'string' ? v : v[0]) || undefined,
+                  )
+                }
+                allowCreate
+                inputSize="sm"
+              />
+            </div>
+          </Card>
+
+          {/* Certifications */}
+          <Card>
+            <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Certifications</h3>
+            <ServerAutoSuggest
+              category="certification"
+              value={filters.certifications ? filters.certifications.split(',') : []}
+              onChange={(vals) =>
+                handleFilterChange('certifications', Array.isArray(vals) ? vals.join(',') : vals)
+              }
+              placeholder="Search certifications..."
+              multiple
+              maxSelections={10}
             />
-            {geoLocationName && (
-              <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                📍 Searching near {geoLocationName}
+          </Card>
+
+          {/* Professional Search */}
+          <Card>
+            <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Professional Search</h3>
+            <p className="mb-4 text-sm text-[var(--text-muted)]">
+              Search for specific education, skills, or designations
+            </p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input
+                label="Education"
+                placeholder="e.g. B.Tech, MBA"
+                value={filters.education || ''}
+                onChange={(e) => handleFilterChange('education', e.target.value || undefined)}
+                inputSize="sm"
+              />
+              <Input
+                label="IT Skill"
+                placeholder="e.g. Python, AWS"
+                value={filters.itSkill || ''}
+                onChange={(e) => handleFilterChange('itSkill', e.target.value || undefined)}
+                inputSize="sm"
+              />
+              <Input
+                label="Designation"
+                placeholder="e.g. Senior Engineer"
+                value={filters.designation || ''}
+                onChange={(e) => handleFilterChange('designation', e.target.value || undefined)}
+                inputSize="sm"
+              />
+            </div>
+          </Card>
+
+          {/* Activity Dates */}
+          <Card>
+            <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Activity Dates</h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                  Registered After
+                </label>
+                <DatePicker
+                  value={filters.registeredAfter || ''}
+                  onChange={(val) => handleFilterChange('registeredAfter', val || undefined)}
+                  maxDate={new Date()}
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                  Modified After
+                </label>
+                <DatePicker
+                  value={filters.modifiedAfter || ''}
+                  onChange={(val) => handleFilterChange('modifiedAfter', val || undefined)}
+                  maxDate={new Date()}
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* Radius Search */}
+          <Card>
+            <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Radius Search</h3>
+            <p className="mb-4 text-sm text-[var(--text-muted)]">
+              Search candidates within a specific radius of a location
+            </p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input
+                label="Latitude"
+                type="number"
+                step="0.000001"
+                placeholder="e.g. 28.6139"
+                value={filters.latitude || ''}
+                onChange={(e) => handleFilterChange('latitude', e.target.value || undefined)}
+                inputSize="sm"
+              />
+              <Input
+                label="Longitude"
+                type="number"
+                step="0.000001"
+                placeholder="e.g. 77.2090"
+                value={filters.longitude || ''}
+                onChange={(e) => handleFilterChange('longitude', e.target.value || undefined)}
+                inputSize="sm"
+              />
+              <Input
+                label="Radius (km)"
+                type="number"
+                min="1"
+                max="1000"
+                placeholder="e.g. 50"
+                value={filters.radiusKm || ''}
+                onChange={(e) => handleFilterChange('radiusKm', e.target.value || undefined)}
+                inputSize="sm"
+              />
+            </div>
+            {filters.latitude && filters.longitude && filters.radiusKm && (
+              <p className="mt-2 text-xs text-[var(--success)]">
+                Searching within {filters.radiusKm}km of ({filters.latitude}, {filters.longitude})
               </p>
             )}
-          </div>
+          </Card>
 
-          {/* Keyword Scope + Operator */}
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-[var(--text-muted)]">Search in:</span>
-            {(['all', 'title', 'skills', 'designation', 'company'] as const).map((scope) => (
-              <button
-                key={scope}
-                type="button"
-                onClick={() =>
-                  handleFilterChange('keywordScope', scope === 'all' ? undefined : scope)
-                }
-                className={`rounded-full px-2.5 py-1 transition-colors ${
-                  (filters.keywordScope || 'all') === scope
-                    ? 'bg-primary text-white'
-                    : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]'
-                }`}
-              >
-                {scope.charAt(0).toUpperCase() + scope.slice(1)}
-              </button>
-            ))}
-            <span className="mx-1 h-4 w-px bg-[var(--border)]" />
-            <span className="text-[var(--text-muted)]">Match:</span>
-            {(['or', 'and'] as const).map((op) => (
-              <button
-                key={op}
-                type="button"
-                onClick={() => handleFilterChange('keywordOperator', op === 'or' ? undefined : op)}
-                className={`rounded-full px-2.5 py-1 transition-colors ${
-                  (filters.keywordOperator || 'or') === op
-                    ? 'bg-primary text-white'
-                    : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]'
-                }`}
-              >
-                {KEYWORD_OPERATOR_LABELS[op]}
-              </button>
-            ))}
-          </div>
-
-          {/* Did you mean? */}
-          {didYouMean && didYouMean !== keyword && (
-            <div className="mt-3 flex items-center gap-2 text-sm">
-              <Sparkles className="h-4 w-4 text-[var(--warning)]" />
-              <span className="text-[var(--text-secondary)]">Did you mean:</span>
-              <button
-                type="button"
-                onClick={() => handleKeywordSearch(didYouMean)}
-                className="text-primary font-medium hover:underline"
-              >
-                {didYouMean}
-              </button>
-            </div>
-          )}
-        </Card>
-
-        {/* Inline skill/company/designation/IT skill autosuggests */}
-        <Card>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <AutoSuggest
-              label="Skills"
-              placeholder="e.g. React, Node.js"
-              value={filters.skills?.split(',').filter(Boolean) ?? []}
-              onChange={(val) => {
-                const str = Array.isArray(val) ? val.join(',') : val;
-                handleFilterChange('skills', str || undefined);
-              }}
-              suggestions={skillOptions}
-              isLoading={isLoadingSkills}
-              onInputChange={setSkillsQuery}
-              multiple
-              allowCreate
-              createLabel={(q) => `Add "${q}"`}
-              maxSelections={15}
-              minChars={1}
-              inputSize="sm"
-              additionalSections={skillAdditionalSections}
-            />
-            <AutoSuggest
-              label="Current Company"
-              placeholder="e.g. Google"
-              value={filters.currentCompany || ''}
-              onChange={(val) =>
-                handleFilterChange(
-                  'currentCompany',
-                  (typeof val === 'string' ? val : val[0]) || undefined,
-                )
-              }
-              suggestions={companyOptions}
-              isLoading={isLoadingCompanies}
-              onInputChange={setCompanyQuery}
-              allowCreate
-              createLabel={(q) => `Search "${q}"`}
-              minChars={2}
-              inputSize="sm"
-              additionalSections={companyAdditionalSections}
-            />
-            <ServerAutoSuggest
-              category="role_category"
-              label="Designation"
-              placeholder="e.g. Senior Developer"
-              value={filters.designation || ''}
-              onChange={(v) =>
-                handleFilterChange(
-                  'designation',
-                  (typeof v === 'string' ? v : v[0]) || undefined,
-                )
-              }
-              allowCreate
-              inputSize="sm"
-            />
-            <ServerAutoSuggest
-              category="skill"
-              label="IT Skill / Technology"
-              placeholder="e.g. Docker, AWS"
-              value={filters.itSkill || ''}
-              onChange={(v) =>
-                handleFilterChange(
-                  'itSkill',
-                  (typeof v === 'string' ? v : v[0]) || undefined,
-                )
-              }
-              allowCreate
-              inputSize="sm"
-            />
-          </div>
-        </Card>
-
-        {/* Exclusion filters */}
-        <Card>
-          <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
-            Exclude from results
-          </p>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Input
-              label="Exclude Keywords"
-              placeholder="e.g. intern, fresher"
-              value={filters.excludeKeywords || ''}
-              onChange={(e) => handleFilterChange('excludeKeywords', e.target.value || undefined)}
-              inputSize="sm"
-            />
-            <ServerAutoSuggest
-              category="company"
-              label="Exclude Company"
-              placeholder="e.g. CompetitorCo"
-              value={filters.excludeCompany || ''}
-              onChange={(v) =>
-                handleFilterChange(
-                  'excludeCompany',
-                  (typeof v === 'string' ? v : v[0]) || undefined,
-                )
-              }
-              allowCreate
-              inputSize="sm"
-            />
-            <ServerAutoSuggest
-              category="location"
-              label="Exclude Location"
-              placeholder="e.g. City to exclude"
-              value={filters.excludeLocation || ''}
-              onChange={(v) =>
-                handleFilterChange(
-                  'excludeLocation',
-                  (typeof v === 'string' ? v : v[0]) || undefined,
-                )
-              }
-              allowCreate
-              inputSize="sm"
-            />
-          </div>
-        </Card>
-
-        {/* Certifications */}
-        <Card>
-          <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Certifications</h3>
-          <ServerAutoSuggest
-            category="certification"
-            value={filters.certifications ? filters.certifications.split(',') : []}
-            onChange={(vals) =>
-              handleFilterChange('certifications', Array.isArray(vals) ? vals.join(',') : vals)
-            }
-            placeholder="Search certifications..."
-            multiple
-            maxSelections={10}
-          />
-        </Card>
-
-        {/* Professional Search */}
-        <Card>
-          <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Professional Search</h3>
-          <p className="mb-4 text-sm text-[var(--text-muted)]">
-            Search for specific education, skills, or designations
-          </p>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Input
-              label="Education"
-              placeholder="e.g. B.Tech, MBA"
-              value={filters.education || ''}
-              onChange={(e) => handleFilterChange('education', e.target.value || undefined)}
-              inputSize="sm"
-            />
-            <Input
-              label="IT Skill"
-              placeholder="e.g. Python, AWS"
-              value={filters.itSkill || ''}
-              onChange={(e) => handleFilterChange('itSkill', e.target.value || undefined)}
-              inputSize="sm"
-            />
-            <Input
-              label="Designation"
-              placeholder="e.g. Senior Engineer"
-              value={filters.designation || ''}
-              onChange={(e) => handleFilterChange('designation', e.target.value || undefined)}
-              inputSize="sm"
-            />
-          </div>
-        </Card>
-
-        {/* Activity Dates */}
-        <Card>
-          <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Activity Dates</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[var(--text)]">
-                Registered After
-              </label>
-              <DatePicker
-                value={filters.registeredAfter || ''}
-                onChange={(val) => handleFilterChange('registeredAfter', val || undefined)}
-                maxDate={new Date()}
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[var(--text)]">
-                Modified After
-              </label>
-              <DatePicker
-                value={filters.modifiedAfter || ''}
-                onChange={(val) => handleFilterChange('modifiedAfter', val || undefined)}
-                maxDate={new Date()}
-              />
-            </div>
-          </div>
-        </Card>
-
-        {/* Radius Search */}
-        <Card>
-          <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Radius Search</h3>
-          <p className="mb-4 text-sm text-[var(--text-muted)]">
-            Search candidates within a specific radius of a location
-          </p>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Input
-              label="Latitude"
-              type="number"
-              step="0.000001"
-              placeholder="e.g. 28.6139"
-              value={filters.latitude || ''}
-              onChange={(e) => handleFilterChange('latitude', e.target.value || undefined)}
-              inputSize="sm"
-            />
-            <Input
-              label="Longitude"
-              type="number"
-              step="0.000001"
-              placeholder="e.g. 77.2090"
-              value={filters.longitude || ''}
-              onChange={(e) => handleFilterChange('longitude', e.target.value || undefined)}
-              inputSize="sm"
-            />
-            <Input
-              label="Radius (km)"
-              type="number"
-              min="1"
-              max="1000"
-              placeholder="e.g. 50"
-              value={filters.radiusKm || ''}
-              onChange={(e) => handleFilterChange('radiusKm', e.target.value || undefined)}
-              inputSize="sm"
-            />
-          </div>
-          {filters.latitude && filters.longitude && filters.radiusKm && (
-            <p className="mt-2 text-xs text-[var(--success)]">
-              Searching within {filters.radiusKm}km of ({filters.latitude}, {filters.longitude})
+          {/* Region Presets */}
+          <Card>
+            <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
+              Quick Location Presets
             </p>
-          )}
-        </Card>
-
-        {/* Region Presets */}
-        <Card>
-          <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
-            Quick Location Presets
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(BROAD_REGION_PRESETS).map(([key, preset]) => {
-              const isActive =
-                preset.special === 'clear'
-                  ? !filters.location
-                  : (preset.cities?.some((c) => filters.location === c) ?? false);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    if (preset.special === 'clear') {
-                      handleFilterChange('location', undefined);
-                      setLocationQuery('');
-                    } else if (preset.special === 'international') {
-                      handleFilterChange('location', 'International');
-                      setLocationQuery('International');
-                    } else if (preset.cities) {
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(BROAD_REGION_PRESETS).map(([key, preset]) => {
+                const isActive =
+                  preset.special === 'clear'
+                    ? !filters.location
+                    : (preset.cities?.some((c) => filters.location === c) ?? false);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      if (preset.special === 'clear') {
+                        handleFilterChange('location', undefined);
+                        setLocationQuery('');
+                      } else if (preset.special === 'international') {
+                        handleFilterChange('location', 'International');
+                        setLocationQuery('International');
+                      } else if (preset.cities) {
+                        if (isActive) {
+                          handleFilterChange('location', undefined);
+                          setLocationQuery('');
+                        } else {
+                          handleFilterChange('location', preset.cities[0]);
+                          setLocationQuery(preset.cities[0]);
+                        }
+                      }
+                    }}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'bg-primary text-white'
+                        : 'border border-[var(--border)] bg-white text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {Object.entries(INDIAN_REGION_PRESETS).map(([region, cities]) => {
+                const isActive = cities.some((c) => filters.location === c);
+                return (
+                  <button
+                    key={region}
+                    type="button"
+                    onClick={() => {
                       if (isActive) {
                         handleFilterChange('location', undefined);
                         setLocationQuery('');
                       } else {
-                        handleFilterChange('location', preset.cities[0]);
-                        setLocationQuery(preset.cities[0]);
+                        handleFilterChange('location', cities[0]);
+                        setLocationQuery(cities[0]);
                       }
-                    }
-                  }}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                    isActive
-                      ? 'bg-primary text-white'
-                      : 'border border-[var(--border)] bg-white text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {Object.entries(INDIAN_REGION_PRESETS).map(([region, cities]) => {
-              const isActive = cities.some((c) => filters.location === c);
-              return (
-                <button
-                  key={region}
-                  type="button"
-                  onClick={() => {
-                    if (isActive) {
-                      handleFilterChange('location', undefined);
-                      setLocationQuery('');
-                    } else {
-                      handleFilterChange('location', cities[0]);
-                      setLocationQuery(cities[0]);
-                    }
-                  }}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                    isActive
-                      ? 'bg-primary text-white'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
-                  }`}
-                >
-                  {region}
-                </button>
-              );
-            })}
-          </div>
-        </Card>
-
-        {/* Education, certifications, department, industry, work permit */}
-        <Card>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <ServerAutoSuggest
-              category="field_of_study"
-              label="Education"
-              placeholder="e.g. B.Tech, MBA"
-              value={filters.education || ''}
-              onChange={(v) =>
-                handleFilterChange(
-                  'education',
-                  (typeof v === 'string' ? v : v[0]) || undefined,
-                )
-              }
-              allowCreate
-              inputSize="sm"
-            />
-            <Select
-              label="Education Level"
-              options={toSelectOptions(EDUCATION_LEVEL_SEARCH_LABELS)}
-              value={filters.educationLevel || ''}
-              onChange={(v) => handleFilterChange('educationLevel', v || undefined)}
-              placeholder="Any level"
-              searchable
-            />
-            <ServerAutoSuggest
-              category="certification"
-              label="Certifications"
-              placeholder="e.g. AWS, PMP"
-              value={filters.certifications || ''}
-              onChange={(v) =>
-                handleFilterChange(
-                  'certifications',
-                  (typeof v === 'string' ? v : v[0]) || undefined,
-                )
-              }
-              allowCreate
-              inputSize="sm"
-            />
-            <ServerAutoSuggest
-              category="department"
-              label="Department"
-              placeholder="e.g. Engineering"
-              value={filters.department || ''}
-              onChange={(v) =>
-                handleFilterChange(
-                  'department',
-                  (typeof v === 'string' ? v : v[0]) || undefined,
-                )
-              }
-              allowCreate
-              inputSize="sm"
-            />
-            <ServerAutoSuggest
-              category="industry"
-              label="Industry"
-              placeholder="e.g. IT, Finance"
-              value={filters.currentIndustry || ''}
-              onChange={(v) =>
-                handleFilterChange(
-                  'currentIndustry',
-                  (typeof v === 'string' ? v : v[0]) || undefined,
-                )
-              }
-              allowCreate
-              inputSize="sm"
-            />
-            <ServerAutoSuggest
-              category="visa_status"
-              label="Work Permit / Visa"
-              placeholder="e.g. Indian Citizen, H-1B Visa"
-              value={filters.workPermit || ''}
-              onChange={(v) =>
-                handleFilterChange(
-                  'workPermit',
-                  (typeof v === 'string' ? v : v[0]) || undefined,
-                )
-              }
-              allowCreate
-              inputSize="sm"
-            />
-          </div>
-        </Card>
-
-        {/* Profile freshness date filters */}
-        <Card>
-          <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
-            Registration Date Presets
-          </p>
-          <div className="mb-4 flex flex-wrap gap-2">
-            {[
-              { label: 'Last 24h', days: 1 },
-              { label: 'Last 7 days', days: 7 },
-              { label: 'Last 30 days', days: 30 },
-              { label: 'Last 90 days', days: 90 },
-            ].map(({ label, days }) => {
-              const targetDate = new Date();
-              targetDate.setDate(targetDate.getDate() - days);
-              const dateStr = targetDate.toISOString().split('T')[0];
-              const isActive = filters.registeredAfter === dateStr;
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() =>
-                    handleFilterChange('registeredAfter', isActive ? undefined : dateStr)
-                  }
-                  className={cn(
-                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                    isActive
-                      ? 'bg-primary text-white'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
-                  )}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <DatePicker
-              label="Registered After"
-              value={filters.registeredAfter || ''}
-              onChange={(v) => handleFilterChange('registeredAfter', v || undefined)}
-              inputSize="sm"
-              placeholder="Select date"
-              maxDate={new Date()}
-            />
-            <DatePicker
-              label="Profile Modified After"
-              value={filters.modifiedAfter || ''}
-              onChange={(v) => handleFilterChange('modifiedAfter', v || undefined)}
-              inputSize="sm"
-              placeholder="Select date"
-              maxDate={new Date()}
-            />
-          </div>
-        </Card>
-
-        {/* Proximity search (geo) */}
-        <Card>
-          <div className="mb-3 flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-[var(--text-secondary)]" />
-            <p className="text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
-              Proximity Search
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="sm:col-span-2">
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                Search near location
-              </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleGetLocation}
-                  disabled={isGettingLocation}
-                  title="Detect my location"
-                  className="cursor-pointer hover:border-primary hover:text-primary hover:bg-primary-light flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition-colors disabled:opacity-50"
-                >
-                  {isGettingLocation ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Locate className="h-4 w-4" />
-                  )}
-                  {filters.latitude ? 'Update location' : 'Use my location'}
-                </button>
-                {filters.latitude && (
-                  <button
-                    type="button"
-                    onClick={clearGeoLocation}
-                    title="Clear location"
-                    className="cursor-pointer text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              {geoLocationName && filters.latitude && (
-                <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                  Detected: {geoLocationName}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Radius</label>
-              <Select
-                options={[
-                  { value: '5', label: '5 km' },
-                  { value: '10', label: '10 km' },
-                  { value: '25', label: '25 km' },
-                  { value: '50', label: '50 km' },
-                  { value: '100', label: '100 km' },
-                  { value: '200', label: '200 km' },
-                ]}
-                value={filters.radiusKm || ''}
-                onChange={(v) => handleFilterChange('radiusKm', v || undefined)}
-                placeholder="Select radius"
-                disabled={!filters.latitude}
-              />
-            </div>
-          </div>
-          {nearbyCities.length > 0 && (
-            <div className="mt-4 border-t border-[var(--border)] pt-3">
-              <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">Nearby Cities</p>
-              <div className="flex flex-wrap gap-1.5">
-                {nearbyCities.map((city) => (
-                  <button
-                    key={city}
-                    type="button"
-                    onClick={() => {
-                      handleFilterChange('location', city);
-                      setLocationQuery(city);
                     }}
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                      filters.location === city
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                      isActive
                         ? 'bg-primary text-white'
-                        : 'hover:bg-primary-light hover:text-primary bg-[var(--bg-secondary)] text-[var(--text-secondary)]'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
                     }`}
                   >
-                    {city}
+                    {region}
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Education, certifications, department, industry, work permit */}
+          <Card>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <ServerAutoSuggest
+                category="field_of_study"
+                label="Education"
+                placeholder="e.g. B.Tech, MBA"
+                value={filters.education || ''}
+                onChange={(v) =>
+                  handleFilterChange('education', (typeof v === 'string' ? v : v[0]) || undefined)
+                }
+                allowCreate
+                inputSize="sm"
+              />
+              <Select
+                label="Education Level"
+                options={toSelectOptions(EDUCATION_LEVEL_SEARCH_LABELS)}
+                value={filters.educationLevel || ''}
+                onChange={(v) => handleFilterChange('educationLevel', v || undefined)}
+                placeholder="Any level"
+                searchable
+              />
+              <ServerAutoSuggest
+                category="certification"
+                label="Certifications"
+                placeholder="e.g. AWS, PMP"
+                value={filters.certifications || ''}
+                onChange={(v) =>
+                  handleFilterChange(
+                    'certifications',
+                    (typeof v === 'string' ? v : v[0]) || undefined,
+                  )
+                }
+                allowCreate
+                inputSize="sm"
+              />
+              <ServerAutoSuggest
+                category="department"
+                label="Department"
+                placeholder="e.g. Engineering"
+                value={filters.department || ''}
+                onChange={(v) =>
+                  handleFilterChange('department', (typeof v === 'string' ? v : v[0]) || undefined)
+                }
+                allowCreate
+                inputSize="sm"
+              />
+              <ServerAutoSuggest
+                category="industry"
+                label="Industry"
+                placeholder="e.g. IT, Finance"
+                value={filters.currentIndustry || ''}
+                onChange={(v) =>
+                  handleFilterChange(
+                    'currentIndustry',
+                    (typeof v === 'string' ? v : v[0]) || undefined,
+                  )
+                }
+                allowCreate
+                inputSize="sm"
+              />
+              <ServerAutoSuggest
+                category="visa_status"
+                label="Work Permit / Visa"
+                placeholder="e.g. Indian Citizen, H-1B Visa"
+                value={filters.workPermit || ''}
+                onChange={(v) =>
+                  handleFilterChange('workPermit', (typeof v === 'string' ? v : v[0]) || undefined)
+                }
+                allowCreate
+                inputSize="sm"
+              />
+            </div>
+          </Card>
+
+          {/* Profile freshness date filters */}
+          <Card>
+            <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
+              Registration Date Presets
+            </p>
+            <div className="mb-4 flex flex-wrap gap-2">
+              {[
+                { label: 'Last 24h', days: 1 },
+                { label: 'Last 7 days', days: 7 },
+                { label: 'Last 30 days', days: 30 },
+                { label: 'Last 90 days', days: 90 },
+              ].map(({ label, days }) => {
+                const targetDate = new Date();
+                targetDate.setDate(targetDate.getDate() - days);
+                const dateStr = targetDate.toISOString().split('T')[0];
+                const isActive = filters.registeredAfter === dateStr;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() =>
+                      handleFilterChange('registeredAfter', isActive ? undefined : dateStr)
+                    }
+                    className={cn(
+                      'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary text-white'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <DatePicker
+                label="Registered After"
+                value={filters.registeredAfter || ''}
+                onChange={(v) => handleFilterChange('registeredAfter', v || undefined)}
+                inputSize="sm"
+                placeholder="Select date"
+                maxDate={new Date()}
+              />
+              <DatePicker
+                label="Profile Modified After"
+                value={filters.modifiedAfter || ''}
+                onChange={(v) => handleFilterChange('modifiedAfter', v || undefined)}
+                inputSize="sm"
+                placeholder="Select date"
+                maxDate={new Date()}
+              />
+            </div>
+          </Card>
+
+          {/* Proximity search (geo) */}
+          <Card>
+            <div className="mb-3 flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-[var(--text-secondary)]" />
+              <p className="text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
+                Proximity Search
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                  Search near location
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGetLocation}
+                    disabled={isGettingLocation}
+                    title="Detect my location"
+                    className="hover:border-primary hover:text-primary hover:bg-primary-light flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition-colors disabled:opacity-50"
+                  >
+                    {isGettingLocation ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Locate className="h-4 w-4" />
+                    )}
+                    {filters.latitude ? 'Update location' : 'Use my location'}
+                  </button>
+                  {filters.latitude && (
+                    <button
+                      type="button"
+                      onClick={clearGeoLocation}
+                      title="Clear location"
+                      className="cursor-pointer text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {geoLocationName && filters.latitude && (
+                  <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                    Detected: {geoLocationName}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                  Radius
+                </label>
+                <Select
+                  options={[
+                    { value: '5', label: '5 km' },
+                    { value: '10', label: '10 km' },
+                    { value: '25', label: '25 km' },
+                    { value: '50', label: '50 km' },
+                    { value: '100', label: '100 km' },
+                    { value: '200', label: '200 km' },
+                  ]}
+                  value={filters.radiusKm || ''}
+                  onChange={(v) => handleFilterChange('radiusKm', v || undefined)}
+                  placeholder="Select radius"
+                  disabled={!filters.latitude}
+                />
+              </div>
+            </div>
+            {nearbyCities.length > 0 && (
+              <div className="mt-4 border-t border-[var(--border)] pt-3">
+                <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">
+                  Nearby Cities
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {nearbyCities.map((city) => (
+                    <button
+                      key={city}
+                      type="button"
+                      onClick={() => {
+                        handleFilterChange('location', city);
+                        setLocationQuery(city);
+                      }}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                        filters.location === city
+                          ? 'bg-primary text-white'
+                          : 'hover:bg-primary-light hover:text-primary bg-[var(--bg-secondary)] text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      {city}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Active filter tags */}
+          <ActiveFilterTags
+            sections={filterSections}
+            values={filterValues}
+            onChange={handleFilterChange}
+            onClear={clearFilters}
+          />
+
+          {/* Search History */}
+          {searchHistory.length > 0 && !keyword && activeFilterCount === 0 && (
+            <Card>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[var(--text)]">Recent Searches</h3>
+                <button
+                  onClick={async () => {
+                    await searchService.clearSearchHistory();
+                    queryClient.invalidateQueries({ queryKey: ['search-history'] });
+                  }}
+                  title="Clear search history"
+                  className="cursor-pointer text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {searchHistory.slice(0, 8).map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      if (item.query) {
+                        setKeyword(item.query);
+                        setFilters((prev) => ({
+                          ...prev,
+                          keyword: item.query,
+                          page: '1',
+                        }));
+                      }
+                    }}
+                    className="hover:border-primary hover:bg-primary-light hover:text-primary flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors"
+                  >
+                    <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                    <span>{item.query || 'Previous search'}</span>
                   </button>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
-        </Card>
 
-        {/* Active filter tags */}
-        <ActiveFilterTags
-          sections={filterSections}
-          values={filterValues}
-          onChange={handleFilterChange}
-          onClear={clearFilters}
-        />
-
-        {/* Search History */}
-        {searchHistory.length > 0 && !keyword && activeFilterCount === 0 && (
-          <Card>
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--text)]">Recent Searches</h3>
-              <button
-                onClick={async () => {
-                  await searchService.clearSearchHistory();
-                  queryClient.invalidateQueries({ queryKey: ['search-history'] });
-                }}
-                title="Clear search history"
-                className="cursor-pointer text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
-              >
-                Clear all
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {searchHistory.slice(0, 8).map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    if (item.query) {
-                      setKeyword(item.query);
-                      setFilters((prev) => ({
-                        ...prev,
-                        keyword: item.query,
-                        page: '1',
-                      }));
-                    }
-                  }}
-                  className="hover:border-primary hover:bg-primary-light hover:text-primary flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors"
-                >
-                  <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                  <span>{item.query || 'Previous search'}</span>
-                </button>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* Toolbar */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowAdvanced(!showAdvanced)} tooltip="Toggle advanced filters">
-              <Filter className="mr-1.5 h-4 w-4" />
-              Advanced Filters
-              {activeFilterCount > 0 && (
-                <span className="bg-primary ml-1.5 flex h-5 w-5 items-center justify-center rounded-full text-xs text-white">
-                  {activeFilterCount}
-                </span>
-              )}
-            </Button>
-            {activeFilterCount > 0 && (
-              <>
+          {/* Toolbar */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <PremiumLockBadge feature="feature.advanced_filters" variant="inline">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowSaveSearch(true)}
-                  tooltip="Create candidate alert"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  tooltip="Toggle advanced filters"
                 >
-                  <Bell className="mr-1.5 h-4 w-4" />
-                  Create Alert
+                  <Filter className="mr-1.5 h-4 w-4" />
+                  Advanced Filters
+                  {activeFilterCount > 0 && (
+                    <span className="bg-primary ml-1.5 flex h-5 w-5 items-center justify-center rounded-full text-xs text-white">
+                      {activeFilterCount}
+                    </span>
+                  )}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setShowSaveSearch(true)} tooltip="Save search criteria">
-                  <Star className="mr-1.5 h-4 w-4" />
-                  Save Search
-                </Button>
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            {/* View Mode Toggle */}
-            <div className="flex rounded-lg border border-[var(--border)] bg-white p-0.5">
-              <button
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'cursor-pointer rounded-md p-1.5 transition-colors',
-                  viewMode === 'list'
-                    ? 'bg-primary text-white'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
-                )}
-                aria-label="List view"
-                title="List view"
-              >
-                <LayoutList className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('compact')}
-                className={cn(
-                  'cursor-pointer rounded-md p-1.5 transition-colors',
-                  viewMode === 'compact'
-                    ? 'bg-primary text-white'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
-                )}
-                aria-label="Compact view"
-                title="Compact view"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('map')}
-                className={cn(
-                  'cursor-pointer rounded-md p-1.5 transition-colors',
-                  viewMode === 'map'
-                    ? 'bg-primary text-white'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
-                )}
-                aria-label="Map view"
-                title="Map view"
-              >
-                <Map className="h-4 w-4" />
-              </button>
+              </PremiumLockBadge>
+              {activeFilterCount > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSaveSearch(true)}
+                    tooltip="Create candidate alert"
+                  >
+                    <Bell className="mr-1.5 h-4 w-4" />
+                    Create Alert
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSaveSearch(true)}
+                    tooltip="Save search criteria"
+                  >
+                    <Star className="mr-1.5 h-4 w-4" />
+                    Save Search
+                  </Button>
+                </>
+              )}
             </div>
-            {/* Sort Dropdown */}
-            <div className="flex items-center gap-2">
-              <label className="hidden text-sm text-[var(--text-muted)] sm:inline">Sort by:</label>
-              <Select
-                options={[
-                  { value: 'relevance', label: 'Best Match' },
-                  { value: 'profileUpdated', label: 'Recently Updated' },
-                  { value: 'lastActive', label: 'Recently Active' },
-                  { value: 'experience', label: 'Experience: High to Low' },
-                  { value: 'experience_asc', label: 'Experience: Low to High' },
-                  { value: 'salary', label: 'Salary: High to Low' },
-                  { value: 'salary_asc', label: 'Salary: Low to High' },
-                  ...(filters.latitude ? [{ value: 'distance', label: 'Nearest First' }] : []),
-                ]}
-                value={filters.sortBy || 'relevance'}
-                onChange={(v) => handleFilterChange('sortBy', v || undefined)}
-              />
-            </div>
-            {pagination && (
-              <span className="text-sm whitespace-nowrap text-[var(--text-muted)]">
-                {pagination.total.toLocaleString()} candidates found
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Advanced Filters Panel */}
-        <AdvancedFilters
-          sections={filterSections}
-          values={filterValues}
-          onChange={handleFilterChange}
-          onClear={clearFilters}
-          activeCount={activeFilterCount}
-          isOpen={showAdvanced}
-          onClose={() => setShowAdvanced(false)}
-          layout="panel"
-          title="Advanced Filters"
-        />
-
-        {/* Quick Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-[var(--text-secondary)]">Quick filters:</span>
-          <button
-            onClick={() =>
-              handleFilterChange(
-                'lastActiveWithin',
-                filters.lastActiveWithin === '7d' ? undefined : '7d',
-              )
-            }
-            className={cn(
-              'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-              filters.lastActiveWithin === '7d'
-                ? 'bg-primary text-white'
-                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
-            )}
-          >
-            Active last 7 days
-          </button>
-          <button
-            onClick={() =>
-              handleFilterChange(
-                'noticePeriod',
-                filters.noticePeriod === 'IMMEDIATE' ? undefined : 'IMMEDIATE',
-              )
-            }
-            className={cn(
-              'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-              filters.noticePeriod === 'IMMEDIATE'
-                ? 'bg-primary text-white'
-                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
-            )}
-          >
-            Immediate joiners
-          </button>
-          <button
-            onClick={() =>
-              handleFilterChange(
-                'openToWork',
-                filters.openToWork === 'ACTIVELY_LOOKING' ? undefined : 'ACTIVELY_LOOKING',
-              )
-            }
-            className={cn(
-              'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-              filters.openToWork === 'ACTIVELY_LOOKING'
-                ? 'bg-primary text-white'
-                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
-            )}
-          >
-            Open to work
-          </button>
-        </div>
-
-        {/* Save Search Dialog */}
-        {showSaveSearch && (
-          <Card>
-            <div className="flex items-end gap-3">
-              <div className="flex-1">
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Save this search
+            <div className="flex items-center gap-3">
+              {/* View Mode Toggle */}
+              <div className="flex rounded-lg border border-[var(--border)] bg-white p-0.5">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    'cursor-pointer rounded-md p-1.5 transition-colors',
+                    viewMode === 'list'
+                      ? 'bg-primary text-white'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
+                  )}
+                  aria-label="List view"
+                  title="List view"
+                >
+                  <LayoutList className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('compact')}
+                  className={cn(
+                    'cursor-pointer rounded-md p-1.5 transition-colors',
+                    viewMode === 'compact'
+                      ? 'bg-primary text-white'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
+                  )}
+                  aria-label="Compact view"
+                  title="Compact view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('map')}
+                  className={cn(
+                    'cursor-pointer rounded-md p-1.5 transition-colors',
+                    viewMode === 'map'
+                      ? 'bg-primary text-white'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
+                  )}
+                  aria-label="Map view"
+                  title="Map view"
+                >
+                  <Map className="h-4 w-4" />
+                </button>
+              </div>
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-2">
+                <label className="hidden text-sm text-[var(--text-muted)] sm:inline">
+                  Sort by:
                 </label>
-                <input
-                  type="text"
-                  placeholder="Name your search, e.g. 'Senior React developers'"
-                  value={saveSearchName}
-                  onChange={(e) => setSaveSearchName(e.target.value)}
-                  className="focus:border-primary focus:ring-primary/20 h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && saveSearchName.trim()) {
-                      saveSearchMutation.mutate(saveSearchName.trim());
-                    }
-                  }}
+                <Select
+                  options={[
+                    { value: 'relevance', label: 'Best Match' },
+                    { value: 'profileUpdated', label: 'Recently Updated' },
+                    { value: 'lastActive', label: 'Recently Active' },
+                    { value: 'experience', label: 'Experience: High to Low' },
+                    { value: 'experience_asc', label: 'Experience: Low to High' },
+                    { value: 'salary', label: 'Salary: High to Low' },
+                    { value: 'salary_asc', label: 'Salary: Low to High' },
+                    ...(filters.latitude ? [{ value: 'distance', label: 'Nearest First' }] : []),
+                  ]}
+                  value={filters.sortBy || 'relevance'}
+                  onChange={(v) => handleFilterChange('sortBy', v || undefined)}
                 />
               </div>
-              <Button
-                onClick={() => saveSearchMutation.mutate(saveSearchName.trim())}
-                disabled={!saveSearchName.trim()}
-                isLoading={saveSearchMutation.isPending}
-                size="sm"
-                tooltip="Save search"
-              >
-                Save
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowSaveSearch(false);
-                  setSaveSearchName('');
-                }}
-                tooltip="Cancel save"
-              >
-                Cancel
-              </Button>
-            </div>
-          </Card>
-        )}
-
-        {/* Bulk Actions Toolbar */}
-        {selectedIds.size > 0 && (
-          <Card className="border-primary bg-primary/5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    if (selectedIds.size === candidates.length) {
-                      clearSelection();
-                    } else {
-                      selectAll();
-                    }
-                  }}
-                  className="cursor-pointer text-primary hover:text-primary-dark flex items-center gap-1.5 text-sm font-medium"
-                  title="Toggle select all"
-                >
-                  {selectedIds.size === candidates.length ? (
-                    <CheckSquare className="h-4 w-4" />
-                  ) : (
-                    <Square className="h-4 w-4" />
-                  )}
-                  {selectedIds.size === candidates.length ? 'Deselect' : 'Select'} all on page
-                </button>
-                <span className="text-sm font-medium text-[var(--text)]">
-                  {selectedIds.size} candidate{selectedIds.size !== 1 ? 's' : ''} selected
+              {pagination && (
+                <span className="text-sm whitespace-nowrap text-[var(--text-muted)]">
+                  {pagination.total.toLocaleString()} candidates found
                 </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const userIds = candidates
-                      .filter((c) => selectedIds.has(c.id))
-                      .map((c) => c.userId);
-                    bulkSaveMutation.mutate(userIds);
-                  }}
-                  disabled={bulkSaveMutation.isPending}
-                  tooltip="Save selected"
-                >
-                  <Bookmark className="mr-1.5 h-4 w-4" />
-                  Save All
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setBulkActionOpen(true)} tooltip="Shortlist selected">
-                  <UserCheck className="mr-1.5 h-4 w-4" />
-                  Shortlist
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => bulkExportMutation.mutate(Array.from(selectedIds))}
-                  disabled={bulkExportMutation.isPending}
-                  isLoading={bulkExportMutation.isPending}
-                  tooltip="Export as XLSX"
-                >
-                  <Download className="mr-1.5 h-4 w-4" />
-                  Export
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => bulkExportResumesMutation.mutate(Array.from(selectedIds))}
-                  disabled={bulkExportResumesMutation.isPending}
-                  isLoading={bulkExportResumesMutation.isPending}
-                  tooltip="Export resumes as ZIP"
-                >
-                  <FileDown className="mr-1.5 h-4 w-4" />
-                  Export Resumes
-                </Button>
-                <Button variant="ghost" size="sm" onClick={clearSelection} tooltip="Clear selection">
-                  <X className="mr-1.5 h-4 w-4" />
-                  Clear
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Results */}
-        {viewMode === 'map' ? (
-          <div className="h-[calc(100vh-350px)] min-h-[600px]">
-            <CandidateMapView
-              candidates={candidates}
-              savedCandidateIds={savedCandidateIds}
-              onSaveCandidate={(id) => toggleSaveMutation.mutate(id)}
-              onSearchArea={handleSearchArea}
-            />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <Card key={i}>
-                  <Skeleton variant="card" />
-                </Card>
-              ))
-            ) : candidates.length > 0 ? (
-              candidates.map((candidate) => {
-                const card =
-                  viewMode === 'compact' ? (
-                    <CompactCandidateCard
-                      key={candidate.id}
-                      candidate={candidate}
-                      searchKeyword={keyword}
-                      requiredSkills={requiredSkills}
-                      isSaved={savedCandidateIds.has(candidate.userId)}
-                      onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
-                      isSaving={
-                        toggleSaveMutation.isPending &&
-                        toggleSaveMutation.variables === candidate.userId
-                      }
-                      isSelected={selectedIds.has(candidate.id)}
-                      onToggleSelect={() => toggleSelect(candidate.id)}
-                      isComparing={compareIds.includes(candidate.id)}
-                      onToggleCompare={() => handleToggleCompare(candidate.id)}
-                    />
-                  ) : (
-                    <CandidateCard
-                      key={candidate.id}
-                      candidate={candidate}
-                      searchKeyword={keyword}
-                      requiredSkills={requiredSkills}
-                      isSaved={savedCandidateIds.has(candidate.userId)}
-                      onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
-                      isSaving={
-                        toggleSaveMutation.isPending &&
-                        toggleSaveMutation.variables === candidate.userId
-                      }
-                      actionedStatus={actionedCandidates[candidate.id]}
-                      onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
-                      onSelect={() => openJobPicker(candidate.id, 'select')}
-                      onResumeDownload={() => handleResumeDownload(candidate.userId)}
-                      isSelected={selectedIds.has(candidate.id)}
-                      onToggleSelect={() => toggleSelect(candidate.id)}
-                      isComparing={compareIds.includes(candidate.id)}
-                      onToggleCompare={() => handleToggleCompare(candidate.id)}
-                    />
-                  );
-
-                return isTouchDevice ? (
-                  <SwipeableCard
-                    key={candidate.id}
-                    enabled={true}
-                    onSave={() => toggleSaveMutation.mutate(candidate.userId)}
-                    onDismiss={() => {
-                      // Track dismissed candidate (optional analytics)
-                    }}
-                  >
-                    {card}
-                  </SwipeableCard>
-                ) : (
-                  <div key={candidate.id}>{card}</div>
-                );
-              })
-            ) : (
-              <EmptyState
-                icon={Search}
-                title="No candidates found"
-                description="Try adjusting your search criteria or filters."
-                action={
-                  <Button variant="outline" size="sm" onClick={clearFilters} tooltip="Clear all filters">
-                    Clear Filters
-                  </Button>
-                }
-              />
-            )}
-          </div>
-        )}
-
-        {/* AI Recommendations */}
-        {recommendedCandidates.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 pt-4">
-              <Sparkles className="text-primary h-4 w-4" />
-              <h3 className="text-sm font-semibold text-[var(--text)]">Recommended for You</h3>
-              <Badge variant="info" size="sm">
-                AI-Powered
-              </Badge>
-            </div>
-            <p className="text-xs text-[var(--text-muted)]">
-              Based on your recent open job postings and hiring patterns
-            </p>
-            <div className="space-y-4">
-              {recommendedCandidates.slice(0, 5).map((candidate) => {
-                const card =
-                  viewMode === 'compact' ? (
-                    <CompactCandidateCard
-                      key={candidate.id}
-                      candidate={candidate as CandidateProfile}
-                      searchKeyword={keyword}
-                      requiredSkills={requiredSkills}
-                      isSaved={savedCandidateIds.has(candidate.userId)}
-                      onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
-                      isSaving={
-                        toggleSaveMutation.isPending &&
-                        toggleSaveMutation.variables === candidate.userId
-                      }
-                      isSelected={selectedIds.has(candidate.id)}
-                      onToggleSelect={() => toggleSelect(candidate.id)}
-                      isComparing={compareIds.includes(candidate.id)}
-                      onToggleCompare={() => handleToggleCompare(candidate.id)}
-                    />
-                  ) : (
-                    <CandidateCard
-                      key={candidate.id}
-                      candidate={candidate as CandidateProfile}
-                      searchKeyword={keyword}
-                      requiredSkills={requiredSkills}
-                      isSaved={savedCandidateIds.has(candidate.userId)}
-                      onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
-                      isSaving={
-                        toggleSaveMutation.isPending &&
-                        toggleSaveMutation.variables === candidate.userId
-                      }
-                      actionedStatus={actionedCandidates[candidate.id]}
-                      onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
-                      onSelect={() => openJobPicker(candidate.id, 'select')}
-                      onResumeDownload={() => handleResumeDownload(candidate.userId)}
-                      isSelected={selectedIds.has(candidate.id)}
-                      onToggleSelect={() => toggleSelect(candidate.id)}
-                      isComparing={compareIds.includes(candidate.id)}
-                      onToggleCompare={() => handleToggleCompare(candidate.id)}
-                    />
-                  );
-                return <div key={candidate.id}>{card}</div>;
-              })}
+              )}
             </div>
           </div>
-        )}
 
-        {pagination && pagination.totalPages > 1 && (
-          <Pagination
-            currentPage={pagination.page}
-            totalPages={pagination.totalPages}
-            onPageChange={handlePageChange}
-            totalItems={pagination.total}
-            pageSize={pagination.limit}
+          {/* Advanced Filters Panel */}
+          <AdvancedFilters
+            sections={filterSections}
+            values={filterValues}
+            onChange={handleFilterChange}
+            onClear={clearFilters}
+            activeCount={activeFilterCount}
+            isOpen={showAdvanced}
+            onClose={() => setShowAdvanced(false)}
+            layout="panel"
+            title="Advanced Filters"
           />
-        )}
-        {/* Job Picker Modal */}
-        {jobPickerOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-lg rounded-xl bg-[var(--bg)] shadow-xl">
-              <div className="flex items-center justify-between border-b border-[var(--border)] p-4">
-                <h3 className="text-lg font-semibold text-[var(--text)]">
-                  {jobPickerAction === 'shortlist' ? 'Shortlist' : 'Select'} for Job
-                </h3>
-                <button
-                  onClick={() => setJobPickerOpen(false)}
-                  title="Close"
-                  className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-4">
-                <div className="relative mb-3">
-                  <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+
+          {/* Quick Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-[var(--text-secondary)]">Quick filters:</span>
+            <button
+              onClick={() =>
+                handleFilterChange(
+                  'lastActiveWithin',
+                  filters.lastActiveWithin === '7d' ? undefined : '7d',
+                )
+              }
+              className={cn(
+                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                filters.lastActiveWithin === '7d'
+                  ? 'bg-primary text-white'
+                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
+              )}
+            >
+              Active last 7 days
+            </button>
+            <button
+              onClick={() =>
+                handleFilterChange(
+                  'noticePeriod',
+                  filters.noticePeriod === 'IMMEDIATE' ? undefined : 'IMMEDIATE',
+                )
+              }
+              className={cn(
+                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                filters.noticePeriod === 'IMMEDIATE'
+                  ? 'bg-primary text-white'
+                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
+              )}
+            >
+              Immediate joiners
+            </button>
+            <button
+              onClick={() =>
+                handleFilterChange(
+                  'openToWork',
+                  filters.openToWork === 'ACTIVELY_LOOKING' ? undefined : 'ACTIVELY_LOOKING',
+                )
+              }
+              className={cn(
+                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                filters.openToWork === 'ACTIVELY_LOOKING'
+                  ? 'bg-primary text-white'
+                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
+              )}
+            >
+              Open to work
+            </button>
+          </div>
+
+          {/* Save Search Dialog */}
+          {showSaveSearch && (
+            <Card>
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                    Save this search
+                  </label>
                   <input
                     type="text"
-                    placeholder="Search your jobs..."
-                    value={jobSearch}
-                    onChange={(e) => setJobSearch(e.target.value)}
-                    className="focus:border-primary w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] py-2 pr-3 pl-10 text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none"
+                    placeholder="Name your search, e.g. 'Senior React developers'"
+                    value={saveSearchName}
+                    onChange={(e) => setSaveSearchName(e.target.value)}
+                    className="focus:border-primary focus:ring-primary/20 h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && saveSearchName.trim()) {
+                        saveSearchMutation.mutate(saveSearchName.trim());
+                      }
+                    }}
                   />
                 </div>
-                <div className="max-h-72 space-y-1 overflow-y-auto">
-                  {(myJobsData?.data?.items || [])
-                    .filter(
-                      (job: { title: string; status: string }) =>
+                <Button
+                  onClick={() => saveSearchMutation.mutate(saveSearchName.trim())}
+                  disabled={!saveSearchName.trim()}
+                  isLoading={saveSearchMutation.isPending}
+                  size="sm"
+                  tooltip="Save search"
+                >
+                  Save
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowSaveSearch(false);
+                    setSaveSearchName('');
+                  }}
+                  tooltip="Cancel save"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* Bulk Actions Toolbar */}
+          {selectedIds.size > 0 && (
+            <Card className="border-primary bg-primary/5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (selectedIds.size === candidates.length) {
+                        clearSelection();
+                      } else {
+                        selectAll();
+                      }
+                    }}
+                    className="text-primary hover:text-primary-dark flex cursor-pointer items-center gap-1.5 text-sm font-medium"
+                    title="Toggle select all"
+                  >
+                    {selectedIds.size === candidates.length ? (
+                      <CheckSquare className="h-4 w-4" />
+                    ) : (
+                      <Square className="h-4 w-4" />
+                    )}
+                    {selectedIds.size === candidates.length ? 'Deselect' : 'Select'} all on page
+                  </button>
+                  <span className="text-sm font-medium text-[var(--text)]">
+                    {selectedIds.size} candidate{selectedIds.size !== 1 ? 's' : ''} selected
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const userIds = candidates
+                        .filter((c) => selectedIds.has(c.id))
+                        .map((c) => c.userId);
+                      bulkSaveMutation.mutate(userIds);
+                    }}
+                    disabled={bulkSaveMutation.isPending}
+                    tooltip="Save selected"
+                  >
+                    <Bookmark className="mr-1.5 h-4 w-4" />
+                    Save All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBulkActionOpen(true)}
+                    tooltip="Shortlist selected"
+                  >
+                    <UserCheck className="mr-1.5 h-4 w-4" />
+                    Shortlist
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => bulkExportMutation.mutate(Array.from(selectedIds))}
+                    disabled={bulkExportMutation.isPending}
+                    isLoading={bulkExportMutation.isPending}
+                    tooltip="Export as XLSX"
+                  >
+                    <Download className="mr-1.5 h-4 w-4" />
+                    Export
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => bulkExportResumesMutation.mutate(Array.from(selectedIds))}
+                    disabled={bulkExportResumesMutation.isPending}
+                    isLoading={bulkExportResumesMutation.isPending}
+                    tooltip="Export resumes as ZIP"
+                  >
+                    <FileDown className="mr-1.5 h-4 w-4" />
+                    Export Resumes
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    tooltip="Clear selection"
+                  >
+                    <X className="mr-1.5 h-4 w-4" />
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Results */}
+          {viewMode === 'map' ? (
+            <div className="h-[calc(100vh-350px)] min-h-[600px]">
+              <CandidateMapView
+                candidates={candidates}
+                savedCandidateIds={savedCandidateIds}
+                onSaveCandidate={(id) => toggleSaveMutation.mutate(id)}
+                onSearchArea={handleSearchArea}
+              />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <Card key={i}>
+                    <Skeleton variant="card" />
+                  </Card>
+                ))
+              ) : candidates.length > 0 ? (
+                candidates.map((candidate) => {
+                  const card =
+                    viewMode === 'compact' ? (
+                      <CompactCandidateCard
+                        key={candidate.id}
+                        candidate={candidate}
+                        searchKeyword={keyword}
+                        requiredSkills={requiredSkills}
+                        isSaved={savedCandidateIds.has(candidate.userId)}
+                        onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
+                        isSaving={
+                          toggleSaveMutation.isPending &&
+                          toggleSaveMutation.variables === candidate.userId
+                        }
+                        isSelected={selectedIds.has(candidate.id)}
+                        onToggleSelect={() => toggleSelect(candidate.id)}
+                        isComparing={compareIds.includes(candidate.id)}
+                        onToggleCompare={() => handleToggleCompare(candidate.id)}
+                      />
+                    ) : (
+                      <CandidateCard
+                        key={candidate.id}
+                        candidate={candidate}
+                        searchKeyword={keyword}
+                        requiredSkills={requiredSkills}
+                        isSaved={savedCandidateIds.has(candidate.userId)}
+                        onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
+                        isSaving={
+                          toggleSaveMutation.isPending &&
+                          toggleSaveMutation.variables === candidate.userId
+                        }
+                        actionedStatus={actionedCandidates[candidate.id]}
+                        onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
+                        onSelect={() => openJobPicker(candidate.id, 'select')}
+                        onResumeDownload={() => handleResumeDownload(candidate.userId)}
+                        isSelected={selectedIds.has(candidate.id)}
+                        onToggleSelect={() => toggleSelect(candidate.id)}
+                        isComparing={compareIds.includes(candidate.id)}
+                        onToggleCompare={() => handleToggleCompare(candidate.id)}
+                      />
+                    );
+
+                  return isTouchDevice ? (
+                    <SwipeableCard
+                      key={candidate.id}
+                      enabled={true}
+                      onSave={() => toggleSaveMutation.mutate(candidate.userId)}
+                      onDismiss={() => {
+                        // Track dismissed candidate (optional analytics)
+                      }}
+                    >
+                      {card}
+                    </SwipeableCard>
+                  ) : (
+                    <div key={candidate.id}>{card}</div>
+                  );
+                })
+              ) : (
+                <EmptyState
+                  icon={Search}
+                  title="No candidates found"
+                  description="Try adjusting your search criteria or filters."
+                  action={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearFilters}
+                      tooltip="Clear all filters"
+                    >
+                      Clear Filters
+                    </Button>
+                  }
+                />
+              )}
+            </div>
+          )}
+
+          {/* AI Recommendations */}
+          {recommendedCandidates.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 pt-4">
+                <Sparkles className="text-primary h-4 w-4" />
+                <h3 className="text-sm font-semibold text-[var(--text)]">Recommended for You</h3>
+                <Badge variant="info" size="sm">
+                  AI-Powered
+                </Badge>
+              </div>
+              <p className="text-xs text-[var(--text-muted)]">
+                Based on your recent open job postings and hiring patterns
+              </p>
+              <div className="space-y-4">
+                {recommendedCandidates.slice(0, 5).map((candidate) => {
+                  const card =
+                    viewMode === 'compact' ? (
+                      <CompactCandidateCard
+                        key={candidate.id}
+                        candidate={candidate as CandidateProfile}
+                        searchKeyword={keyword}
+                        requiredSkills={requiredSkills}
+                        isSaved={savedCandidateIds.has(candidate.userId)}
+                        onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
+                        isSaving={
+                          toggleSaveMutation.isPending &&
+                          toggleSaveMutation.variables === candidate.userId
+                        }
+                        isSelected={selectedIds.has(candidate.id)}
+                        onToggleSelect={() => toggleSelect(candidate.id)}
+                        isComparing={compareIds.includes(candidate.id)}
+                        onToggleCompare={() => handleToggleCompare(candidate.id)}
+                      />
+                    ) : (
+                      <CandidateCard
+                        key={candidate.id}
+                        candidate={candidate as CandidateProfile}
+                        searchKeyword={keyword}
+                        requiredSkills={requiredSkills}
+                        isSaved={savedCandidateIds.has(candidate.userId)}
+                        onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
+                        isSaving={
+                          toggleSaveMutation.isPending &&
+                          toggleSaveMutation.variables === candidate.userId
+                        }
+                        actionedStatus={actionedCandidates[candidate.id]}
+                        onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
+                        onSelect={() => openJobPicker(candidate.id, 'select')}
+                        onResumeDownload={() => handleResumeDownload(candidate.userId)}
+                        isSelected={selectedIds.has(candidate.id)}
+                        onToggleSelect={() => toggleSelect(candidate.id)}
+                        isComparing={compareIds.includes(candidate.id)}
+                        onToggleCompare={() => handleToggleCompare(candidate.id)}
+                      />
+                    );
+                  return <div key={candidate.id}>{card}</div>;
+                })}
+              </div>
+            </div>
+          )}
+
+          {pagination && pagination.totalPages > 1 && (
+            <Pagination
+              currentPage={pagination.page}
+              totalPages={pagination.totalPages}
+              onPageChange={handlePageChange}
+              totalItems={pagination.total}
+              pageSize={pagination.limit}
+            />
+          )}
+          {/* Job Picker Modal */}
+          {jobPickerOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="w-full max-w-lg rounded-xl bg-[var(--bg)] shadow-xl">
+                <div className="flex items-center justify-between border-b border-[var(--border)] p-4">
+                  <h3 className="text-lg font-semibold text-[var(--text)]">
+                    {jobPickerAction === 'shortlist' ? 'Shortlist' : 'Select'} for Job
+                  </h3>
+                  <button
+                    onClick={() => setJobPickerOpen(false)}
+                    title="Close"
+                    className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="p-4">
+                  <div className="relative mb-3">
+                    <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+                    <input
+                      type="text"
+                      placeholder="Search your jobs..."
+                      value={jobSearch}
+                      onChange={(e) => setJobSearch(e.target.value)}
+                      className="focus:border-primary w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] py-2 pr-3 pl-10 text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none"
+                    />
+                  </div>
+                  <div className="max-h-72 space-y-1 overflow-y-auto">
+                    {(myJobsData?.data?.items || [])
+                      .filter(
+                        (job: { title: string; status: string }) =>
+                          job.status === 'OPEN' &&
+                          job.title.toLowerCase().includes(jobSearch.toLowerCase()),
+                      )
+                      .map((job: { id: string; title: string; location: string }) => (
+                        <button
+                          key={job.id}
+                          type="button"
+                          title={`Select ${job.title}`}
+                          onClick={() => {
+                            if (jobPickerAction === 'shortlist') {
+                              shortlistMutation.mutate({
+                                candidateId: jobPickerCandidateId,
+                                jobId: job.id,
+                              });
+                            } else {
+                              selectMutation.mutate({
+                                candidateId: jobPickerCandidateId,
+                                jobId: job.id,
+                              });
+                            }
+                          }}
+                          disabled={shortlistMutation.isPending || selectMutation.isPending}
+                          className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                        >
+                          <div>
+                            <p className="font-medium text-[var(--text)]">{job.title}</p>
+                            <p className="text-xs text-[var(--text-muted)]">{job.location}</p>
+                          </div>
+                        </button>
+                      ))}
+                    {(myJobsData?.data?.items || []).filter(
+                      (job: { status: string; title: string }) =>
                         job.status === 'OPEN' &&
                         job.title.toLowerCase().includes(jobSearch.toLowerCase()),
-                    )
-                    .map((job: { id: string; title: string; location: string }) => (
-                      <button
-                        key={job.id}
-                        type="button"
-                        title={`Select ${job.title}`}
-                        onClick={() => {
-                          if (jobPickerAction === 'shortlist') {
-                            shortlistMutation.mutate({
-                              candidateId: jobPickerCandidateId,
-                              jobId: job.id,
-                            });
-                          } else {
-                            selectMutation.mutate({
-                              candidateId: jobPickerCandidateId,
-                              jobId: job.id,
-                            });
-                          }
-                        }}
-                        disabled={shortlistMutation.isPending || selectMutation.isPending}
-                        className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[var(--bg-secondary)] disabled:opacity-50"
-                      >
-                        <div>
-                          <p className="font-medium text-[var(--text)]">{job.title}</p>
-                          <p className="text-xs text-[var(--text-muted)]">{job.location}</p>
-                        </div>
-                      </button>
-                    ))}
-                  {(myJobsData?.data?.items || []).filter(
-                    (job: { status: string; title: string }) =>
-                      job.status === 'OPEN' &&
-                      job.title.toLowerCase().includes(jobSearch.toLowerCase()),
-                  ).length === 0 && (
-                    <p className="py-8 text-center text-sm text-[var(--text-muted)]">
-                      No open jobs found.
-                    </p>
-                  )}
+                    ).length === 0 && (
+                      <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+                        No open jobs found.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Comparison Features */}
-        <CompareBar
-          candidates={compareCandidates}
-          onRemove={(id) => setCompareIds((prev) => prev.filter((cid) => cid !== id))}
-          onClear={() => setCompareIds([])}
-          onCompare={() => setShowCompare(true)}
-        />
+          {/* Comparison Features */}
+          <CompareBar
+            candidates={compareCandidates}
+            onRemove={(id) => setCompareIds((prev) => prev.filter((cid) => cid !== id))}
+            onClear={() => setCompareIds([])}
+            onCompare={() => setShowCompare(true)}
+          />
 
-        <CompareModal
-          isOpen={showCompare}
-          onClose={() => setShowCompare(false)}
-          candidates={compareCandidates}
-          onRemove={(id) => {
-            setCompareIds((prev) => prev.filter((cid) => cid !== id));
-            if (compareCandidates.length <= 1) {
-              setShowCompare(false);
-            }
-          }}
-        />
-      </div>
+          <CompareModal
+            isOpen={showCompare}
+            onClose={() => setShowCompare(false)}
+            candidates={compareCandidates}
+            onRemove={(id) => {
+              setCompareIds((prev) => prev.filter((cid) => cid !== id));
+              if (compareCandidates.length <= 1) {
+                setShowCompare(false);
+              }
+            }}
+          />
+        </div>
+      </PlanGate>
     </DashboardLayout>
   );
 }
@@ -2451,10 +2497,16 @@ function CandidateCard({
           <div className="min-w-0">
             <Link
               href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate.id)}
-              className="flex items-center gap-2 font-semibold text-[var(--text)] hover:text-primary hover:underline"
+              className="hover:text-primary flex items-center gap-2 font-semibold text-[var(--text)] hover:underline"
             >
               <HighlightText text={name} highlight={searchKeyword} />
               <PresenceIndicator userId={candidate.userId} />
+              <VerifiedBadge
+                isVerified={Boolean(
+                  (candidate as unknown as { hasVerifiedBadge?: boolean }).hasVerifiedBadge,
+                )}
+                size="sm"
+              />
             </Link>
             {candidate.headline && (
               <p className="text-sm text-[var(--text-secondary)]">
@@ -2606,11 +2658,14 @@ function CandidateCard({
               className={cn(
                 'flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
                 actionedStatus === 'shortlisted'
-                  ? 'border-[var(--success)]/30 text-[var(--success)] bg-[var(--success)]/10'
-                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-primary hover:text-primary hover:bg-primary-light',
+                  ? 'border-[var(--success)]/30 bg-[var(--success)]/10 text-[var(--success)]'
+                  : 'hover:border-primary hover:text-primary hover:bg-primary-light border-[var(--border)] text-[var(--text-secondary)]',
               )}
             >
-              <Star className={cn('h-3.5 w-3.5', actionedStatus === 'shortlisted' && 'fill-current')} /> Shortlist
+              <Star
+                className={cn('h-3.5 w-3.5', actionedStatus === 'shortlisted' && 'fill-current')}
+              />{' '}
+              Shortlist
             </button>
             <button
               type="button"
@@ -2619,8 +2674,8 @@ function CandidateCard({
               className={cn(
                 'flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
                 actionedStatus === 'selected'
-                  ? 'border-[var(--success)]/30 text-[var(--success)] bg-[var(--success)]/10'
-                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-primary hover:text-primary hover:bg-primary-light',
+                  ? 'border-[var(--success)]/30 bg-[var(--success)]/10 text-[var(--success)]'
+                  : 'hover:border-primary hover:text-primary hover:bg-primary-light border-[var(--border)] text-[var(--text-secondary)]',
               )}
             >
               <UserCheck className="h-3.5 w-3.5" /> Select
@@ -2656,7 +2711,9 @@ function CandidateCard({
                         <Phone className="h-3.5 w-3.5" /> Call
                       </a>
                     )}
-                    {(candidate.user?.whatsappNumber || candidate.user?.mobileNumber || candidate.phone) && (
+                    {(candidate.user?.whatsappNumber ||
+                      candidate.user?.mobileNumber ||
+                      candidate.phone) && (
                       <a
                         href={`https://wa.me/${(candidate.user?.whatsappNumber || candidate.user?.mobileNumber || candidate.phone || '').replace(/\D/g, '')}`}
                         target="_blank"
@@ -2667,9 +2724,14 @@ function CandidateCard({
                         <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                       </a>
                     )}
-                    {!candidate.user?.email && !candidate.user?.mobileNumber && !candidate.user?.whatsappNumber && !candidate.phone && (
-                      <p className="px-3 py-2 text-xs text-[var(--text-muted)]">No contact info available</p>
-                    )}
+                    {!candidate.user?.email &&
+                      !candidate.user?.mobileNumber &&
+                      !candidate.user?.whatsappNumber &&
+                      !candidate.phone && (
+                        <p className="px-3 py-2 text-xs text-[var(--text-muted)]">
+                          No contact info available
+                        </p>
+                      )}
                   </div>
                 </>
               )}
@@ -2892,11 +2954,17 @@ function CompactCandidateCard({
             <div className="flex items-center gap-2">
               <Link
                 href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate.id)}
-                className="truncate font-semibold text-[var(--text)] hover:text-primary hover:underline"
+                className="hover:text-primary truncate font-semibold text-[var(--text)] hover:underline"
               >
                 <HighlightText text={name} highlight={searchKeyword} />
               </Link>
               <PresenceIndicator userId={candidate.userId} />
+              <VerifiedBadge
+                isVerified={Boolean(
+                  (candidate as unknown as { hasVerifiedBadge?: boolean }).hasVerifiedBadge,
+                )}
+                size="sm"
+              />
               {candidate.workStatus && (
                 <Badge
                   variant={candidate.workStatus === 'ACTIVELY_LOOKING' ? 'success' : 'neutral'}

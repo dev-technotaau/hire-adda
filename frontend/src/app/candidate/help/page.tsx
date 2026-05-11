@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
+import PriorityWhatsappBanner from '@/components/billing/PriorityWhatsappBanner';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -175,6 +176,8 @@ export default function CandidateHelpPage() {
           </p>
         </div>
 
+        <PriorityWhatsappBanner role="candidate" />
+
         {/* ─────────────────────────────────────────────────────── */}
         {/* FAQ Section                                            */}
         {/* ─────────────────────────────────────────────────────── */}
@@ -325,7 +328,7 @@ export default function CandidateHelpPage() {
                   variant="bordered"
                   padding="sm"
                   onClick={() => router.push(ROUTES.CANDIDATE.TICKET_DETAIL(ticket.id))}
-                  className="cursor-pointer hover:border-primary/40"
+                  className="hover:border-primary/40 cursor-pointer"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     {/* Left: ticket info */}

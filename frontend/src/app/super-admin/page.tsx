@@ -43,6 +43,7 @@ import PieChart from '@/components/charts/PieChart';
 import BarChart from '@/components/charts/BarChart';
 import AreaChart from '@/components/charts/AreaChart';
 import StatsChart from '@/components/charts/StatsChart';
+import TeamsVendorsWidget from '@/components/super-admin/TeamsVendorsWidget';
 import { adminService } from '@/services/admin.service';
 import { QUERY_KEYS } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
@@ -671,6 +672,9 @@ export default function SuperAdminDashboard() {
             </Card>
           ))}
         </div>
+
+        {/* ── Teams & Vendors widget ── */}
+        <TeamsVendorsWidget />
 
         {/* ── KPI Insight Cards ── */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

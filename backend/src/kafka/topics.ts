@@ -34,6 +34,26 @@ export enum KafkaTopics {
   // File events
   RESUME_UPLOADED = 'resume.uploaded',
   AVATAR_CHANGED = 'avatar.changed',
+
+  // Billing events (Phase 1+ — emitted by billing services)
+  BILLING_ORDER_CREATED = 'billing.order.created',
+  BILLING_ORDER_PAID = 'billing.order.paid',
+  BILLING_ORDER_REFUNDED = 'billing.order.refunded',
+  BILLING_PAYMENT_CAPTURED = 'billing.payment.captured',
+  BILLING_PAYMENT_FAILED = 'billing.payment.failed',
+  BILLING_SUBSCRIPTION_ACTIVATED = 'billing.subscription.activated',
+  BILLING_SUBSCRIPTION_CHARGED = 'billing.subscription.charged',
+  BILLING_SUBSCRIPTION_CANCELLED = 'billing.subscription.cancelled',
+  BILLING_SUBSCRIPTION_FAILED = 'billing.subscription.charged_failed',
+  BILLING_INVOICE_ISSUED = 'billing.invoice.issued',
+  BILLING_ENTITLEMENT_GRANTED = 'billing.entitlement.granted',
+  BILLING_ENTITLEMENT_CONSUMED = 'billing.entitlement.consumed',
+  BILLING_ENTITLEMENT_EXPIRED = 'billing.entitlement.expired',
+  BILLING_REFUND_PROCESSED = 'billing.refund.processed',
+  BILLING_FRAUD_FLAGGED = 'billing.fraud.flagged',
+  BILLING_COUPON_REDEEMED = 'billing.coupon.redeemed',
+  BILLING_QUOTE_RECEIVED = 'billing.quote.received',
+  BILLING_CUSTOM_OFFER_SENT = 'billing.custom_offer.sent',
 }
 
 export const ConsolidatedTopics = {
@@ -41,4 +61,5 @@ export const ConsolidatedTopics = {
   JOBS: 'ha.jobs',
   APPLICATIONS: 'ha.applications',
   NOTIFICATIONS: 'ha.notifications',
+  BILLING: 'ha.billing',
 } as const;

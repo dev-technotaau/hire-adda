@@ -120,6 +120,15 @@ import { apiLimiter } from './middleware/rate-limit';
 // authLimiter is applied inside auth.routes.ts via router.use(authLimiter)
 app.use('/api', apiLimiter);
 
+// ----------------------------------------------------------
+// Razorpay webhook — MUST be mounted BEFORE the global JSON parser so
+// the raw bytes survive HMAC verification. CSRF is bypassed (signature is
+// the auth). Idempotent at the DB layer (RazorpayWebhookEvent.razorpayEventId).
+// ----------------------------------------------------------
+import { razorpayWebhookRawBody } from './middleware/razorpay-webhook-rawbody';
+import { handleRazorpayWebhook } from './controllers/razorpay-webhook.controller';
+app.post('/api/v1/webhooks/razorpay', razorpayWebhookRawBody(), handleRazorpayWebhook);
+
 // Body parsing
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
@@ -304,6 +313,9 @@ import draftRoutes from './routes/draft.routes';
 import sessionRoutes from './routes/session.routes';
 import superAdminRoutes from './routes/super-admin.routes';
 import savedCandidateRoutes from './routes/saved-candidate.routes';
+import teamRoutes from './routes/team.routes';
+import vendorRoutes from './routes/vendor.routes';
+import vendorPublicRoutes from './routes/vendor-public.routes';
 import savedSearchRoutes from './routes/saved-search.routes';
 import searchRoutes from './routes/search.routes';
 import candidateListRoutes from './routes/candidate-list.routes';
@@ -316,6 +328,28 @@ import analyticsRoutes from './routes/analytics.routes';
 import contactRoutes from './routes/contact.routes';
 import publicRoutes from './routes/public.routes';
 import ticketRoutes from './routes/ticket.routes';
+import planRoutes, { superAdminPlanRouter } from './routes/plan.routes';
+import orderRoutes from './routes/order.routes';
+import subscriptionRoutes from './routes/subscription.routes';
+import upgradeRoutes from './routes/upgrade.routes';
+import { couponPublicRouter, couponSuperAdminRouter } from './routes/coupon.routes';
+import { quoteUserRouter, quoteSuperAdminRouter } from './routes/quote.routes';
+import { invoiceUserRouter, invoiceSuperAdminRouter } from './routes/invoice.routes';
+import { entitlementUserRouter, entitlementSuperAdminRouter } from './routes/entitlement.routes';
+import superAdminBillingRoutes from './routes/super-admin-billing.routes';
+import superAdminTeamsRoutes from './routes/super-admin-teams.routes';
+import superAdminVendorsRoutes from './routes/super-admin-vendors.routes';
+import assistedHiringRoutes from './routes/assisted-hiring.routes';
+import superAdminAssistedHiringRoutes from './routes/super-admin-assisted-hiring.routes';
+import superAdminCuratedRoutes from './routes/super-admin-curated.routes';
+import widgetRoutes from './routes/widget.routes';
+import companyFollowRoutes from './routes/company-follow.routes';
+import superAdminFollowsRoutes from './routes/super-admin-follows.routes';
+import companyReviewRoutes from './routes/company-review.routes';
+import paymentMethodRoutes from './routes/payment-method.routes';
+import billingAddressRoutes from './routes/billing-address.routes';
+import mandateRoutes from './routes/mandate.routes';
+import cvUnlockRoutes from './routes/cv-unlock.routes';
 // alertmanagerRoutes is mounted earlier (before CSRF middleware) — see above.
 
 apiV1Router.use('/auth', authRoutes);
@@ -330,6 +364,9 @@ apiV1Router.use('/drafts', draftRoutes);
 apiV1Router.use('/sessions', sessionRoutes);
 apiV1Router.use('/super-admin', superAdminRoutes);
 apiV1Router.use('/saved-candidates', savedCandidateRoutes);
+apiV1Router.use('/employer/team', teamRoutes);
+apiV1Router.use('/vendor', vendorRoutes);
+apiV1Router.use('/vendors', vendorPublicRoutes);
 apiV1Router.use('/candidate-lists', candidateListRoutes);
 apiV1Router.use('/saved-searches', savedSearchRoutes);
 apiV1Router.use('/search', searchRoutes);
@@ -342,6 +379,38 @@ apiV1Router.use('/analytics', analyticsRoutes);
 apiV1Router.use('/contact', contactRoutes);
 apiV1Router.use('/public', publicRoutes);
 apiV1Router.use('/tickets', ticketRoutes);
+apiV1Router.use('/plans', planRoutes);
+apiV1Router.use('/super-admin/plans', superAdminPlanRouter);
+apiV1Router.use('/billing/orders', orderRoutes);
+apiV1Router.use('/billing/subscriptions', subscriptionRoutes);
+apiV1Router.use('/billing/upgrade', upgradeRoutes);
+apiV1Router.use('/billing/coupons', couponPublicRouter);
+apiV1Router.use('/billing/quotes', quoteUserRouter);
+apiV1Router.use('/super-admin/coupons', couponSuperAdminRouter);
+apiV1Router.use('/super-admin/quotes', quoteSuperAdminRouter);
+apiV1Router.use('/billing/invoices', invoiceUserRouter);
+apiV1Router.use('/super-admin/invoices', invoiceSuperAdminRouter);
+apiV1Router.use('/billing', entitlementUserRouter); // mounts /me/entitlements
+apiV1Router.use('/super-admin/entitlements', entitlementSuperAdminRouter);
+apiV1Router.use('/super-admin/billing', superAdminBillingRoutes);
+apiV1Router.use('/super-admin/teams', superAdminTeamsRoutes);
+apiV1Router.use('/super-admin/vendors', superAdminVendorsRoutes);
+apiV1Router.use('/assisted-hiring', assistedHiringRoutes);
+apiV1Router.use('/super-admin/assisted-hiring', superAdminAssistedHiringRoutes);
+apiV1Router.use('/super-admin/curated-listings', superAdminCuratedRoutes);
+apiV1Router.use('/widgets', widgetRoutes);
+// Company follow routes (mix of /companies/:slug/follow,
+// /candidate/following/*, /employer/followers — kept in one file
+// for cohesion, mounted at the API root).
+apiV1Router.use('/', companyFollowRoutes);
+apiV1Router.use('/super-admin/follows', superAdminFollowsRoutes);
+// Company-review routes — covers /public/.../reviews, /candidate/reviews,
+// /employer/reviews, /super-admin/reviews. One file, mixed prefixes.
+apiV1Router.use('/', companyReviewRoutes);
+apiV1Router.use('/billing/methods', paymentMethodRoutes);
+apiV1Router.use('/billing/addresses', billingAddressRoutes);
+apiV1Router.use('/billing/mandates', mandateRoutes);
+apiV1Router.use('/billing/cv-unlock', cvUnlockRoutes);
 // /internal/alertmanager is mounted earlier (above doubleCsrfProtection)
 
 // API versioning headers

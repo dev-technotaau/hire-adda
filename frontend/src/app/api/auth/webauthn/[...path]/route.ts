@@ -4,10 +4,7 @@ import { backendFetch, authenticatedBackendFetch, setAuthCookies } from '../../_
 /** Routes that return tokens and need cookie interception */
 const TOKEN_ROUTES = new Set(['login/verify']);
 
-async function handler(
-  request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> },
-) {
+async function handler(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   try {
     const { path } = await params;
     const subPath = path.join('/');

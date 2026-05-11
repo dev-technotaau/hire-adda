@@ -656,7 +656,11 @@ export default function AdminVerificationsPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" tooltip="Cancel employer contact" onClick={() => setContactTarget(null)}>
+              <Button
+                variant="outline"
+                tooltip="Cancel employer contact"
+                onClick={() => setContactTarget(null)}
+              >
                 Cancel
               </Button>
               <Button

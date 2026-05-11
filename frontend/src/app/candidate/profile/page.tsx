@@ -57,6 +57,11 @@ import type { UpdateCandidateRequest, ResumeReadinessItem } from '@/types/candid
 import type { ApiError } from '@/types/api';
 import type { ParsedResumeData, ApplyableResumeFields } from '@/types/resume-parse';
 import ResumeParseReview from '@/components/common/ResumeParseReview';
+import ResumeTemplatePicker from '@/components/candidate/ResumeTemplatePicker';
+import VerifiedBadge from '@/components/billing/VerifiedBadge';
+import { useUpgradeModal } from '@/components/billing/UpgradeModal';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { ShieldCheck } from 'lucide-react';
 
 import PersonalSection from '@/components/profile/PersonalSection';
 import ExperienceSection from '@/components/profile/ExperienceSection';
@@ -136,6 +141,7 @@ export default function CandidateProfilePage() {
   const [showUploadedResumePreview, setShowUploadedResumePreview] = useState(false);
   const [showResumePreview, setShowResumePreview] = useState(false);
   const [showActiveResumePreview, setShowActiveResumePreview] = useState(false);
+  const [resumeTemplateId, setResumeTemplateId] = useState<string>('classic');
 
   const { data: profileData, isLoading } = useQuery({
     queryKey: QUERY_KEYS.CANDIDATES.PROFILE,
@@ -313,7 +319,7 @@ export default function CandidateProfilePage() {
   });
 
   const generateResumeMutation = useMutation({
-    mutationFn: () => candidateService.generateResume(),
+    mutationFn: () => candidateService.generateResume(resumeTemplateId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CANDIDATES.PROFILE });
       setShowResumePreview(true);
@@ -546,11 +552,15 @@ export default function CandidateProfilePage() {
 
   return (
     <DashboardLayout requiredRole={['CANDIDATE']}>
+      <CandidateProfilePremiumBanner />
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--text)]">My Profile</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold text-[var(--text)]">My Profile</h1>
+              <VerifiedBadge isOwnProfile size="md" />
+            </div>
             <p className="mt-1 text-sm text-[var(--text-muted)]">
               Keep your profile updated to get better job matches
             </p>
@@ -1365,6 +1375,8 @@ export default function CandidateProfilePage() {
                         );
                       })()}
 
+                    <ResumeTemplatePicker value={resumeTemplateId} onChange={setResumeTemplateId} />
+
                     <Button
                       variant="outline"
                       onClick={() => generateResumeMutation.mutate()}
@@ -1581,5 +1593,49 @@ function ResumeParserSection({
         )}
       </div>
     </Card>
+  );
+}
+
+/**
+ * Inline upsell banner shown when the candidate has no Premium entitlement.
+ * Surfaces the value of CAND_PREMIUM (₹199/30d) without blocking profile editing.
+ * Click → opens the upgrade modal pre-filled for the verified-badge feature
+ * (most concrete benefit for profile-page context).
+ */
+function CandidateProfilePremiumBanner() {
+  const { hasFeature } = useEntitlements();
+  const upgrade = useUpgradeModal();
+  const isPremium =
+    hasFeature('feature.candidate_ai_resume_premium') ||
+    hasFeature('feature.candidate_verified_badge') ||
+    hasFeature('feature.candidate_top_visibility');
+  if (isPremium) return null;
+  return (
+    <>
+      <div className="mb-4 rounded-xl border border-[var(--border)] bg-gradient-to-r from-amber-50 to-orange-50 p-4 dark:from-amber-950/20 dark:to-orange-950/20">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
+              <ShieldCheck size={18} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-[var(--text)]">Stand out with Candidate Premium</h3>
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                AI Resume Premium · Verified Badge · 7-day Profile Boost · Priority WhatsApp Support
+                · Top Visibility — just ₹199/month.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => upgrade.open({ feature: 'feature.candidate_verified_badge' })}
+            className="flex-shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
+          >
+            Upgrade →
+          </button>
+        </div>
+      </div>
+      {upgrade.modal}
+    </>
   );
 }

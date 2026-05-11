@@ -52,11 +52,6 @@ export default function ServerSuggestionInput({
   };
 
   return (
-    <SuggestionInput
-      {...rest}
-      value={value}
-      onChange={handleChange}
-      suggestions={suggestions}
-    />
+    <SuggestionInput {...rest} value={value} onChange={handleChange} suggestions={suggestions} />
   );
 }

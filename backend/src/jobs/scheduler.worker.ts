@@ -18,6 +18,21 @@ import { handleExpirationWarning } from './expiration-warning.worker';
 import { handleReviewReminder } from './review-reminder.worker';
 import { handleStaleProfileCheck } from './stale-profile.worker';
 import { handleViewCounterFlush } from './view-counter-flush.worker';
+import { handleBillingReminder } from './billing-reminder.worker';
+import { handleEntitlementExpiry } from './entitlement-expiry.worker';
+import { handleSettlementSync } from './settlement-sync.worker';
+import { handleDisputeSync } from './dispute-sync.worker';
+import { handleSubscriptionRenewal } from './subscription-renewal.worker';
+import { handlePaymentStatusSweep } from './payment-status-poll.worker';
+import {
+  handlePaymentRetry,
+  handleExpirePendingOrders,
+  handleAutoRenewOneTimePlans,
+} from './payment-retry.worker';
+import { handleWebhookRetrySweep } from './webhook-retry-sweep.worker';
+import { handleVendorLeadExpiry } from './vendor-lead-expiry.worker';
+import { handleSearchHistorySweep } from './search-history.worker';
+import { handleReviewIndustryAverages, handleReviewAggregateSweep } from './review-cron.worker';
 
 /**
  * Combined scheduler worker — processes ALL periodic/cron jobs through
@@ -65,6 +80,34 @@ export function createSchedulerWorker(): Worker {
               return handleStaleProfileCheck(job);
             case 'flush-view-counters':
               return handleViewCounterFlush(job);
+            case 'send-billing-reminders':
+              return handleBillingReminder(job);
+            case 'sweep-expired-entitlements':
+              return handleEntitlementExpiry(job);
+            case 'sync-settlements':
+              return handleSettlementSync(job);
+            case 'sync-disputes':
+              return handleDisputeSync(job);
+            case 'subscription-renewal-precheck':
+              return handleSubscriptionRenewal(job);
+            case 'payment-status-sweep':
+              return handlePaymentStatusSweep(job);
+            case 'process-payment-retries':
+              return handlePaymentRetry(job);
+            case 'expire-pending-orders':
+              return handleExpirePendingOrders(job);
+            case 'auto-renew-one-time-plans':
+              return handleAutoRenewOneTimePlans(job);
+            case 'webhook-retry-sweep':
+              return handleWebhookRetrySweep(job);
+            case 'vendor-lead-expiry-sweep':
+              return handleVendorLeadExpiry(job);
+            case 'search-history-sweep':
+              return handleSearchHistorySweep(job);
+            case 'refresh-industry-averages':
+              return handleReviewIndustryAverages(job);
+            case 'sweep-review-aggregates':
+              return handleReviewAggregateSweep(job);
             default:
               logger.warn(`Unknown scheduler job name: ${job.name}`);
               return null;

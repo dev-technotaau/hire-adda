@@ -64,3 +64,10 @@ backend/backups/
 
 # Logs
 *.log
+
+# Internal planning / brief documents (not for git history)
+/payment.md
+/payment-implementation-plan.md
+/PUBLIC_JOBS_COMPANIES_PLAN.md
+/public.md
+/RATINGS_REVIEWS_PLAN.md

@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { HelpCircle, ChevronDown, Plus, MessageSquare, Clock, Send, Ticket } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
+import PriorityWhatsappBanner from '@/components/billing/PriorityWhatsappBanner';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
@@ -95,6 +96,8 @@ export default function EmployerHelpPage() {
             Find answers to common questions or contact our support team
           </p>
         </div>
+
+        <PriorityWhatsappBanner role="employer" />
 
         <FaqSection />
         <TicketsSection />

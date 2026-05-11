@@ -289,7 +289,11 @@ export default function CandidateVerificationPage() {
               title="No verification requests"
               description="Submit your identity or employment documents for verification."
               action={
-                <Button onClick={() => setShowForm(true)} size="sm" tooltip="Submit a new verification request">
+                <Button
+                  onClick={() => setShowForm(true)}
+                  size="sm"
+                  tooltip="Submit a new verification request"
+                >
                   Submit Request
                 </Button>
               }

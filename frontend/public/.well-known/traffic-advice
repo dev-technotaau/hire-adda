@@ -1,0 +1,7 @@
+[
+  {
+    "_comment": "Per https://github.com/buettner/private-prefetch-proxy/blob/main/traffic-advice.md, this signals to private prefetch proxies (Chrome's Prerender via Cloudflare, etc.) whether prefetching is welcome on this origin. We allow up to 50 in-flight prefetches because Hire Adda's public surface (jobs, companies) benefits from anticipatory navigation, but the bypass below excludes auth + admin paths.",
+    "user_agent": "prefetch-proxy",
+    "fraction": 1.0
+  }
+]

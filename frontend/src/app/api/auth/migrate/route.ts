@@ -12,18 +12,12 @@ export async function POST(request: NextRequest) {
     const { accessToken, refreshToken, sessionId, rememberMe = true } = body;
 
     if (!accessToken || !refreshToken) {
-      return NextResponse.json(
-        { status: 'error', message: 'Tokens required' },
-        { status: 400 },
-      );
+      return NextResponse.json({ status: 'error', message: 'Tokens required' }, { status: 400 });
     }
 
     const response = NextResponse.json({ status: 'success', message: 'Migrated to cookies' });
     return setAuthCookies(response, accessToken, refreshToken, rememberMe, sessionId);
   } catch {
-    return NextResponse.json(
-      { status: 'error', message: 'Migration failed' },
-      { status: 500 },
-    );
+    return NextResponse.json({ status: 'error', message: 'Migration failed' }, { status: 500 });
   }
 }

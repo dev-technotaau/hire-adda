@@ -182,7 +182,9 @@ export default function SuperAdminJobsPage() {
       }
     },
     onSuccess: () => {
-      showToast.success(`Successfully approved ${selectedJobs.size} job${selectedJobs.size !== 1 ? 's' : ''}`);
+      showToast.success(
+        `Successfully approved ${selectedJobs.size} job${selectedJobs.size !== 1 ? 's' : ''}`,
+      );
       queryClient.invalidateQueries({ queryKey: ['admin', 'jobs'] as const });
       setShowBulkApproveModal(false);
       setSelectedJobs(new Set());
@@ -201,7 +203,9 @@ export default function SuperAdminJobsPage() {
       }
     },
     onSuccess: () => {
-      showToast.success(`Successfully deleted ${selectedJobs.size} job${selectedJobs.size !== 1 ? 's' : ''}`);
+      showToast.success(
+        `Successfully deleted ${selectedJobs.size} job${selectedJobs.size !== 1 ? 's' : ''}`,
+      );
       queryClient.invalidateQueries({ queryKey: ['admin', 'jobs'] as const });
       setShowBulkDeleteModal(false);
       setSelectedJobs(new Set());
@@ -291,7 +295,12 @@ export default function SuperAdminJobsPage() {
                 >
                   Bulk Delete
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedJobs(new Set())} tooltip="Deselect all jobs">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedJobs(new Set())}
+                  tooltip="Deselect all jobs"
+                >
                   Clear Selection
                 </Button>
               </div>
@@ -309,9 +318,7 @@ export default function SuperAdminJobsPage() {
                   <Briefcase className="text-primary h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-[var(--text)]">
-                    {pagination?.total || 0}
-                  </p>
+                  <p className="text-2xl font-bold text-[var(--text)]">{pagination?.total || 0}</p>
                   <p className="text-xs text-[var(--text-muted)]">Total Jobs</p>
                 </div>
               </div>
@@ -340,7 +347,11 @@ export default function SuperAdminJobsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-[var(--text)]">
-                    {jobs.filter((j: any) => j.urgencyLevel === 'URGENT' || j.urgencyLevel === 'IMMEDIATE').length}
+                    {
+                      jobs.filter(
+                        (j: any) => j.urgencyLevel === 'URGENT' || j.urgencyLevel === 'IMMEDIATE',
+                      ).length
+                    }
                   </p>
                   <p className="text-xs text-[var(--text-muted)]">Urgent</p>
                 </div>
@@ -357,10 +368,13 @@ export default function SuperAdminJobsPage() {
                   <p className="text-2xl font-bold text-[var(--text)]">
                     {(() => {
                       const salaries = jobs
-                        .filter((j: any) => j.salaryMax && j.salaryDisclosed && j.currency === 'INR')
+                        .filter(
+                          (j: any) => j.salaryMax && j.salaryDisclosed && j.currency === 'INR',
+                        )
                         .map((j: any) => j.salaryMax);
                       if (salaries.length === 0) return '—';
-                      const avg = salaries.reduce((a: number, b: number) => a + b, 0) / salaries.length;
+                      const avg =
+                        salaries.reduce((a: number, b: number) => a + b, 0) / salaries.length;
                       return `₹${(avg / 100000).toFixed(1)}L`;
                     })()}
                   </p>
@@ -421,7 +435,7 @@ export default function SuperAdminJobsPage() {
             </div>
 
             {/* Advanced Filters Row */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end border-t border-[var(--border)] pt-4">
+            <div className="flex flex-col gap-4 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-end">
               <p className="text-sm font-medium text-[var(--text)]">Advanced Filters:</p>
               <div className="w-full sm:w-40">
                 <Select
@@ -493,7 +507,7 @@ export default function SuperAdminJobsPage() {
                       type="checkbox"
                       checked={selectedJobs.has(job.id)}
                       onChange={() => toggleJobSelection(job.id)}
-                      className="mt-1 h-4 w-4 rounded border-[var(--border)] text-primary focus:ring-2 focus:ring-primary"
+                      className="text-primary focus:ring-primary mt-1 h-4 w-4 rounded border-[var(--border)] focus:ring-2"
                     />
                   </div>
                   {/* Job Info */}
@@ -736,7 +750,11 @@ export default function SuperAdminJobsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)} tooltip="Cancel deletion">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteTarget(null)}
+                tooltip="Cancel deletion"
+              >
                 Cancel
               </Button>
               <Button
@@ -768,7 +786,11 @@ export default function SuperAdminJobsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowBulkApproveModal(false)} tooltip="Cancel bulk approval">
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkApproveModal(false)}
+                tooltip="Cancel bulk approval"
+              >
                 Cancel
               </Button>
               <Button
@@ -785,7 +807,8 @@ export default function SuperAdminJobsPage() {
             <CheckCircle className="h-5 w-5 shrink-0 text-[var(--success)]" />
             <p className="text-sm text-[var(--text-secondary)]">
               Are you sure you want to approve {selectedJobs.size} selected job
-              {selectedJobs.size !== 1 ? 's' : ''}? They will be published and visible to candidates.
+              {selectedJobs.size !== 1 ? 's' : ''}? They will be published and visible to
+              candidates.
             </p>
           </div>
         </Modal>
@@ -798,10 +821,18 @@ export default function SuperAdminJobsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowBulkDeleteModal(false)} tooltip="Cancel bulk deletion">
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkDeleteModal(false)}
+                tooltip="Cancel bulk deletion"
+              >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleBulkDelete} tooltip="Permanently delete selected jobs">
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                tooltip="Permanently delete selected jobs"
+              >
                 Delete {selectedJobs.size} Job{selectedJobs.size !== 1 ? 's' : ''}
               </Button>
             </div>

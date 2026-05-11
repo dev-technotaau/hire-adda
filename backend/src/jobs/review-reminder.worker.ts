@@ -97,17 +97,16 @@ export async function handleReviewReminder(job: Job) {
         data: { reviewReminderSentAt: now },
       });
 
-      logger.info(`Sent review reminders to ${reminded} employers for ${pendingApplications.length} applications`);
+      logger.info(
+        `Sent review reminders to ${reminded} employers for ${pendingApplications.length} applications`
+      );
       return { reminded, applications: pendingApplications.length };
     };
 
     return await Promise.race([
       processReminders(),
       new Promise<never>((_resolve, reject) =>
-        setTimeout(
-          () => reject(new Error('Review reminder worker timeout after 60s')),
-          TIMEOUT_MS
-        )
+        setTimeout(() => reject(new Error('Review reminder worker timeout after 60s')), TIMEOUT_MS)
       ),
     ]);
   } catch (error) {

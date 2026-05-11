@@ -30,6 +30,26 @@ const EVENT_TO_TOPIC: Record<KafkaTopics, string> = {
   [KafkaTopics.APPLICATION_SUBMITTED]: ConsolidatedTopics.APPLICATIONS,
   [KafkaTopics.APPLICATION_STATUS_CHANGED]: ConsolidatedTopics.APPLICATIONS,
   [KafkaTopics.NOTIFICATION_SENT]: ConsolidatedTopics.NOTIFICATIONS,
+  // Billing events flow into one consolidated topic for downstream
+  // analytics consumers (BigQuery sync, fraud-scan, ad-hoc dashboards).
+  [KafkaTopics.BILLING_ORDER_CREATED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_ORDER_PAID]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_ORDER_REFUNDED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_PAYMENT_CAPTURED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_PAYMENT_FAILED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_SUBSCRIPTION_ACTIVATED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_SUBSCRIPTION_CHARGED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_SUBSCRIPTION_CANCELLED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_SUBSCRIPTION_FAILED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_INVOICE_ISSUED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_ENTITLEMENT_GRANTED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_ENTITLEMENT_CONSUMED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_ENTITLEMENT_EXPIRED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_REFUND_PROCESSED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_FRAUD_FLAGGED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_COUPON_REDEEMED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_QUOTE_RECEIVED]: ConsolidatedTopics.BILLING,
+  [KafkaTopics.BILLING_CUSTOM_OFFER_SENT]: ConsolidatedTopics.BILLING,
 };
 
 /**

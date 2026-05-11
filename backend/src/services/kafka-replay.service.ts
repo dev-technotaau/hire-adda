@@ -1,8 +1,8 @@
 import { prisma } from '../config/prisma';
 import logger from '../config/logger';
-import {  } from '../kafka/producer';
+import {} from '../kafka/producer';
 import { publishEvent } from '../kafka/producer';
-import { KafkaTopics } from '../kafka/topics';
+import type { KafkaTopics } from '../kafka/topics';
 
 class KafkaReplayService {
   /**

@@ -122,7 +122,13 @@ function PasskeysSection() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" tooltip="Register a new passkey" onClick={handleRegister} isLoading={registering}>
+          <Button
+            variant="outline"
+            size="sm"
+            tooltip="Register a new passkey"
+            onClick={handleRegister}
+            isLoading={registering}
+          >
             <Plus className="mr-1 h-4 w-4" />
             Add Passkey
           </Button>
@@ -201,7 +207,9 @@ function PasskeysSection() {
             >
               Cancel
             </Button>
-            <Button tooltip="Save and register passkey" onClick={handleConfirmRegister}>Save Passkey</Button>
+            <Button tooltip="Save and register passkey" onClick={handleConfirmRegister}>
+              Save Passkey
+            </Button>
           </div>
         }
       >

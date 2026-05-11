@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
+import PremiumLockBadge from '@/components/billing/PremiumLockBadge';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Tag from '@/components/ui/Tag';
@@ -62,7 +63,9 @@ export default function SavedCandidatesPage() {
   const [jobPickerAction, setJobPickerAction] = useState<'shortlist' | 'select'>('shortlist');
   const [jobPickerCandidateId, setJobPickerCandidateId] = useState('');
   const [jobSearch, setJobSearch] = useState('');
-  const [actionedCandidates, setActionedCandidates] = useState<Record<string, 'shortlisted' | 'selected'>>({});
+  const [actionedCandidates, setActionedCandidates] = useState<
+    Record<string, 'shortlisted' | 'selected'>
+  >({});
 
   const { data, isLoading } = useQuery({
     queryKey: [...QUERY_KEYS.EMPLOYERS.SAVED_CANDIDATES, page],
@@ -201,7 +204,11 @@ export default function SavedCandidatesPage() {
             </p>
           </div>
           <Link href={ROUTES.EMPLOYER.CANDIDATES}>
-            <Button variant="outline" leftIcon={<Search className="h-4 w-4" />} tooltip="Search candidates">
+            <Button
+              variant="outline"
+              leftIcon={<Search className="h-4 w-4" />}
+              tooltip="Search candidates"
+            >
               Search Candidates
             </Button>
           </Link>
@@ -221,7 +228,7 @@ export default function SavedCandidatesPage() {
                     }
                   }}
                   title="Toggle select all"
-                  className="cursor-pointer text-primary hover:text-primary-dark flex items-center gap-1.5 text-sm font-medium"
+                  className="text-primary hover:text-primary-dark flex cursor-pointer items-center gap-1.5 text-sm font-medium"
                 >
                   {selectedIds.size === candidates.length ? (
                     <CheckSquare className="h-4 w-4" />
@@ -235,29 +242,38 @@ export default function SavedCandidatesPage() {
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <PremiumLockBadge feature="feature.bulk_download" variant="inline">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => bulkExportMutation.mutate(Array.from(selectedIds))}
+                    disabled={bulkExportMutation.isPending}
+                    isLoading={bulkExportMutation.isPending}
+                    tooltip="Export as XLSX"
+                  >
+                    <Download className="mr-1.5 h-4 w-4" />
+                    Export
+                  </Button>
+                </PremiumLockBadge>
+                <PremiumLockBadge feature="feature.bulk_download" variant="inline">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => bulkExportResumesMutation.mutate(Array.from(selectedIds))}
+                    disabled={bulkExportResumesMutation.isPending}
+                    isLoading={bulkExportResumesMutation.isPending}
+                    tooltip="Export resumes as ZIP"
+                  >
+                    <FileDown className="mr-1.5 h-4 w-4" />
+                    Export Resumes
+                  </Button>
+                </PremiumLockBadge>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  onClick={() => bulkExportMutation.mutate(Array.from(selectedIds))}
-                  disabled={bulkExportMutation.isPending}
-                  isLoading={bulkExportMutation.isPending}
-                  tooltip="Export as XLSX"
+                  onClick={clearSelection}
+                  tooltip="Clear selection"
                 >
-                  <Download className="mr-1.5 h-4 w-4" />
-                  Export
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => bulkExportResumesMutation.mutate(Array.from(selectedIds))}
-                  disabled={bulkExportResumesMutation.isPending}
-                  isLoading={bulkExportResumesMutation.isPending}
-                  tooltip="Export resumes as ZIP"
-                >
-                  <FileDown className="mr-1.5 h-4 w-4" />
-                  Export Resumes
-                </Button>
-                <Button variant="ghost" size="sm" onClick={clearSelection} tooltip="Clear selection">
                   <X className="mr-1.5 h-4 w-4" />
                   Clear
                 </Button>
@@ -298,7 +314,9 @@ export default function SavedCandidatesPage() {
               description="Save candidates from search results to review them later."
               action={
                 <Link href={ROUTES.EMPLOYER.CANDIDATES}>
-                  <Button size="sm" tooltip="Browse candidates">Browse Candidates</Button>
+                  <Button size="sm" tooltip="Browse candidates">
+                    Browse Candidates
+                  </Button>
                 </Link>
               }
             />
@@ -451,13 +469,15 @@ function SavedCandidateCard({
   })();
 
   return (
-    <Card className={`transition-all hover:shadow-sm ${isSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/20'}`}>
+    <Card
+      className={`transition-all hover:shadow-sm ${isSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/20'}`}
+    >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-1 gap-4">
           <button
             type="button"
             onClick={onToggleSelect}
-            className="cursor-pointer mt-1 shrink-0 text-[var(--text-muted)] hover:text-primary"
+            className="hover:text-primary mt-1 shrink-0 cursor-pointer text-[var(--text-muted)]"
             title={isSelected ? 'Deselect' : 'Select'}
           >
             {isSelected ? (
@@ -664,7 +684,9 @@ function SavedCandidateCard({
                         <Phone className="h-3.5 w-3.5" /> Call
                       </a>
                     )}
-                    {(candidate.user?.whatsappNumber || candidate.user?.mobileNumber || candidate.phone) && (
+                    {(candidate.user?.whatsappNumber ||
+                      candidate.user?.mobileNumber ||
+                      candidate.phone) && (
                       <a
                         href={`https://wa.me/${(candidate.user?.whatsappNumber || candidate.user?.mobileNumber || candidate.phone || '').replace(/\D/g, '')}`}
                         target="_blank"
@@ -675,9 +697,14 @@ function SavedCandidateCard({
                         <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                       </a>
                     )}
-                    {!candidate.user?.email && !candidate.user?.mobileNumber && !candidate.user?.whatsappNumber && !candidate.phone && (
-                      <p className="px-3 py-2 text-xs text-[var(--text-muted)]">No contact info available</p>
-                    )}
+                    {!candidate.user?.email &&
+                      !candidate.user?.mobileNumber &&
+                      !candidate.user?.whatsappNumber &&
+                      !candidate.phone && (
+                        <p className="px-3 py-2 text-xs text-[var(--text-muted)]">
+                          No contact info available
+                        </p>
+                      )}
                   </div>
                 </>
               )}
@@ -685,7 +712,9 @@ function SavedCandidateCard({
           </div>
           <div className="flex items-center gap-2">
             <Link href={ROUTES.EMPLOYER.CANDIDATE_DETAIL(candidate.id)}>
-              <Button size="sm" tooltip="View profile">View Profile</Button>
+              <Button size="sm" tooltip="View profile">
+                View Profile
+              </Button>
             </Link>
             {candidate.resume && (
               <a

@@ -28,6 +28,8 @@ import Modal from '@/components/ui/Modal';
 import Dropdown from '@/components/ui/Dropdown';
 import { showToast } from '@/components/ui/Toast';
 import Tooltip from '@/components/ui/Tooltip';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { useUpgradeModal } from '@/components/billing/UpgradeModal';
 import { jobService } from '@/services/job.service';
 import { ROUTES } from '@/constants/routes';
 import { QUERY_KEYS, PAGINATION } from '@/constants/config';
@@ -53,9 +55,18 @@ const statusTabs = [
 
 export default function MyJobsPage() {
   const queryClient = useQueryClient();
+  const { remaining, allocated, hasFeature } = useEntitlements();
+  const upgrade = useUpgradeModal();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [deactivateTarget, setDeactivateTarget] = useState<string | null>(null);
+
+  // Job-post quota state — drives the upsell banner. Hidden when the user
+  // has plenty of capacity left or has urgent_hiring_badge (EMP_PREMIUM).
+  const jobPostsRemaining = remaining('JOB_POST');
+  const jobPostsAllocated = allocated('JOB_POST');
+  const isPremium = hasFeature('feature.urgent_hiring_badge');
+  const showJobQuotaUpsell = !isPremium && jobPostsAllocated > 0 && jobPostsRemaining === 0;
 
   const serverStatus = statusFilter === 'ALL' ? undefined : statusFilter;
   const { data, isLoading } = useQuery({
@@ -92,6 +103,33 @@ export default function MyJobsPage() {
   return (
     <DashboardLayout requiredRole={['EMPLOYER']}>
       <div className="space-y-6">
+        {/* Job-post quota upsell — shown when employer is at the cap */}
+        {showJobQuotaUpsell && (
+          <button
+            type="button"
+            onClick={() => upgrade.open({ feature: 'feature.urgent_hiring_badge' })}
+            className="group flex w-full items-start gap-3 rounded-xl border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 p-4 text-left transition-colors hover:from-amber-100 hover:to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20"
+          >
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-amber-500 text-white shadow">
+              <Plus className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-amber-900 dark:text-amber-100">
+                You&apos;ve used all {jobPostsAllocated} job post
+                {jobPostsAllocated === 1 ? '' : 's'} on your plan
+              </p>
+              <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-200/80">
+                Upgrade to Premium for 3 job posts (30 days each), top search visibility, urgent
+                hiring badge and 20 CV unlocks.
+              </p>
+            </div>
+            <span className="hidden items-center gap-1 self-center rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors group-hover:bg-amber-700 sm:inline-flex">
+              Upgrade
+            </span>
+          </button>
+        )}
+        {upgrade.modal}
+
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -100,7 +138,9 @@ export default function MyJobsPage() {
           </div>
           <Tooltip content="Create a new job listing">
             <Link href={ROUTES.EMPLOYER.POST_JOB}>
-              <Button leftIcon={<Plus className="h-4 w-4" />} tooltip="Create a new job listing">Post New Job</Button>
+              <Button leftIcon={<Plus className="h-4 w-4" />} tooltip="Create a new job listing">
+                Post New Job
+              </Button>
             </Link>
           </Tooltip>
         </div>
@@ -141,7 +181,11 @@ export default function MyJobsPage() {
               action={
                 <Tooltip content="Create your first job listing">
                   <Link href={ROUTES.EMPLOYER.POST_JOB}>
-                    <Button size="sm" leftIcon={<Plus className="h-4 w-4" />} tooltip="Post your first job">
+                    <Button
+                      size="sm"
+                      leftIcon={<Plus className="h-4 w-4" />}
+                      tooltip="Post your first job"
+                    >
                       Post a Job
                     </Button>
                   </Link>
@@ -170,7 +214,11 @@ export default function MyJobsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setDeactivateTarget(null)} tooltip="Cancel deactivation">
+              <Button
+                variant="outline"
+                onClick={() => setDeactivateTarget(null)}
+                tooltip="Cancel deactivation"
+              >
                 Cancel
               </Button>
               <Button
@@ -267,7 +315,8 @@ function JobCard({ job, onDeactivate }: { job: Job; onDeactivate: () => void }) 
                 </span>
                 {job.numberOfOpenings && (
                   <span className="flex items-center gap-1">
-                    <UserCheck className="h-3 w-3" /> {job._hiredCount ?? 0}/{job.numberOfOpenings} filled
+                    <UserCheck className="h-3 w-3" /> {job._hiredCount ?? 0}/{job.numberOfOpenings}{' '}
+                    filled
                   </span>
                 )}
               </div>

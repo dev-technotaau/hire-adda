@@ -22,9 +22,25 @@ const router = Router();
 router.use(searchLimiter);
 
 // Public routes (no auth required) — with query param validation
-router.get('/autocomplete', validate({ query: autocompleteQuery }), etagCache({ ttl: 300 }), cache({ ttl: 300 }), searchController.autocomplete);
-router.get('/suggest', validate({ query: unifiedSuggestQuery }), cache({ ttl: 600 }), searchController.suggest);
-router.get('/suggest/skills', validate({ query: suggestQuery }), cache({ ttl: 600 }), searchController.suggestSkills);
+router.get(
+  '/autocomplete',
+  validate({ query: autocompleteQuery }),
+  etagCache({ ttl: 300 }),
+  cache({ ttl: 300 }),
+  searchController.autocomplete
+);
+router.get(
+  '/suggest',
+  validate({ query: unifiedSuggestQuery }),
+  cache({ ttl: 600 }),
+  searchController.suggest
+);
+router.get(
+  '/suggest/skills',
+  validate({ query: suggestQuery }),
+  cache({ ttl: 600 }),
+  searchController.suggestSkills
+);
 router.get(
   '/suggest/locations',
   validate({ query: suggestQuery }),
@@ -37,9 +53,25 @@ router.get(
   cache({ ttl: 600 }),
   searchController.suggestCompanies
 );
-router.get('/suggest/titles', validate({ query: suggestQuery }), cache({ ttl: 600 }), searchController.suggestJobTitles);
-router.get('/did-you-mean', validate({ query: didYouMeanQuery }), cache({ ttl: 300 }), searchController.didYouMean);
-router.get('/popular', validate({ query: popularQuery }), etagCache({ ttl: 600 }), cache({ ttl: 600 }), searchController.getPopularSearches);
+router.get(
+  '/suggest/titles',
+  validate({ query: suggestQuery }),
+  cache({ ttl: 600 }),
+  searchController.suggestJobTitles
+);
+router.get(
+  '/did-you-mean',
+  validate({ query: didYouMeanQuery }),
+  cache({ ttl: 300 }),
+  searchController.didYouMean
+);
+router.get(
+  '/popular',
+  validate({ query: popularQuery }),
+  etagCache({ ttl: 600 }),
+  cache({ ttl: 600 }),
+  searchController.getPopularSearches
+);
 
 // Protected routes (auth required)
 router.get('/history', protect, searchController.getSearchHistory);

@@ -22,7 +22,9 @@ try {
     if (env.CLOUD_TALENT_TENANT_ID) {
       logger.info('🤝 Google Cloud Talent Solution initialized');
     } else {
-      logger.warn('🤝 Cloud Talent client created but CLOUD_TALENT_TENANT_ID missing — API calls will use fallback tenant');
+      logger.warn(
+        '🤝 Cloud Talent client created but CLOUD_TALENT_TENANT_ID missing — API calls will use fallback tenant'
+      );
     }
   } else {
     logger.warn('⚠️ Google Cloud credentials missing — Talent Solution disabled');

@@ -99,7 +99,8 @@ export const getUnreadCount = async (
       throw new AppError('Not authorized', 401);
     }
 
-    const count = await notificationService.getUnreadCount(req.user.id);
+    const category = typeof req.query.category === 'string' ? req.query.category : undefined;
+    const count = await notificationService.getUnreadCount(req.user.id, category);
 
     res.status(200).json({
       status: 'success',

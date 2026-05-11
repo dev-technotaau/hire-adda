@@ -14,11 +14,18 @@ import {
 import { searchJobsSchema } from '../schemas/search.schema';
 import { Role } from '@prisma/client';
 import { audit } from '../middleware/audit';
+import { planGate } from '../middleware/plan-gate';
 
 const router = Router();
 
 // Public: Search jobs (cached 60s — high-volume, query-string based, ETag for 304)
-router.get('/', validate(searchJobsSchema), etagCache({ ttl: 60 }), cache({ ttl: 60 }), jobController.searchJobs);
+router.get(
+  '/',
+  validate(searchJobsSchema),
+  etagCache({ ttl: 60 }),
+  cache({ ttl: 60 }),
+  jobController.searchJobs
+);
 
 // --- Static paths MUST be registered before /:id to avoid route conflicts ---
 
@@ -97,6 +104,11 @@ router.post(
   '/',
   protect,
   restrictTo(Role.EMPLOYER),
+  planGate({
+    require: ['feature.job_post'],
+    minResource: { unit: 'JOB_POST', amount: 1 },
+    skipForRoles: ['SUPER_ADMIN', 'ADMIN'],
+  }),
   validate(createJobSchema),
   audit('JOB_CREATE', 'JobPost'),
   jobController.createJob

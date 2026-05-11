@@ -151,7 +151,11 @@ export default function ManageAdminsPage() {
               Create and manage admin accounts
             </p>
           </div>
-          <Button leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => setShowCreate(true)} tooltip="Create a new admin account">
+          <Button
+            leftIcon={<UserPlus className="h-4 w-4" />}
+            onClick={() => setShowCreate(true)}
+            tooltip="Create a new admin account"
+          >
             Create Admin
           </Button>
         </div>
@@ -193,7 +197,12 @@ export default function ManageAdminsPage() {
                     </span>
                     <Tooltip content="View admin details">
                       <Link href={ROUTES.SUPER_ADMIN.ADMIN_DETAIL(admin.id)}>
-                        <Button variant="outline" size="sm" leftIcon={<Eye className="h-3.5 w-3.5" />} tooltip="View admin details">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          leftIcon={<Eye className="h-3.5 w-3.5" />}
+                          tooltip="View admin details"
+                        >
                           View
                         </Button>
                       </Link>
@@ -236,7 +245,11 @@ export default function ManageAdminsPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowCreate(false)} tooltip="Cancel and close">
+              <Button
+                variant="outline"
+                onClick={() => setShowCreate(false)}
+                tooltip="Cancel and close"
+              >
                 Cancel
               </Button>
               <Button
@@ -289,7 +302,11 @@ export default function ManageAdminsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setRemoveTarget(null)} tooltip="Cancel and close">
+              <Button
+                variant="outline"
+                onClick={() => setRemoveTarget(null)}
+                tooltip="Cancel and close"
+              >
                 Cancel
               </Button>
               <Button
@@ -324,7 +341,11 @@ export default function ManageAdminsPage() {
                 Cancel
               </Button>
               {resetStep === 'send' ? (
-                <Button onClick={handleSendResetOtp} isLoading={isSendingOtp} tooltip="Send OTP verification code">
+                <Button
+                  onClick={handleSendResetOtp}
+                  isLoading={isSendingOtp}
+                  tooltip="Send OTP verification code"
+                >
                   Send Verification Code
                 </Button>
               ) : (

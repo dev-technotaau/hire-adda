@@ -73,10 +73,7 @@ export async function handleStaleProfileCheck(job: Job) {
     return await Promise.race([
       processStaleProfiles(),
       new Promise<never>((_resolve, reject) =>
-        setTimeout(
-          () => reject(new Error('Stale profile check timeout after 60s')),
-          TIMEOUT_MS
-        )
+        setTimeout(() => reject(new Error('Stale profile check timeout after 60s')), TIMEOUT_MS)
       ),
     ]);
   } catch (error) {

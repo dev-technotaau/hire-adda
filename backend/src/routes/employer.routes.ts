@@ -12,6 +12,7 @@ import { createJobTemplateSchema, updateJobTemplateSchema } from '../schemas/job
 import { audit } from '../middleware/audit';
 import { cache } from '../middleware/cache';
 import { exportLimiter } from '../middleware/rate-limit';
+import { planGate } from '../middleware/plan-gate';
 
 const router = Router();
 
@@ -60,23 +61,49 @@ router.delete('/me/cover-image', employerController.removeCoverImage);
 
 router.get('/me/profile-views', employerController.getProfileViews);
 
-router.get('/candidates/search', cache({ ttl: 60, perUser: true }), employerController.searchCandidates);
+router.get(
+  '/candidates/search',
+  planGate({
+    require: ['feature.cv_db_access'],
+    minResource: { unit: 'SEARCH_RESULT', amount: 1 },
+    skipForRoles: ['SUPER_ADMIN', 'ADMIN'],
+    optional: false,
+  }),
+  cache({ ttl: 60, perUser: true }),
+  employerController.searchCandidates
+);
 
 router.post(
   '/candidates/bulk-export',
   exportLimiter,
+  planGate({
+    require: ['feature.bulk_download'],
+    skipForRoles: ['SUPER_ADMIN', 'ADMIN'],
+  }),
   audit('BULK_EXPORT_CANDIDATES', 'CandidateProfile'),
   employerController.bulkExportCandidates
 );
 router.post(
   '/candidates/bulk-export-resumes',
   exportLimiter,
+  planGate({
+    require: ['feature.bulk_download'],
+    skipForRoles: ['SUPER_ADMIN', 'ADMIN'],
+  }),
   audit('BULK_EXPORT_RESUMES', 'CandidateProfile'),
   employerController.bulkExportResumes
 );
 
 // Candidate management
-router.get('/applications', jobController.getAllEmployerApplications);
+router.get(
+  '/applications',
+  planGate({
+    require: ['feature.job_post'],
+    skipForRoles: ['SUPER_ADMIN', 'ADMIN'],
+    optional: true, // soft gate — read-only listing always allowed; UI handles upsell
+  }),
+  jobController.getAllEmployerApplications
+);
 router.post(
   '/candidates/:candidateId/shortlist',
   audit('APPLICATION_SHORTLIST', 'JobApplication'),
@@ -87,8 +114,16 @@ router.post(
   audit('APPLICATION_SELECT', 'JobApplication'),
   jobController.selectCandidateForJob
 );
-router.get('/candidates/:candidateId/match/:jobId', cache({ ttl: 300, perUser: true }), employerController.getCandidateMatchScore);
-router.get('/candidates/:candidateId/similar', cache({ ttl: 300, perUser: true }), employerController.getSimilarCandidates);
+router.get(
+  '/candidates/:candidateId/match/:jobId',
+  cache({ ttl: 300, perUser: true }),
+  employerController.getCandidateMatchScore
+);
+router.get(
+  '/candidates/:candidateId/similar',
+  cache({ ttl: 300, perUser: true }),
+  employerController.getSimilarCandidates
+);
 
 // Job Templates CRUD
 router.get('/job-templates', jobTemplateController.getTemplates);

@@ -48,6 +48,7 @@ export class EmployerService {
       select: {
         id: true,
         userId: true,
+        slug: true,
         accountType: true,
         hiringType: true,
         companyName: true,
@@ -153,14 +154,41 @@ export class EmployerService {
         : {}),
     };
 
+    // SEO slug — generated from companyName with collision suffixing.
+    // Stable once assigned; we only assign if the row doesn't already
+    // have a slug, so editing the company name later doesn't invalidate
+    // any indexed URL. (Slug regeneration on rename is a deliberate
+    // follow-up — out of scope for this delivery.)
+    const existing = await prisma.companyProfile.findUnique({
+      where: { userId },
+      select: { slug: true },
+    });
+    let companySlug = existing?.slug ?? null;
+    if (!companySlug && (safeData.companyName || 'My Company')) {
+      const { buildCompanySlug } = await import('../lib/slugs');
+      companySlug = await buildCompanySlug(safeData.companyName || 'My Company', {
+        isTaken: async (candidate) => {
+          const taken = await prisma.companyProfile.findFirst({
+            where: { slug: candidate, NOT: { userId } },
+            select: { id: true },
+          });
+          return Boolean(taken);
+        },
+      });
+    }
+
     const profile = await prisma.companyProfile.upsert({
       where: { userId },
       create: {
         userId,
         companyName: safeData.companyName || 'My Company',
         ...safeData,
+        ...(companySlug ? { slug: companySlug } : {}),
       },
-      update: safeData,
+      update: {
+        ...safeData,
+        ...(companySlug && !existing?.slug ? { slug: companySlug } : {}),
+      },
     });
 
     // Index in Elasticsearch
@@ -187,6 +215,48 @@ export class EmployerService {
           addGeocodingJob({ entityType: 'company', entityId: profile.id, address: geoAddress })
         )
         .catch(() => {});
+    }
+
+    // Notify followers when high-signal fields change. Throttled to
+    // once per 24h per company in the service layer so fast-iterating
+    // employers don't spam followers. Only triggers on fields that
+    // followers care about — text-tweaks like description don't fire.
+    const HIGH_SIGNAL_FIELDS = [
+      'awardsRecognitions',
+      'leadershipTeam',
+      'employeeTestimonials',
+      'officePhotos',
+      'companyVideoUrl',
+      'fundingStage',
+      'investors',
+      'productsServices',
+      'isVerified',
+    ] as const;
+    const changedFields = HIGH_SIGNAL_FIELDS.filter((k) => k in (data as Record<string, unknown>));
+    if (changedFields.length > 0) {
+      const summary = (() => {
+        if (changedFields.includes('isVerified') && (data as { isVerified?: boolean }).isVerified) {
+          return `${profile.companyName} just got GST-verified.`;
+        }
+        if (changedFields.includes('awardsRecognitions')) {
+          return `${profile.companyName} just added new awards & recognition.`;
+        }
+        if (changedFields.includes('leadershipTeam')) {
+          return `${profile.companyName} updated their leadership team.`;
+        }
+        if (changedFields.includes('officePhotos') || changedFields.includes('companyVideoUrl')) {
+          return `${profile.companyName} added new photos / video to their profile.`;
+        }
+        if (changedFields.includes('fundingStage') || changedFields.includes('investors')) {
+          return `${profile.companyName} updated their funding details.`;
+        }
+        return `${profile.companyName} updated their profile.`;
+      })();
+      import('./company-follow.service')
+        .then(({ notifyFollowersOfCompanyUpdate }) =>
+          notifyFollowersOfCompanyUpdate(profile.id, summary)
+        )
+        .catch((err) => logger.warn('notifyFollowersOfCompanyUpdate failed', err));
     }
 
     return profile;
@@ -373,12 +443,36 @@ export class EmployerService {
       if (oldPublicId) deleteImage(oldPublicId).catch(() => {});
     }
 
+    // Slug — only assigned on first-time create. The logo-upload upsert
+    // creates the company row with the placeholder name "My Company" if
+    // the user hasn't completed their profile yet; we still seed a slug
+    // so any subsequent public-search index emit has a stable URL. The
+    // slug is stable thereafter (rename in completeProfile won't replace it).
+    const existingForSlug = await prisma.companyProfile.findUnique({
+      where: { userId },
+      select: { slug: true },
+    });
+    let logoUploadSlug = existingForSlug?.slug ?? null;
+    if (!logoUploadSlug) {
+      const { buildCompanySlug } = await import('../lib/slugs');
+      logoUploadSlug = await buildCompanySlug('My Company', {
+        isTaken: async (candidate) => {
+          const taken = await prisma.companyProfile.findFirst({
+            where: { slug: candidate, NOT: { userId } },
+            select: { id: true },
+          });
+          return Boolean(taken);
+        },
+      });
+    }
+
     const profile = await prisma.companyProfile.upsert({
       where: { userId },
       create: {
         userId,
         companyName: 'My Company',
         logo: uploadResult.secure_url,
+        ...(logoUploadSlug ? { slug: logoUploadSlug } : {}),
       },
       update: {
         logo: uploadResult.secure_url,

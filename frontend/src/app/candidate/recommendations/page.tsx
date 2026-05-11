@@ -22,10 +22,13 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
 import Badge from '@/components/ui/Badge';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { useUpgradeModal } from '@/components/billing/UpgradeModal';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import Tooltip from '@/components/ui/Tooltip';
+import RatingBadge from '@/components/reviews/RatingBadge';
 import { recommendationService } from '@/services/recommendation.service';
 import { useAppliedJobs } from '@/hooks/use-jobs';
 import { QUERY_KEYS } from '@/constants/config';
@@ -154,6 +157,7 @@ export default function RecommendationsPage() {
 
   return (
     <DashboardLayout requiredRole={['CANDIDATE']}>
+      <CandidatePremiumBanner />
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -256,11 +260,31 @@ export default function RecommendationsPage() {
                           <h3 className="text-base font-semibold text-[var(--text)]">
                             {job.title}
                           </h3>
-                          <p className="mt-0.5 flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+                          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm text-[var(--text-secondary)]">
                             <Building2 className="h-3.5 w-3.5" />
-                            {job.isConfidential
-                              ? 'Confidential Company'
-                              : job.company?.companyName || 'Company'}
+                            <span>
+                              {job.isConfidential
+                                ? 'Confidential Company'
+                                : job.company?.companyName || 'Company'}
+                            </span>
+                            {!job.isConfidential &&
+                              ((job.company as { totalReviews?: number })?.totalReviews ?? 0) >
+                                0 && (
+                                <RatingBadge
+                                  rating={
+                                    (job.company as { averageRating?: number })?.averageRating ?? 0
+                                  }
+                                  count={
+                                    (job.company as { totalReviews?: number })?.totalReviews ?? 0
+                                  }
+                                  size="xs"
+                                  href={
+                                    (job.company as { slug?: string | null })?.slug
+                                      ? `/companies/${encodeURIComponent((job.company as { slug?: string | null }).slug!)}/reviews`
+                                      : undefined
+                                  }
+                                />
+                              )}
                           </p>
                         </div>
                         {/* Match Score */}
@@ -401,5 +425,45 @@ export default function RecommendationsPage() {
         )}
       </div>
     </DashboardLayout>
+  );
+}
+
+/**
+ * Inline upsell banner — only renders if the candidate is NOT on a Premium plan.
+ * Premium grants priority placement, AI Resume Premium, verified badge, etc.
+ */
+function CandidatePremiumBanner() {
+  const { hasFeature } = useEntitlements();
+  const upgrade = useUpgradeModal();
+  if (hasFeature('feature.candidate_top_visibility')) return null;
+  return (
+    <>
+      <div className="mb-4 rounded-xl border border-[var(--border)] bg-gradient-to-r from-blue-50 to-indigo-50 p-4 dark:from-blue-950/20 dark:to-indigo-950/20">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-[var(--text)]">
+                Get to the top — 7 days Profile Boost
+              </h3>
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                Boosted profiles get 4× more recruiter views. Includes Verified badge, AI Resume
+                Premium, top search visibility and priority WhatsApp support — ₹199/month.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => upgrade.open({ feature: 'feature.candidate_profile_boost' })}
+            className="flex-shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+          >
+            Boost my profile →
+          </button>
+        </div>
+      </div>
+      {upgrade.modal}
+    </>
   );
 }

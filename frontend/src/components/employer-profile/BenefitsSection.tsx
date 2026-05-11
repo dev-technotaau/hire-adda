@@ -242,9 +242,7 @@ export default function BenefitsSection({
               <Input
                 placeholder="Add a perk"
                 value={perkInputs[catIndex] || ''}
-                onChange={(e) =>
-                  setPerkInputs((prev) => ({ ...prev, [catIndex]: e.target.value }))
-                }
+                onChange={(e) => setPerkInputs((prev) => ({ ...prev, [catIndex]: e.target.value }))}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();

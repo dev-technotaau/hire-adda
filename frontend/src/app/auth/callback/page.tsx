@@ -57,7 +57,7 @@ export default function OAuthCallbackPage() {
         // Fetch user profile (now using httpOnly cookies)
         const meRes = await authService.getMe();
         const payload = meRes.data as unknown as Record<string, unknown>;
-        const user = ((payload?.user as typeof meRes.data) ?? meRes.data);
+        const user = (payload?.user as typeof meRes.data) ?? meRes.data;
 
         getQueryClient().clear();
         storeLogin(user);

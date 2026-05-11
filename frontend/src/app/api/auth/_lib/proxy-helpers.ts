@@ -78,10 +78,22 @@ export function setAuthCookies(
   rememberMe = true,
   sessionId?: string,
 ): NextResponse {
-  response.cookies.set(COOKIE_NAMES.ACCESS_TOKEN, accessToken, accessTokenCookieOptions(rememberMe));
-  response.cookies.set(COOKIE_NAMES.REFRESH_TOKEN, refreshToken, refreshTokenCookieOptions(rememberMe));
+  response.cookies.set(
+    COOKIE_NAMES.ACCESS_TOKEN,
+    accessToken,
+    accessTokenCookieOptions(rememberMe),
+  );
+  response.cookies.set(
+    COOKIE_NAMES.REFRESH_TOKEN,
+    refreshToken,
+    refreshTokenCookieOptions(rememberMe),
+  );
   response.cookies.set(COOKIE_NAMES.AUTH_SESSION, '1', sessionCookieOptions(rememberMe));
-  response.cookies.set(COOKIE_NAMES.REMEMBER_ME, rememberMe ? '1' : '0', sessionCookieOptions(rememberMe));
+  response.cookies.set(
+    COOKIE_NAMES.REMEMBER_ME,
+    rememberMe ? '1' : '0',
+    sessionCookieOptions(rememberMe),
+  );
   if (sessionId) {
     response.cookies.set(COOKIE_NAMES.SESSION_ID, sessionId, sessionCookieOptions(rememberMe));
   }

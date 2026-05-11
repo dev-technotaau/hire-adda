@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
+import { useActionTrigger } from '@/hooks/use-action-trigger';
 import Link from 'next/link';
 import {
   MapPin,
@@ -24,6 +25,7 @@ import {
   Calendar,
   ShieldCheck,
   Ban,
+  ChevronRight,
 } from 'lucide-react';
 import DOMPurify from 'isomorphic-dompurify';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -38,6 +40,7 @@ import { showToast } from '@/components/ui/Toast';
 import Tooltip from '@/components/ui/Tooltip';
 import PresenceIndicator from '@/components/ui/PresenceIndicator';
 import ScreeningQuestionForm from '@/components/ui/ScreeningQuestionForm';
+import RatingBadge from '@/components/reviews/RatingBadge';
 import { useJob, useApplyJob, useToggleSaveJob, useAppliedJobs } from '@/hooks/use-jobs';
 import { ROUTES } from '@/constants/routes';
 import {
@@ -227,6 +230,14 @@ export default function JobDetailPage() {
       showToast.error('Failed to save job');
     }
   };
+
+  // Post-auth action triggers — when a guest bounces through login from
+  // a public job CTA (?action=apply / ?action=save), open the matching
+  // form/modal automatically. The hook strips the param after firing.
+  useActionTrigger('apply', () => setShowApplyModal(true));
+  useActionTrigger('save', () => {
+    void handleSave();
+  });
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -860,7 +871,7 @@ export default function JobDetailPage() {
                         )}
                       </div>
                       <div>
-                        <h3 className="flex items-center gap-2 font-semibold text-[var(--text)]">
+                        <h3 className="flex flex-wrap items-center gap-2 font-semibold text-[var(--text)]">
                           {job.company.companyName}
                           {job.company.isVerified ? (
                             <Badge variant="success" size="sm">
@@ -871,6 +882,16 @@ export default function JobDetailPage() {
                               Not Verified
                             </Badge>
                           )}
+                          <RatingBadge
+                            rating={(job.company as { averageRating?: number }).averageRating ?? 0}
+                            count={(job.company as { totalReviews?: number }).totalReviews ?? 0}
+                            size="xs"
+                            href={
+                              (job.company as { slug?: string | null }).slug
+                                ? `/companies/${encodeURIComponent((job.company as { slug?: string | null }).slug!)}/reviews`
+                                : undefined
+                            }
+                          />
                           <PresenceIndicator userId={job.company.userId} showLabel size="sm" />
                         </h3>
                         {job.company.tagline && (
@@ -910,6 +931,24 @@ export default function JobDetailPage() {
                           )}
                         </div>
                       </div>
+                    </div>
+                    {/* View full company profile — links to the public
+                        SEO surface when a slug exists, or the legacy
+                        /company/{id} route which 301-redirects to the
+                        slug URL when available. Plan §13 risk #25:
+                        "Job → Company tab → Profile button entry path". */}
+                    <div>
+                      <Link
+                        href={
+                          job.company.slug
+                            ? `/companies/${job.company.slug}`
+                            : `/company/${job.company.id}`
+                        }
+                        className="bg-primary/10 text-primary hover:bg-primary/20 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+                      >
+                        View full company profile
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Link>
                     </div>
                     {job.company.description && (
                       <p className="line-clamp-4 text-sm leading-relaxed text-[var(--text-secondary)]">

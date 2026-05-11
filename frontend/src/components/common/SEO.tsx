@@ -34,6 +34,8 @@ interface SEOProps {
   tags?: string[];
   /** hreflang overrides for this specific page. */
   languages?: Record<string, string>;
+  /** Pagination — emits `<link rel="prev">` / `<link rel="next">`. */
+  pagination?: { prev?: string; next?: string };
 }
 
 /**
@@ -80,6 +82,7 @@ export function generateMetadata({
   section,
   tags,
   languages,
+  pagination,
 }: SEOProps): Metadata {
   const fullTitle = title;
   const desc = description || APP_CONFIG.description;
@@ -152,6 +155,25 @@ export function generateMetadata({
       },
     },
   };
+}
+
+/**
+ * Emits inline <link rel="prev"> / <link rel="next"> tags. React 19
+ * auto-hoists these into <head>, so a page can render this component
+ * anywhere in its JSX tree.
+ *
+ * Note: Google deprecated rel=prev/next as a search signal in 2019, but
+ * Bing, Yandex, Baidu, screen-readers, and browser prefetch heuristics
+ * still consume them. Emit when paginating long listings.
+ */
+export function PaginationLinks({ prev, next }: { prev?: string; next?: string }) {
+  if (!prev && !next) return null;
+  return (
+    <>
+      {prev ? <link rel="prev" href={prev} /> : null}
+      {next ? <link rel="next" href={next} /> : null}
+    </>
+  );
 }
 
 // Re-export so callers that only need the site-wide wide hero URL (e.g. for

@@ -37,4 +37,6 @@ schedulerQueue
     logger.error('Failed to schedule backup cleanup job:', err);
   });
 
-logger.info('Backup jobs scheduled on: scheduler-queue (db-backup@2AM-UTC, backup-cleanup@Sun4AM-UTC)');
+logger.info(
+  'Backup jobs scheduled on: scheduler-queue (db-backup@2AM-UTC, backup-cleanup@Sun4AM-UTC)'
+);

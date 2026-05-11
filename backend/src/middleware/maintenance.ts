@@ -18,11 +18,7 @@ import { isFeatureEnabled, getFlag } from '../config/feature-flags';
 export const maintenanceCheck = () => {
   // Endpoints that should bypass maintenance mode
   // Note: Middleware is mounted at /api, so paths start with /v1/...
-  const WHITELIST_PATTERNS = [
-    /^\/v1\/feature-flags/,
-    /^\/v1\/public/,
-    /^\/v1\/config/,
-  ];
+  const WHITELIST_PATTERNS = [/^\/v1\/feature-flags/, /^\/v1\/public/, /^\/v1\/config/];
 
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

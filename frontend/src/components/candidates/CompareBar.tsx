@@ -50,7 +50,13 @@ export default function CompareBar({ candidates, onRemove, onClear, onCompare }:
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onClear} className="text-xs" tooltip="Clear all selected candidates">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            className="text-xs"
+            tooltip="Clear all selected candidates"
+          >
             Clear
           </Button>
           <Button

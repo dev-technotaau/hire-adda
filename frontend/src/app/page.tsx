@@ -48,6 +48,13 @@ import {
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import HeroJobSearchBar from '@/components/job-search/HeroJobSearchBar';
+import JobSearchHistoryChips from '@/components/job-search/JobSearchHistoryChips';
+// Discovery widgets (Sections 1–4 of the homepage discovery layer).
+import JobsCategoriesChipsSection from '@/components/home/JobsCategoriesChipsSection';
+import TopCompanyCategoriesSlider from '@/components/home/TopCompanyCategoriesSlider';
+import FeaturedCompaniesSlider from '@/components/home/FeaturedCompaniesSlider';
+import PopularRolesGrid from '@/components/home/PopularRolesGrid';
 
 export const metadata: Metadata = buildMetadata({
   title: "Hire Adda — India's Leading Job Portal & Recruitment Platform",
@@ -82,7 +89,7 @@ const homeJsonLd = graph(
     name: "Hire Adda — India's Leading Job Portal & Recruitment Platform",
     description:
       "Find your dream job or hire top talent on India's AI-powered recruitment platform. Verified employers, smart matching, and quick apply.",
-    speakableCssSelectors: ['h1', '.hero-subtitle'],
+    speakableCssSelectors: ['h1', '.hero-subtitle', '[data-speakable]'],
     primaryImage: '/images/og-home.png',
   }),
   // Primary navigation — drives SERP sitelinks under the top brand result.
@@ -433,21 +440,36 @@ export default async function Home() {
                 Build Your Future
               </h1>
 
-              <p className="mt-6 max-w-xl text-lg text-[var(--text-secondary)] sm:text-xl">
+              <p className="hero-subtitle mt-6 max-w-xl text-lg text-[var(--text-secondary)] sm:text-xl">
                 Connect with top companies and discover opportunities that match your skills.
                 Whether you&apos;re hiring or looking for your next role, Hire Adda has you covered.
               </p>
 
-              <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row">
+              {/* Public hero search bar (Phase 9) — keyword + location +
+                  experience + Search button. Submitting navigates to
+                  /jobs?q=...&location=...&experienceMin/Max=... so the
+                  user lands on the public listing surface with their
+                  search pre-applied. */}
+              <div className="mt-8 max-w-2xl">
+                <HeroJobSearchBar destination="/jobs" />
+                <JobSearchHistoryChips
+                  type="JOB"
+                  destination="/jobs"
+                  className="mt-3"
+                  hideWhenEmpty
+                />
+              </div>
+
+              <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row">
                 <Tooltip content="Create your free account and start your job search">
-                  <Link href="/auth/register">
+                  <Link href="/auth/register/candidate">
                     <Button size="lg" rightIcon={<ArrowRight className="h-5 w-5" />}>
                       Get Started
                     </Button>
                   </Link>
                 </Tooltip>
                 <Tooltip content="Register as an employer and post job listings">
-                  <Link href="/auth/register?role=employer">
+                  <Link href="/auth/register/employer">
                     <Button variant="highlight" size="lg">
                       Post a Job
                     </Button>
@@ -483,6 +505,112 @@ export default async function Home() {
                 fetchPriority="high"
               />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================================================================
+                DISCOVERY LAYER (4 sections): chips · top-categories ·
+                featured companies · popular roles. Drive guests deeper
+                into the public job/company surfaces without a search.
+            ================================================================ */}
+      {/* Section 1 — Jobs in Demand + Popular Categories chips (no heading) */}
+      <div className="bg-white">
+        <JobsCategoriesChipsSection />
+      </div>
+
+      {/* Section 2 — Top Companies Hiring Now (per-category slider) */}
+      <div className="bg-[var(--bg-secondary)]">
+        <TopCompanyCategoriesSlider />
+      </div>
+
+      {/* Section 3 — Featured Companies Actively Hiring */}
+      <div className="bg-white">
+        <FeaturedCompaniesSlider />
+      </div>
+
+      {/* Section 4 — Discover Jobs Across Popular Roles */}
+      <div className="bg-[var(--bg-secondary)]">
+        <PopularRolesGrid />
+      </div>
+
+      {/* ================================================================
+                SECTION 1.5: Hiring solutions (per pricing-guide §"Best Website Home Options")
+            ================================================================ */}
+      <section className="bg-[var(--bg)] py-14 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <span className="bg-primary-light text-primary inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold">
+              Choose Hiring Solution
+            </span>
+            <h2 className="mt-4 text-3xl font-bold text-[var(--text)] sm:text-4xl">
+              Hire your way
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-[var(--text-secondary)]">
+              Four ways to find the right talent — pick the one that fits your stage.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                title: 'Post a Job',
+                href: '/employer/jobs/new',
+                desc: 'Free job post in 2 minutes — reach thousands of candidates.',
+                accent: 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300',
+              },
+              {
+                title: 'Search CV Database',
+                href: '/pricing/employer#employer_cv_database',
+                desc: 'Filter the Talent Vault, unlock contact details, hire faster.',
+                accent:
+                  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
+              },
+              {
+                title: 'Assisted Hiring',
+                href: '/pricing/employer#employer_assisted_hiring',
+                desc: 'Our team finds 4-5 matching CVs for your role in 7 days.',
+                accent: 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+              },
+              {
+                title: 'Find Recruitment Partners',
+                href: '/vendors',
+                desc: 'Browse vetted staffing agencies and send hiring leads.',
+                accent: 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300',
+              },
+            ].map((card) => (
+              <a
+                key={card.title}
+                href={card.href}
+                className="group hover:border-primary/30 flex flex-col rounded-xl border border-[var(--border)] bg-white p-5 transition-all hover:shadow-md dark:bg-[var(--bg-secondary)]"
+              >
+                <div
+                  className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold ${card.accent}`}
+                  aria-hidden
+                >
+                  {card.title.charAt(0)}
+                </div>
+                <h3 className="group-hover:text-primary text-base font-semibold text-[var(--text)]">
+                  {card.title}
+                </h3>
+                <p className="mt-1 flex-1 text-sm text-[var(--text-muted)]">{card.desc}</p>
+                <span className="text-primary mt-3 inline-flex items-center gap-1 text-sm font-semibold">
+                  Learn more
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17 8l4 4m0 0l-4 4m4-4H3"
+                    />
+                  </svg>
+                </span>
+              </a>
+            ))}
           </div>
         </div>
       </section>
@@ -617,7 +745,7 @@ export default async function Home() {
                 ))}
               </ul>
               <Tooltip content="Sign up and find your dream job">
-                <Link href="/auth/register">
+                <Link href="/auth/register/candidate">
                   <Button size="lg" rightIcon={<ArrowRight className="h-5 w-5" />}>
                     Start Your Job Search
                   </Button>
@@ -646,7 +774,7 @@ export default async function Home() {
                 ))}
               </ul>
               <Tooltip content="Register as an employer and start hiring">
-                <Link href="/auth/register?role=employer">
+                <Link href="/auth/register/employer">
                   <Button
                     size="lg"
                     className="bg-accent hover:bg-accent-hover text-white"
@@ -680,7 +808,7 @@ export default async function Home() {
               const count = getCategoryCount(cat.title, categoryCounts);
               return (
                 <Link
-                  href="/auth/register"
+                  href="/auth/register/candidate"
                   key={cat.title}
                   title={`Browse ${cat.title} jobs`}
                   className="group hover:border-primary/30 rounded-xl border border-[var(--border)] bg-white p-5 transition-all hover:shadow-md"
@@ -862,7 +990,7 @@ export default async function Home() {
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Tooltip content="Sign up for a free Hire Adda account">
-              <Link href="/auth/register">
+              <Link href="/auth/register/candidate">
                 <Button
                   size="lg"
                   className="text-primary bg-white hover:bg-white/90"
@@ -873,7 +1001,7 @@ export default async function Home() {
               </Link>
             </Tooltip>
             <Tooltip content="Register as an employer and find top talent">
-              <Link href="/auth/register?role=employer">
+              <Link href="/auth/register/employer">
                 <Button
                   variant="outline"
                   size="lg"

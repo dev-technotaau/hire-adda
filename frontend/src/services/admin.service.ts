@@ -35,13 +35,33 @@ import type { Job } from '@/types/job';
 import type { FeatureFlags } from '@/types/feature-flag';
 
 interface RawStatsData {
-  users?: { total?: number; candidates?: number; employers?: number; admins?: number; newThisWeek?: number; newThisMonth?: number; activeThisWeek?: number };
-  jobs?: { total?: number; active?: number; expired?: number; newThisWeek?: number; newThisMonth?: number };
+  users?: {
+    total?: number;
+    candidates?: number;
+    employers?: number;
+    admins?: number;
+    newThisWeek?: number;
+    newThisMonth?: number;
+    activeThisWeek?: number;
+  };
+  jobs?: {
+    total?: number;
+    active?: number;
+    expired?: number;
+    newThisWeek?: number;
+    newThisMonth?: number;
+  };
   applications?: { total?: number; thisWeek?: number; conversionRate?: number };
   verifications?: { pending?: number; approved?: number; rejected?: number };
-  totalUsers?: number; totalCandidates?: number; totalEmployers?: number;
-  totalJobs?: number; activeJobs?: number; totalApplications?: number;
-  newUsersToday?: number; newUsersThisWeek?: number; newUsersThisMonth?: number;
+  totalUsers?: number;
+  totalCandidates?: number;
+  totalEmployers?: number;
+  totalJobs?: number;
+  activeJobs?: number;
+  totalApplications?: number;
+  newUsersToday?: number;
+  newUsersThisWeek?: number;
+  newUsersThisMonth?: number;
   pendingVerifications?: number;
   topSkills?: Array<{ skill: string; count: number }>;
   topLocations?: Array<{ location: string; count: number }>;
@@ -407,10 +427,7 @@ export const adminService = {
     return res.data;
   },
 
-  async testEmailTemplate(
-    templateName: string,
-    toEmail: string,
-  ): Promise<ApiResponse<unknown>> {
+  async testEmailTemplate(templateName: string, toEmail: string): Promise<ApiResponse<unknown>> {
     const res = await api.post(API.ADMIN.EMAIL_TEMPLATES_TEST, {
       templateName,
       toEmail,
@@ -583,7 +600,9 @@ export const adminService = {
 
   async getExportJobs(
     filters?: Record<string, string | number | undefined>,
-  ): Promise<ApiResponse<{ items: ExportJob[]; counts: Record<string, number>; page: number; limit: number }>> {
+  ): Promise<
+    ApiResponse<{ items: ExportJob[]; counts: Record<string, number>; page: number; limit: number }>
+  > {
     const qs = buildQueryString((filters || {}) as Record<string, string | undefined>);
     const res = await api.get(`${API.ADMIN.EXPORT_JOBS}${qs}`);
     return res.data;
@@ -654,7 +673,10 @@ export const adminService = {
     return res.data;
   },
 
-  async bulkExportUsers(userIds: string[], format: 'csv' | 'xlsx' = 'csv'): Promise<ApiResponse<{ count: number }>> {
+  async bulkExportUsers(
+    userIds: string[],
+    format: 'csv' | 'xlsx' = 'csv',
+  ): Promise<ApiResponse<{ count: number }>> {
     const res = await api.post('/super-admin/users/bulk/export', { userIds, format });
     return res.data;
   },
@@ -667,7 +689,10 @@ export const adminService = {
     return res.data;
   },
 
-  async bulkSuspendUsers(userIds: string[], reason?: string): Promise<ApiResponse<{ count: number }>> {
+  async bulkSuspendUsers(
+    userIds: string[],
+    reason?: string,
+  ): Promise<ApiResponse<{ count: number }>> {
     const res = await api.post('/super-admin/users/bulk/suspend', { userIds, reason });
     return res.data;
   },

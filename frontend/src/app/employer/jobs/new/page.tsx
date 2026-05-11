@@ -18,6 +18,7 @@ import {
   Save,
   Download,
   Upload,
+  Users,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -38,6 +39,10 @@ import { showToast } from '@/components/ui/Toast';
 import Tooltip from '@/components/ui/Tooltip';
 import DOMPurify from 'isomorphic-dompurify';
 import { jobService } from '@/services/job.service';
+import PlanGate from '@/components/billing/PlanGate';
+import PremiumLockBadge from '@/components/billing/PremiumLockBadge';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { useUpgradeModal } from '@/components/billing/UpgradeModal';
 import { jobTemplateService } from '@/services/job-template.service';
 import { draftService } from '@/services/draft.service';
 import { employerService } from '@/services/employer.service';
@@ -95,9 +100,16 @@ const initialForm: CreateJobRequest = {
 
 export default function PostJobPage() {
   const router = useRouter();
+  const { hasFeature } = useEntitlements();
+  const upgrade = useUpgradeModal();
   const [step, setStep] = useState<Step>(0);
   const [form, setForm] = useState<CreateJobRequest>(initialForm);
   const [tagInput, setTagInput] = useState('');
+
+  // Assisted Hiring promo — shown only on the very first step so it's not
+  // intrusive while the employer is filling later steps. Hidden if the
+  // employer has the assisted-hiring entitlement already (they bought it).
+  const showAssistedHiringPromo = step === 0 && !hasFeature('feature.assisted_hiring');
 
   // Template state
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
@@ -365,1058 +377,456 @@ export default function PostJobPage() {
 
   return (
     <DashboardLayout requiredRole={['EMPLOYER']}>
-      <div className="space-y-6">
-        {/* Draft Restore Banner */}
-        {draftBanner && (
-          <div className="border-primary/30 bg-primary-light flex items-center justify-between rounded-lg border px-4 py-3">
-            <div className="flex items-center gap-3">
-              <FileText className="text-primary h-5 w-5" />
-              <div>
-                <p className="text-sm font-medium text-[var(--text)]">
-                  You have a saved draft from{' '}
-                  {new Date(draftBanner.updatedAt).toLocaleDateString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">Would you like to restore it?</p>
+      <PlanGate
+        require={['feature.job_post']}
+        minResource={{ unit: 'JOB_POST', amount: 1 }}
+        feature="job posting"
+      >
+        <div className="space-y-6">
+          {/* Assisted Hiring promo — first step only, hidden once purchased */}
+          {showAssistedHiringPromo && (
+            <button
+              type="button"
+              onClick={() => upgrade.open({ feature: 'feature.assisted_hiring' })}
+              className="group flex w-full items-start gap-3 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-4 text-left transition-colors hover:from-emerald-100 hover:to-teal-100 dark:border-emerald-900/30 dark:from-emerald-900/20 dark:to-teal-900/20"
+            >
+              <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-emerald-600 text-white shadow">
+                <Users className="h-5 w-5" />
               </div>
+              <div className="flex-1">
+                <p className="font-semibold text-emerald-900 dark:text-emerald-100">
+                  Don&apos;t have time to source candidates?
+                </p>
+                <p className="mt-0.5 text-sm text-emerald-800 dark:text-emerald-200/80">
+                  Try Assisted Hiring (₹1,499) — our team finds 4-5 matching CVs and emails them to
+                  you within 7 days. Includes a requirement call + job-post setup help.
+                </p>
+              </div>
+              <span className="hidden items-center gap-1 self-center rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors group-hover:bg-emerald-800 sm:inline-flex">
+                Learn more
+              </span>
+            </button>
+          )}
+          {upgrade.modal}
+
+          {/* Draft Restore Banner */}
+          {draftBanner && (
+            <div className="border-primary/30 bg-primary-light flex items-center justify-between rounded-lg border px-4 py-3">
+              <div className="flex items-center gap-3">
+                <FileText className="text-primary h-5 w-5" />
+                <div>
+                  <p className="text-sm font-medium text-[var(--text)]">
+                    You have a saved draft from{' '}
+                    {new Date(draftBanner.updatedAt).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">Would you like to restore it?</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDismissDraft}
+                  tooltip="Discard saved draft"
+                >
+                  Dismiss
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleRestoreDraft}
+                  tooltip="Restore your previously saved draft"
+                >
+                  Restore Draft
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-[var(--text)]">Post a New Job</h1>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
+                Fill in the details to create a job posting
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleDismissDraft}
-                tooltip="Discard saved draft"
+                onClick={openLoadTemplateModal}
+                tooltip="Load a saved job template"
               >
-                Dismiss
+                <Download className="mr-1.5 h-4 w-4" /> Load Template
               </Button>
               <Button
-                variant="primary"
+                variant="outline"
                 size="sm"
-                onClick={handleRestoreDraft}
-                tooltip="Restore your previously saved draft"
+                onClick={() => setShowSaveTemplateModal(true)}
+                tooltip="Save current form as a reusable template"
               >
-                Restore Draft
+                <Upload className="mr-1.5 h-4 w-4" /> Save as Template
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={saveDraft}
+                tooltip="Save current progress as draft"
+              >
+                <Save className="mr-1.5 h-4 w-4" /> Save Draft
               </Button>
             </div>
           </div>
-        )}
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--text)]">Post a New Job</h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Fill in the details to create a job posting
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openLoadTemplateModal}
-              tooltip="Load a saved job template"
-            >
-              <Download className="mr-1.5 h-4 w-4" /> Load Template
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSaveTemplateModal(true)}
-              tooltip="Save current form as a reusable template"
-            >
-              <Upload className="mr-1.5 h-4 w-4" /> Save as Template
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={saveDraft}
-              tooltip="Save current progress as draft"
-            >
-              <Save className="mr-1.5 h-4 w-4" /> Save Draft
-            </Button>
-          </div>
-        </div>
-
-        {/* Step Indicator */}
-        <div className="flex items-center justify-between">
-          {steps.map((s, i) => (
-            <div key={i} className="flex flex-1 items-center">
-              <Tooltip content={`Go to ${s.label} step`}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (i <= step) setStep(i as Step);
-                  }}
-                  className={`flex flex-col items-center gap-1.5 ${i <= step ? 'cursor-pointer' : 'cursor-default'}`}
-                >
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors ${
-                      i < step
-                        ? 'bg-[var(--success)] text-white'
-                        : i === step
-                          ? 'bg-primary text-white'
-                          : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
-                    }`}
-                  >
-                    {i < step ? <Check className="h-4 w-4" /> : <s.icon className="h-4 w-4" />}
-                  </div>
-                  <span
-                    className={`hidden text-xs sm:block ${
-                      i === step ? 'text-primary font-medium' : 'text-[var(--text-muted)]'
-                    }`}
-                  >
-                    {s.label}
-                  </span>
-                </button>
-              </Tooltip>
-              {i < steps.length - 1 && (
-                <div
-                  className={`mx-2 h-0.5 flex-1 ${
-                    i < step ? 'bg-[var(--success)]' : 'bg-[var(--border)]'
-                  }`}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Step Content */}
-        <Card>
-          {step === 0 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Basic Information</h2>
-              <ServerSuggestionInput
-                category="job_title"
-                label="Job Title"
-                placeholder="e.g. Senior Software Engineer"
-                value={form.title}
-                onChange={(val) => updateField('title', val)}
-                required
-              />
-              {isConsultancy && (
-                <Input
-                  label="Client Company"
-                  placeholder="Company this role is for (visible to candidates)"
-                  value={form.clientCompanyName || ''}
-                  onChange={(e) => updateField('clientCompanyName', e.target.value)}
-                  helperText="The actual company the candidate will work for"
-                />
-              )}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="Job Type"
-                  options={toSelectOptions(JOB_TYPE_LABELS)}
-                  value={form.type || ''}
-                  onChange={(v) => updateField('type', v as CreateJobRequest['type'])}
-                  placeholder="Select type"
-                />
-                <Select
-                  label="Experience Level"
-                  options={toSelectOptions(EXPERIENCE_LEVEL_LABELS)}
-                  value={form.experienceLevel || ''}
-                  onChange={(v) =>
-                    updateField('experienceLevel', v as CreateJobRequest['experienceLevel'])
-                  }
-                  placeholder="Select level"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Input
-                  label="Min Experience (years)"
-                  type="number"
-                  placeholder="0"
-                  value={form.experienceMin?.toString() || ''}
-                  onChange={(e) => updateField('experienceMin', parseInt(e.target.value) || 0)}
-                />
-                <Input
-                  label="Max Experience (years)"
-                  type="number"
-                  placeholder="10"
-                  value={form.experienceMax?.toString() || ''}
-                  onChange={(e) =>
-                    updateField('experienceMax', parseInt(e.target.value) || undefined)
-                  }
-                />
-                <Input
-                  label="Number of Openings"
-                  type="number"
-                  placeholder="1"
-                  value={form.numberOfOpenings?.toString() || ''}
-                  onChange={(e) =>
-                    updateField('numberOfOpenings', parseInt(e.target.value) || undefined)
-                  }
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <ServerAutoSuggest
-                  category="industry"
-                  label="Industry"
-                  placeholder="e.g. Information Technology"
-                  value={form.industry || ''}
-                  onChange={(v) => updateField('industry', v as string)}
-                  allowCreate
-                />
-                <ServerAutoSuggest
-                  category="department"
-                  label="Department"
-                  placeholder="e.g. Engineering"
-                  value={form.department || ''}
-                  onChange={(v) => updateField('department', v as string)}
-                  allowCreate
-                />
-              </div>
-              <Select
-                label="Education Required"
-                options={toSelectOptions(EDUCATION_LEVEL_LABELS)}
-                value={form.educationRequired || ''}
-                onChange={(v) => {
-                  updateField('educationRequired', v as CreateJobRequest['educationRequired']);
-                  // Clear incompatible specific degrees when education level changes
-                  const allowed = getDegreesForLevel(v as string).map((d) => d.value);
-                  if (allowed.length === 0) {
-                    updateField('specificDegrees', []);
-                  } else {
-                    updateField(
-                      'specificDegrees',
-                      (form.specificDegrees || []).filter((d) => allowed.includes(d)),
-                    );
-                  }
-                }}
-                placeholder="Select level"
-              />
-              <ServerAutoSuggest
-                category="field_of_study"
-                label="Preferred Education Field"
-                placeholder="e.g. Computer Science, MBA"
-                value={form.preferredEducationField || ''}
-                onChange={(v) => updateField('preferredEducationField', v as string)}
-                allowCreate
-              />
-              <ServerAutoSuggest
-                category="role_category"
-                label="Role Category"
-                placeholder="e.g. Engineering, Marketing"
-                value={form.roleCategory || ''}
-                onChange={(v) => updateField('roleCategory', v as string)}
-                allowCreate
-              />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="Functional Area"
-                  options={toSelectOptions(FUNCTIONAL_AREA_LABELS)}
-                  value={form.functionalArea || ''}
-                  onChange={(v) =>
-                    updateField('functionalArea', v as CreateJobRequest['functionalArea'])
-                  }
-                  placeholder="Select area"
-                />
-                <Input
-                  label="Job Reference Code"
-                  placeholder="e.g. ENG-2026-001"
-                  value={form.referenceCode || ''}
-                  onChange={(e) => updateField('referenceCode', e.target.value)}
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="UG Required"
-                  options={toSelectOptions(EDUCATION_LEVEL_LABELS)}
-                  value={form.ugRequired || ''}
-                  onChange={(v) => updateField('ugRequired', v as CreateJobRequest['ugRequired'])}
-                  placeholder="Select UG level"
-                />
-                <Select
-                  label="PG Required"
-                  options={toSelectOptions(EDUCATION_LEVEL_LABELS)}
-                  value={form.pgRequired || ''}
-                  onChange={(v) => updateField('pgRequired', v as CreateJobRequest['pgRequired'])}
-                  placeholder="Select PG level"
-                />
-              </div>
-              {/* Specific Degrees */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Specific Degrees Accepted
-                  {(!form.educationRequired ||
-                    getDegreesForLevel(form.educationRequired).length === 0) && (
-                    <span className="ml-1 text-xs font-normal text-[var(--text-muted)]">
-                      {!form.educationRequired
-                        ? '(select education level first)'
-                        : '(not applicable for this level)'}
-                    </span>
-                  )}
-                </label>
-                <div className="mb-2 flex flex-wrap gap-1.5">
-                  {(form.educationRequired && getDegreesForLevel(form.educationRequired).length > 0
-                    ? getDegreesForLevel(form.educationRequired).map(
-                        ({ value: val, label: lbl }) => [val, lbl] as [string, string],
-                      )
-                    : Object.entries(SPECIFIC_DEGREE_LABELS)
-                  ).map(([val, lbl]) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => {
-                        const existing = form.specificDegrees || [];
-                        updateField(
-                          'specificDegrees',
-                          existing.includes(val as SpecificDegree)
-                            ? existing.filter((d) => d !== val)
-                            : [...existing, val as SpecificDegree],
-                        );
-                      }}
-                      className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                        (form.specificDegrees || []).includes(val as SpecificDegree)
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'hover:border-primary/50 border-[var(--border)] text-[var(--text-muted)]'
-                      }`}
-                    >
-                      {lbl}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <ServerAutoSuggest
-                category="field_of_study"
-                label="Degree Specializations"
-                placeholder="e.g. Computer Science, Electronics"
-                multiple
-                allowCreate
-                value={form.degreeSpecializations || []}
-                onChange={(v) => updateField('degreeSpecializations', v as string[])}
-              />
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Job Description</h2>
-              <RichTextEditor
-                label="Description"
-                placeholder="Describe the role, what the candidate will work on, and the team they'll join..."
-                value={form.description}
-                onChange={(v) => updateField('description', v)}
-                required
-              />
-              <RichTextEditor
-                label="Key Responsibilities"
-                placeholder="List the primary responsibilities of this role..."
-                value={form.keyResponsibilities || ''}
-                onChange={(v) => updateField('keyResponsibilities', v)}
-              />
-              <RichTextEditor
-                label="Requirements"
-                placeholder="List the qualifications and skills required..."
-                value={form.requirements || ''}
-                onChange={(v) => updateField('requirements', v)}
-              />
-              <RichTextEditor
-                label="Benefits"
-                placeholder="What benefits does this role offer?"
-                value={form.benefits || ''}
-                onChange={(v) => updateField('benefits', v)}
-              />
-              <Textarea
-                label="Interview Process"
-                rows={3}
-                placeholder="Describe the interview process (e.g. Phone screen → Technical → Onsite)"
-                value={form.interviewProcess || ''}
-                onChange={(e) => updateField('interviewProcess', e.target.value)}
-              />
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Compensation</h2>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Input
-                  label="Min Salary"
-                  type="number"
-                  placeholder="e.g. 500000"
-                  value={form.salaryMin?.toString() || ''}
-                  onChange={(e) => updateField('salaryMin', parseInt(e.target.value) || undefined)}
-                />
-                <Input
-                  label="Max Salary"
-                  type="number"
-                  placeholder="e.g. 1500000"
-                  value={form.salaryMax?.toString() || ''}
-                  onChange={(e) => updateField('salaryMax', parseInt(e.target.value) || undefined)}
-                />
-                <Select
-                  label="Salary Type"
-                  options={toSelectOptions(SALARY_TYPE_LABELS)}
-                  value={form.salaryType || ''}
-                  onChange={(v) => updateField('salaryType', v as CreateJobRequest['salaryType'])}
-                  placeholder="Select type"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="Currency"
-                  options={toSelectOptions(SALARY_CURRENCY_LABELS)}
-                  value={form.currency || ''}
-                  onChange={(v) => updateField('currency', v)}
-                  placeholder="Select currency"
-                />
-                <div className="flex items-end pb-1">
-                  <Switch
-                    label="Disclose salary on listing"
-                    checked={form.salaryDisclosed !== false}
-                    onChange={() => updateField('salaryDisclosed', form.salaryDisclosed === false)}
-                  />
-                </div>
-              </div>
-              <Switch
-                label="Salary is negotiable"
-                checked={form.salaryNegotiable || false}
-                onChange={() => updateField('salaryNegotiable', !form.salaryNegotiable)}
-              />
-              {(form.currency || 'INR') === 'INR' &&
-                form.salaryType === 'ANNUAL' &&
-                (form.salaryMin || form.salaryMax) && (
-                  <p className="text-primary text-sm font-medium">
-                    CTC: {formatSalaryAsLPA(form.salaryMin, form.salaryMax)}
-                  </p>
-                )}
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Location & Work Mode</h2>
-              <ServerAutoSuggest
-                category="location"
-                label="Location"
-                placeholder="e.g. Bangalore, Karnataka"
-                value={form.location}
-                onChange={(v) => updateField('location', v as string)}
-                allowCreate
-                required
-              />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="Work Mode"
-                  options={toSelectOptions(WORK_MODE_LABELS)}
-                  value={form.workMode || ''}
-                  onChange={(v) => updateField('workMode', v as CreateJobRequest['workMode'])}
-                  placeholder="Select mode"
-                />
-                <Select
-                  label="Shift Type"
-                  options={toSelectOptions(SHIFT_TYPE_LABELS)}
-                  value={form.shiftType || ''}
-                  onChange={(v) => updateField('shiftType', v as CreateJobRequest['shiftType'])}
-                  placeholder="Select shift"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Switch
-                  label="Remote position"
-                  checked={form.isRemote || false}
-                  onChange={() => updateField('isRemote', !form.isRemote)}
-                />
-                <Switch
-                  label="Relocation assistance offered"
-                  checked={form.relocationAssistance || false}
-                  onChange={() => updateField('relocationAssistance', !form.relocationAssistance)}
-                />
-              </div>
-              <Input
-                label="Travel Requirement (%)"
-                type="number"
-                placeholder="0"
-                value={form.travelRequirementPercent?.toString() || ''}
-                onChange={(e) =>
-                  updateField('travelRequirementPercent', parseInt(e.target.value) || undefined)
-                }
-              />
-              <ServerAutoSuggest
-                category="location"
-                label="Additional Locations"
-                placeholder="e.g. Mumbai, Delhi NCR"
-                multiple
-                allowCreate
-                value={form.additionalLocations || []}
-                onChange={(v) => updateField('additionalLocations', v as string[])}
-              />
-              <Switch
-                label="Accommodation provided"
-                checked={form.accommodationProvided || false}
-                onChange={() => updateField('accommodationProvided', !form.accommodationProvided)}
-              />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Switch
-                  label="Walk-in interview"
-                  checked={form.isWalkIn || false}
-                  onChange={() => updateField('isWalkIn', !form.isWalkIn)}
-                />
-              </div>
-              {form.isWalkIn && (
-                <div className="space-y-4 rounded-lg border border-[var(--border)] p-4">
-                  <h3 className="text-sm font-medium text-[var(--text)]">Walk-in Details</h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <DatePicker
-                      label="Start Date & Time"
-                      value={form.walkInStartDate || ''}
-                      onChange={(v) => updateField('walkInStartDate', v)}
-                      mode="datetime"
-                    />
-                    <DatePicker
-                      label="End Date & Time"
-                      value={form.walkInEndDate || ''}
-                      onChange={(v) => updateField('walkInEndDate', v)}
-                      mode="datetime"
-                    />
-                  </div>
-                  <Input
-                    label="Time"
-                    placeholder="e.g. 10:00 AM - 4:00 PM"
-                    value={form.walkInTime || ''}
-                    onChange={(e) => updateField('walkInTime', e.target.value)}
-                  />
-                  <Input
-                    label="Venue"
-                    placeholder="Full address of walk-in venue"
-                    value={form.walkInVenue || ''}
-                    onChange={(e) => updateField('walkInVenue', e.target.value)}
-                  />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Input
-                      label="Contact Person"
-                      placeholder="Name"
-                      value={form.walkInContactPerson || ''}
-                      onChange={(e) => updateField('walkInContactPerson', e.target.value)}
-                    />
-                    <Input
-                      label="Contact Phone"
-                      placeholder="Phone number"
-                      value={form.walkInContactPhone || ''}
-                      onChange={(e) => updateField('walkInContactPhone', e.target.value)}
-                    />
-                  </div>
-                  <Textarea
-                    label="Instructions"
-                    rows={2}
-                    placeholder="Any special instructions for walk-in candidates"
-                    value={form.walkInInstructions || ''}
-                    onChange={(e) => updateField('walkInInstructions', e.target.value)}
-                  />
-                </div>
-              )}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Contact Person"
-                  placeholder="HR Manager Name"
-                  value={form.contactPerson || ''}
-                  onChange={(e) => updateField('contactPerson', e.target.value)}
-                />
-                <Input
-                  label="Contact Email"
-                  type="email"
-                  placeholder="hr@company.com"
-                  value={form.contactEmail || ''}
-                  onChange={(e) => updateField('contactEmail', e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Skills, Tags & More</h2>
-
-              <ServerAutoSuggest
-                category="skill"
-                label="Required Skills"
-                placeholder="e.g. React, TypeScript"
-                multiple
-                allowCreate
-                required
-                value={form.skillsRequired}
-                onChange={(v) => updateField('skillsRequired', v as string[])}
-              />
-
-              <ServerAutoSuggest
-                category="skill"
-                label="Nice-to-Have Skills"
-                placeholder="e.g. GraphQL, Docker"
-                multiple
-                allowCreate
-                value={form.niceToHaveSkills || []}
-                onChange={(v) => updateField('niceToHaveSkills', v as string[])}
-              />
-
-              <ServerAutoSuggest
-                category="certification"
-                label="Certifications Required"
-                placeholder="e.g. AWS Solutions Architect"
-                multiple
-                allowCreate
-                value={form.certificationsRequired || []}
-                onChange={(v) => updateField('certificationsRequired', v as string[])}
-              />
-
-              <ServerAutoSuggest
-                category="language"
-                label="Languages Required"
-                placeholder="e.g. English, Hindi"
-                multiple
-                allowCreate
-                value={form.languagesRequired || []}
-                onChange={(v) => updateField('languagesRequired', v as string[])}
-              />
-
-              {/* Tags */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">Tags</label>
-                <div className="mb-2 flex gap-2">
-                  <Input
-                    placeholder="e.g. startup, fintech"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addToArray('tags', tagInput, setTagInput);
-                      }
+          {/* Step Indicator */}
+          <div className="flex items-center justify-between">
+            {steps.map((s, i) => (
+              <div key={i} className="flex flex-1 items-center">
+                <Tooltip content={`Go to ${s.label} step`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (i <= step) setStep(i as Step);
                     }}
-                  />
-                  <Button
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() => addToArray('tags', tagInput, setTagInput)}
-                    tooltip="Add tag"
+                    className={`flex flex-col items-center gap-1.5 ${i <= step ? 'cursor-pointer' : 'cursor-default'}`}
                   >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(form.tags || []).map((t) => (
-                    <Tag key={t} label={t} onRemove={() => removeFromArray('tags', t)} />
-                  ))}
-                </div>
-              </div>
-
-              <ServerAutoSuggest
-                category="benefit"
-                label="Job Perks"
-                placeholder="e.g. Free meals, Gym membership"
-                multiple
-                allowCreate
-                value={form.jobPerks || []}
-                onChange={(v) => updateField('jobPerks', v as string[])}
-              />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="Urgency Level"
-                  options={toSelectOptions(URGENCY_LEVEL_LABELS)}
-                  value={form.urgencyLevel || ''}
-                  onChange={(v) =>
-                    updateField('urgencyLevel', v as CreateJobRequest['urgencyLevel'])
-                  }
-                  placeholder="Select urgency"
-                />
-                <DatePicker
-                  label="Application Deadline (Date & Time)"
-                  value={form.applicationDeadline || ''}
-                  onChange={(val) => updateField('applicationDeadline', val)}
-                  mode="datetime"
-                />
-              </div>
-
-              <Switch
-                label="Feature this job (premium)"
-                checked={form.isFeatured || false}
-                onChange={() => updateField('isFeatured', !form.isFeatured)}
-              />
-
-              <Switch
-                label="Premium Job Posting"
-                description="Highlight this job with premium badge and priority placement"
-                checked={form.isPremium || false}
-                onChange={() => updateField('isPremium', !form.isPremium)}
-              />
-
-              {/* Notice Period Preference */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Preferred Notice Period
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(NOTICE_PERIOD_PREFERENCE_LABELS).map(([val, lbl]) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => {
-                        const existing = form.noticePeriodPreference || [];
-                        updateField(
-                          'noticePeriodPreference',
-                          existing.includes(val as NoticePeriodPreference)
-                            ? existing.filter((n) => n !== val)
-                            : [...existing, val as NoticePeriodPreference],
-                        );
-                      }}
-                      className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                        (form.noticePeriodPreference || []).includes(val as NoticePeriodPreference)
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'hover:border-primary/50 border-[var(--border)] text-[var(--text-muted)]'
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                        i < step
+                          ? 'bg-[var(--success)] text-white'
+                          : i === step
+                            ? 'bg-primary text-white'
+                            : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
                       }`}
                     >
-                      {lbl}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 5 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Requirements & Inclusion</h2>
-
-              {/* Diversity Tags */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Diversity & Inclusion Tags
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {DIVERSITY_TAG_OPTIONS.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        const existing = form.diversityTags || [];
-                        updateField(
-                          'diversityTags',
-                          existing.includes(tag)
-                            ? existing.filter((t) => t !== tag)
-                            : [...existing, tag],
-                        );
-                      }}
-                      className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                        (form.diversityTags || []).includes(tag)
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'hover:border-primary/50 border-[var(--border)] text-[var(--text-muted)]'
+                      {i < step ? <Check className="h-4 w-4" /> : <s.icon className="h-4 w-4" />}
+                    </div>
+                    <span
+                      className={`hidden text-xs sm:block ${
+                        i === step ? 'text-primary font-medium' : 'text-[var(--text-muted)]'
                       }`}
                     >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
+                      {s.label}
+                    </span>
+                  </button>
+                </Tooltip>
+                {i < steps.length - 1 && (
+                  <div
+                    className={`mx-2 h-0.5 flex-1 ${
+                      i < step ? 'bg-[var(--success)]' : 'bg-[var(--border)]'
+                    }`}
+                  />
+                )}
               </div>
+            ))}
+          </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Switch
-                  label="PwD (Differently Abled) Friendly"
-                  checked={form.isPwdFriendly || false}
-                  onChange={() => updateField('isPwdFriendly', !form.isPwdFriendly)}
-                />
-                <Switch
-                  label="Visa Sponsorship Available"
-                  checked={form.visaSponsorshipAvailable || false}
-                  onChange={() =>
-                    updateField('visaSponsorshipAvailable', !form.visaSponsorshipAvailable)
-                  }
-                />
-                <Switch
-                  label="Background Check Required"
-                  checked={form.backgroundCheckRequired || false}
-                  onChange={() =>
-                    updateField('backgroundCheckRequired', !form.backgroundCheckRequired)
-                  }
-                />
-                <Switch
-                  label="Passport Required"
-                  checked={form.passportRequired || false}
-                  onChange={() => updateField('passportRequired', !form.passportRequired)}
-                />
-                <Switch
-                  label="Confidential Posting"
-                  checked={form.isConfidential || false}
-                  onChange={() => updateField('isConfidential', !form.isConfidential)}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="Gender Preference"
-                  options={toSelectOptions(GENDER_PREFERENCE_LABELS)}
-                  value={form.genderPreference || ''}
-                  onChange={(v) =>
-                    updateField('genderPreference', v as CreateJobRequest['genderPreference'])
-                  }
-                  placeholder="Select"
-                />
-                <Select
-                  label="Driving License Required"
-                  options={toSelectOptions(DRIVING_LICENSE_TYPE_LABELS)}
-                  value={form.drivingLicenseRequired || ''}
-                  onChange={(v) =>
-                    updateField(
-                      'drivingLicenseRequired',
-                      v as CreateJobRequest['drivingLicenseRequired'],
-                    )
-                  }
-                  placeholder="Select"
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Minimum Age"
-                  type="number"
-                  placeholder="18"
-                  value={form.ageMin?.toString() || ''}
-                  onChange={(e) => updateField('ageMin', parseInt(e.target.value) || undefined)}
-                />
-                <Input
-                  label="Maximum Age"
-                  type="number"
-                  placeholder="65"
-                  value={form.ageMax?.toString() || ''}
-                  onChange={(e) => updateField('ageMax', parseInt(e.target.value) || undefined)}
-                />
-              </div>
-
-              <Textarea
-                label="Bond / Service Agreement Details"
-                rows={2}
-                placeholder="e.g. 2-year service bond with ₹2L penalty clause"
-                value={form.bondDetails || ''}
-                onChange={(e) => updateField('bondDetails', e.target.value)}
-              />
-            </div>
-          )}
-
-          {step === 6 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Screening & Posting</h2>
-
-              <ScreeningQuestionBuilder
-                questions={form.screeningQuestions || []}
-                onChange={(q) => updateField('screeningQuestions', q)}
-              />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="Posting Visibility"
-                  options={toSelectOptions(POSTING_VISIBILITY_LABELS)}
-                  value={form.postingVisibility || ''}
-                  onChange={(v) =>
-                    updateField('postingVisibility', v as CreateJobRequest['postingVisibility'])
-                  }
-                  placeholder="Select visibility"
-                />
-                <Select
-                  label="Apply Method"
-                  options={toSelectOptions(APPLY_METHOD_LABELS)}
-                  value={form.applyMethod || ''}
-                  onChange={(v) => updateField('applyMethod', v as CreateJobRequest['applyMethod'])}
-                  placeholder="Select method"
-                />
-              </div>
-
-              {form.applyMethod === 'EXTERNAL_URL' && (
-                <Input
-                  label="External Apply URL"
-                  placeholder="https://careers.company.com/apply/123"
-                  value={form.externalApplyUrl || ''}
-                  onChange={(e) => updateField('externalApplyUrl', e.target.value)}
+          {/* Step Content */}
+          <Card>
+            {step === 0 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-[var(--text)]">Basic Information</h2>
+                <ServerSuggestionInput
+                  category="job_title"
+                  label="Job Title"
+                  placeholder="e.g. Senior Software Engineer"
+                  value={form.title}
+                  onChange={(val) => updateField('title', val)}
                   required
                 />
-              )}
-
-              <DatePicker
-                label="Schedule Publish Date & Time (leave empty to publish immediately)"
-                value={form.scheduledPublishAt || ''}
-                onChange={(v) => updateField('scheduledPublishAt', v)}
-                mode="datetime"
-              />
-
-              <DatePicker
-                label="Job Expiration Date & Time"
-                helperText="Date and time when this job will automatically expire and close"
-                value={form.expiresAt || ''}
-                onChange={(v) => updateField('expiresAt', v)}
-                mode="datetime"
-                minDate={new Date()}
-              />
-            </div>
-          )}
-
-          {step === 7 && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Preview Your Job Posting</h2>
-
-              {/* Badges row */}
-              <div className="flex flex-wrap gap-1.5">
-                {form.isConfidential && <Badge variant="warning">Confidential</Badge>}
-                {form.isFeatured && <Badge variant="success">Featured</Badge>}
-                {form.isPremium && <Badge variant="info">Premium</Badge>}
-                {form.postingVisibility && form.postingVisibility !== 'PUBLIC' && (
-                  <Badge variant="info">{POSTING_VISIBILITY_LABELS[form.postingVisibility]}</Badge>
+                {isConsultancy && (
+                  <Input
+                    label="Client Company"
+                    placeholder="Company this role is for (visible to candidates)"
+                    value={form.clientCompanyName || ''}
+                    onChange={(e) => updateField('clientCompanyName', e.target.value)}
+                    helperText="The actual company the candidate will work for"
+                  />
                 )}
-                {form.applyMethod && form.applyMethod !== 'IN_PLATFORM' && (
-                  <Badge variant="neutral">{APPLY_METHOD_LABELS[form.applyMethod]}</Badge>
-                )}
-                {form.scheduledPublishAt && (
-                  <Badge variant="info">Scheduled: {form.scheduledPublishAt}</Badge>
-                )}
-                {form.expiresAt && <Badge variant="warning">Expires: {form.expiresAt}</Badge>}
-              </div>
-
-              {/* Basic Info */}
-              <div className="space-y-2">
-                <PreviewSection label="Job Title" value={form.title} />
-                <PreviewSection
-                  label="Job Type"
-                  value={form.type ? JOB_TYPE_LABELS[form.type] : '—'}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label="Job Type"
+                    options={toSelectOptions(JOB_TYPE_LABELS)}
+                    value={form.type || ''}
+                    onChange={(v) => updateField('type', v as CreateJobRequest['type'])}
+                    placeholder="Select type"
+                  />
+                  <Select
+                    label="Experience Level"
+                    options={toSelectOptions(EXPERIENCE_LEVEL_LABELS)}
+                    value={form.experienceLevel || ''}
+                    onChange={(v) =>
+                      updateField('experienceLevel', v as CreateJobRequest['experienceLevel'])
+                    }
+                    placeholder="Select level"
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Input
+                    label="Min Experience (years)"
+                    type="number"
+                    placeholder="0"
+                    value={form.experienceMin?.toString() || ''}
+                    onChange={(e) => updateField('experienceMin', parseInt(e.target.value) || 0)}
+                  />
+                  <Input
+                    label="Max Experience (years)"
+                    type="number"
+                    placeholder="10"
+                    value={form.experienceMax?.toString() || ''}
+                    onChange={(e) =>
+                      updateField('experienceMax', parseInt(e.target.value) || undefined)
+                    }
+                  />
+                  <Input
+                    label="Number of Openings"
+                    type="number"
+                    placeholder="1"
+                    value={form.numberOfOpenings?.toString() || ''}
+                    onChange={(e) =>
+                      updateField('numberOfOpenings', parseInt(e.target.value) || undefined)
+                    }
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ServerAutoSuggest
+                    category="industry"
+                    label="Industry"
+                    placeholder="e.g. Information Technology"
+                    value={form.industry || ''}
+                    onChange={(v) => updateField('industry', v as string)}
+                    allowCreate
+                  />
+                  <ServerAutoSuggest
+                    category="department"
+                    label="Department"
+                    placeholder="e.g. Engineering"
+                    value={form.department || ''}
+                    onChange={(v) => updateField('department', v as string)}
+                    allowCreate
+                  />
+                </div>
+                <Select
+                  label="Education Required"
+                  options={toSelectOptions(EDUCATION_LEVEL_LABELS)}
+                  value={form.educationRequired || ''}
+                  onChange={(v) => {
+                    updateField('educationRequired', v as CreateJobRequest['educationRequired']);
+                    // Clear incompatible specific degrees when education level changes
+                    const allowed = getDegreesForLevel(v as string).map((d) => d.value);
+                    if (allowed.length === 0) {
+                      updateField('specificDegrees', []);
+                    } else {
+                      updateField(
+                        'specificDegrees',
+                        (form.specificDegrees || []).filter((d) => allowed.includes(d)),
+                      );
+                    }
+                  }}
+                  placeholder="Select level"
                 />
-                <PreviewSection
-                  label="Experience"
-                  value={`${form.experienceMin || 0} - ${form.experienceMax || 'Any'} years`}
+                <ServerAutoSuggest
+                  category="field_of_study"
+                  label="Preferred Education Field"
+                  placeholder="e.g. Computer Science, MBA"
+                  value={form.preferredEducationField || ''}
+                  onChange={(v) => updateField('preferredEducationField', v as string)}
+                  allowCreate
                 />
-                <PreviewSection
-                  label="Experience Level"
-                  value={form.experienceLevel ? EXPERIENCE_LEVEL_LABELS[form.experienceLevel] : '—'}
+                <ServerAutoSuggest
+                  category="role_category"
+                  label="Role Category"
+                  placeholder="e.g. Engineering, Marketing"
+                  value={form.roleCategory || ''}
+                  onChange={(v) => updateField('roleCategory', v as string)}
+                  allowCreate
                 />
-                <PreviewSection
-                  label="Education"
-                  value={
-                    form.educationRequired ? EDUCATION_LEVEL_LABELS[form.educationRequired] : '—'
-                  }
-                />
-                {form.preferredEducationField && (
-                  <PreviewSection label="Education Field" value={form.preferredEducationField} />
-                )}
-                {form.roleCategory && (
-                  <PreviewSection label="Role Category" value={form.roleCategory} />
-                )}
-                {form.industry && <PreviewSection label="Industry" value={form.industry} />}
-                {form.department && <PreviewSection label="Department" value={form.department} />}
-                <PreviewSection label="Openings" value={form.numberOfOpenings?.toString() || '—'} />
-                {form.functionalArea && (
-                  <PreviewSection
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
                     label="Functional Area"
-                    value={FUNCTIONAL_AREA_LABELS[form.functionalArea]}
+                    options={toSelectOptions(FUNCTIONAL_AREA_LABELS)}
+                    value={form.functionalArea || ''}
+                    onChange={(v) =>
+                      updateField('functionalArea', v as CreateJobRequest['functionalArea'])
+                    }
+                    placeholder="Select area"
                   />
-                )}
-                {form.referenceCode && (
-                  <PreviewSection label="Reference Code" value={form.referenceCode} />
-                )}
-                {form.ugRequired && (
-                  <PreviewSection
+                  <Input
+                    label="Job Reference Code"
+                    placeholder="e.g. ENG-2026-001"
+                    value={form.referenceCode || ''}
+                    onChange={(e) => updateField('referenceCode', e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
                     label="UG Required"
-                    value={EDUCATION_LEVEL_LABELS[form.ugRequired]}
+                    options={toSelectOptions(EDUCATION_LEVEL_LABELS)}
+                    value={form.ugRequired || ''}
+                    onChange={(v) => updateField('ugRequired', v as CreateJobRequest['ugRequired'])}
+                    placeholder="Select UG level"
                   />
-                )}
-                {form.pgRequired && (
-                  <PreviewSection
+                  <Select
                     label="PG Required"
-                    value={EDUCATION_LEVEL_LABELS[form.pgRequired]}
+                    options={toSelectOptions(EDUCATION_LEVEL_LABELS)}
+                    value={form.pgRequired || ''}
+                    onChange={(v) => updateField('pgRequired', v as CreateJobRequest['pgRequired'])}
+                    placeholder="Select PG level"
                   />
-                )}
-              </div>
-
-              {(form.specificDegrees || []).length > 0 && (
+                </div>
+                {/* Specific Degrees */}
                 <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Specific Degrees</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(form.specificDegrees || []).map((d) => (
-                      <Tag key={d} label={SPECIFIC_DEGREE_LABELS[d] || d} />
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                    Specific Degrees Accepted
+                    {(!form.educationRequired ||
+                      getDegreesForLevel(form.educationRequired).length === 0) && (
+                      <span className="ml-1 text-xs font-normal text-[var(--text-muted)]">
+                        {!form.educationRequired
+                          ? '(select education level first)'
+                          : '(not applicable for this level)'}
+                      </span>
+                    )}
+                  </label>
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {(form.educationRequired &&
+                    getDegreesForLevel(form.educationRequired).length > 0
+                      ? getDegreesForLevel(form.educationRequired).map(
+                          ({ value: val, label: lbl }) => [val, lbl] as [string, string],
+                        )
+                      : Object.entries(SPECIFIC_DEGREE_LABELS)
+                    ).map(([val, lbl]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => {
+                          const existing = form.specificDegrees || [];
+                          updateField(
+                            'specificDegrees',
+                            existing.includes(val as SpecificDegree)
+                              ? existing.filter((d) => d !== val)
+                              : [...existing, val as SpecificDegree],
+                          );
+                        }}
+                        className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                          (form.specificDegrees || []).includes(val as SpecificDegree)
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'hover:border-primary/50 border-[var(--border)] text-[var(--text-muted)]'
+                        }`}
+                      >
+                        {lbl}
+                      </button>
                     ))}
                   </div>
                 </div>
-              )}
-
-              {(form.degreeSpecializations || []).length > 0 && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Degree Specializations</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(form.degreeSpecializations || []).map((d) => (
-                      <Tag key={d} label={d} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Description (rich text) */}
-              <div className="border-t border-[var(--border)] pt-4">
-                <h3 className="mb-2 font-medium text-[var(--text)]">Description</h3>
-                <div
-                  className="prose prose-sm max-w-none text-sm text-[var(--text-secondary)]"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.description || '') }}
+                <ServerAutoSuggest
+                  category="field_of_study"
+                  label="Degree Specializations"
+                  placeholder="e.g. Computer Science, Electronics"
+                  multiple
+                  allowCreate
+                  value={form.degreeSpecializations || []}
+                  onChange={(v) => updateField('degreeSpecializations', v as string[])}
                 />
               </div>
+            )}
 
-              {form.keyResponsibilities && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Key Responsibilities</h3>
-                  <div
-                    className="prose prose-sm max-w-none text-sm text-[var(--text-secondary)]"
-                    dangerouslySetInnerHTML={{
-                      __html: DOMPurify.sanitize(form.keyResponsibilities),
-                    }}
+            {step === 1 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-[var(--text)]">Job Description</h2>
+                <RichTextEditor
+                  label="Description"
+                  placeholder="Describe the role, what the candidate will work on, and the team they'll join..."
+                  value={form.description}
+                  onChange={(v) => updateField('description', v)}
+                  required
+                />
+                <RichTextEditor
+                  label="Key Responsibilities"
+                  placeholder="List the primary responsibilities of this role..."
+                  value={form.keyResponsibilities || ''}
+                  onChange={(v) => updateField('keyResponsibilities', v)}
+                />
+                <RichTextEditor
+                  label="Requirements"
+                  placeholder="List the qualifications and skills required..."
+                  value={form.requirements || ''}
+                  onChange={(v) => updateField('requirements', v)}
+                />
+                <RichTextEditor
+                  label="Benefits"
+                  placeholder="What benefits does this role offer?"
+                  value={form.benefits || ''}
+                  onChange={(v) => updateField('benefits', v)}
+                />
+                <Textarea
+                  label="Interview Process"
+                  rows={3}
+                  placeholder="Describe the interview process (e.g. Phone screen → Technical → Onsite)"
+                  value={form.interviewProcess || ''}
+                  onChange={(e) => updateField('interviewProcess', e.target.value)}
+                />
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-[var(--text)]">Compensation</h2>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Input
+                    label="Min Salary"
+                    type="number"
+                    placeholder="e.g. 500000"
+                    value={form.salaryMin?.toString() || ''}
+                    onChange={(e) =>
+                      updateField('salaryMin', parseInt(e.target.value) || undefined)
+                    }
+                  />
+                  <Input
+                    label="Max Salary"
+                    type="number"
+                    placeholder="e.g. 1500000"
+                    value={form.salaryMax?.toString() || ''}
+                    onChange={(e) =>
+                      updateField('salaryMax', parseInt(e.target.value) || undefined)
+                    }
+                  />
+                  <Select
+                    label="Salary Type"
+                    options={toSelectOptions(SALARY_TYPE_LABELS)}
+                    value={form.salaryType || ''}
+                    onChange={(v) => updateField('salaryType', v as CreateJobRequest['salaryType'])}
+                    placeholder="Select type"
                   />
                 </div>
-              )}
-
-              {form.requirements && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Requirements</h3>
-                  <div
-                    className="prose prose-sm max-w-none text-sm text-[var(--text-secondary)]"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.requirements) }}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label="Currency"
+                    options={toSelectOptions(SALARY_CURRENCY_LABELS)}
+                    value={form.currency || ''}
+                    onChange={(v) => updateField('currency', v)}
+                    placeholder="Select currency"
                   />
+                  <div className="flex items-end pb-1">
+                    <Switch
+                      label="Disclose salary on listing"
+                      checked={form.salaryDisclosed !== false}
+                      onChange={() =>
+                        updateField('salaryDisclosed', form.salaryDisclosed === false)
+                      }
+                    />
+                  </div>
                 </div>
-              )}
-
-              {form.benefits && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Benefits</h3>
-                  <div
-                    className="prose prose-sm max-w-none text-sm text-[var(--text-secondary)]"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.benefits) }}
-                  />
-                </div>
-              )}
-
-              {form.interviewProcess && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Interview Process</h3>
-                  <p className="text-sm whitespace-pre-wrap text-[var(--text-secondary)]">
-                    {form.interviewProcess}
-                  </p>
-                </div>
-              )}
-
-              {/* Compensation */}
-              <div className="space-y-2 border-t border-[var(--border)] pt-4">
-                <h3 className="mb-2 font-medium text-[var(--text)]">Compensation</h3>
-                <div className="grid gap-2 text-sm sm:grid-cols-2">
-                  <p>
-                    <span className="text-[var(--text-muted)]">Salary: </span>
-                    <span className="text-[var(--text)]">
-                      {form.salaryMin || '—'} - {form.salaryMax || '—'} {form.currency || 'INR'}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-[var(--text-muted)]">Type: </span>
-                    <span className="text-[var(--text)]">
-                      {form.salaryType ? SALARY_TYPE_LABELS[form.salaryType] : '—'}
-                    </span>
-                  </p>
-                </div>
-                {form.salaryNegotiable && (
-                  <p className="text-sm text-[var(--success)]">Salary is negotiable</p>
-                )}
+                <Switch
+                  label="Salary is negotiable"
+                  checked={form.salaryNegotiable || false}
+                  onChange={() => updateField('salaryNegotiable', !form.salaryNegotiable)}
+                />
                 {(form.currency || 'INR') === 'INR' &&
                   form.salaryType === 'ANNUAL' &&
                   (form.salaryMin || form.salaryMax) && (
@@ -1425,430 +835,1103 @@ export default function PostJobPage() {
                     </p>
                   )}
               </div>
+            )}
 
-              {/* Location & Work */}
-              <div className="space-y-2 border-t border-[var(--border)] pt-4">
-                <h3 className="mb-2 font-medium text-[var(--text)]">Location & Work</h3>
-                <div className="grid gap-2 text-sm sm:grid-cols-2">
-                  <p>
-                    <span className="text-[var(--text-muted)]">Location: </span>
-                    <span className="text-[var(--text)]">{form.location || '—'}</span>
-                  </p>
-                  <p>
-                    <span className="text-[var(--text-muted)]">Work Mode: </span>
-                    <span className="text-[var(--text)]">
-                      {form.workMode ? WORK_MODE_LABELS[form.workMode] : '—'}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-[var(--text-muted)]">Shift: </span>
-                    <span className="text-[var(--text)]">
-                      {form.shiftType ? SHIFT_TYPE_LABELS[form.shiftType] : '—'}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-[var(--text-muted)]">Remote: </span>
-                    <span className="text-[var(--text)]">{form.isRemote ? 'Yes' : 'No'}</span>
-                  </p>
-                  {form.relocationAssistance && (
-                    <p className="text-[var(--success)]">Relocation assistance offered</p>
+            {step === 3 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-[var(--text)]">Location & Work Mode</h2>
+                <ServerAutoSuggest
+                  category="location"
+                  label="Location"
+                  placeholder="e.g. Bangalore, Karnataka"
+                  value={form.location}
+                  onChange={(v) => updateField('location', v as string)}
+                  allowCreate
+                  required
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label="Work Mode"
+                    options={toSelectOptions(WORK_MODE_LABELS)}
+                    value={form.workMode || ''}
+                    onChange={(v) => updateField('workMode', v as CreateJobRequest['workMode'])}
+                    placeholder="Select mode"
+                  />
+                  <Select
+                    label="Shift Type"
+                    options={toSelectOptions(SHIFT_TYPE_LABELS)}
+                    value={form.shiftType || ''}
+                    onChange={(v) => updateField('shiftType', v as CreateJobRequest['shiftType'])}
+                    placeholder="Select shift"
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Switch
+                    label="Remote position"
+                    checked={form.isRemote || false}
+                    onChange={() => updateField('isRemote', !form.isRemote)}
+                  />
+                  <Switch
+                    label="Relocation assistance offered"
+                    checked={form.relocationAssistance || false}
+                    onChange={() => updateField('relocationAssistance', !form.relocationAssistance)}
+                  />
+                </div>
+                <Input
+                  label="Travel Requirement (%)"
+                  type="number"
+                  placeholder="0"
+                  value={form.travelRequirementPercent?.toString() || ''}
+                  onChange={(e) =>
+                    updateField('travelRequirementPercent', parseInt(e.target.value) || undefined)
+                  }
+                />
+                <ServerAutoSuggest
+                  category="location"
+                  label="Additional Locations"
+                  placeholder="e.g. Mumbai, Delhi NCR"
+                  multiple
+                  allowCreate
+                  value={form.additionalLocations || []}
+                  onChange={(v) => updateField('additionalLocations', v as string[])}
+                />
+                <Switch
+                  label="Accommodation provided"
+                  checked={form.accommodationProvided || false}
+                  onChange={() => updateField('accommodationProvided', !form.accommodationProvided)}
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Switch
+                    label="Walk-in interview"
+                    checked={form.isWalkIn || false}
+                    onChange={() => updateField('isWalkIn', !form.isWalkIn)}
+                  />
+                </div>
+                {form.isWalkIn && (
+                  <div className="space-y-4 rounded-lg border border-[var(--border)] p-4">
+                    <h3 className="text-sm font-medium text-[var(--text)]">Walk-in Details</h3>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <DatePicker
+                        label="Start Date & Time"
+                        value={form.walkInStartDate || ''}
+                        onChange={(v) => updateField('walkInStartDate', v)}
+                        mode="datetime"
+                      />
+                      <DatePicker
+                        label="End Date & Time"
+                        value={form.walkInEndDate || ''}
+                        onChange={(v) => updateField('walkInEndDate', v)}
+                        mode="datetime"
+                      />
+                    </div>
+                    <Input
+                      label="Time"
+                      placeholder="e.g. 10:00 AM - 4:00 PM"
+                      value={form.walkInTime || ''}
+                      onChange={(e) => updateField('walkInTime', e.target.value)}
+                    />
+                    <Input
+                      label="Venue"
+                      placeholder="Full address of walk-in venue"
+                      value={form.walkInVenue || ''}
+                      onChange={(e) => updateField('walkInVenue', e.target.value)}
+                    />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Input
+                        label="Contact Person"
+                        placeholder="Name"
+                        value={form.walkInContactPerson || ''}
+                        onChange={(e) => updateField('walkInContactPerson', e.target.value)}
+                      />
+                      <Input
+                        label="Contact Phone"
+                        placeholder="Phone number"
+                        value={form.walkInContactPhone || ''}
+                        onChange={(e) => updateField('walkInContactPhone', e.target.value)}
+                      />
+                    </div>
+                    <Textarea
+                      label="Instructions"
+                      rows={2}
+                      placeholder="Any special instructions for walk-in candidates"
+                      value={form.walkInInstructions || ''}
+                      onChange={(e) => updateField('walkInInstructions', e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Contact Person"
+                    placeholder="HR Manager Name"
+                    value={form.contactPerson || ''}
+                    onChange={(e) => updateField('contactPerson', e.target.value)}
+                  />
+                  <Input
+                    label="Contact Email"
+                    type="email"
+                    placeholder="hr@company.com"
+                    value={form.contactEmail || ''}
+                    onChange={(e) => updateField('contactEmail', e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {step === 4 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-[var(--text)]">Skills, Tags & More</h2>
+
+                <ServerAutoSuggest
+                  category="skill"
+                  label="Required Skills"
+                  placeholder="e.g. React, TypeScript"
+                  multiple
+                  allowCreate
+                  required
+                  value={form.skillsRequired}
+                  onChange={(v) => updateField('skillsRequired', v as string[])}
+                />
+
+                <ServerAutoSuggest
+                  category="skill"
+                  label="Nice-to-Have Skills"
+                  placeholder="e.g. GraphQL, Docker"
+                  multiple
+                  allowCreate
+                  value={form.niceToHaveSkills || []}
+                  onChange={(v) => updateField('niceToHaveSkills', v as string[])}
+                />
+
+                <ServerAutoSuggest
+                  category="certification"
+                  label="Certifications Required"
+                  placeholder="e.g. AWS Solutions Architect"
+                  multiple
+                  allowCreate
+                  value={form.certificationsRequired || []}
+                  onChange={(v) => updateField('certificationsRequired', v as string[])}
+                />
+
+                <ServerAutoSuggest
+                  category="language"
+                  label="Languages Required"
+                  placeholder="e.g. English, Hindi"
+                  multiple
+                  allowCreate
+                  value={form.languagesRequired || []}
+                  onChange={(v) => updateField('languagesRequired', v as string[])}
+                />
+
+                {/* Tags */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                    Tags
+                  </label>
+                  <div className="mb-2 flex gap-2">
+                    <Input
+                      placeholder="e.g. startup, fintech"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addToArray('tags', tagInput, setTagInput);
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => addToArray('tags', tagInput, setTagInput)}
+                      tooltip="Add tag"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(form.tags || []).map((t) => (
+                      <Tag key={t} label={t} onRemove={() => removeFromArray('tags', t)} />
+                    ))}
+                  </div>
+                </div>
+
+                <ServerAutoSuggest
+                  category="benefit"
+                  label="Job Perks"
+                  placeholder="e.g. Free meals, Gym membership"
+                  multiple
+                  allowCreate
+                  value={form.jobPerks || []}
+                  onChange={(v) => updateField('jobPerks', v as string[])}
+                />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label="Urgency Level"
+                    options={toSelectOptions(URGENCY_LEVEL_LABELS)}
+                    value={form.urgencyLevel || ''}
+                    onChange={(v) =>
+                      updateField('urgencyLevel', v as CreateJobRequest['urgencyLevel'])
+                    }
+                    placeholder="Select urgency"
+                  />
+                  <DatePicker
+                    label="Application Deadline (Date & Time)"
+                    value={form.applicationDeadline || ''}
+                    onChange={(val) => updateField('applicationDeadline', val)}
+                    mode="datetime"
+                  />
+                </div>
+
+                <PremiumLockBadge feature="feature.top_listing_boost" variant="corner">
+                  <div className="rounded-lg border border-[var(--border)] p-3">
+                    <Switch
+                      label="Feature this job"
+                      description="Top Listing Boost — your job appears above standard listings"
+                      checked={form.isFeatured || false}
+                      onChange={() => updateField('isFeatured', !form.isFeatured)}
+                    />
+                  </div>
+                </PremiumLockBadge>
+
+                <PremiumLockBadge feature="feature.urgent_hiring_badge" variant="corner">
+                  <div className="rounded-lg border border-[var(--border)] p-3">
+                    <Switch
+                      label="Urgent Hiring Badge"
+                      description="Add a red Urgent badge — fills roles up to 5× faster"
+                      checked={form.isPremium || false}
+                      onChange={() => updateField('isPremium', !form.isPremium)}
+                    />
+                  </div>
+                </PremiumLockBadge>
+
+                {/* Notice Period Preference */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                    Preferred Notice Period
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(NOTICE_PERIOD_PREFERENCE_LABELS).map(([val, lbl]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => {
+                          const existing = form.noticePeriodPreference || [];
+                          updateField(
+                            'noticePeriodPreference',
+                            existing.includes(val as NoticePeriodPreference)
+                              ? existing.filter((n) => n !== val)
+                              : [...existing, val as NoticePeriodPreference],
+                          );
+                        }}
+                        className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                          (form.noticePeriodPreference || []).includes(
+                            val as NoticePeriodPreference,
+                          )
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'hover:border-primary/50 border-[var(--border)] text-[var(--text-muted)]'
+                        }`}
+                      >
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {step === 5 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-[var(--text)]">
+                  Requirements & Inclusion
+                </h2>
+
+                {/* Diversity Tags */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                    Diversity & Inclusion Tags
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {DIVERSITY_TAG_OPTIONS.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          const existing = form.diversityTags || [];
+                          updateField(
+                            'diversityTags',
+                            existing.includes(tag)
+                              ? existing.filter((t) => t !== tag)
+                              : [...existing, tag],
+                          );
+                        }}
+                        className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                          (form.diversityTags || []).includes(tag)
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'hover:border-primary/50 border-[var(--border)] text-[var(--text-muted)]'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Switch
+                    label="PwD (Differently Abled) Friendly"
+                    checked={form.isPwdFriendly || false}
+                    onChange={() => updateField('isPwdFriendly', !form.isPwdFriendly)}
+                  />
+                  <Switch
+                    label="Visa Sponsorship Available"
+                    checked={form.visaSponsorshipAvailable || false}
+                    onChange={() =>
+                      updateField('visaSponsorshipAvailable', !form.visaSponsorshipAvailable)
+                    }
+                  />
+                  <Switch
+                    label="Background Check Required"
+                    checked={form.backgroundCheckRequired || false}
+                    onChange={() =>
+                      updateField('backgroundCheckRequired', !form.backgroundCheckRequired)
+                    }
+                  />
+                  <Switch
+                    label="Passport Required"
+                    checked={form.passportRequired || false}
+                    onChange={() => updateField('passportRequired', !form.passportRequired)}
+                  />
+                  <Switch
+                    label="Confidential Posting"
+                    checked={form.isConfidential || false}
+                    onChange={() => updateField('isConfidential', !form.isConfidential)}
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label="Gender Preference"
+                    options={toSelectOptions(GENDER_PREFERENCE_LABELS)}
+                    value={form.genderPreference || ''}
+                    onChange={(v) =>
+                      updateField('genderPreference', v as CreateJobRequest['genderPreference'])
+                    }
+                    placeholder="Select"
+                  />
+                  <Select
+                    label="Driving License Required"
+                    options={toSelectOptions(DRIVING_LICENSE_TYPE_LABELS)}
+                    value={form.drivingLicenseRequired || ''}
+                    onChange={(v) =>
+                      updateField(
+                        'drivingLicenseRequired',
+                        v as CreateJobRequest['drivingLicenseRequired'],
+                      )
+                    }
+                    placeholder="Select"
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Minimum Age"
+                    type="number"
+                    placeholder="18"
+                    value={form.ageMin?.toString() || ''}
+                    onChange={(e) => updateField('ageMin', parseInt(e.target.value) || undefined)}
+                  />
+                  <Input
+                    label="Maximum Age"
+                    type="number"
+                    placeholder="65"
+                    value={form.ageMax?.toString() || ''}
+                    onChange={(e) => updateField('ageMax', parseInt(e.target.value) || undefined)}
+                  />
+                </div>
+
+                <Textarea
+                  label="Bond / Service Agreement Details"
+                  rows={2}
+                  placeholder="e.g. 2-year service bond with ₹2L penalty clause"
+                  value={form.bondDetails || ''}
+                  onChange={(e) => updateField('bondDetails', e.target.value)}
+                />
+              </div>
+            )}
+
+            {step === 6 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-[var(--text)]">Screening & Posting</h2>
+
+                <ScreeningQuestionBuilder
+                  questions={form.screeningQuestions || []}
+                  onChange={(q) => updateField('screeningQuestions', q)}
+                />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label="Posting Visibility"
+                    options={toSelectOptions(POSTING_VISIBILITY_LABELS)}
+                    value={form.postingVisibility || ''}
+                    onChange={(v) =>
+                      updateField('postingVisibility', v as CreateJobRequest['postingVisibility'])
+                    }
+                    placeholder="Select visibility"
+                  />
+                  <Select
+                    label="Apply Method"
+                    options={toSelectOptions(APPLY_METHOD_LABELS)}
+                    value={form.applyMethod || ''}
+                    onChange={(v) =>
+                      updateField('applyMethod', v as CreateJobRequest['applyMethod'])
+                    }
+                    placeholder="Select method"
+                  />
+                </div>
+
+                {form.applyMethod === 'EXTERNAL_URL' && (
+                  <Input
+                    label="External Apply URL"
+                    placeholder="https://careers.company.com/apply/123"
+                    value={form.externalApplyUrl || ''}
+                    onChange={(e) => updateField('externalApplyUrl', e.target.value)}
+                    required
+                  />
+                )}
+
+                <DatePicker
+                  label="Schedule Publish Date & Time (leave empty to publish immediately)"
+                  value={form.scheduledPublishAt || ''}
+                  onChange={(v) => updateField('scheduledPublishAt', v)}
+                  mode="datetime"
+                />
+
+                <DatePicker
+                  label="Job Expiration Date & Time"
+                  helperText="Date and time when this job will automatically expire and close"
+                  value={form.expiresAt || ''}
+                  onChange={(v) => updateField('expiresAt', v)}
+                  mode="datetime"
+                  minDate={new Date()}
+                />
+              </div>
+            )}
+
+            {step === 7 && (
+              <div className="space-y-6">
+                <h2 className="text-lg font-semibold text-[var(--text)]">
+                  Preview Your Job Posting
+                </h2>
+
+                {/* Badges row */}
+                <div className="flex flex-wrap gap-1.5">
+                  {form.isConfidential && <Badge variant="warning">Confidential</Badge>}
+                  {form.isFeatured && <Badge variant="success">Featured</Badge>}
+                  {form.isPremium && <Badge variant="info">Premium</Badge>}
+                  {form.postingVisibility && form.postingVisibility !== 'PUBLIC' && (
+                    <Badge variant="info">
+                      {POSTING_VISIBILITY_LABELS[form.postingVisibility]}
+                    </Badge>
                   )}
-                  {form.travelRequirementPercent != null && form.travelRequirementPercent > 0 && (
-                    <p>
-                      <span className="text-[var(--text-muted)]">Travel: </span>
-                      <span className="text-[var(--text)]">{form.travelRequirementPercent}%</span>
-                    </p>
+                  {form.applyMethod && form.applyMethod !== 'IN_PLATFORM' && (
+                    <Badge variant="neutral">{APPLY_METHOD_LABELS[form.applyMethod]}</Badge>
                   )}
-                  {form.accommodationProvided && (
-                    <p className="text-[var(--success)]">Accommodation provided</p>
+                  {form.scheduledPublishAt && (
+                    <Badge variant="info">Scheduled: {form.scheduledPublishAt}</Badge>
+                  )}
+                  {form.expiresAt && <Badge variant="warning">Expires: {form.expiresAt}</Badge>}
+                </div>
+
+                {/* Basic Info */}
+                <div className="space-y-2">
+                  <PreviewSection label="Job Title" value={form.title} />
+                  <PreviewSection
+                    label="Job Type"
+                    value={form.type ? JOB_TYPE_LABELS[form.type] : '—'}
+                  />
+                  <PreviewSection
+                    label="Experience"
+                    value={`${form.experienceMin || 0} - ${form.experienceMax || 'Any'} years`}
+                  />
+                  <PreviewSection
+                    label="Experience Level"
+                    value={
+                      form.experienceLevel ? EXPERIENCE_LEVEL_LABELS[form.experienceLevel] : '—'
+                    }
+                  />
+                  <PreviewSection
+                    label="Education"
+                    value={
+                      form.educationRequired ? EDUCATION_LEVEL_LABELS[form.educationRequired] : '—'
+                    }
+                  />
+                  {form.preferredEducationField && (
+                    <PreviewSection label="Education Field" value={form.preferredEducationField} />
+                  )}
+                  {form.roleCategory && (
+                    <PreviewSection label="Role Category" value={form.roleCategory} />
+                  )}
+                  {form.industry && <PreviewSection label="Industry" value={form.industry} />}
+                  {form.department && <PreviewSection label="Department" value={form.department} />}
+                  <PreviewSection
+                    label="Openings"
+                    value={form.numberOfOpenings?.toString() || '—'}
+                  />
+                  {form.functionalArea && (
+                    <PreviewSection
+                      label="Functional Area"
+                      value={FUNCTIONAL_AREA_LABELS[form.functionalArea]}
+                    />
+                  )}
+                  {form.referenceCode && (
+                    <PreviewSection label="Reference Code" value={form.referenceCode} />
+                  )}
+                  {form.ugRequired && (
+                    <PreviewSection
+                      label="UG Required"
+                      value={EDUCATION_LEVEL_LABELS[form.ugRequired]}
+                    />
+                  )}
+                  {form.pgRequired && (
+                    <PreviewSection
+                      label="PG Required"
+                      value={EDUCATION_LEVEL_LABELS[form.pgRequired]}
+                    />
                   )}
                 </div>
-                {(form.additionalLocations || []).length > 0 && (
+
+                {(form.specificDegrees || []).length > 0 && (
                   <div>
-                    <span className="text-sm text-[var(--text-muted)]">Additional Locations: </span>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {(form.additionalLocations || []).map((l) => (
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Specific Degrees</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.specificDegrees || []).map((d) => (
+                        <Tag key={d} label={SPECIFIC_DEGREE_LABELS[d] || d} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(form.degreeSpecializations || []).length > 0 && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Degree Specializations</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.degreeSpecializations || []).map((d) => (
+                        <Tag key={d} label={d} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Description (rich text) */}
+                <div className="border-t border-[var(--border)] pt-4">
+                  <h3 className="mb-2 font-medium text-[var(--text)]">Description</h3>
+                  <div
+                    className="prose prose-sm max-w-none text-sm text-[var(--text-secondary)]"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.description || '') }}
+                  />
+                </div>
+
+                {form.keyResponsibilities && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Key Responsibilities</h3>
+                    <div
+                      className="prose prose-sm max-w-none text-sm text-[var(--text-secondary)]"
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(form.keyResponsibilities),
+                      }}
+                    />
+                  </div>
+                )}
+
+                {form.requirements && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Requirements</h3>
+                    <div
+                      className="prose prose-sm max-w-none text-sm text-[var(--text-secondary)]"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.requirements) }}
+                    />
+                  </div>
+                )}
+
+                {form.benefits && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Benefits</h3>
+                    <div
+                      className="prose prose-sm max-w-none text-sm text-[var(--text-secondary)]"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.benefits) }}
+                    />
+                  </div>
+                )}
+
+                {form.interviewProcess && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Interview Process</h3>
+                    <p className="text-sm whitespace-pre-wrap text-[var(--text-secondary)]">
+                      {form.interviewProcess}
+                    </p>
+                  </div>
+                )}
+
+                {/* Compensation */}
+                <div className="space-y-2 border-t border-[var(--border)] pt-4">
+                  <h3 className="mb-2 font-medium text-[var(--text)]">Compensation</h3>
+                  <div className="grid gap-2 text-sm sm:grid-cols-2">
+                    <p>
+                      <span className="text-[var(--text-muted)]">Salary: </span>
+                      <span className="text-[var(--text)]">
+                        {form.salaryMin || '—'} - {form.salaryMax || '—'} {form.currency || 'INR'}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="text-[var(--text-muted)]">Type: </span>
+                      <span className="text-[var(--text)]">
+                        {form.salaryType ? SALARY_TYPE_LABELS[form.salaryType] : '—'}
+                      </span>
+                    </p>
+                  </div>
+                  {form.salaryNegotiable && (
+                    <p className="text-sm text-[var(--success)]">Salary is negotiable</p>
+                  )}
+                  {(form.currency || 'INR') === 'INR' &&
+                    form.salaryType === 'ANNUAL' &&
+                    (form.salaryMin || form.salaryMax) && (
+                      <p className="text-primary text-sm font-medium">
+                        CTC: {formatSalaryAsLPA(form.salaryMin, form.salaryMax)}
+                      </p>
+                    )}
+                </div>
+
+                {/* Location & Work */}
+                <div className="space-y-2 border-t border-[var(--border)] pt-4">
+                  <h3 className="mb-2 font-medium text-[var(--text)]">Location & Work</h3>
+                  <div className="grid gap-2 text-sm sm:grid-cols-2">
+                    <p>
+                      <span className="text-[var(--text-muted)]">Location: </span>
+                      <span className="text-[var(--text)]">{form.location || '—'}</span>
+                    </p>
+                    <p>
+                      <span className="text-[var(--text-muted)]">Work Mode: </span>
+                      <span className="text-[var(--text)]">
+                        {form.workMode ? WORK_MODE_LABELS[form.workMode] : '—'}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="text-[var(--text-muted)]">Shift: </span>
+                      <span className="text-[var(--text)]">
+                        {form.shiftType ? SHIFT_TYPE_LABELS[form.shiftType] : '—'}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="text-[var(--text-muted)]">Remote: </span>
+                      <span className="text-[var(--text)]">{form.isRemote ? 'Yes' : 'No'}</span>
+                    </p>
+                    {form.relocationAssistance && (
+                      <p className="text-[var(--success)]">Relocation assistance offered</p>
+                    )}
+                    {form.travelRequirementPercent != null && form.travelRequirementPercent > 0 && (
+                      <p>
+                        <span className="text-[var(--text-muted)]">Travel: </span>
+                        <span className="text-[var(--text)]">{form.travelRequirementPercent}%</span>
+                      </p>
+                    )}
+                    {form.accommodationProvided && (
+                      <p className="text-[var(--success)]">Accommodation provided</p>
+                    )}
+                  </div>
+                  {(form.additionalLocations || []).length > 0 && (
+                    <div>
+                      <span className="text-sm text-[var(--text-muted)]">
+                        Additional Locations:{' '}
+                      </span>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {(form.additionalLocations || []).map((l) => (
+                          <Tag key={l} label={l} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(form.contactPerson || form.contactEmail) && (
+                    <div className="text-sm">
+                      {form.contactPerson && (
+                        <p>
+                          <span className="text-[var(--text-muted)]">Contact: </span>
+                          {form.contactPerson}
+                        </p>
+                      )}
+                      {form.contactEmail && (
+                        <p>
+                          <span className="text-[var(--text-muted)]">Email: </span>
+                          {form.contactEmail}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Walk-in Details */}
+                {form.isWalkIn && (
+                  <div className="space-y-2 border-t border-[var(--border)] pt-4">
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Walk-in Details</h3>
+                    <div className="space-y-1 text-sm">
+                      {form.walkInStartDate && (
+                        <p>
+                          <span className="text-[var(--text-muted)]">Date: </span>
+                          {form.walkInStartDate}
+                          {form.walkInEndDate ? ` – ${form.walkInEndDate}` : ''}
+                        </p>
+                      )}
+                      {form.walkInTime && (
+                        <p>
+                          <span className="text-[var(--text-muted)]">Time: </span>
+                          {form.walkInTime}
+                        </p>
+                      )}
+                      {form.walkInVenue && (
+                        <p>
+                          <span className="text-[var(--text-muted)]">Venue: </span>
+                          {form.walkInVenue}
+                        </p>
+                      )}
+                      {form.walkInContactPerson && (
+                        <p>
+                          <span className="text-[var(--text-muted)]">Contact: </span>
+                          {form.walkInContactPerson}
+                          {form.walkInContactPhone ? ` (${form.walkInContactPhone})` : ''}
+                        </p>
+                      )}
+                      {form.walkInInstructions && (
+                        <p>
+                          <span className="text-[var(--text-muted)]">Instructions: </span>
+                          {form.walkInInstructions}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Skills & Tags */}
+                {form.skillsRequired.length > 0 && (
+                  <div className="border-t border-[var(--border)] pt-4">
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Required Skills</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {form.skillsRequired.map((s) => (
+                        <Tag key={s} label={s} variant="primary" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(form.niceToHaveSkills || []).length > 0 && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Nice-to-Have Skills</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.niceToHaveSkills || []).map((s) => (
+                        <Tag key={s} label={s} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(form.certificationsRequired || []).length > 0 && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Certifications Required</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.certificationsRequired || []).map((c) => (
+                        <Tag key={c} label={c} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(form.languagesRequired || []).length > 0 && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Languages Required</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.languagesRequired || []).map((l) => (
                         <Tag key={l} label={l} />
                       ))}
                     </div>
                   </div>
                 )}
-                {(form.contactPerson || form.contactEmail) && (
-                  <div className="text-sm">
-                    {form.contactPerson && (
-                      <p>
-                        <span className="text-[var(--text-muted)]">Contact: </span>
-                        {form.contactPerson}
-                      </p>
+
+                {(form.tags || []).length > 0 && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Tags</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.tags || []).map((t) => (
+                        <Tag key={t} label={t} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(form.jobPerks || []).length > 0 && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">Job Perks</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.jobPerks || []).map((p) => (
+                        <Tag key={p} label={p} variant="primary" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Urgency & Deadline */}
+                {(form.urgencyLevel || form.applicationDeadline) && (
+                  <div className="flex flex-wrap gap-4 border-t border-[var(--border)] pt-4 text-sm">
+                    {form.urgencyLevel && (
+                      <div>
+                        <span className="text-[var(--text-muted)]">Urgency: </span>
+                        <Badge
+                          variant={
+                            form.urgencyLevel === 'IMMEDIATE'
+                              ? 'error'
+                              : form.urgencyLevel === 'URGENT'
+                                ? 'warning'
+                                : 'neutral'
+                          }
+                        >
+                          {URGENCY_LEVEL_LABELS[form.urgencyLevel]}
+                        </Badge>
+                      </div>
                     )}
-                    {form.contactEmail && (
-                      <p>
-                        <span className="text-[var(--text-muted)]">Email: </span>
-                        {form.contactEmail}
-                      </p>
+                    {form.applicationDeadline && (
+                      <div>
+                        <span className="text-[var(--text-muted)]">Deadline: </span>
+                        <span className="text-[var(--text)]">{form.applicationDeadline}</span>
+                      </div>
                     )}
                   </div>
                 )}
-              </div>
 
-              {/* Walk-in Details */}
-              {form.isWalkIn && (
-                <div className="space-y-2 border-t border-[var(--border)] pt-4">
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Walk-in Details</h3>
-                  <div className="space-y-1 text-sm">
-                    {form.walkInStartDate && (
-                      <p>
-                        <span className="text-[var(--text-muted)]">Date: </span>
-                        {form.walkInStartDate}
-                        {form.walkInEndDate ? ` – ${form.walkInEndDate}` : ''}
-                      </p>
-                    )}
-                    {form.walkInTime && (
-                      <p>
-                        <span className="text-[var(--text-muted)]">Time: </span>
-                        {form.walkInTime}
-                      </p>
-                    )}
-                    {form.walkInVenue && (
-                      <p>
-                        <span className="text-[var(--text-muted)]">Venue: </span>
-                        {form.walkInVenue}
-                      </p>
-                    )}
-                    {form.walkInContactPerson && (
-                      <p>
-                        <span className="text-[var(--text-muted)]">Contact: </span>
-                        {form.walkInContactPerson}
-                        {form.walkInContactPhone ? ` (${form.walkInContactPhone})` : ''}
-                      </p>
-                    )}
-                    {form.walkInInstructions && (
-                      <p>
-                        <span className="text-[var(--text-muted)]">Instructions: </span>
-                        {form.walkInInstructions}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Skills & Tags */}
-              {form.skillsRequired.length > 0 && (
-                <div className="border-t border-[var(--border)] pt-4">
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Required Skills</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {form.skillsRequired.map((s) => (
-                      <Tag key={s} label={s} variant="primary" />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(form.niceToHaveSkills || []).length > 0 && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Nice-to-Have Skills</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(form.niceToHaveSkills || []).map((s) => (
-                      <Tag key={s} label={s} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(form.certificationsRequired || []).length > 0 && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Certifications Required</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(form.certificationsRequired || []).map((c) => (
-                      <Tag key={c} label={c} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(form.languagesRequired || []).length > 0 && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Languages Required</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(form.languagesRequired || []).map((l) => (
-                      <Tag key={l} label={l} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(form.tags || []).length > 0 && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Tags</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(form.tags || []).map((t) => (
-                      <Tag key={t} label={t} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(form.jobPerks || []).length > 0 && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Job Perks</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(form.jobPerks || []).map((p) => (
-                      <Tag key={p} label={p} variant="primary" />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Urgency & Deadline */}
-              {(form.urgencyLevel || form.applicationDeadline) && (
-                <div className="flex flex-wrap gap-4 border-t border-[var(--border)] pt-4 text-sm">
-                  {form.urgencyLevel && (
-                    <div>
-                      <span className="text-[var(--text-muted)]">Urgency: </span>
-                      <Badge
-                        variant={
-                          form.urgencyLevel === 'IMMEDIATE'
-                            ? 'error'
-                            : form.urgencyLevel === 'URGENT'
-                              ? 'warning'
-                              : 'neutral'
-                        }
-                      >
-                        {URGENCY_LEVEL_LABELS[form.urgencyLevel]}
-                      </Badge>
+                {/* Notice Period */}
+                {(form.noticePeriodPreference || []).length > 0 && (
+                  <div>
+                    <h3 className="mb-2 font-medium text-[var(--text)]">
+                      Notice Period Preference
+                    </h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(form.noticePeriodPreference || []).map((np) => (
+                        <Tag key={np} label={NOTICE_PERIOD_PREFERENCE_LABELS[np] || np} />
+                      ))}
                     </div>
-                  )}
-                  {form.applicationDeadline && (
-                    <div>
-                      <span className="text-[var(--text-muted)]">Deadline: </span>
-                      <span className="text-[var(--text)]">{form.applicationDeadline}</span>
+                  </div>
+                )}
+
+                {/* Requirements & Inclusion */}
+                {(form.diversityTags?.length ||
+                  form.isPwdFriendly ||
+                  form.visaSponsorshipAvailable ||
+                  form.backgroundCheckRequired ||
+                  form.passportRequired ||
+                  form.genderPreference ||
+                  form.drivingLicenseRequired ||
+                  form.ageMin ||
+                  form.ageMax ||
+                  form.bondDetails) && (
+                  <div className="space-y-3 border-t border-[var(--border)] pt-4">
+                    <h3 className="font-medium text-[var(--text)]">Requirements & Inclusion</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {form.isPwdFriendly && <Badge variant="success">PwD Friendly</Badge>}
+                      {form.visaSponsorshipAvailable && (
+                        <Badge variant="info">Visa Sponsorship</Badge>
+                      )}
+                      {form.backgroundCheckRequired && (
+                        <Badge variant="warning">Background Check</Badge>
+                      )}
+                      {form.passportRequired && <Badge variant="warning">Passport Required</Badge>}
+                      {(form.diversityTags || []).map((tag) => (
+                        <Badge key={tag} variant="neutral">
+                          {tag}
+                        </Badge>
+                      ))}
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Notice Period */}
-              {(form.noticePeriodPreference || []).length > 0 && (
-                <div>
-                  <h3 className="mb-2 font-medium text-[var(--text)]">Notice Period Preference</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(form.noticePeriodPreference || []).map((np) => (
-                      <Tag key={np} label={NOTICE_PERIOD_PREFERENCE_LABELS[np] || np} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Requirements & Inclusion */}
-              {(form.diversityTags?.length ||
-                form.isPwdFriendly ||
-                form.visaSponsorshipAvailable ||
-                form.backgroundCheckRequired ||
-                form.passportRequired ||
-                form.genderPreference ||
-                form.drivingLicenseRequired ||
-                form.ageMin ||
-                form.ageMax ||
-                form.bondDetails) && (
-                <div className="space-y-3 border-t border-[var(--border)] pt-4">
-                  <h3 className="font-medium text-[var(--text)]">Requirements & Inclusion</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {form.isPwdFriendly && <Badge variant="success">PwD Friendly</Badge>}
-                    {form.visaSponsorshipAvailable && (
-                      <Badge variant="info">Visa Sponsorship</Badge>
-                    )}
-                    {form.backgroundCheckRequired && (
-                      <Badge variant="warning">Background Check</Badge>
-                    )}
-                    {form.passportRequired && <Badge variant="warning">Passport Required</Badge>}
-                    {(form.diversityTags || []).map((tag) => (
-                      <Badge key={tag} variant="neutral">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    {form.genderPreference && form.genderPreference !== 'ANY' && (
-                      <p>
-                        <span className="text-[var(--text-muted)]">Gender Pref.: </span>
-                        {GENDER_PREFERENCE_LABELS[form.genderPreference]}
-                      </p>
-                    )}
-                    {form.drivingLicenseRequired && form.drivingLicenseRequired !== 'NONE' && (
-                      <p>
-                        <span className="text-[var(--text-muted)]">Driving License: </span>
-                        {DRIVING_LICENSE_TYPE_LABELS[form.drivingLicenseRequired]}
-                      </p>
-                    )}
-                    {(form.ageMin || form.ageMax) && (
-                      <p>
-                        <span className="text-[var(--text-muted)]">Age: </span>
-                        {form.ageMin || '—'} – {form.ageMax || '—'} years
-                      </p>
-                    )}
-                  </div>
-                  {form.bondDetails && (
-                    <div>
-                      <p className="text-sm text-[var(--text-muted)]">Bond / Service Agreement:</p>
-                      <p className="text-sm text-[var(--text)]">{form.bondDetails}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Screening Questions */}
-              {(form.screeningQuestions || []).length > 0 && (
-                <div className="border-t border-[var(--border)] pt-4">
-                  <h3 className="mb-2 font-medium text-[var(--text)]">
-                    Screening Questions ({(form.screeningQuestions || []).length})
-                  </h3>
-                  <div className="space-y-2">
-                    {(form.screeningQuestions || []).map((q, idx) => (
-                      <div key={idx} className="rounded-lg border border-[var(--border)] p-3">
-                        <p className="text-sm font-medium text-[var(--text)]">
-                          {idx + 1}. {q.question}
+                    <div className="space-y-1 text-sm">
+                      {form.genderPreference && form.genderPreference !== 'ANY' && (
+                        <p>
+                          <span className="text-[var(--text-muted)]">Gender Pref.: </span>
+                          {GENDER_PREFERENCE_LABELS[form.genderPreference]}
                         </p>
-                        <div className="mt-1 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                          <span>{q.questionType}</span>
-                          {q.isRequired && (
-                            <Badge variant="warning" size="sm">
-                              Required
-                            </Badge>
-                          )}
-                          {q.isDealBreaker && (
-                            <Badge variant="error" size="sm">
-                              Deal Breaker
-                            </Badge>
-                          )}
-                          {q.idealAnswer && <span>Ideal: {q.idealAnswer}</span>}
-                        </div>
+                      )}
+                      {form.drivingLicenseRequired && form.drivingLicenseRequired !== 'NONE' && (
+                        <p>
+                          <span className="text-[var(--text-muted)]">Driving License: </span>
+                          {DRIVING_LICENSE_TYPE_LABELS[form.drivingLicenseRequired]}
+                        </p>
+                      )}
+                      {(form.ageMin || form.ageMax) && (
+                        <p>
+                          <span className="text-[var(--text-muted)]">Age: </span>
+                          {form.ageMin || '—'} – {form.ageMax || '—'} years
+                        </p>
+                      )}
+                    </div>
+                    {form.bondDetails && (
+                      <div>
+                        <p className="text-sm text-[var(--text-muted)]">
+                          Bond / Service Agreement:
+                        </p>
+                        <p className="text-sm text-[var(--text)]">{form.bondDetails}</p>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* External Apply URL */}
-              {form.applyMethod === 'EXTERNAL_URL' && form.externalApplyUrl && (
-                <div className="text-sm">
-                  <span className="text-[var(--text-muted)]">External Apply URL: </span>
-                  <span className="text-primary break-all">{form.externalApplyUrl}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-
-        {/* Navigation Buttons */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={step === 0}
-            tooltip="Go to previous step"
-          >
-            <ChevronLeft className="mr-1 h-4 w-4" /> Back
-          </Button>
-          <span className="text-sm text-[var(--text-muted)]">
-            Step {step + 1} of {steps.length}
-          </span>
-          {step < 7 ? (
-            <Button onClick={handleNext} disabled={!canGoNext()} tooltip="Continue to next step">
-              Next <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSubmit}
-              isLoading={createMutation.isPending}
-              tooltip="Publish your job listing"
-            >
-              <Briefcase className="mr-1.5 h-4 w-4" /> Post Job
-            </Button>
-          )}
-        </div>
-        {/* Save Template Modal */}
-        <Modal
-          isOpen={showSaveTemplateModal}
-          onClose={() => setShowSaveTemplateModal(false)}
-          title="Save as Template"
-        >
-          <div className="space-y-4">
-            <Input
-              label="Template Name"
-              placeholder="e.g. Senior Engineer Template"
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              required
-            />
-            <Textarea
-              label="Description (optional)"
-              rows={2}
-              placeholder="Brief description of this template"
-              value={templateDesc}
-              onChange={(e) => setTemplateDesc(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowSaveTemplateModal(false)}
-                tooltip="Cancel saving template"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSaveAsTemplate}
-                isLoading={saveTemplateMutation.isPending}
-                disabled={!templateName.trim()}
-                tooltip="Save this template for future use"
-              >
-                Save Template
-              </Button>
-            </div>
-          </div>
-        </Modal>
-
-        {/* Load Template Modal */}
-        <Modal
-          isOpen={showLoadTemplateModal}
-          onClose={() => setShowLoadTemplateModal(false)}
-          title="Load Template"
-        >
-          <div className="space-y-3">
-            {!templatesData?.data || templatesData.data.length === 0 ? (
-              <p className="py-6 text-center text-sm text-[var(--text-muted)]">
-                No templates saved yet.
-              </p>
-            ) : (
-              templatesData.data.map((tpl) => (
-                <Tooltip key={tpl.id} content={`Load the "${tpl.name}" template`}>
-                  <button
-                    type="button"
-                    onClick={() => handleLoadTemplate(tpl.templateData)}
-                    className="hover:border-primary/50 w-full cursor-pointer rounded-lg border border-[var(--border)] p-3 text-left transition-colors hover:bg-[var(--bg-secondary)]"
-                  >
-                    <p className="text-sm font-medium text-[var(--text)]">{tpl.name}</p>
-                    {tpl.description && (
-                      <p className="mt-0.5 text-xs text-[var(--text-muted)]">{tpl.description}</p>
                     )}
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">
-                      Saved {new Date(tpl.updatedAt).toLocaleDateString()}
-                    </p>
-                  </button>
-                </Tooltip>
-              ))
+                  </div>
+                )}
+
+                {/* Screening Questions */}
+                {(form.screeningQuestions || []).length > 0 && (
+                  <div className="border-t border-[var(--border)] pt-4">
+                    <h3 className="mb-2 font-medium text-[var(--text)]">
+                      Screening Questions ({(form.screeningQuestions || []).length})
+                    </h3>
+                    <div className="space-y-2">
+                      {(form.screeningQuestions || []).map((q, idx) => (
+                        <div key={idx} className="rounded-lg border border-[var(--border)] p-3">
+                          <p className="text-sm font-medium text-[var(--text)]">
+                            {idx + 1}. {q.question}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                            <span>{q.questionType}</span>
+                            {q.isRequired && (
+                              <Badge variant="warning" size="sm">
+                                Required
+                              </Badge>
+                            )}
+                            {q.isDealBreaker && (
+                              <Badge variant="error" size="sm">
+                                Deal Breaker
+                              </Badge>
+                            )}
+                            {q.idealAnswer && <span>Ideal: {q.idealAnswer}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* External Apply URL */}
+                {form.applyMethod === 'EXTERNAL_URL' && form.externalApplyUrl && (
+                  <div className="text-sm">
+                    <span className="text-[var(--text-muted)]">External Apply URL: </span>
+                    <span className="text-primary break-all">{form.externalApplyUrl}</span>
+                  </div>
+                )}
+              </div>
             )}
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowLoadTemplateModal(false)}
-                tooltip="Close template selector"
-              >
-                Close
+          </Card>
+
+          {/* Navigation Buttons */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={step === 0}
+              tooltip="Go to previous step"
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" /> Back
+            </Button>
+            <span className="text-sm text-[var(--text-muted)]">
+              Step {step + 1} of {steps.length}
+            </span>
+            {step < 7 ? (
+              <Button onClick={handleNext} disabled={!canGoNext()} tooltip="Continue to next step">
+                Next <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
-            </div>
+            ) : (
+              <Button
+                onClick={handleSubmit}
+                isLoading={createMutation.isPending}
+                tooltip="Publish your job listing"
+              >
+                <Briefcase className="mr-1.5 h-4 w-4" /> Post Job
+              </Button>
+            )}
           </div>
-        </Modal>
-      </div>
+          {/* Save Template Modal */}
+          <Modal
+            isOpen={showSaveTemplateModal}
+            onClose={() => setShowSaveTemplateModal(false)}
+            title="Save as Template"
+          >
+            <div className="space-y-4">
+              <Input
+                label="Template Name"
+                placeholder="e.g. Senior Engineer Template"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                required
+              />
+              <Textarea
+                label="Description (optional)"
+                rows={2}
+                placeholder="Brief description of this template"
+                value={templateDesc}
+                onChange={(e) => setTemplateDesc(e.target.value)}
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSaveTemplateModal(false)}
+                  tooltip="Cancel saving template"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveAsTemplate}
+                  isLoading={saveTemplateMutation.isPending}
+                  disabled={!templateName.trim()}
+                  tooltip="Save this template for future use"
+                >
+                  Save Template
+                </Button>
+              </div>
+            </div>
+          </Modal>
+
+          {/* Load Template Modal */}
+          <Modal
+            isOpen={showLoadTemplateModal}
+            onClose={() => setShowLoadTemplateModal(false)}
+            title="Load Template"
+          >
+            <div className="space-y-3">
+              {!templatesData?.data || templatesData.data.length === 0 ? (
+                <p className="py-6 text-center text-sm text-[var(--text-muted)]">
+                  No templates saved yet.
+                </p>
+              ) : (
+                templatesData.data.map((tpl) => (
+                  <Tooltip key={tpl.id} content={`Load the "${tpl.name}" template`}>
+                    <button
+                      type="button"
+                      onClick={() => handleLoadTemplate(tpl.templateData)}
+                      className="hover:border-primary/50 w-full cursor-pointer rounded-lg border border-[var(--border)] p-3 text-left transition-colors hover:bg-[var(--bg-secondary)]"
+                    >
+                      <p className="text-sm font-medium text-[var(--text)]">{tpl.name}</p>
+                      {tpl.description && (
+                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{tpl.description}</p>
+                      )}
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Saved {new Date(tpl.updatedAt).toLocaleDateString()}
+                      </p>
+                    </button>
+                  </Tooltip>
+                ))
+              )}
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowLoadTemplateModal(false)}
+                  tooltip="Close template selector"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        </div>
+      </PlanGate>
     </DashboardLayout>
   );
 }

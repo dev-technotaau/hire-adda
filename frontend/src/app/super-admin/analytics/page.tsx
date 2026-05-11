@@ -28,6 +28,7 @@ import {
   Server,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import TeamsVendorsWidget from '@/components/super-admin/TeamsVendorsWidget';
 import Card from '@/components/ui/Card';
 import DatePicker from '@/components/ui/DatePicker';
 import Select from '@/components/ui/Select';
@@ -1382,6 +1383,11 @@ export default function SuperAdminAnalyticsPage() {
                 />
               )}
             </Card>
+
+            {/* Teams & Vendors aggregate metrics — same data the SA
+                dashboard shows, surfaced here so the analytics page
+                covers the full platform. */}
+            <TeamsVendorsWidget />
           </>
         )}
 

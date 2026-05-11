@@ -222,11 +222,15 @@ export default function AuditLogsPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           {log.details ? (
-                            <Tooltip content={expandedRow === log.id ? 'Hide log details' : 'View log details'}>
+                            <Tooltip
+                              content={
+                                expandedRow === log.id ? 'Hide log details' : 'View log details'
+                              }
+                            >
                               <button
                                 type="button"
                                 onClick={() => toggleRow(log.id)}
-                                className="text-primary cursor-pointer inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors hover:bg-[var(--bg-secondary)]"
+                                className="text-primary inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors hover:bg-[var(--bg-secondary)]"
                               >
                                 {expandedRow === log.id ? (
                                   <>

@@ -111,6 +111,32 @@ const STATIC_ENTRIES: SitemapEntry[] = [
     priority: 1.0,
     images: ['/images/og-home.png', '/icons/logo.png'],
   },
+  // Public job board + company directory — top-level listing pages.
+  // These are SEPARATE from the dynamic /sitemap/2..K shards (which
+  // hold individual /jobs/{slug} + /companies/{slug} URLs). The
+  // listing-page index is high priority because it's the primary
+  // entry surface for "jobs in india" / "companies hiring" queries.
+  {
+    path: '/jobs',
+    source: 'src/app/jobs/page.tsx',
+    changeFrequency: 'daily',
+    priority: 0.9,
+    images: ['/images/og-home.png'],
+  },
+  {
+    path: '/companies',
+    source: 'src/app/companies/page.tsx',
+    changeFrequency: 'daily',
+    priority: 0.9,
+    images: ['/images/og-home.png'],
+  },
+  // Standalone review-write entry — open form, no company prefill.
+  {
+    path: '/reviews/write',
+    source: 'src/app/reviews/write/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  },
   { path: '/about', source: 'src/app/about/page.tsx', changeFrequency: 'monthly', priority: 0.8 },
   {
     path: '/contact',
@@ -130,8 +156,44 @@ const STATIC_ENTRIES: SitemapEntry[] = [
     priority: 0.5,
   },
   {
+    path: '/auth/login/candidate',
+    source: 'src/app/auth/login/candidate/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  },
+  {
+    path: '/auth/login/employer',
+    source: 'src/app/auth/login/employer/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  },
+  {
+    path: '/auth/login/vendor',
+    source: 'src/app/auth/login/vendor/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  },
+  {
     path: '/auth/register',
     source: 'src/app/auth/register/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  },
+  {
+    path: '/auth/register/candidate',
+    source: 'src/app/auth/register/candidate/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  },
+  {
+    path: '/auth/register/employer',
+    source: 'src/app/auth/register/employer/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  },
+  {
+    path: '/auth/register/vendor',
+    source: 'src/app/auth/register/vendor/page.tsx',
     changeFrequency: 'monthly',
     priority: 0.5,
   },
@@ -149,6 +211,96 @@ const STATIC_ENTRIES: SitemapEntry[] = [
     source: 'src/app/site-map/page.tsx',
     changeFrequency: 'monthly',
     priority: 0.5,
+  },
+
+  // Pricing pages — high priority, business-critical landing surfaces.
+  // The audience-split pages (/pricing/employer, /pricing/candidate) are
+  // ranked alongside the catch-all so each gets full SEO coverage.
+  {
+    path: '/pricing',
+    source: 'src/app/pricing/page.tsx',
+    changeFrequency: 'weekly',
+    priority: 0.8,
+  },
+  {
+    path: '/pricing/employer',
+    source: 'src/app/pricing/employer/page.tsx',
+    changeFrequency: 'weekly',
+    priority: 0.8,
+  },
+  {
+    path: '/pricing/candidate',
+    source: 'src/app/pricing/candidate/page.tsx',
+    changeFrequency: 'weekly',
+    priority: 0.8,
+  },
+
+  // Per-plan detail pages — slugs are stable (defined by seed-plans.ts).
+  // Ranked slightly below the pricing index so the index pages remain the
+  // primary landing surface for "<role> pricing" queries.
+  {
+    path: '/pricing/candidate-premium',
+    source: 'src/app/pricing/[slug]/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  },
+  {
+    path: '/pricing/employer-free',
+    source: 'src/app/pricing/[slug]/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  },
+  {
+    path: '/pricing/employer-standard',
+    source: 'src/app/pricing/[slug]/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  },
+  {
+    path: '/pricing/employer-premium',
+    source: 'src/app/pricing/[slug]/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  },
+  {
+    path: '/pricing/cvdb-lite',
+    source: 'src/app/pricing/[slug]/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  },
+  {
+    path: '/pricing/cvdb-pro',
+    source: 'src/app/pricing/[slug]/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  },
+  {
+    path: '/pricing/cvdb-enterprise',
+    source: 'src/app/pricing/[slug]/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  },
+  {
+    path: '/pricing/assisted-hiring',
+    source: 'src/app/pricing/[slug]/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  },
+  {
+    path: '/pricing/vendor-connect',
+    source: 'src/app/pricing/[slug]/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  },
+
+  // Public vendor directory — the index page is stable, individual vendor
+  // profile pages (/vendors/[slug]) belong in a future dynamic shard once
+  // we have enough vendors to justify the build-time backend pull.
+  {
+    path: '/vendors',
+    source: 'src/app/vendors/page.tsx',
+    changeFrequency: 'weekly',
+    priority: 0.7,
   },
 
   // Legal / policy pages — required for compliance + app store approval
@@ -206,15 +358,340 @@ const STATIC_ENTRIES: SitemapEntry[] = [
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap#generating-multiple-sitemaps
  * @see https://www.sitemaps.org/protocol.html
  */
+/**
+ * Sitemap-shard map.
+ *
+ *   0       = static (marketing/legal/auth/pricing/site-map)
+ *   1       = curated landings (cities, categories, departments,
+ *             qualifications, collections — both job-side and company-side)
+ *   2..K    = jobs (50k URLs/shard, paginated by id ASC)
+ *   K+1..N  = companies (50k URLs/shard)
+ *   N+1     = cartesian (CuratedListing × top cities × exp buckets)
+ *   N+2     = popular role×city aggregates (from SearchHistory hits)
+ *   N+3     = company-reviews (one URL per company with ≥1 approved review)
+ *   N+4     = vendors (per-vendor public profile pages)
+ *   N+5     = help-articles (per-article URLs under /help/{slug})
+ *   N+6     = news-articles (Google News sitemap candidate)
+ *
+ * Constants, shard counters, and ID arithmetic live in
+ * `@/lib/sitemap-shards` so this file and `app/sitemap.xml/route.ts`
+ * share a single source of truth — adding a new shard there propagates
+ * to both consumers without code-level drift.
+ */
+import { JOBS_SHARD_BASE, SHARD_PAGE_SIZE, getShardIds, getShardMap } from '@/lib/sitemap-shards';
+
 export async function generateSitemaps() {
-  // IMPORTANT: Next.js 16 requires NUMERIC shard IDs. String IDs like
-  // 'static' silently break — the index at /sitemap.xml becomes 404 and
-  // the shard at /sitemap/<id>.xml returns an empty <urlset>.
-  //
-  // Shard map:
-  //   0 = static pages (marketing, legal, auth entry points)
-  //   Future: 1+ = dynamic content shards (jobs, companies)
-  return [{ id: 0 }];
+  const ids = await getShardIds();
+  return ids.map((id) => ({ id }));
+}
+
+interface ShardItem {
+  url: string;
+  lastModified?: Date;
+  changeFrequency: ChangeFreq;
+  priority: number;
+  /**
+   * Optional image URLs surfaced via the sitemap-image namespace
+   * (`<image:image>` per Google's image sitemap spec). Next.js's
+   * `MetadataRoute.Sitemap` `images` field serialises these directly.
+   * Drives Google Images / Bing visual-search discovery for company
+   * logos, job-posting thumbnails, etc.
+   */
+  images?: string[];
+}
+
+async function fetchCuratedSitemapItems(): Promise<ShardItem[]> {
+  const apiBase =
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:5000/api/v1';
+  const items: ShardItem[] = [];
+  try {
+    const res = await fetch(`${apiBase}/public/curated/menu`, {
+      next: { revalidate: 600 },
+    });
+    if (!res.ok) return items;
+    const body = await res.json();
+    const grouped: Record<
+      string,
+      Array<{ slug: string; type: string; updatedAt: string }>
+    > = body?.data ?? {};
+    const all = Object.values(grouped).flat();
+    for (const item of all) {
+      const path = curatedSlugToPath(item.slug, item.type);
+      if (path) {
+        items.push({
+          url: `${BASE_URL}${path}`,
+          lastModified: item.updatedAt ? new Date(item.updatedAt) : undefined,
+          changeFrequency: 'weekly',
+          priority: 0.6,
+        });
+      }
+    }
+  } catch {
+    /* ignore — curated section will be empty for this build */
+  }
+  return items;
+}
+
+function curatedSlugToPath(slug: string, type: string): string | null {
+  switch (type) {
+    case 'JOB_LOCATION':
+      return `/jobs/in/${slug.replace(/^jobs-in-/, '')}`;
+    case 'JOB_CATEGORY':
+      return `/jobs/category/${slug.replace(/-jobs$/, '')}`;
+    case 'JOB_DEPARTMENT':
+      return `/jobs/department/${slug.replace(/-jobs$/, '')}`;
+    case 'JOB_QUALIFICATION':
+      return `/jobs/qualification/${slug.replace(/-jobs$/, '')}`;
+    case 'JOB_DEMAND':
+      return `/jobs/${slug}`;
+    case 'JOB_COLLECTION':
+      return `/jobs/collection/${slug}`;
+    case 'COMPANY_CATEGORY':
+      return `/companies/category/${slug.replace(/^companies-/, '')}`;
+    case 'COMPANY_COLLECTION':
+      return `/companies/collection/${slug}`;
+    // Companies-by-city: maps COMPANY_LOCATION curated entries to the
+    // /companies/in/{city} surface. The route exists at
+    // app/companies/in/[city]/page.tsx with full JSON-LD.
+    case 'COMPANY_LOCATION':
+      return `/companies/in/${slug.replace(/^companies-in-/, '').replace(/^companies-/, '')}`;
+    // Companies-by-industry: maps COMPANY_INDUSTRY curated entries to
+    // /companies/industry/{ind}. The route exists at
+    // app/companies/industry/[ind]/page.tsx.
+    case 'COMPANY_INDUSTRY':
+      return `/companies/industry/${slug.replace(/^companies-industry-/, '').replace(/^companies-/, '')}`;
+    default:
+      return null;
+  }
+}
+
+async function fetchJobsShard(shardIndex: number): Promise<ShardItem[]> {
+  const apiBase =
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:5000/api/v1';
+  const items: ShardItem[] = [];
+  let page = 1;
+  const targetCount = SHARD_PAGE_SIZE;
+  const startOffset = shardIndex * SHARD_PAGE_SIZE;
+  // Pull pages until we've collected `targetCount` items for this shard.
+  while (items.length < targetCount) {
+    const res = await fetch(
+      `${apiBase}/public/jobs?limit=100&page=${page + Math.floor(startOffset / 100)}`,
+      { next: { revalidate: 600 } },
+    );
+    if (!res.ok) break;
+    const body = await res.json();
+    const rows: Array<{
+      slug?: string;
+      updatedAt?: string;
+      company?: { logo?: string | null };
+    }> = body?.data?.items ?? [];
+    if (rows.length === 0) break;
+    for (const r of rows) {
+      if (!r.slug) continue;
+      const logo = r.company?.logo;
+      items.push({
+        url: `${BASE_URL}/jobs/${r.slug}`,
+        lastModified: r.updatedAt ? new Date(r.updatedAt) : undefined,
+        changeFrequency: 'weekly',
+        priority: 0.7,
+        // Surface the company logo as a sitemap image so Google
+        // Images / Bing visual-search index the brand-mark on every
+        // job page. Skipped when the company has no logo.
+        ...(logo ? { images: [logo] } : {}),
+      });
+      if (items.length >= targetCount) break;
+    }
+    if (rows.length < 100) break;
+    page += 1;
+  }
+  return items;
+}
+
+/**
+ * Cartesian-combos generator — emits `{role}-jobs-in-{city}` and
+ * `{role}-jobs-for-{n}-years-experience` URL forms for every
+ * combination of:
+ *   - CuratedListing entries (JOB_CATEGORY + JOB_DEMAND + JOB_DEPARTMENT)
+ *   - Top cities (JOB_LOCATION curated entries)
+ *   - 5 experience buckets (0, 2, 5, 8, 12 years +)
+ *
+ * Hard-capped at 50k URLs per shard (sitemap spec limit). Skips combos
+ * that would duplicate canonical curated landings already emitted by
+ * shard 1 (curated).
+ */
+async function fetchCartesianComboItems(): Promise<ShardItem[]> {
+  const apiBase =
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:5000/api/v1';
+
+  const items: ShardItem[] = [];
+  try {
+    const res = await fetch(`${apiBase}/public/curated/menu`, {
+      next: { revalidate: 600 },
+    });
+    if (!res.ok) return items;
+    const body = await res.json();
+    const grouped: Record<string, Array<{ slug: string; type: string }>> = body?.data ?? {};
+
+    const roles = [
+      ...(grouped.JOB_CATEGORY ?? []),
+      ...(grouped.JOB_DEMAND ?? []),
+      ...(grouped.JOB_DEPARTMENT ?? []),
+    ];
+    const cities = (grouped.JOB_LOCATION ?? []).slice(0, 50);
+    const expBuckets = [0, 2, 5, 8, 12]; // 5 buckets matching plan §14.
+
+    for (const role of roles) {
+      // Strip well-known suffixes so the URL slug is clean.
+      const r = role.slug.replace(/-jobs$/, '').replace(/^jobs-in-/, '');
+      // role × city
+      for (const city of cities) {
+        const c = city.slug.replace(/^jobs-in-/, '');
+        items.push({
+          url: `${BASE_URL}/jobs/${r}-jobs-in-${c}`,
+          changeFrequency: 'weekly',
+          priority: 0.55,
+        });
+        if (items.length >= SHARD_PAGE_SIZE) return items;
+      }
+      // role × exp
+      for (const yrs of expBuckets) {
+        items.push({
+          url: `${BASE_URL}/jobs/${r}-jobs-for-${yrs}-years-experience`,
+          changeFrequency: 'weekly',
+          priority: 0.5,
+        });
+        if (items.length >= SHARD_PAGE_SIZE) return items;
+      }
+    }
+  } catch {
+    /* curated API down — return whatever we have collected */
+  }
+  return items;
+}
+
+/**
+ * Popular role×city aggregates from SearchHistory. Returns empty when
+ * the table has no data; once accrued, returns the top 5,000 most-
+ * frequent role+city queries as crawl-ready URLs.
+ *
+ * The aggregates endpoint must exist server-side. Today there is no
+ * such endpoint — when SearchHistory accrues data we'll add a
+ * `/api/v1/public/search-aggregates` route. Until then, this shard
+ * is intentionally empty (still emitted so Googlebot caches the path
+ * and re-crawls when content arrives).
+ */
+async function fetchPopularAggregateItems(): Promise<ShardItem[]> {
+  const apiBase =
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:5000/api/v1';
+  try {
+    const res = await fetch(`${apiBase}/public/search-aggregates?limit=5000`, {
+      next: { revalidate: 7 * 24 * 60 * 60 },
+    });
+    if (!res.ok) return [];
+    const body = await res.json();
+    const rows: Array<{ url: string; updatedAt?: string }> = body?.data?.items ?? [];
+    return rows.map((r) => ({
+      url: r.url.startsWith('http') ? r.url : `${BASE_URL}${r.url}`,
+      lastModified: r.updatedAt ? new Date(r.updatedAt) : undefined,
+      changeFrequency: 'weekly' as ChangeFreq,
+      priority: 0.55,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function fetchCompaniesShard(shardIndex: number): Promise<ShardItem[]> {
+  const apiBase =
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:5000/api/v1';
+  const items: ShardItem[] = [];
+  let page = 1;
+  const targetCount = SHARD_PAGE_SIZE;
+  const startOffset = shardIndex * SHARD_PAGE_SIZE;
+  while (items.length < targetCount) {
+    const res = await fetch(
+      `${apiBase}/public/companies?limit=100&page=${page + Math.floor(startOffset / 100)}`,
+      { next: { revalidate: 600 } },
+    );
+    if (!res.ok) break;
+    const body = await res.json();
+    const rows: Array<{
+      slug?: string;
+      updatedAt?: string;
+      logo?: string | null;
+      coverImage?: string | null;
+    }> = body?.data?.items ?? [];
+    if (rows.length === 0) break;
+    for (const r of rows) {
+      if (!r.slug) continue;
+      // Surface the brand logo + cover image as sitemap-image entries.
+      // Google Images extracts these for visual-search and the
+      // knowledge-panel hero. Both are optional — skipped when missing.
+      const images = [r.logo, r.coverImage].filter(
+        (i): i is string => typeof i === 'string' && i.length > 0,
+      );
+      items.push({
+        url: `${BASE_URL}/companies/${r.slug}`,
+        lastModified: r.updatedAt ? new Date(r.updatedAt) : undefined,
+        changeFrequency: 'weekly',
+        priority: 0.6,
+        ...(images.length > 0 ? { images } : {}),
+      });
+      if (items.length >= targetCount) break;
+    }
+    if (rows.length < 100) break;
+    page += 1;
+  }
+  return items;
+}
+
+/**
+ * Companies-with-reviews shard — emits `/companies/{slug}/reviews`
+ * for every company that has ≥1 approved review. Backend cursor-paged
+ * so the shard cleanly fits the 50k spec limit.
+ */
+async function fetchCompanyReviewsShardItems(): Promise<ShardItem[]> {
+  const apiBase =
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:5000/api/v1';
+  const items: ShardItem[] = [];
+  try {
+    let cursor: string | null = null;
+    while (items.length < 50_000) {
+      const url = `${apiBase}/public/companies-with-reviews-sitemap?limit=1000${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+      const res = await fetch(url, { next: { revalidate: 600 } });
+      if (!res.ok) break;
+      const body = await res.json();
+      const rows: Array<{ slug: string; refreshedAt: string }> = body?.data?.items ?? [];
+      for (const r of rows) {
+        if (!r.slug) continue;
+        items.push({
+          url: `${BASE_URL}/companies/${r.slug}/reviews`,
+          lastModified: r.refreshedAt ? new Date(r.refreshedAt) : undefined,
+          changeFrequency: 'weekly',
+          priority: 0.6,
+        });
+        if (items.length >= 50_000) break;
+      }
+      const next = body?.data?.cursor as string | null | undefined;
+      if (!next) break;
+      cursor = next;
+    }
+  } catch {
+    /* ignore — shard renders empty if backend is unavailable */
+  }
+  return items;
 }
 
 function buildAlternates(path: string) {
@@ -243,24 +720,7 @@ function buildAlternates(path: string) {
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap
  * @see https://developers.google.com/search/docs/specialty/international/localized-versions
  */
-export default function sitemap(): MetadataRoute.Sitemap {
-  // WORKAROUND: Next.js 16 has a compiled-code bug where the `id` parameter
-  // from generateSitemaps is passed as an unresolved Promise instead of the
-  // resolved numeric value. `0 === Promise` is false, which caused `switch`
-  // and `if` matching to silently fall to the default branch → empty <urlset>.
-  //
-  // Since we only have one shard (id: 0 = static pages), we return all entries
-  // unconditionally. The `id` param is accepted by JS at runtime (extra args
-  // are ignored) but not referenced. generateSitemaps() is preserved for the
-  // sharding URL structure (/sitemap/0.xml) and future multi-shard support.
-  //
-  // When adding dynamic shards (jobs, companies), make the function async and
-  // `await` the id before branching:
-  //
-  //   export default async function sitemap({ id }: { id: number }) {
-  //     const resolvedId = typeof id === 'object' && 'then' in id ? await id : id;
-  //     switch (resolvedId) { ... }
-  //   }
+function staticShardEntries(): MetadataRoute.Sitemap {
   return STATIC_ENTRIES.map((entry) => ({
     url: `${BASE_URL}${entry.path}`,
     lastModified: entry.lastModified ?? getPageLastModified(entry.source),
@@ -271,4 +731,200 @@ export default function sitemap(): MetadataRoute.Sitemap {
       ? { images: entry.images.map((src) => `${BASE_URL}${src}`) }
       : {}),
   }));
+}
+
+export default async function sitemap({ id }: { id: number }): Promise<MetadataRoute.Sitemap> {
+  // Resolve the Next.js 16 id-as-Promise quirk defensively.
+  const resolvedId =
+    typeof id === 'object' && id !== null && 'then' in (id as object)
+      ? Number(await (id as unknown as Promise<number>))
+      : Number(id);
+
+  if (resolvedId === 0) return staticShardEntries();
+
+  const map = await getShardMap();
+
+  // Single mapper — propagates url, lastModified, change-freq, priority,
+  // alternates AND `images` (when present) for every dynamic shard.
+  // Without this, Next.js drops the `images` field and Google Image
+  // search misses every company logo in the catalogue.
+  const toEntry = (it: ShardItem) => ({
+    url: it.url,
+    lastModified: it.lastModified,
+    changeFrequency: it.changeFrequency,
+    priority: it.priority,
+    alternates: buildAlternates(it.url.replace(BASE_URL, '')),
+    ...(it.images && it.images.length > 0 ? { images: it.images } : {}),
+  });
+
+  if (resolvedId === map.curatedId) {
+    const items = await fetchCuratedSitemapItems();
+    return items.map(toEntry);
+  }
+
+  // Jobs shards.
+  if (resolvedId >= JOBS_SHARD_BASE && resolvedId < map.companiesShardBase) {
+    const shardIndex = resolvedId - JOBS_SHARD_BASE;
+    const items = await fetchJobsShard(shardIndex);
+    return items.map(toEntry);
+  }
+
+  // Companies shards.
+  if (
+    resolvedId >= map.companiesShardBase &&
+    resolvedId < map.companiesShardBase + map.companiesShardCount
+  ) {
+    const shardIndex = resolvedId - map.companiesShardBase;
+    const items = await fetchCompaniesShard(shardIndex);
+    return items.map(toEntry);
+  }
+
+  // Cartesian curated × cities × exp shard.
+  if (resolvedId === map.cartesianShardId) {
+    const items = await fetchCartesianComboItems();
+    return items.map(toEntry);
+  }
+
+  // Popular role×city aggregates from SearchHistory. Returns [] when
+  // the aggregates endpoint isn't yet available — Googlebot still picks
+  // up the empty shard and re-crawls when content arrives.
+  if (resolvedId === map.popularAggregatesShardId) {
+    const items = await fetchPopularAggregateItems();
+    return items.map(toEntry);
+  }
+
+  // Company-reviews shard — `/companies/{slug}/reviews` for every
+  // company with ≥1 approved review.
+  if (resolvedId === map.companyReviewsShardId) {
+    const items = await fetchCompanyReviewsShardItems();
+    return items.map(toEntry);
+  }
+
+  // Vendors shard — public vendor profile pages.
+  if (resolvedId === map.vendorsShardId) {
+    const items = await fetchVendorsShardItems();
+    return items.map(toEntry);
+  }
+
+  // Help-articles shard — public help articles under /help/{slug}.
+  if (resolvedId === map.helpArticlesShardId) {
+    const items = await fetchHelpArticlesShardItems();
+    return items.map(toEntry);
+  }
+
+  // News-articles shard — Google News candidate. Empty until /news ships.
+  if (resolvedId === map.newsArticlesShardId) {
+    const items = await fetchNewsArticlesShardItems();
+    return items.map(toEntry);
+  }
+
+  // Unknown shard id — return empty so the sitemap remains valid.
+  return [];
+}
+
+/**
+ * Vendors shard — public vendor profile pages. Pulled from the public
+ * vendor-search endpoint; capped at 50k per the sitemap spec.
+ */
+async function fetchVendorsShardItems(): Promise<ShardItem[]> {
+  const apiBase =
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:5000/api/v1';
+  const items: ShardItem[] = [];
+  try {
+    let page = 1;
+    while (items.length < 50_000) {
+      const res = await fetch(`${apiBase}/vendors?limit=100&page=${page}`, {
+        next: { revalidate: 600 },
+      });
+      if (!res.ok) break;
+      const body = await res.json();
+      const rows: Array<{ slug?: string; updatedAt?: string }> =
+        body?.data?.items ?? body?.data?.vendors ?? [];
+      if (rows.length === 0) break;
+      for (const r of rows) {
+        if (!r.slug) continue;
+        items.push({
+          url: `${BASE_URL}/vendors/${r.slug}`,
+          lastModified: r.updatedAt ? new Date(r.updatedAt) : undefined,
+          changeFrequency: 'weekly',
+          priority: 0.5,
+        });
+        if (items.length >= 50_000) break;
+      }
+      if (rows.length < 100) break;
+      page += 1;
+    }
+  } catch {
+    /* ignore — empty shard if backend unavailable */
+  }
+  return items;
+}
+
+/**
+ * Help-articles shard — public help/{slug} pages. Empty array on
+ * failure so the sitemap remains spec-valid.
+ */
+async function fetchHelpArticlesShardItems(): Promise<ShardItem[]> {
+  const apiBase =
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:5000/api/v1';
+  const items: ShardItem[] = [];
+  try {
+    const res = await fetch(`${apiBase}/public/help-articles?limit=500`, {
+      next: { revalidate: 600 },
+    });
+    if (!res.ok) return items;
+    const body = await res.json();
+    const rows: Array<{ slug?: string; updatedAt?: string }> =
+      body?.data?.items ?? body?.data ?? [];
+    for (const r of rows) {
+      if (!r.slug) continue;
+      items.push({
+        url: `${BASE_URL}/help/${r.slug}`,
+        lastModified: r.updatedAt ? new Date(r.updatedAt) : undefined,
+        changeFrequency: 'monthly',
+        priority: 0.5,
+      });
+    }
+  } catch {
+    /* ignore */
+  }
+  return items;
+}
+
+/**
+ * News-articles shard — Google News sitemap candidate. Empty until a
+ * /news or /blog surface ships; emitted regardless so Googlebot has a
+ * stable shard URL waiting.
+ */
+async function fetchNewsArticlesShardItems(): Promise<ShardItem[]> {
+  const apiBase =
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:5000/api/v1';
+  const items: ShardItem[] = [];
+  try {
+    const res = await fetch(`${apiBase}/public/news?limit=500`, {
+      next: { revalidate: 600 },
+    });
+    if (!res.ok) return items;
+    const body = await res.json();
+    const rows: Array<{ slug?: string; updatedAt?: string }> =
+      body?.data?.items ?? body?.data ?? [];
+    for (const r of rows) {
+      if (!r.slug) continue;
+      items.push({
+        url: `${BASE_URL}/news/${r.slug}`,
+        lastModified: r.updatedAt ? new Date(r.updatedAt) : undefined,
+        changeFrequency: 'daily',
+        priority: 0.6,
+      });
+    }
+  } catch {
+    /* ignore */
+  }
+  return items;
 }

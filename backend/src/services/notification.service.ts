@@ -1345,9 +1345,13 @@ class NotificationService {
   /**
    * Get unread notification count
    */
-  async getUnreadCount(userId: string): Promise<number> {
+  async getUnreadCount(userId: string, category?: string): Promise<number> {
     return prisma.notification.count({
-      where: { userId, isRead: false },
+      where: {
+        userId,
+        isRead: false,
+        ...(category ? { category } : {}),
+      },
     });
   }
 

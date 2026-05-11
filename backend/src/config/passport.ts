@@ -81,8 +81,16 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
             return done(new Error('No email found in Google profile'), false);
           }
 
-          // Support role selection via session state (set during /auth/google initiation)
-          const requestedRole = req.query?.state === 'EMPLOYER' ? Role.EMPLOYER : Role.CANDIDATE;
+          // Role hint is echoed back via `state` (set during /auth/google
+          // initiation). Allow-list match is defensive — anything else falls
+          // back to CANDIDATE.
+          const stateValue = typeof req.query?.state === 'string' ? req.query.state : '';
+          const requestedRole =
+            stateValue === 'EMPLOYER'
+              ? Role.EMPLOYER
+              : stateValue === 'VENDOR'
+                ? Role.VENDOR
+                : Role.CANDIDATE;
 
           // Upsert user: Update if exists (link googleId), create if not
           const user = await prisma.user.upsert({
@@ -122,8 +130,9 @@ if (env.LINKEDIN_CLIENT_ID && env.LINKEDIN_CLIENT_SECRET) {
         clientSecret: env.LINKEDIN_CLIENT_SECRET,
         callbackURL: env.LINKEDIN_CALLBACK_URL,
         scope: ['r_emailaddress', 'r_liteprofile'],
+        passReqToCallback: true,
       },
-      async (_accessToken: string, _refreshToken: string, profile: any, done: any) => {
+      async (req: any, _accessToken: string, _refreshToken: string, profile: any, done: any) => {
         try {
           const email = profile.emails?.[0].value;
 
@@ -131,8 +140,19 @@ if (env.LINKEDIN_CLIENT_ID && env.LINKEDIN_CLIENT_SECRET) {
             return done(new Error('No email found in LinkedIn profile'), false);
           }
 
-          // LinkedIn state is random nonce; role is passed via separate mechanism
-          // Default to CANDIDATE for LinkedIn (professional network = job seekers)
+          // Role is encoded into state as `<ROLE>:<nonce>` by the
+          // /auth/linkedin init handler so first-time signups respect the
+          // requested role exactly the way Google does. Fall back to
+          // CANDIDATE when state is missing or doesn't match the allow-list.
+          const rawState = typeof req.query?.state === 'string' ? req.query.state : '';
+          const stateRole = rawState.split(':')[0]?.toUpperCase();
+          const requestedRole =
+            stateRole === 'EMPLOYER'
+              ? Role.EMPLOYER
+              : stateRole === 'VENDOR'
+                ? Role.VENDOR
+                : Role.CANDIDATE;
+
           const user = await prisma.user.upsert({
             where: { email: email.toLowerCase() },
             update: {
@@ -146,7 +166,7 @@ if (env.LINKEDIN_CLIENT_ID && env.LINKEDIN_CLIENT_SECRET) {
               lastName: profile.name?.familyName || '',
               linkedinId: profile.id,
               avatar: profile.photos?.[0]?.value,
-              role: Role.CANDIDATE,
+              role: requestedRole,
               isEmailVerified: true,
             },
           });

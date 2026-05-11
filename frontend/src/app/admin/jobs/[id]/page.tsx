@@ -316,12 +316,11 @@ export default function AdminJobDetailPage() {
                     : job.salaryType === 'HOURLY'
                       ? ' / hour'
                       : ''}
-                {(job.currency || 'INR').toUpperCase() === 'INR' &&
-                  job.salaryType === 'ANNUAL' && (
-                    <span className="ml-2 text-xs text-[var(--text-muted)]">
-                      ({formatSalaryAsLPA(job.salaryMin, job.salaryMax)})
-                    </span>
-                  )}
+                {(job.currency || 'INR').toUpperCase() === 'INR' && job.salaryType === 'ANNUAL' && (
+                  <span className="ml-2 text-xs text-[var(--text-muted)]">
+                    ({formatSalaryAsLPA(job.salaryMin, job.salaryMax)})
+                  </span>
+                )}
                 {job.salaryNegotiable && (
                   <span className="ml-2 text-xs text-[var(--success)]">Negotiable</span>
                 )}
@@ -336,7 +335,7 @@ export default function AdminJobDetailPage() {
                 tooltip="Approve this job listing"
                 leftIcon={<CheckCircle className="h-4 w-4" />}
                 onClick={() => setShowApproveModal(true)}
-                className="text-[var(--success)] border-[var(--success)]/30"
+                className="border-[var(--success)]/30 text-[var(--success)]"
               >
                 Approve
               </Button>
@@ -371,7 +370,10 @@ export default function AdminJobDetailPage() {
                 Delete
               </Button>
               {job.company?.userId && (
-                <Link href={ROUTES.ADMIN.USER_DETAIL(job.company.userId)} title="View employer profile">
+                <Link
+                  href={ROUTES.ADMIN.USER_DETAIL(job.company.userId)}
+                  title="View employer profile"
+                >
                   <Button variant="outline" size="sm" leftIcon={<Users className="h-4 w-4" />}>
                     View Employer
                   </Button>
@@ -382,24 +384,15 @@ export default function AdminJobDetailPage() {
         </Card>
 
         {/* Tabs */}
-        <Tabs
-          tabs={tabs}
-          activeTab={activeTab}
-          onChange={handleTabChange}
-          variant="underline"
-        />
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} variant="underline" />
 
         {/* Tab Content */}
         <div className="space-y-6">
           {/* Overview Tab */}
-          {activeTab === 'overview' && (
-            <OverviewTab job={job} />
-          )}
+          {activeTab === 'overview' && <OverviewTab job={job} />}
 
           {/* Requirements Tab */}
-          {activeTab === 'requirements' && (
-            <RequirementsTab job={job} />
-          )}
+          {activeTab === 'requirements' && <RequirementsTab job={job} />}
 
           {/* Applications Tab */}
           {activeTab === 'applications' && (
@@ -432,7 +425,11 @@ export default function AdminJobDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" tooltip="Cancel approval" onClick={() => setShowApproveModal(false)}>
+              <Button
+                variant="outline"
+                tooltip="Cancel approval"
+                onClick={() => setShowApproveModal(false)}
+              >
                 Cancel
               </Button>
               <Button
@@ -565,7 +562,11 @@ export default function AdminJobDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" tooltip="Cancel deletion" onClick={() => setShowDeleteModal(false)}>
+              <Button
+                variant="outline"
+                tooltip="Cancel deletion"
+                onClick={() => setShowDeleteModal(false)}
+              >
                 Cancel
               </Button>
               <Button
@@ -583,8 +584,8 @@ export default function AdminJobDetailPage() {
             <Trash2 className="text-error h-5 w-5 shrink-0" />
             <p className="text-sm text-[var(--text-secondary)]">
               Are you sure you want to permanently delete{' '}
-              <span className="font-medium text-[var(--text)]">{job.title}</span>? This action cannot
-              be undone.
+              <span className="font-medium text-[var(--text)]">{job.title}</span>? This action
+              cannot be undone.
             </p>
           </div>
         </Modal>
@@ -746,28 +747,22 @@ function OverviewTab({ job }: { job: Job }) {
               value={`${job.experienceMin}-${job.experienceMax || job.experienceMin}+ years`}
             />
             {job.experienceLevel && (
-              <InfoRow
-                label="Level"
-                value={EXPERIENCE_LEVEL_LABELS[job.experienceLevel]}
-              />
+              <InfoRow label="Level" value={EXPERIENCE_LEVEL_LABELS[job.experienceLevel]} />
             )}
             {job.numberOfOpenings && (
-              <InfoRow label="Openings" value={`${job._hiredCount ?? 0}/${job.numberOfOpenings} filled`} />
+              <InfoRow
+                label="Openings"
+                value={`${job._hiredCount ?? 0}/${job.numberOfOpenings} filled`}
+              />
             )}
             {job.industry && <InfoRow label="Industry" value={job.industry} />}
             {job.department && <InfoRow label="Department" value={job.department} />}
             {job.functionalArea && (
-              <InfoRow
-                label="Functional Area"
-                value={FUNCTIONAL_AREA_LABELS[job.functionalArea]}
-              />
+              <InfoRow label="Functional Area" value={FUNCTIONAL_AREA_LABELS[job.functionalArea]} />
             )}
             {job.roleCategory && <InfoRow label="Role Category" value={job.roleCategory} />}
             {job.educationRequired && (
-              <InfoRow
-                label="Education"
-                value={EDUCATION_LEVEL_LABELS[job.educationRequired]}
-              />
+              <InfoRow label="Education" value={EDUCATION_LEVEL_LABELS[job.educationRequired]} />
             )}
             {job.preferredEducationField && (
               <InfoRow label="Education Field" value={job.preferredEducationField} />
@@ -778,9 +773,7 @@ function OverviewTab({ job }: { job: Job }) {
             {job.pgRequired && (
               <InfoRow label="PG Required" value={EDUCATION_LEVEL_LABELS[job.pgRequired]} />
             )}
-            {job.shiftType && (
-              <InfoRow label="Shift" value={SHIFT_TYPE_LABELS[job.shiftType]} />
-            )}
+            {job.shiftType && <InfoRow label="Shift" value={SHIFT_TYPE_LABELS[job.shiftType]} />}
             {job.isRemote && <InfoRow label="Remote" value="Yes" valueColor="success" />}
             {job.travelRequirementPercent != null && job.travelRequirementPercent > 0 && (
               <InfoRow label="Travel" value={`${job.travelRequirementPercent}%`} />
@@ -909,9 +902,7 @@ function OverviewTab({ job }: { job: Job }) {
         {/* Nice-to-Have Skills */}
         {(job.niceToHaveSkills?.length ?? 0) > 0 && (
           <Card>
-            <h2 className="mb-3 text-base font-semibold text-[var(--text)]">
-              Nice-to-Have Skills
-            </h2>
+            <h2 className="mb-3 text-base font-semibold text-[var(--text)]">Nice-to-Have Skills</h2>
             <div className="flex flex-wrap gap-1.5">
               {job.niceToHaveSkills.map((skill) => (
                 <Tag key={skill} label={skill} size="sm" />
@@ -937,9 +928,7 @@ function OverviewTab({ job }: { job: Job }) {
         {/* Languages */}
         {(job.languagesRequired?.length ?? 0) > 0 && (
           <Card>
-            <h2 className="mb-3 text-base font-semibold text-[var(--text)]">
-              Languages Required
-            </h2>
+            <h2 className="mb-3 text-base font-semibold text-[var(--text)]">Languages Required</h2>
             <div className="flex flex-wrap gap-1.5">
               {job.languagesRequired.map((lang) => (
                 <Tag key={lang} label={lang} size="sm" />
@@ -1193,7 +1182,7 @@ function ActivityTab({
         </h3>
         <div className="space-y-3">
           {logs.map((log) => (
-            <div key={log.id} className="border-l-2 border-primary pl-4 py-2">
+            <div key={log.id} className="border-primary border-l-2 py-2 pl-4">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-[var(--text)]">{log.action}</span>
                 <span className="text-xs text-[var(--text-muted)]">
@@ -1205,10 +1194,10 @@ function ActivityTab({
               </p>
               {log.details && (
                 <details className="mt-1">
-                  <summary className="text-xs cursor-pointer text-[var(--text-muted)]">
+                  <summary className="cursor-pointer text-xs text-[var(--text-muted)]">
                     View Details
                   </summary>
-                  <pre className="text-xs bg-[var(--bg-secondary)] p-2 rounded mt-1 overflow-x-auto">
+                  <pre className="mt-1 overflow-x-auto rounded bg-[var(--bg-secondary)] p-2 text-xs">
                     {JSON.stringify(log.details, null, 2)}
                   </pre>
                 </details>

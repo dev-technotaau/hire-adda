@@ -84,7 +84,12 @@ export default function SkillsSection({ form, updateField }: ProfileSectionProps
                 }}
               />
             </div>
-            <Button variant="outline" onClick={addSkill} className="shrink-0" tooltip="Add this skill">
+            <Button
+              variant="outline"
+              onClick={addSkill}
+              className="shrink-0"
+              tooltip="Add this skill"
+            >
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -109,7 +114,12 @@ export default function SkillsSection({ form, updateField }: ProfileSectionProps
         header={
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-[var(--text)]">Skills with Proficiency</h2>
-            <Button size="sm" variant="outline" onClick={addSkillWithProficiency} tooltip="Add a skill with proficiency level">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={addSkillWithProficiency}
+              tooltip="Add a skill with proficiency level"
+            >
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>

@@ -31,7 +31,11 @@ export default function Error({
           <p className="mb-4 text-xs text-[var(--text-muted)]">Error ID: {error.digest}</p>
         )}
         <div className="flex items-center justify-center gap-3">
-          <Button onClick={reset} leftIcon={<RefreshCw className="h-4 w-4" />} tooltip="Retry loading the page">
+          <Button
+            onClick={reset}
+            leftIcon={<RefreshCw className="h-4 w-4" />}
+            tooltip="Retry loading the page"
+          >
             Try Again
           </Button>
           <Button

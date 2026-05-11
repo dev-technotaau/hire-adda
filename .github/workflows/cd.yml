@@ -216,3 +216,53 @@ jobs:
       K8S_USER: ${{ secrets.K8S_USER }}
       K8S_DEPLOY_PATH: ${{ secrets.K8S_DEPLOY_PATH }}
       GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── IndexNow ping (post-deploy) ──
+  # After a successful deploy, fan a bulk URL list to Bing/Yandex/Naver
+  # via the frontend's /api/indexnow-ping route. The route validates the
+  # bearer token before forwarding to api.indexnow.org so random
+  # callers can't burn our quota. Backend mutation paths
+  # (job/company/review create) auto-ping on their own — this step
+  # only covers the static marketing surface that doesn't change on
+  # data mutations.
+  #
+  # Required GitHub Actions secret:
+  #   - INDEXNOW_PING_TOKEN  (matches the value in infra/docker/.env)
+  #
+  # Failure here NEVER fails the deploy — IndexNow is best-effort.
+  indexnow-ping:
+    needs: [deploy-k8s]
+    if: always() && needs.deploy-k8s.result == 'success'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Ping IndexNow with marketing URLs
+        run: |
+          set +e   # never block the workflow on a 4xx/5xx from IndexNow
+          curl --silent --show-error --max-time 10 \
+            -X POST https://hireadda.in/api/indexnow-ping \
+            -H "Authorization: Bearer $INDEXNOW_PING_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "urls": [
+                "https://hireadda.in/",
+                "https://hireadda.in/about",
+                "https://hireadda.in/contact",
+                "https://hireadda.in/help",
+                "https://hireadda.in/jobs",
+                "https://hireadda.in/companies",
+                "https://hireadda.in/vendors",
+                "https://hireadda.in/pricing",
+                "https://hireadda.in/pricing/employer",
+                "https://hireadda.in/pricing/candidate",
+                "https://hireadda.in/site-map",
+                "https://hireadda.in/sitemap.xml",
+                "https://hireadda.in/sitemap-news.xml",
+                "https://hireadda.in/feed.xml",
+                "https://hireadda.in/feed.atom",
+                "https://hireadda.in/feed.json"
+              ]
+            }'
+          echo ""   # trailing newline for log readability
+        env:
+          INDEXNOW_PING_TOKEN: ${{ secrets.INDEXNOW_PING_TOKEN }}

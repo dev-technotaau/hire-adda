@@ -122,16 +122,31 @@ export function organizationSchema(): JsonLd {
         '@type': 'ContactPoint',
         contactType: 'customer support',
         email: 'support@hireadda.in',
+        telephone: '+91-1800-123-4567',
         url: `${BASE_URL}/contact`,
         areaServed: 'IN',
         availableLanguage: ['English', 'Hindi'],
+        hoursAvailable: {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          opens: '09:00',
+          closes: '18:00',
+        },
       },
       {
         '@type': 'ContactPoint',
         contactType: 'sales',
         email: 'billing@hireadda.in',
+        telephone: '+91-7374011333',
+        url: `${BASE_URL}/pricing/employer`,
         areaServed: 'IN',
-        availableLanguage: 'English',
+        availableLanguage: ['English', 'Hindi'],
+        hoursAvailable: {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+          opens: '09:00',
+          closes: '18:00',
+        },
       },
       {
         '@type': 'ContactPoint',
@@ -146,6 +161,25 @@ export function organizationSchema(): JsonLd {
         email: 'privacy@hireadda.in',
         areaServed: 'IN',
         availableLanguage: 'English',
+      },
+      {
+        // WhatsApp support channel — surfaced on plans that include
+        // WhatsApp/priority support. The `contactOption: 'TollFree'` +
+        // wa.me URL pattern signals to Google that this is a chat channel,
+        // not a voice line.
+        '@type': 'ContactPoint',
+        contactType: 'customer support',
+        telephone: '+91-8054050551',
+        url: 'https://wa.me/918054050551',
+        areaServed: 'IN',
+        availableLanguage: ['English', 'Hindi'],
+        contactOption: 'WhatsApp',
+        hoursAvailable: {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+          opens: '09:00',
+          closes: '21:00',
+        },
       },
     ],
     sameAs: [
@@ -444,6 +478,96 @@ export function speakableSchema(cssSelectors: ReadonlyArray<string>): JsonLd {
   };
 }
 
+/**
+ * Service schema — used to surface a specific Hire Adda service offering
+ * (e.g. "Employer hiring solutions") with its dedicated phone helpline, area
+ * served, and offer list. Renders the helpline as structured data so it can
+ * appear in Google's Service / Knowledge Panel results when users search
+ * "hire adda employer support phone" etc.
+ *
+ * The `provider` field references the Organization @id so the graph remains
+ * connected — Google attributes the service to Hire Adda, not as a
+ * standalone entity.
+ *
+ * Schema.org docs: https://schema.org/Service
+ */
+export interface ServiceSchemaInput {
+  name: string;
+  description: string;
+  url: string;
+  serviceType: string;
+  /** Display + tel-URI form. */
+  telephone?: { display: string; uri: string };
+  /** Hours when the helpline / service is staffed. */
+  hours?: {
+    days: ReadonlyArray<
+      'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday'
+    >;
+    opens: string; // "09:00"
+    closes: string; // "18:00"
+  };
+  /** Audience targeted (e.g. "employers", "candidates", "vendors"). */
+  audienceType?: string;
+  /** Optional list of products/plans offered under this service. */
+  offers?: ReadonlyArray<{
+    name: string;
+    pricePaise: number;
+    currency?: string;
+    url?: string;
+  }>;
+}
+
+export function serviceSchema(input: ServiceSchemaInput): JsonLd {
+  const channel: JsonLd | undefined = input.telephone
+    ? {
+        '@type': 'ServiceChannel',
+        serviceUrl: abs(input.url),
+        servicePhone: input.telephone.uri,
+        ...(input.hours
+          ? {
+              availableLanguage: ['English', 'Hindi'],
+              serviceLocation: {
+                '@type': 'OpeningHoursSpecification',
+                dayOfWeek: input.hours.days,
+                opens: input.hours.opens,
+                closes: input.hours.closes,
+              },
+            }
+          : {}),
+      }
+    : undefined;
+
+  const offers =
+    input.offers && input.offers.length > 0
+      ? input.offers.map((o) => ({
+          '@type': 'Offer',
+          name: o.name,
+          price: (o.pricePaise / 100).toFixed(2),
+          priceCurrency: o.currency ?? 'INR',
+          ...(o.url ? { url: abs(o.url) } : {}),
+          availability: 'https://schema.org/InStock',
+        }))
+      : undefined;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: input.name,
+    description: input.description,
+    url: abs(input.url),
+    serviceType: input.serviceType,
+    provider: { '@id': ORGANIZATION_ID },
+    areaServed: { '@type': 'Country', name: 'India' },
+    ...(input.audienceType
+      ? { audience: { '@type': 'Audience', audienceType: input.audienceType } }
+      : {}),
+    ...(channel ? { availableChannel: channel } : {}),
+    ...(offers
+      ? { hasOfferCatalog: { '@type': 'OfferCatalog', name: input.name, itemListElement: offers } }
+      : {}),
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // 6.  JobPosting — Google Jobs / SERP job carousel (critical for a job portal)
 // ═══════════════════════════════════════════════════════════════════════
@@ -474,7 +598,7 @@ interface JobLocation {
   addressCountry: string;
 }
 
-interface JobPostingInput {
+export interface JobPostingInput {
   /** Absolute or relative URL — used as canonical. */
   url: string;
   title: string;
@@ -960,34 +1084,6 @@ export function eventSchema(input: {
   };
 }
 
-export function serviceSchema(input: {
-  name: string;
-  description: string;
-  serviceType: string;
-  areaServed?: string;
-  provider?: { id: string };
-  offers?: { price: string; priceCurrency: string };
-}): JsonLd {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Service',
-    name: input.name,
-    description: input.description,
-    serviceType: input.serviceType,
-    provider: { '@id': input.provider?.id ?? ORGANIZATION_ID },
-    ...(input.areaServed ? { areaServed: input.areaServed } : {}),
-    ...(input.offers
-      ? {
-          offers: {
-            '@type': 'Offer',
-            price: input.offers.price,
-            priceCurrency: input.offers.priceCurrency,
-          },
-        }
-      : {}),
-  };
-}
-
 export function reviewSchema(input: {
   itemName: string;
   itemType: string; // 'Organization' | 'Product' etc.
@@ -1028,6 +1124,365 @@ export function aggregateRatingSchema(input: {
     reviewCount: input.reviewCount,
     bestRating: input.bestRating ?? 5,
     worstRating: input.worstRating ?? 1,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// 10b. Course / EducationalOccupationalProgram — career-skill content
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Course schema — for help articles teaching a specific career skill
+ * (resume writing, interview prep, salary negotiation, etc.). Triggers
+ * the Course rich-result carousel on Google.
+ */
+export function courseSchema(input: {
+  url: string;
+  name: string;
+  description: string;
+  provider?: { name: string; url?: string };
+  inLanguage?: string;
+  isAccessibleForFree?: boolean;
+  hasCourseInstance?: ReadonlyArray<{
+    courseMode: 'Online' | 'Onsite' | 'Blended';
+    startDate?: string;
+    endDate?: string;
+    courseWorkload?: string;
+    location?: string;
+    instructor?: { name: string; url?: string };
+  }>;
+  educationalLevel?: string;
+  about?: string;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Course',
+    name: input.name,
+    description: input.description,
+    url: abs(input.url),
+    inLanguage: input.inLanguage ?? 'en-IN',
+    provider: input.provider
+      ? {
+          '@type': 'Organization',
+          name: input.provider.name,
+          ...(input.provider.url ? { url: abs(input.provider.url) } : {}),
+        }
+      : { '@id': ORGANIZATION_ID },
+    isAccessibleForFree: input.isAccessibleForFree ?? true,
+    ...(input.educationalLevel ? { educationalLevel: input.educationalLevel } : {}),
+    ...(input.about ? { about: input.about } : {}),
+    ...(input.hasCourseInstance && input.hasCourseInstance.length > 0
+      ? {
+          hasCourseInstance: input.hasCourseInstance.map((inst) => ({
+            '@type': 'CourseInstance',
+            courseMode: inst.courseMode,
+            ...(inst.startDate ? { startDate: inst.startDate } : {}),
+            ...(inst.endDate ? { endDate: inst.endDate } : {}),
+            ...(inst.courseWorkload ? { courseWorkload: inst.courseWorkload } : {}),
+            ...(inst.location ? { location: inst.location } : {}),
+            ...(inst.instructor
+              ? {
+                  instructor: {
+                    '@type': 'Person',
+                    name: inst.instructor.name,
+                    ...(inst.instructor.url ? { url: inst.instructor.url } : {}),
+                  },
+                }
+              : {}),
+          })),
+        }
+      : {}),
+  };
+}
+
+/** EducationalOccupationalProgram — long-form skills program. */
+export function educationalProgramSchema(input: {
+  url: string;
+  name: string;
+  description: string;
+  occupationalCategory?: string;
+  programType?: string;
+  educationalLevel?: string;
+  timeOfDay?: string;
+  applicationDeadline?: string;
+  numberOfCredits?: number;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'EducationalOccupationalProgram',
+    url: abs(input.url),
+    name: input.name,
+    description: input.description,
+    provider: { '@id': ORGANIZATION_ID },
+    ...(input.occupationalCategory ? { occupationalCategory: input.occupationalCategory } : {}),
+    ...(input.programType ? { programType: input.programType } : {}),
+    ...(input.educationalLevel ? { educationalLevel: input.educationalLevel } : {}),
+    ...(input.timeOfDay ? { timeOfDay: input.timeOfDay } : {}),
+    ...(input.applicationDeadline ? { applicationDeadline: input.applicationDeadline } : {}),
+    ...(input.numberOfCredits ? { numberOfCredits: input.numberOfCredits } : {}),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// 10c. QAPage / Quiz / Dataset / Product / ProfilePage / ImageGallery
+// ═══════════════════════════════════════════════════════════════════════
+
+/** QAPage — community Q&A; distinct from owner-curated FAQPage. */
+export function qaPageSchema(input: {
+  url: string;
+  question: string;
+  questionDatePublished: string;
+  questionAuthorName: string;
+  upvoteCount?: number;
+  answerCount?: number;
+  acceptedAnswer?: {
+    text: string;
+    datePublished: string;
+    authorName: string;
+    upvoteCount?: number;
+    url?: string;
+  };
+  suggestedAnswers?: ReadonlyArray<{
+    text: string;
+    datePublished: string;
+    authorName: string;
+    upvoteCount?: number;
+    url?: string;
+  }>;
+}): JsonLd {
+  type AnswerInput = NonNullable<typeof input.acceptedAnswer>;
+  const buildAnswer = (a: AnswerInput) => ({
+    '@type': 'Answer',
+    text: a.text,
+    datePublished: a.datePublished,
+    author: { '@type': 'Person', name: a.authorName },
+    ...(a.upvoteCount !== undefined ? { upvoteCount: a.upvoteCount } : {}),
+    ...(a.url ? { url: abs(a.url) } : {}),
+  });
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'QAPage',
+    mainEntity: {
+      '@type': 'Question',
+      name: input.question,
+      text: input.question,
+      datePublished: input.questionDatePublished,
+      author: { '@type': 'Person', name: input.questionAuthorName },
+      ...(input.upvoteCount !== undefined ? { upvoteCount: input.upvoteCount } : {}),
+      ...(input.answerCount !== undefined ? { answerCount: input.answerCount } : {}),
+      ...(input.acceptedAnswer ? { acceptedAnswer: buildAnswer(input.acceptedAnswer) } : {}),
+      ...(input.suggestedAnswers && input.suggestedAnswers.length > 0
+        ? { suggestedAnswer: input.suggestedAnswers.map(buildAnswer) }
+        : {}),
+    },
+    url: abs(input.url),
+  };
+}
+
+/** Quiz — skill assessment / role-fit quiz. */
+export function quizSchema(input: {
+  url: string;
+  name: string;
+  description: string;
+  about?: string;
+  educationalLevel?: string;
+  timeRequired?: string;
+  numberOfQuestions?: number;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Quiz',
+    url: abs(input.url),
+    name: input.name,
+    description: input.description,
+    ...(input.about ? { about: input.about } : {}),
+    ...(input.educationalLevel ? { educationalLevel: input.educationalLevel } : {}),
+    ...(input.timeRequired ? { timeRequired: input.timeRequired } : {}),
+    ...(input.numberOfQuestions ? { numberOfQuestions: input.numberOfQuestions } : {}),
+    publisher: { '@id': ORGANIZATION_ID },
+  };
+}
+
+/**
+ * Dataset — surfaces public data to Google Dataset Search and AI engines.
+ * Use on /jobs and /companies listing pages.
+ *
+ * @see https://developers.google.com/search/docs/appearance/structured-data/dataset
+ */
+export function datasetSchema(input: {
+  url: string;
+  name: string;
+  description: string;
+  dateModified?: string;
+  datePublished?: string;
+  spatialCoverage?: string;
+  temporalCoverage?: string;
+  keywords?: string[];
+  license?: string;
+  distribution?: ReadonlyArray<{ encodingFormat: string; contentUrl: string }>;
+  size?: number;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    url: abs(input.url),
+    name: input.name,
+    description: input.description,
+    creator: { '@id': ORGANIZATION_ID },
+    publisher: { '@id': ORGANIZATION_ID },
+    inLanguage: 'en-IN',
+    isAccessibleForFree: true,
+    license: input.license ? abs(input.license) : abs('/terms'),
+    ...(input.dateModified ? { dateModified: input.dateModified } : {}),
+    ...(input.datePublished ? { datePublished: input.datePublished } : {}),
+    ...(input.spatialCoverage
+      ? { spatialCoverage: { '@type': 'Place', name: input.spatialCoverage } }
+      : {}),
+    ...(input.temporalCoverage ? { temporalCoverage: input.temporalCoverage } : {}),
+    ...(input.keywords ? { keywords: input.keywords } : {}),
+    ...(input.distribution
+      ? {
+          distribution: input.distribution.map((d) => ({
+            '@type': 'DataDownload',
+            encodingFormat: d.encodingFormat,
+            contentUrl: abs(d.contentUrl),
+          })),
+        }
+      : {}),
+    ...(input.size
+      ? { variableMeasured: { '@type': 'PropertyValue', name: 'size', value: input.size } }
+      : {}),
+  };
+}
+
+/** Product — for paid plan pages. */
+export function productSchema(input: {
+  url: string;
+  name: string;
+  description: string;
+  image?: string | string[];
+  brand?: string;
+  category?: string;
+  offers: {
+    pricePaise: number;
+    currency?: string;
+    priceValidUntil?: string;
+    availability?: string;
+    url?: string;
+    priceValidFrom?: string;
+  };
+  aggregateRating?: { ratingValue: number; reviewCount: number };
+  sku?: string;
+}): JsonLd {
+  const images = input.image
+    ? Array.isArray(input.image)
+      ? input.image.map(abs)
+      : [abs(input.image)]
+    : OG_IMAGE_VARIANTS.map((v) => abs(v.url));
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    url: abs(input.url),
+    name: input.name,
+    description: input.description,
+    image: images,
+    brand: { '@type': 'Brand', name: input.brand ?? 'Hire Adda' },
+    ...(input.category ? { category: input.category } : {}),
+    ...(input.sku ? { sku: input.sku } : {}),
+    offers: {
+      '@type': 'Offer',
+      price: (input.offers.pricePaise / 100).toFixed(2),
+      priceCurrency: input.offers.currency ?? 'INR',
+      availability: input.offers.availability ?? 'https://schema.org/InStock',
+      url: abs(input.offers.url ?? input.url),
+      ...(input.offers.priceValidUntil ? { priceValidUntil: input.offers.priceValidUntil } : {}),
+      ...(input.offers.priceValidFrom ? { priceValidFrom: input.offers.priceValidFrom } : {}),
+      seller: { '@id': ORGANIZATION_ID },
+    },
+    ...(input.aggregateRating
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: input.aggregateRating.ratingValue,
+            reviewCount: input.aggregateRating.reviewCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
+  };
+}
+
+/** ProfilePage — wraps a Person/Organization for profile-style URLs. */
+export function profilePageSchema(input: {
+  url: string;
+  mainEntity: JsonLd;
+  dateCreated?: string;
+  dateModified?: string;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    url: abs(input.url),
+    mainEntity: input.mainEntity,
+    ...(input.dateCreated ? { dateCreated: input.dateCreated } : {}),
+    ...(input.dateModified ? { dateModified: input.dateModified } : {}),
+  };
+}
+
+/** ImageGallery — for company office-photo galleries. */
+export function imageGallerySchema(input: {
+  url: string;
+  name: string;
+  description?: string;
+  images: ReadonlyArray<{
+    url: string;
+    caption?: string;
+    width?: number;
+    height?: number;
+  }>;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ImageGallery',
+    url: abs(input.url),
+    name: input.name,
+    ...(input.description ? { description: input.description } : {}),
+    associatedMedia: input.images.map((img) => ({
+      '@type': 'ImageObject',
+      contentUrl: abs(img.url),
+      url: abs(img.url),
+      ...(img.caption ? { caption: img.caption } : {}),
+      ...(img.width ? { width: img.width } : {}),
+      ...(img.height ? { height: img.height } : {}),
+    })),
+  };
+}
+
+/** ItemList — generic homogeneous URL list (sitemap, related-items panel). */
+export function itemListSchema(input: {
+  url: string;
+  name: string;
+  items: ReadonlyArray<{ url: string; name: string; image?: string; description?: string }>;
+  itemListOrder?: 'Ascending' | 'Descending' | 'Unordered';
+  numberOfItems?: number;
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    url: abs(input.url),
+    name: input.name,
+    itemListOrder: `https://schema.org/ItemListOrder${input.itemListOrder ?? 'Unordered'}`,
+    numberOfItems: input.numberOfItems ?? input.items.length,
+    itemListElement: input.items.map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: abs(it.url),
+      name: it.name,
+      ...(it.image ? { image: abs(it.image) } : {}),
+      ...(it.description ? { description: it.description } : {}),
+    })),
   };
 }
 

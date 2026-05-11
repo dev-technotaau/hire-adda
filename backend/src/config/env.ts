@@ -21,6 +21,16 @@ const envSchema = z
     // BFF (Backend-For-Frontend) — shared secret for Next.js API route proxying
     BFF_SECRET: z.string().min(32).optional(),
 
+    // Public-facing canonical URL — drives sitemap absolutes, IndexNow
+    // host token, deep-link generators. Same value the frontend uses
+    // for NEXT_PUBLIC_APP_URL.
+    NEXT_PUBLIC_APP_URL: z.string().default('https://hireadda.in'),
+
+    // IndexNow site key (32+ char URL-safe). Defaults to the dev-mode
+    // key so non-prod deploys still produce valid payloads (which the
+    // service guards against actually submitting).
+    INDEXNOW_KEY: z.string().default('c43d83f87126d18729b99c85048ac0f8'),
+
     // Cookie maxAge (days) — controls how long auth cookies persist in the browser
     COOKIE_ACCESS_MAX_AGE_DAYS: z.string().default('7'),
     COOKIE_REFRESH_MAX_AGE_DAYS: z.string().default('30'),
@@ -64,6 +74,8 @@ const envSchema = z
     BULLMQ_SCHEDULER_CONCURRENCY: z.string().default('2'),
     BULLMQ_ONBOARDING_DRIP_CONCURRENCY: z.string().default('3'),
     BULLMQ_IMAGE_PROCESSING_CONCURRENCY: z.string().default('2'),
+    BULLMQ_FOLLOWER_NOTIFY_CONCURRENCY: z.string().default('5'),
+    BULLMQ_REVIEW_AGGREGATE_CONCURRENCY: z.string().default('5'),
 
     // Email
     SMTP_HOST: z.string().optional(),
@@ -257,6 +269,110 @@ const envSchema = z
     BACKUP_DIR: z.string().default('./backups'),
     BACKUP_RETENTION_DAYS: z.coerce.number().default(30),
     OPENSEARCH_SNAPSHOT_REPO: z.string().default('hire_adda_repo'),
+
+    // ============================================================
+    // Razorpay Payment Suite
+    // ============================================================
+    // All optional — if any is missing the billing system degrades
+    // gracefully. Required for production billing flows.
+    RAZORPAY_KEY_ID: z.string().optional(),
+    RAZORPAY_KEY_SECRET: z.string().optional(),
+    RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+    RAZORPAY_API_BASE_URL: z.string().default('https://api.razorpay.com/v1'),
+    RAZORPAY_DEFAULT_CURRENCY: z.string().default('INR'),
+    RAZORPAY_PAYMENT_CAPTURE_AUTO: z
+      .string()
+      .default('false') // we capture from webhook handler
+      .transform((v) => v === 'true'),
+    RAZORPAY_INTERNATIONAL_ENABLED: z
+      .string()
+      .default('false')
+      .transform((v) => v === 'true'),
+
+    // Razorpay subscription notify channels (used in checkout options)
+    RAZORPAY_NOTIFY_EMAIL: z
+      .string()
+      .default('true')
+      .transform((v) => v === 'true'),
+    RAZORPAY_NOTIFY_SMS: z
+      .string()
+      .default('true')
+      .transform((v) => v === 'true'),
+
+    // ============================================================
+    // Hire Adda billing identity (seller side — printed on invoices)
+    // ============================================================
+    HA_GSTIN: z.string().optional(),
+    HA_LEGAL_NAME: z.string().default('Hire Adda'),
+    HA_TRADE_NAME: z.string().default('Hire Adda'),
+    HA_BILLING_LINE1: z.string().optional(),
+    HA_BILLING_LINE2: z.string().optional(),
+    HA_BILLING_CITY: z.string().optional(),
+    HA_BILLING_STATE_NAME: z.string().optional(),
+    HA_BILLING_STATE_CODE: z.string().optional(), // 2-digit GST code
+    HA_BILLING_PINCODE: z.string().optional(),
+    HA_BILLING_COUNTRY: z.string().default('India'),
+    HA_PAN: z.string().optional(),
+    HA_CIN: z.string().optional(),
+    HA_UDYAM_NUMBER: z.string().optional(),
+    HA_SUPPORT_EMAIL: z.string().optional(),
+    HA_SUPPORT_PHONE: z.string().optional(),
+
+    // ============================================================
+    // Tax / GST / Invoice settings
+    // ============================================================
+    HA_HSN_SAC_CODE: z.string().default('998314'),
+    HA_GST_RATE_PERCENT: z.coerce.number().default(18),
+    HA_GST_INCLUSIVE_PRICING: z
+      .string()
+      .default('true')
+      .transform((v) => v === 'true'),
+    HA_INVOICE_PREFIX: z.string().default('HA'),
+    HA_FY_START_MONTH: z.coerce.number().default(4), // April
+    HA_E_INVOICE_REQUIRED: z
+      .string()
+      .default('false')
+      .transform((v) => v === 'true'),
+    HA_E_INVOICE_API_URL: z.string().optional(),
+    HA_E_INVOICE_USERNAME: z.string().optional(),
+    HA_E_INVOICE_PASSWORD: z.string().optional(),
+    HA_PLACE_OF_SUPPLY_DEFAULT_STATE: z.string().default('03'), // Punjab — Hire Adda HQ
+    HA_GST_EXPORT_WITH_LUT: z.string().default('true'), // 0% on export-of-services when LUT filed; falls back to SystemConfig key gst.export.with_lut
+
+    // ============================================================
+    // Billing operational settings
+    // ============================================================
+    BILLING_REFUND_WINDOW_DAYS: z.coerce.number().default(2),
+    BILLING_CUSTOM_OFFER_EXPIRY_DAYS: z.coerce.number().default(7),
+    BILLING_AUTO_RENEW_RETRY_MAX: z.coerce.number().default(4),
+    BILLING_GRACE_PERIOD_DAYS: z.coerce.number().default(3),
+    BILLING_EMI_MIN_AMOUNT_PAISE: z.coerce.number().default(300000), // ₹3000
+    BILLING_ORDER_EXPIRY_MINUTES: z.coerce.number().default(30),
+    BILLING_INVOICE_PDF_RETENTION_DAYS: z.coerce.number().default(2555), // ~7 years
+    BILLING_FRAUD_ENABLED: z
+      .string()
+      .default('true')
+      .transform((v) => v === 'true'),
+    BILLING_FRAUD_MULTI_ACCOUNT_THRESHOLD: z.coerce.number().default(3),
+    BILLING_FRAUD_VELOCITY_WINDOW_SECONDS: z.coerce.number().default(300),
+    BILLING_FRAUD_VELOCITY_THRESHOLD: z.coerce.number().default(5),
+    BILLING_BIGQUERY_SYNC_ENABLED: z
+      .string()
+      .default('false')
+      .transform((v) => v === 'true'),
+    BILLING_BQ_DATASET: z.string().default('hire_adda_analytics'),
+    BILLING_BQ_TABLE: z.string().default('billing_events'),
+
+    // BullMQ concurrency for new billing queues
+    BULLMQ_RAZORPAY_WEBHOOK_CONCURRENCY: z.string().default('5'),
+    BULLMQ_BILLING_REMINDER_CONCURRENCY: z.string().default('5'),
+    BULLMQ_BILLING_RETRY_CONCURRENCY: z.string().default('3'),
+    BULLMQ_INVOICE_GEN_CONCURRENCY: z.string().default('2'),
+    BULLMQ_SETTLEMENT_SYNC_CONCURRENCY: z.string().default('1'),
+    BULLMQ_FRAUD_SCAN_CONCURRENCY: z.string().default('3'),
+    BULLMQ_ENTITLEMENT_EXPIRY_CONCURRENCY: z.string().default('2'),
+    BULLMQ_BIGQUERY_BILLING_CONCURRENCY: z.string().default('5'),
+    BULLMQ_PAYMENT_STATUS_POLL_CONCURRENCY: z.string().default('2'),
   })
   .superRefine((data, ctx) => {
     // RS256 requires both private and public keys
@@ -363,5 +479,18 @@ export const getRateLimitMaxRequests = (): number => parseInt(env.RATE_LIMIT_MAX
 export const getAuthRateLimitWindowMs = (): number => parseInt(env.AUTH_RATE_LIMIT_WINDOW_MS, 10);
 export const getAuthRateLimitMaxAttempts = (): number =>
   parseInt(env.AUTH_RATE_LIMIT_MAX_ATTEMPTS, 10);
+
+// ============================================================
+// Razorpay / Billing helpers
+// ============================================================
+export const isRazorpayConfigured = (): boolean =>
+  Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
+
+export const isRazorpayWebhookConfigured = (): boolean => Boolean(env.RAZORPAY_WEBHOOK_SECRET);
+
+export const isRazorpayLiveMode = (): boolean =>
+  Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_ID.startsWith('rzp_live_'));
+
+export const isHaGstConfigured = (): boolean => Boolean(env.HA_GSTIN && env.HA_BILLING_STATE_CODE);
 
 export type Env = z.infer<typeof envSchema>;

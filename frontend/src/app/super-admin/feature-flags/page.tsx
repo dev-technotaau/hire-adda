@@ -67,7 +67,13 @@ export default function FeatureFlagsPage() {
               the Firebase console.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} tooltip="Refresh feature flags from Firebase">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            tooltip="Refresh feature flags from Firebase"
+          >
             <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
             Refresh
           </Button>

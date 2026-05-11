@@ -4,7 +4,7 @@ import prisma from '../config/prisma';
 import { AppError } from '../middleware/error';
 import { generateTokens } from '../services/auth.service';
 
-import {  } from '../kafka/producer';
+import {} from '../kafka/producer';
 import { publishEvent } from '../kafka/producer';
 import { KafkaTopics } from '../kafka/topics';
 import { trackEvent, getClientId } from '../services/analytics.service';
@@ -68,7 +68,9 @@ export const firebaseLogin = async (
           isEmailVerified: decodedToken.email_verified || false,
           googleId: decodedToken.uid,
         },
-        include: { companyProfile: { select: { logo: true, coverImage: true, companyName: true } } },
+        include: {
+          companyProfile: { select: { logo: true, coverImage: true, companyName: true } },
+        },
       });
 
       isNewUser = true;

@@ -239,12 +239,18 @@ class SuperAdminService {
 
     // ADMIN accounts must use OTP-verified routes for contact info changes
     if (user.role === Role.ADMIN) {
-      const blocked = ['email', 'mobileNumber', 'whatsappNumber', 'isMobileVerified', 'isWhatsappVerified'] as const;
+      const blocked = [
+        'email',
+        'mobileNumber',
+        'whatsappNumber',
+        'isMobileVerified',
+        'isWhatsappVerified',
+      ] as const;
       for (const field of blocked) {
         if (data[field] !== undefined) {
           throw new AppError(
             `Cannot directly modify ${field} for admin accounts. Use the verified management endpoints.`,
-            400,
+            400
           );
         }
       }
@@ -345,7 +351,7 @@ class SuperAdminService {
     if (user.role === Role.ADMIN) {
       throw new AppError(
         'Admin accounts require verified password change. Use the /password/initiate endpoint.',
-        400,
+        400
       );
     }
     if (user.role === Role.SUPER_ADMIN && userId !== superAdminId) {
@@ -382,7 +388,7 @@ class SuperAdminService {
     if (user.role === Role.ADMIN) {
       throw new AppError(
         'Admin accounts require verified password change. Use the /password/confirm endpoint.',
-        400,
+        400
       );
     }
     if (user.role === Role.SUPER_ADMIN && userId !== superAdminId) {
@@ -574,19 +580,30 @@ class SuperAdminService {
     const cooldown = getOtpResendCooldown();
     const maxAttempts = getOtpMaxResendAttempts();
     if (resendCount >= maxAttempts) {
-      throw new AppError('Maximum resend attempts reached. Please try again later.', 429, 'OTP_MAX_RESEND');
+      throw new AppError(
+        'Maximum resend attempts reached. Please try again later.',
+        429,
+        'OTP_MAX_RESEND'
+      );
     }
     if (lastSentAt) {
       const elapsed = (Date.now() - lastSentAt.getTime()) / 1000;
       if (elapsed < cooldown) {
         const remaining = Math.ceil(cooldown - elapsed);
-        throw new AppError(`Please wait ${remaining} seconds before requesting another code`, 429, 'OTP_COOLDOWN');
+        throw new AppError(
+          `Please wait ${remaining} seconds before requesting another code`,
+          429,
+          'OTP_COOLDOWN'
+        );
       }
     }
   }
 
   private async verifySuperAdminPassword(superAdminId: string, password: string): Promise<void> {
-    const admin = await prisma.user.findUnique({ where: { id: superAdminId }, select: { password: true } });
+    const admin = await prisma.user.findUnique({
+      where: { id: superAdminId },
+      select: { password: true },
+    });
     if (!admin?.password) throw new AppError('Super admin password not found', 500);
     const valid = await bcrypt.compare(password, admin.password);
     if (!valid) throw new AppError('Invalid password', 401);
@@ -595,7 +612,9 @@ class SuperAdminService {
   private async verifyTargetIsAdmin(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AppError('User not found', 404);
-    if (user.role !== Role.ADMIN) throw new AppError('This operation is only available for admin accounts', 400);
+    if (user.role !== Role.ADMIN) {
+      throw new AppError('This operation is only available for admin accounts', 400);
+    }
     return user;
   }
 
@@ -604,13 +623,15 @@ class SuperAdminService {
   async initiateAdminEmailChange(
     targetUserId: string,
     data: { newEmail: string; password: string },
-    superAdminId: string,
+    superAdminId: string
   ) {
     const user = await this.verifyTargetIsAdmin(targetUserId);
     await this.verifySuperAdminPassword(superAdminId, data.password);
 
     const newEmail = data.newEmail.toLowerCase();
-    if (newEmail === user.email) throw new AppError('New email must be different from current email', 400);
+    if (newEmail === user.email) {
+      throw new AppError('New email must be different from current email', 400);
+    }
 
     const existing = await prisma.user.findUnique({ where: { email: newEmail } });
     if (existing) throw new AppError('Email already in use', 400);
@@ -651,7 +672,9 @@ class SuperAdminService {
       },
     });
 
-    logger.info(`Admin email change initiated for ${targetUserId} to ${newEmail} by super admin ${superAdminId}`);
+    logger.info(
+      `Admin email change initiated for ${targetUserId} to ${newEmail} by super admin ${superAdminId}`
+    );
   }
 
   async confirmAdminEmailChange(targetUserId: string, otp: string, superAdminId: string) {
@@ -659,7 +682,9 @@ class SuperAdminService {
     if (!user.pendingEmail) throw new AppError('No pending email change', 400);
 
     const hashedOtp = hashToken(otp);
-    if (user.emailVerificationToken !== hashedOtp) throw new AppError('Invalid verification code', 400);
+    if (user.emailVerificationToken !== hashedOtp) {
+      throw new AppError('Invalid verification code', 400);
+    }
     if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
       throw new AppError('Verification code has expired', 400);
     }
@@ -688,7 +713,12 @@ class SuperAdminService {
     try {
       const { emailChanged } = await import('../templates/email/security');
       const tmpl = emailChanged(user.firstName || 'there', user.pendingEmail!);
-      await emailQueue.add('send-email', { to: oldEmail, subject: tmpl.subject, html: tmpl.html, text: tmpl.text });
+      await emailQueue.add('send-email', {
+        to: oldEmail,
+        subject: tmpl.subject,
+        html: tmpl.html,
+        text: tmpl.text,
+      });
     } catch (error) {
       logger.error('Failed to send admin email change notification', error);
     }
@@ -703,7 +733,9 @@ class SuperAdminService {
       },
     });
 
-    logger.info(`Admin email changed for ${targetUserId} from ${oldEmail} to ${user.pendingEmail} by ${superAdminId}`);
+    logger.info(
+      `Admin email changed for ${targetUserId} from ${oldEmail} to ${user.pendingEmail} by ${superAdminId}`
+    );
   }
 
   async resendAdminEmailOtp(targetUserId: string, superAdminId: string) {
@@ -745,13 +777,15 @@ class SuperAdminService {
   async initiateAdminMobileChange(
     targetUserId: string,
     data: { mobileNumber: string; password?: string },
-    superAdminId: string,
+    superAdminId: string
   ) {
     const user = await this.verifyTargetIsAdmin(targetUserId);
 
     // If admin already has a mobile, require super admin password (this is a "change")
     if (user.mobileNumber) {
-      if (!data.password) throw new AppError('Password is required when changing an existing mobile number', 400);
+      if (!data.password) {
+        throw new AppError('Password is required when changing an existing mobile number', 400);
+      }
       await this.verifySuperAdminPassword(superAdminId, data.password);
     }
 
@@ -810,7 +844,9 @@ class SuperAdminService {
     if (!user.pendingMobileNumber) throw new AppError('No pending mobile number change', 400);
 
     const hashedOtp = hashToken(otp);
-    if (user.mobileVerificationToken !== hashedOtp) throw new AppError('Invalid verification code', 400);
+    if (user.mobileVerificationToken !== hashedOtp) {
+      throw new AppError('Invalid verification code', 400);
+    }
     if (!user.mobileVerificationExpires || user.mobileVerificationExpires < new Date()) {
       throw new AppError('Verification code has expired', 400);
     }
@@ -818,7 +854,9 @@ class SuperAdminService {
     const hasSeparateWhatsapp = !!user.whatsappNumber;
 
     await prisma.$transaction(async (tx) => {
-      const existing = await tx.user.findFirst({ where: { mobileNumber: user.pendingMobileNumber! } });
+      const existing = await tx.user.findFirst({
+        where: { mobileNumber: user.pendingMobileNumber! },
+      });
       if (existing) throw new AppError('Mobile number already in use', 409);
 
       await tx.user.update({
@@ -855,7 +893,9 @@ class SuperAdminService {
       },
     });
 
-    logger.info(`Admin mobile changed for ${targetUserId} to ${user.pendingMobileNumber} by ${superAdminId}`);
+    logger.info(
+      `Admin mobile changed for ${targetUserId} to ${user.pendingMobileNumber} by ${superAdminId}`
+    );
   }
 
   async resendAdminMobileOtp(targetUserId: string, superAdminId: string) {
@@ -940,10 +980,12 @@ class SuperAdminService {
   async initiateAdminWhatsappVerify(
     targetUserId: string,
     data: { mobileNumber: string; whatsappNumber?: string },
-    superAdminId: string,
+    superAdminId: string
   ) {
     const user = await this.verifyTargetIsAdmin(targetUserId);
-    if (!user.mobileNumber && !data.mobileNumber) throw new AppError('No mobile number provided', 400);
+    if (!user.mobileNumber && !data.mobileNumber) {
+      throw new AppError('No mobile number provided', 400);
+    }
 
     const effectiveMobile = data.mobileNumber || user.mobileNumber!;
     const targetNumber = data.whatsappNumber || effectiveMobile;
@@ -951,7 +993,9 @@ class SuperAdminService {
     // Block if already verified with same number
     if (user.isWhatsappVerified) {
       const currentWhatsapp = user.whatsappNumber || user.mobileNumber;
-      if (targetNumber === currentWhatsapp) throw new AppError('WhatsApp already verified with this number', 400);
+      if (targetNumber === currentWhatsapp) {
+        throw new AppError('WhatsApp already verified with this number', 400);
+      }
     }
 
     const separateWhatsapp =
@@ -961,7 +1005,9 @@ class SuperAdminService {
       const existing = await prisma.user.findFirst({
         where: { whatsappNumber: separateWhatsapp, id: { not: targetUserId } },
       });
-      if (existing) throw new AppError('This WhatsApp number is already in use by another account', 400);
+      if (existing) {
+        throw new AppError('This WhatsApp number is already in use by another account', 400);
+      }
     }
 
     this.enforceResendLimits(user.whatsappOtpLastSentAt, user.whatsappOtpResendCount);
@@ -974,7 +1020,7 @@ class SuperAdminService {
       `whatsapp:pending:${targetUserId}`,
       JSON.stringify({ number: separateWhatsapp, targetNumber }),
       'EX',
-      expiryMinutes * 60,
+      expiryMinutes * 60
     );
 
     await prisma.user.update({
@@ -1010,13 +1056,15 @@ class SuperAdminService {
       },
     });
 
-    logger.info(`Admin WhatsApp OTP sent to ${targetNumber} for ${targetUserId} by ${superAdminId}`);
+    logger.info(
+      `Admin WhatsApp OTP sent to ${targetNumber} for ${targetUserId} by ${superAdminId}`
+    );
   }
 
   async initiateAdminWhatsappChange(
     targetUserId: string,
     data: { newWhatsappNumber: string; password: string },
-    superAdminId: string,
+    superAdminId: string
   ) {
     const user = await this.verifyTargetIsAdmin(targetUserId);
     await this.verifySuperAdminPassword(superAdminId, data.password);
@@ -1026,14 +1074,17 @@ class SuperAdminService {
       throw new AppError('New WhatsApp number must be different from current', 400);
     }
 
-    const storeNumber = data.newWhatsappNumber === user.mobileNumber ? null : data.newWhatsappNumber;
+    const storeNumber =
+      data.newWhatsappNumber === user.mobileNumber ? null : data.newWhatsappNumber;
     const targetNumber = data.newWhatsappNumber;
 
     if (storeNumber) {
       const existing = await prisma.user.findFirst({
         where: { whatsappNumber: storeNumber, id: { not: targetUserId } },
       });
-      if (existing) throw new AppError('This WhatsApp number is already in use by another account', 400);
+      if (existing) {
+        throw new AppError('This WhatsApp number is already in use by another account', 400);
+      }
     }
 
     const otp = generateOtp(getOtpLength());
@@ -1044,7 +1095,7 @@ class SuperAdminService {
       `whatsapp:pending:${targetUserId}`,
       JSON.stringify({ number: storeNumber, targetNumber }),
       'EX',
-      expiryMinutes * 60,
+      expiryMinutes * 60
     );
 
     await prisma.user.update({
@@ -1084,14 +1135,18 @@ class SuperAdminService {
       },
     });
 
-    logger.info(`Admin WhatsApp change initiated for ${targetUserId} to ${targetNumber} by ${superAdminId}`);
+    logger.info(
+      `Admin WhatsApp change initiated for ${targetUserId} to ${targetNumber} by ${superAdminId}`
+    );
   }
 
   async confirmAdminWhatsappOtp(targetUserId: string, otp: string, superAdminId: string) {
     const user = await this.verifyTargetIsAdmin(targetUserId);
 
     const hashedOtp = hashToken(otp);
-    if (user.whatsappVerificationToken !== hashedOtp) throw new AppError('Invalid or expired OTP', 400);
+    if (user.whatsappVerificationToken !== hashedOtp) {
+      throw new AppError('Invalid or expired OTP', 400);
+    }
     if (!user.whatsappVerificationExpires || user.whatsappVerificationExpires < new Date()) {
       throw new AppError('Verification code has expired', 400);
     }
@@ -1162,7 +1217,7 @@ class SuperAdminService {
   async initiateAdminPasswordChange(
     targetUserId: string,
     data: { password: string; newPassword: string },
-    superAdminId: string,
+    superAdminId: string
   ) {
     const user = await this.verifyTargetIsAdmin(targetUserId);
     await this.verifySuperAdminPassword(superAdminId, data.password);
@@ -1173,12 +1228,7 @@ class SuperAdminService {
     // Hash new password and store temporarily in Redis
     const hashedPassword = await bcrypt.hash(data.newPassword, SALT_ROUNDS);
     const expiryMinutes = getOtpExpiryMinutes();
-    await redis.set(
-      `admin:pw:pending:${targetUserId}`,
-      hashedPassword,
-      'EX',
-      expiryMinutes * 60,
-    );
+    await redis.set(`admin:pw:pending:${targetUserId}`, hashedPassword, 'EX', expiryMinutes * 60);
 
     const otp = generateOtp(getOtpLength());
     const hashedOtp = hashToken(otp);
@@ -1214,7 +1264,9 @@ class SuperAdminService {
       },
     });
 
-    logger.info(`Admin password change initiated for ${targetUserId} by super admin ${superAdminId}`);
+    logger.info(
+      `Admin password change initiated for ${targetUserId} by super admin ${superAdminId}`
+    );
   }
 
   async confirmAdminPasswordChange(targetUserId: string, otp: string, superAdminId: string) {

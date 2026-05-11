@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTokensFromCookies, backendFetch, setAuthCookies, clearAuthCookies } from '../_lib/proxy-helpers';
+import {
+  getTokensFromCookies,
+  backendFetch,
+  setAuthCookies,
+  clearAuthCookies,
+} from '../_lib/proxy-helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +35,10 @@ export async function POST(request: NextRequest) {
 
     if (!newAccessToken || !newRefreshToken) {
       return clearAuthCookies(
-        NextResponse.json({ status: 'error', message: 'Invalid refresh response' }, { status: 500 }),
+        NextResponse.json(
+          { status: 'error', message: 'Invalid refresh response' },
+          { status: 500 },
+        ),
       );
     }
 

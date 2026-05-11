@@ -4,45 +4,96 @@
   "version": "1.5",
   "body": [
     {
-      "type": "TextBlock",
-      "text": "Latest Jobs",
-      "weight": "Bolder",
-      "size": "Medium",
-      "color": "Accent"
-    },
-    {
-      "type": "TextBlock",
-      "text": "Hand-picked openings matching your profile",
-      "isSubtle": true,
-      "wrap": true,
-      "spacing": "None"
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "auto",
+          "items": [
+            {
+              "type": "Image",
+              "url": "${$root.brandIcon}",
+              "size": "Small",
+              "altText": "Hire Adda"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Latest Jobs",
+              "weight": "Bolder",
+              "size": "Medium",
+              "color": "Accent"
+            },
+            {
+              "type": "TextBlock",
+              "text": "${$root.subtitle}",
+              "isSubtle": true,
+              "wrap": true,
+              "spacing": "None"
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "Container",
+      "$data": "${jobs}",
+      "spacing": "Small",
+      "separator": true,
       "items": [
         {
           "type": "TextBlock",
-          "text": "${jobs[0].title}",
-          "weight": "Bolder"
+          "text": "${title}",
+          "weight": "Bolder",
+          "wrap": true,
+          "maxLines": 1
         },
         {
           "type": "TextBlock",
-          "text": "${jobs[0].company} · ${jobs[0].location}",
+          "text": "${company} · ${location}",
           "isSubtle": true,
+          "spacing": "None",
+          "wrap": true,
+          "maxLines": 1
+        },
+        {
+          "type": "TextBlock",
+          "text": "${if(salary, salary, '')}",
+          "isVisible": "${if(salary, true, false)}",
+          "size": "Small",
+          "color": "Good",
           "spacing": "None"
         }
       ],
       "selectAction": {
         "type": "Action.OpenUrl",
-        "url": "${jobs[0].url}"
+        "url": "${url}"
       }
+    },
+    {
+      "type": "TextBlock",
+      "text": "${if(empty, 'No new jobs right now — check back soon.', '')}",
+      "isVisible": "${empty}",
+      "isSubtle": true,
+      "wrap": true,
+      "spacing": "Medium"
     }
   ],
   "actions": [
     {
       "type": "Action.OpenUrl",
       "title": "See all jobs",
-      "url": "https://hireadda.in/candidate/jobs?utm_source=pwa&utm_medium=widget"
+      "url": "${$root.allJobsUrl}"
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "Open Hire Adda",
+      "url": "${$root.homeUrl}"
     }
   ]
 }

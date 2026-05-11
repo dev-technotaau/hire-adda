@@ -46,6 +46,8 @@ export interface OfficePhotoEntry {
 export interface CompanyProfile {
   id: string;
   userId: string;
+  /** Public SEO slug; null on companies that haven't been backfilled yet. */
+  slug?: string | null;
   accountType: AccountType | null;
   hiringType: HiringType | null;
   companyName: string;

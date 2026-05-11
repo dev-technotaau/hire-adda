@@ -18,6 +18,19 @@ import type {
 import type { Job } from '@/types/job';
 import type { ParsedResumeData } from '@/types/resume-parse';
 
+/**
+ * Mirrors `backend/src/config/resume-templates.ts:ResumeTemplateConfig`.
+ * Returned by `/candidates/me/resume/templates`.
+ */
+export interface ResumeTemplate {
+  id: string;
+  name: string;
+  description: string;
+  file: string;
+  requiresPremium: boolean;
+  accentColor: string;
+}
+
 export const candidateService = {
   async getProfile(): Promise<ApiResponse<CandidateProfile>> {
     const res = await api.get(API.CANDIDATES.ME);
@@ -112,8 +125,17 @@ export const candidateService = {
     return res.data;
   },
 
-  async generateResume(): Promise<ApiResponse<{ url: string; generatedAt: string }>> {
-    const res = await api.get(API.CANDIDATES.RESUME_GENERATE);
+  async generateResume(
+    templateId?: string,
+  ): Promise<ApiResponse<{ url: string; generatedAt: string }>> {
+    const res = await api.get(API.CANDIDATES.RESUME_GENERATE, {
+      params: templateId ? { template: templateId } : undefined,
+    });
+    return res.data;
+  },
+
+  async listResumeTemplates(): Promise<ApiResponse<ResumeTemplate[]>> {
+    const res = await api.get(API.CANDIDATES.RESUME_TEMPLATES);
     return res.data;
   },
 

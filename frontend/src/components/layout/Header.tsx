@@ -13,6 +13,10 @@ import {
   Settings,
   LayoutDashboard,
   Briefcase,
+  Building2,
+  GraduationCap,
+  Tag,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
@@ -23,6 +27,8 @@ import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
 import Tooltip from '@/components/ui/Tooltip';
 import Logo from '@/components/common/Logo';
+import BillingAlertBadge from '@/components/billing/BillingAlertBadge';
+import NavMegaMenu, { MobileNavMegaMenu } from '@/components/layout/NavMegaMenu';
 import type { Role } from '@/types/auth';
 
 const publicNavItems = [
@@ -32,6 +38,36 @@ const publicNavItems = [
   { label: 'Help', href: ROUTES.PUBLIC.HELP },
 ];
 
+interface PricingMenuChild {
+  label: string;
+  sublabel: string;
+  href: string;
+  icon: typeof Building2;
+  badge?: string;
+}
+
+const pricingMenuItems: PricingMenuChild[] = [
+  {
+    label: 'For Employers',
+    sublabel: 'Job Posts, CV Database & Assisted Hiring',
+    href: ROUTES.BILLING.PRICING_EMPLOYER,
+    icon: Building2,
+    badge: 'Buy Now',
+  },
+  {
+    label: 'For Candidates',
+    sublabel: 'Premium Profile, Verified Badge & Top Visibility',
+    href: ROUTES.BILLING.PRICING_CANDIDATE,
+    icon: GraduationCap,
+  },
+  {
+    label: 'For Vendors',
+    sublabel: 'Receive hiring leads & connect with clients (₹199/mo)',
+    href: '/pricing#vendor_connect',
+    icon: Users,
+  },
+];
+
 export default function Header() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
@@ -39,6 +75,7 @@ export default function Header() {
   const { mobileMenuOpen, setMobileMenuOpen } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [pricingMenuOpen, setPricingMenuOpen] = useState(false);
 
   const unreadCount = unreadData?.data?.count || 0;
 
@@ -53,6 +90,7 @@ export default function Header() {
     queueMicrotask(() => {
       setMobileMenuOpen(false);
       setUserMenuOpen(false);
+      setPricingMenuOpen(false);
     });
   }, [pathname, setMobileMenuOpen]);
 
@@ -62,17 +100,18 @@ export default function Header() {
       if (e.key === 'Escape') {
         setUserMenuOpen(false);
         setMobileMenuOpen(false);
+        setPricingMenuOpen(false);
       }
     },
     [setMobileMenuOpen],
   );
 
   useEffect(() => {
-    if (userMenuOpen || mobileMenuOpen) {
+    if (userMenuOpen || mobileMenuOpen || pricingMenuOpen) {
       document.addEventListener('keydown', handleEscapeKey);
       return () => document.removeEventListener('keydown', handleEscapeKey);
     }
-  }, [userMenuOpen, mobileMenuOpen, handleEscapeKey]);
+  }, [userMenuOpen, mobileMenuOpen, pricingMenuOpen, handleEscapeKey]);
 
   const dashboardPath = user?.role ? ROLE_DASHBOARDS[user.role as Role] : '/';
 
@@ -91,7 +130,100 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-1 md:flex">
-          {publicNavItems.map((item) => (
+          {publicNavItems.slice(0, 2).map((item) => (
+            <Tooltip key={item.href} content={`Go to ${item.label}`}>
+              <Link
+                href={item.href}
+                className={cn(
+                  'rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  pathname === item.href
+                    ? 'bg-primary-light text-primary'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
+                )}
+              >
+                {item.label}
+              </Link>
+            </Tooltip>
+          ))}
+
+          {/* Jobs + Companies mega-menus (Phase 10). Sit between
+              Home/About and the Pricing dropdown. */}
+          <NavMegaMenu />
+
+          {/* Pricing dropdown — split here between "About" and "Contact" so
+              audience pages get a top-level entry without crowding the right-
+              side login/register block. */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setPricingMenuOpen((v) => !v)}
+              aria-expanded={pricingMenuOpen}
+              aria-haspopup="menu"
+              className={cn(
+                'flex items-center gap-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                pathname.startsWith('/pricing')
+                  ? 'bg-primary-light text-primary'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
+              )}
+            >
+              Pricing
+              <ChevronDown
+                className={cn('h-4 w-4 transition-transform', pricingMenuOpen && 'rotate-180')}
+              />
+            </button>
+            {pricingMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setPricingMenuOpen(false)} />
+                <div
+                  role="menu"
+                  className="animate-scale-in absolute left-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-lg"
+                >
+                  {pricingMenuItems.map((child) => {
+                    const Icon = child.icon;
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        onClick={() => setPricingMenuOpen(false)}
+                        role="menuitem"
+                        className="flex items-start gap-3 border-b border-[var(--border)] px-4 py-3 transition-colors last:border-b-0 hover:bg-[var(--bg-secondary)]"
+                      >
+                        <div className="bg-primary/10 text-primary flex h-9 w-9 flex-none items-center justify-center rounded-lg">
+                          <Icon className="h-4.5 w-4.5" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-[var(--text)]">
+                              {child.label}
+                            </span>
+                            {child.badge && (
+                              <span className="bg-primary inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
+                                {child.badge}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                            {child.sublabel}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                  <Link
+                    href={ROUTES.BILLING.PRICING}
+                    onClick={() => setPricingMenuOpen(false)}
+                    role="menuitem"
+                    className="hover:text-primary flex items-center gap-2 bg-[var(--bg-secondary)] px-4 py-2.5 text-xs font-medium text-[var(--text-secondary)] transition-colors"
+                  >
+                    <Tag className="h-3.5 w-3.5" />
+                    See all plans
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+
+          {publicNavItems.slice(2).map((item) => (
             <Tooltip key={item.href} content={`Go to ${item.label}`}>
               <Link
                 href={item.href}
@@ -112,6 +244,9 @@ export default function Header() {
         <div className="flex items-center gap-3">
           {isAuthenticated && user ? (
             <>
+              {/* Billing alert (only when there's an actionable billing state) */}
+              {(user.role === 'CANDIDATE' || user.role === 'EMPLOYER') && <BillingAlertBadge />}
+
               {/* Notifications */}
               <Tooltip content="View notifications">
                 <Link
@@ -206,18 +341,18 @@ export default function Header() {
             </>
           ) : (
             <div className="hidden items-center gap-2 sm:flex">
-              <Link href={ROUTES.AUTH.LOGIN}>
-                <Button variant="ghost" size="md" tooltip="Sign in to your account">
+              <Link href={ROUTES.AUTH.LOGIN_CANDIDATE}>
+                <Button variant="ghost" size="md" tooltip="Sign in as a candidate">
                   Login
                 </Button>
               </Link>
-              <Link href={ROUTES.AUTH.REGISTER}>
-                <Button size="md" tooltip="Create a new account">
+              <Link href={ROUTES.AUTH.REGISTER_CANDIDATE}>
+                <Button size="md" tooltip="Create a candidate account">
                   Register
                 </Button>
               </Link>
               <div className="mx-1 h-6 w-px bg-[var(--border)]" />
-              <Link href={`${ROUTES.AUTH.LOGIN}?tab=employer`}>
+              <Link href={ROUTES.AUTH.LOGIN_EMPLOYER}>
                 <Button variant="highlight" size="md" tooltip="Sign in as an employer">
                   <Briefcase className="mr-1.5 h-4 w-4" />
                   Employer Login
@@ -250,7 +385,7 @@ export default function Header() {
           aria-label="Mobile navigation"
         >
           <nav className="flex flex-col px-4 py-3">
-            {publicNavItems.map((item) => (
+            {publicNavItems.slice(0, 2).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -264,17 +399,75 @@ export default function Header() {
                 {item.label}
               </Link>
             ))}
+
+            {/* Mobile Jobs + Companies accordion (Phase 10). */}
+            <MobileNavMegaMenu onNavigate={() => setMobileMenuOpen(false)} />
+
+            {/* Pricing section — header + indented audience-specific links */}
+            <p className="mt-3 mb-1 px-3 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+              Pricing
+            </p>
+            {pricingMenuItems.map((child) => {
+              const Icon = child.icon;
+              return (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    pathname === child.href
+                      ? 'bg-primary-light text-primary'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+                  )}
+                >
+                  <Icon className="h-4 w-4 flex-none" />
+                  <span className="flex-1">{child.label}</span>
+                  {child.badge && (
+                    <span className="bg-primary inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
+                      {child.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+            <Link
+              href={ROUTES.BILLING.PRICING}
+              className={cn(
+                'rounded-lg px-3 py-2 text-xs font-medium transition-colors',
+                pathname === ROUTES.BILLING.PRICING
+                  ? 'text-primary'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text)]',
+              )}
+            >
+              See all plans →
+            </Link>
+
+            {publicNavItems.slice(2).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'mt-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  pathname === item.href
+                    ? 'bg-primary-light text-primary'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+
             {!isAuthenticated && (
               <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] pt-3">
-                <Link href={ROUTES.AUTH.LOGIN}>
+                <Link href={ROUTES.AUTH.LOGIN_CANDIDATE}>
                   <Button variant="outline" fullWidth>
                     Login
                   </Button>
                 </Link>
-                <Link href={ROUTES.AUTH.REGISTER}>
+                <Link href={ROUTES.AUTH.REGISTER_CANDIDATE}>
                   <Button fullWidth>Register</Button>
                 </Link>
-                <Link href={`${ROUTES.AUTH.LOGIN}?tab=employer`}>
+                <Link href={ROUTES.AUTH.LOGIN_EMPLOYER}>
                   <Button variant="ghost" fullWidth>
                     <Briefcase className="mr-1.5 h-4 w-4" />
                     Employer Login

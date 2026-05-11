@@ -36,7 +36,33 @@ export const searchCandidates = async (req: Request, res: Response, next: NextFu
           : undefined,
       experienceMin: q.experienceMin ? Number(q.experienceMin) : undefined,
       experienceMax: q.experienceMax ? Number(q.experienceMax) : undefined,
-      skills: typeof q.skills === 'string' ? q.skills.split(',') : undefined,
+      // Operator-aware skills (`,` AND, `|` OR, `!` NOT) — backwards
+      // compatible with bare comma-separated lists (legacy URLs still work).
+      ...(typeof q.skills === 'string'
+        ? (() => {
+            const { parseMultiValue, hasOperatorChars } =
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
+              require('../lib/operator-parser') as {
+                parseMultiValue: (s: string) => {
+                  must: string[];
+                  should: string[];
+                  mustNot: string[];
+                  op: 'AND' | 'OR';
+                };
+                hasOperatorChars: (s: string) => boolean;
+              };
+            if (!hasOperatorChars(q.skills)) {
+              return {
+                skills: q.skills
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              };
+            }
+            const parsed = parseMultiValue(q.skills);
+            return { skillsBool: parsed };
+          })()
+        : {}),
       salaryMin: q.salaryMin ? Number(q.salaryMin) : undefined,
       salaryMax: q.salaryMax ? Number(q.salaryMax) : undefined,
       salaryCurrency: typeof q.salaryCurrency === 'string' ? q.salaryCurrency : undefined,

@@ -17,6 +17,8 @@ import Badge from '@/components/ui/Badge';
 import Tooltip from '@/components/ui/Tooltip';
 import Logo from '@/components/common/Logo';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import QuotaBar from '@/components/billing/QuotaBar';
+import BillingAlertBadge from '@/components/billing/BillingAlertBadge';
 import SearchBar from '@/components/ui/SearchBar';
 import AutoSuggest from '@/components/ui/AutoSuggest';
 import ExperienceSelect, { type ExperienceValue } from '@/components/ui/ExperienceSelect';
@@ -297,6 +299,20 @@ export default function DashboardHeader() {
               </button>
             </Tooltip>
           )}
+
+          {/* Persistent quota bar — only for paying roles, hidden on small screens */}
+          {(user.role === 'CANDIDATE' || user.role === 'EMPLOYER') && (
+            <div className="hidden items-center gap-2 lg:flex">
+              <QuotaBar
+                units={
+                  user.role === 'EMPLOYER' ? ['JOB_POST', 'CV_UNLOCK'] : ['MATCHED_PROFILE_EMAIL']
+                }
+              />
+            </div>
+          )}
+
+          {/* Billing-state alert (expiring/no-plan/failed-renewal) */}
+          {(user.role === 'CANDIDATE' || user.role === 'EMPLOYER') && <BillingAlertBadge />}
 
           <NotificationBell />
 

@@ -212,7 +212,7 @@ export default function CandidateListsPage() {
                       }}
                       title={`View ${list.name}`}
                       className={cn(
-                        'cursor-pointer flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors',
+                        'flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors',
                         selectedList?.id === list.id
                           ? 'bg-primary-light text-primary'
                           : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
@@ -262,7 +262,11 @@ export default function CandidateListsPage() {
                   title="No lists yet"
                   description="Create your first list to get started"
                   action={
-                    <Button size="sm" onClick={() => setCreateDialogOpen(true)} tooltip="Create new list">
+                    <Button
+                      size="sm"
+                      onClick={() => setCreateDialogOpen(true)}
+                      tooltip="Create new list"
+                    >
                       <Plus className="mr-1.5 h-4 w-4" />
                       Create List
                     </Button>
@@ -499,7 +503,11 @@ export default function CandidateListsPage() {
                 Are you sure you want to remove this candidate from the list?
               </p>
               <div className="mt-6 flex justify-end gap-3">
-                <Button variant="ghost" onClick={() => setMemberToRemove(null)} tooltip="Cancel removal">
+                <Button
+                  variant="ghost"
+                  onClick={() => setMemberToRemove(null)}
+                  tooltip="Cancel removal"
+                >
                   Cancel
                 </Button>
                 <Button
@@ -528,7 +536,11 @@ export default function CandidateListsPage() {
                 className="focus:border-primary focus:ring-primary/20 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
               />
               <div className="mt-4 flex justify-end gap-3">
-                <Button variant="ghost" onClick={() => setNotesDialogOpen(false)} tooltip="Cancel edit">
+                <Button
+                  variant="ghost"
+                  onClick={() => setNotesDialogOpen(false)}
+                  tooltip="Cancel edit"
+                >
                   Cancel
                 </Button>
                 <Button
@@ -566,7 +578,11 @@ function CreateListDialog({
       <div className="w-full max-w-md rounded-xl bg-[var(--bg)] p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-[var(--text)]">Create New List</h3>
-          <button onClick={onClose} title="Close" className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]">
+          <button
+            onClick={onClose}
+            title="Close"
+            className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -682,7 +698,11 @@ function EditListDialog({
       <div className="w-full max-w-md rounded-xl bg-[var(--bg)] p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-[var(--text)]">Edit List</h3>
-          <button onClick={onClose} title="Close" className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]">
+          <button
+            onClick={onClose}
+            title="Close"
+            className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -740,7 +760,7 @@ function EditListDialog({
                   key={c}
                   onClick={() => setColor(c)}
                   className={cn(
-                    'cursor-pointer h-8 w-8 rounded-lg border-2 transition-all',
+                    'h-8 w-8 cursor-pointer rounded-lg border-2 transition-all',
                     color === c ? 'scale-110 border-gray-900' : 'border-transparent',
                   )}
                   style={{ backgroundColor: c }}

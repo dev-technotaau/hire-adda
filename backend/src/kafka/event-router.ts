@@ -87,16 +87,22 @@ eventRouter.register('job-service', async (eventType, data) => {
 
 eventRouter.register('application-service', async (eventType, data) => {
   // Handles: APPLICATION_SUBMITTED, APPLICATION_STATUS_CHANGED
-  logger.debug(`[application-service] Processing ${eventType} for application ${data.applicationId || 'unknown'}`);
+  logger.debug(
+    `[application-service] Processing ${eventType} for application ${data.applicationId || 'unknown'}`
+  );
 });
 
 eventRouter.register('notification-service', async (eventType, data) => {
   // Handles: NOTIFICATION_SENT, NOTIFICATION_READ
-  logger.debug(`[notification-service] Processing ${eventType} for user ${data.userId || 'unknown'}`);
+  logger.debug(
+    `[notification-service] Processing ${eventType} for user ${data.userId || 'unknown'}`
+  );
 });
 
 eventRouter.register('admin-service', async (eventType, data) => {
   // Handles: ADMIN_USER_SUSPENDED, ADMIN_ROLE_CHANGED, COMPANY_VERIFIED,
   // COMPANY_PROFILE_UPDATED
-  logger.debug(`[admin-service] Processing ${eventType} for target ${data.userId || data.companyId || 'unknown'}`);
+  logger.debug(
+    `[admin-service] Processing ${eventType} for target ${data.userId || data.companyId || 'unknown'}`
+  );
 });

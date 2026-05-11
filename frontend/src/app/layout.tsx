@@ -52,8 +52,9 @@ export const metadata: Metadata = {
       // Add 'hi-IN': '/hi' etc. when localised content ships.
     },
     types: {
-      'application/rss+xml': '/feed.xml', // RSS when we publish a blog
+      'application/rss+xml': '/feed.xml',
       'application/atom+xml': '/feed.atom',
+      'application/feed+json': '/feed.json',
     },
   },
   title: {
@@ -221,6 +222,56 @@ export default async function RootLayout({
             __html: `if(window.top!==window.self){window.top.location=window.self.location}`,
           }}
         />
+
+        {/* Chrome Speculation Rules — anticipatory navigation. Browser
+            prerenders / prefetches likely-next URLs so they paint
+            instantly when the user actually clicks. We aggressively
+            speculate on public navigation links + conservatively
+            prefetch the dashboard entry points. The "moderate" eagerness
+            reduces wasted prerenders on accidental hovers. */}
+        <script
+          type="speculationrules"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              prerender: [
+                {
+                  source: 'document',
+                  where: {
+                    and: [
+                      { href_matches: '/jobs*' },
+                      { not: { href_matches: '/api/*' } },
+                      { not: { href_matches: '/auth/*' } },
+                      { not: { selector_matches: '[rel~=nofollow]' } },
+                    ],
+                  },
+                  eagerness: 'moderate',
+                },
+                {
+                  source: 'document',
+                  where: {
+                    and: [{ href_matches: '/companies*' }, { not: { href_matches: '/api/*' } }],
+                  },
+                  eagerness: 'moderate',
+                },
+              ],
+              prefetch: [
+                {
+                  source: 'document',
+                  where: {
+                    and: [
+                      {
+                        href_matches: ['/about', '/contact', '/help*', '/pricing*', '/vendors*'],
+                      },
+                    ],
+                  },
+                  eagerness: 'conservative',
+                },
+              ],
+            }),
+          }}
+        />
+
         <GTMHead nonce={nonce} />
 
         {/* ── Favicons ── */}
@@ -244,6 +295,72 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-title" content={SEO_CONFIG.siteName} />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
+        {/* ── iOS PWA splash screens —
+              Apple's PWA install pulls a launch image matching the
+              device's exact screen resolution. We point every supported
+              model at the 512×512 logo so iOS letterboxes correctly. */}
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+        />
+        {/* iPad common resolutions */}
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/icon-512x512.png"
+          media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+        />
+        {/* Multi-resolution apple-touch-icon — iOS picks the closest match. */}
+        <link rel="apple-touch-icon" sizes="120x120" href="/icon-128x128.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/icon-152x152.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/icon-152x152.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icon-192x192.png" />
+
         {/* ── Geo tags (local + "local pack" SEO for India) ── */}
         <meta name="geo.region" content={SEO_CONFIG.region} />
         <meta name="geo.placename" content={SEO_CONFIG.placeName} />
@@ -255,6 +372,16 @@ export default async function RootLayout({
           name="ICBM"
           content={`${SEO_CONFIG.coordinates.lat}, ${SEO_CONFIG.coordinates.lon}`}
         />
+        {/* OpenGraph local-business location hints — used by Facebook,
+            LinkedIn, and some AI ranking systems for geo-attribution. */}
+        <meta property="og:country-name" content="India" />
+        <meta property="og:region" content="IN" />
+        <meta property="og:locale" content={SEO_CONFIG.locale} />
+        {/* Twitter — supplementary `summary_large_image` data slots. */}
+        <meta name="twitter:label1" content="Coverage" />
+        <meta name="twitter:data1" content="All India" />
+        <meta name="twitter:label2" content="Industry" />
+        <meta name="twitter:data2" content="Recruitment / Job Portal" />
 
         {/* ── Language + distribution ── */}
         <meta httpEquiv="content-language" content={SEO_CONFIG.lang} />
@@ -312,8 +439,20 @@ export default async function RootLayout({
         <link
           rel="alternate"
           type="application/rss+xml"
-          title="Hire Adda Blog RSS"
+          title="Hire Adda — Latest Jobs (RSS)"
           href="/feed.xml"
+        />
+        <link
+          rel="alternate"
+          type="application/atom+xml"
+          title="Hire Adda — Latest Jobs (Atom)"
+          href="/feed.atom"
+        />
+        <link
+          rel="alternate"
+          type="application/feed+json"
+          title="Hire Adda — Latest Jobs (JSON Feed)"
+          href="/feed.json"
         />
         <link
           rel="alternate"

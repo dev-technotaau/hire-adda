@@ -7,151 +7,151 @@ import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
 import { useAuthStore } from '@/store/auth.store';
 import { articleSchema, breadcrumbSchema, faqPageSchema, graph } from '@/lib/json-ld';
-import { ChevronDown, Mail, MessageCircle, Phone, Search, TicketCheck } from 'lucide-react';
+import {
+  ChevronDown,
+  Mail,
+  MessageCircle,
+  Phone,
+  Search,
+  Sparkles,
+  TicketCheck,
+} from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import Fuse from 'fuse.js';
+import { useMemo, useState } from 'react';
+import {
+  CATEGORY_LABELS,
+  DEFAULT_LOCALE,
+  SUPPORTED_LOCALES,
+  getFaqsForLocale,
+  type FaqCategory,
+  type FaqEntry,
+  type LocaleCode,
+} from '@/data/faqs';
+import { useFaqLocale } from '@/hooks/use-faq-locale';
+import {
+  EMPLOYER_HELPLINE,
+  EMPLOYER_HELPLINE_HOURS,
+  GENERIC_HELPLINE,
+  GENERIC_HELPLINE_HOURS,
+  SUPPORT_EMAIL,
+} from '@/constants/support';
 
-const faqs = [
+type CategoryTab = 'all' | FaqCategory;
+
+const TABS: { key: CategoryTab; label: Record<LocaleCode, string> }[] = [
   {
-    id: 1,
-    question: 'How do I create an account on Hire Adda?',
-    answer:
-      'Creating an account is simple and free. Click the "Get Started" or "Sign Up" button on the homepage. You can register using your email address and password, or sign up quickly using your Google or LinkedIn account. Once registered, you will be guided through completing your profile with your skills, experience, and job preferences.',
+    key: 'all',
+    label: { en: 'All', hi: 'सभी', ta: 'அனைத்தும்', te: 'అన్నీ', bn: 'সব', mr: 'सर्व' },
   },
-  {
-    id: 2,
-    question: 'How do I apply for jobs on the platform?',
-    answer:
-      'Once you have created your profile, browse jobs using the search bar or explore curated listings on your dashboard. When you find a job you are interested in, click the "Apply" button on the job detail page. Your profile and resume will be shared with the employer. You can also enable "Quick Apply" to apply to multiple positions with a single click using your saved profile.',
-  },
-  {
-    id: 3,
-    question: 'How do I post a job as an employer?',
-    answer:
-      'Register as an employer and complete your company profile with details like company name, description, industry, and location. Once verified, navigate to your employer dashboard and click "Post a Job." Fill in the job title, description, required skills, salary range, and other details. Your listing will go live after a brief moderation review to ensure quality.',
-  },
-  {
-    id: 4,
-    question: 'How do I update my profile information?',
-    answer:
-      'Log in to your account and navigate to your profile page from the dashboard. You can edit your personal information, work experience, education, skills, and preferences at any time. Click "Edit Profile" to make changes, and remember to save once you are done. Keeping your profile updated helps our matching engine find better opportunities for you.',
-  },
-  {
-    id: 5,
-    question: 'How do I reset my password?',
-    answer:
-      'If you have forgotten your password, click "Forgot Password" on the login page. Enter the email address associated with your account, and we will send you a password reset link. The link is valid for 1 hour. Click it to set a new password. If you do not receive the email, check your spam folder or contact our support team for assistance.',
-  },
-  {
-    id: 6,
-    question: 'How do I delete my account?',
-    answer:
-      'You can request account deletion from your account settings page. Navigate to Settings, then scroll to the "Danger Zone" section and click "Delete Account." You will be asked to confirm your decision. Please note that account deletion is permanent and all your data, including applications, saved jobs, and messages, will be permanently removed within 30 days.',
-  },
-  {
-    id: 7,
-    question: 'How do I contact customer support?',
-    answer:
-      'You can reach our support team through multiple channels. Email us at support@hireadda.in, call our toll-free number at +91 1800-123-4567 (Mon-Fri, 9 AM - 6 PM IST), or visit our Contact page to send a message directly. We also offer in-app chat support for logged-in users. Our team typically responds within 24 hours.',
-  },
-  {
-    id: 8,
-    question: 'How do I report a suspicious or fraudulent job posting?',
-    answer:
-      'If you encounter a job listing that appears fraudulent, misleading, or suspicious, click the "Report" button on the job detail page. Select the reason for reporting and provide any additional details. Our moderation team reviews all reports within 24-48 hours. You can also email reports directly to safety@hireadda.in for urgent concerns.',
-  },
-  {
-    id: 9,
-    question: 'Is Hire Adda free to use? What are the pricing plans?',
-    answer:
-      'Hire Adda is completely free for job seekers. You can create a profile, search for jobs, and apply to unlimited positions at no cost. For employers, we offer a free plan that allows up to 3 active job postings. Premium plans start at INR 2,999/month and include features like unlimited postings, advanced candidate search, analytics dashboard, and priority support.',
-  },
-  {
-    id: 10,
-    question: 'Is there a Hire Adda mobile app available?',
-    answer:
-      'We are currently developing native mobile apps for both Android and iOS, expected to launch in Q3 2026. In the meantime, our website is fully responsive and works seamlessly on mobile browsers. You can add Hire Adda to your home screen for an app-like experience. We also support push notifications through your browser to keep you updated on new matches and application status.',
-  },
+  { key: 'general', label: CATEGORY_LABELS.general },
+  { key: 'candidates', label: CATEGORY_LABELS.candidates },
+  { key: 'employers', label: CATEGORY_LABELS.employers },
+  { key: 'vendors', label: CATEGORY_LABELS.vendors },
+  { key: 'billing-payments', label: CATEGORY_LABELS['billing-payments'] },
+  { key: 'account-security', label: CATEGORY_LABELS['account-security'] },
 ];
 
 export default function HelpPage() {
+  const { locale, setLocale } = useFaqLocale();
   const [searchQuery, setSearchQuery] = useState('');
-  const [openItems, setOpenItems] = useState<Set<number>>(new Set());
-  const user = useAuthStore((s: { user: { role: string } | null }) => s.user);
+  const [activeTab, setActiveTab] = useState<CategoryTab>('all');
+  const [openItems, setOpenItems] = useState<Set<string>>(new Set());
+  const user = useAuthStore((s) => s.user);
 
-  const toggleItem = (id: number) => {
+  const allFaqs = useMemo<FaqEntry[]>(() => getFaqsForLocale(locale), [locale]);
+
+  const fuse = useMemo(
+    () =>
+      new Fuse(allFaqs, {
+        keys: [
+          { name: 'question', weight: 0.5 },
+          { name: 'answer', weight: 0.2 },
+          { name: 'keywords', weight: 0.3 },
+        ],
+        threshold: 0.4,
+        includeScore: true,
+        minMatchCharLength: 2,
+      }),
+    [allFaqs],
+  );
+
+  // Apply tab filter then search.
+  const filteredFaqs = useMemo<FaqEntry[]>(() => {
+    const tabbed = activeTab === 'all' ? allFaqs : allFaqs.filter((f) => f.category === activeTab);
+    const q = searchQuery.trim();
+    if (!q) return tabbed;
+    // Restrict the fuzzy search to tab-filtered IDs so the search respects
+    // the tab. Build an id-set for O(1) lookups.
+    const allowed = new Set(tabbed.map((f) => f.id));
+    return fuse
+      .search(q)
+      .map((r) => r.item)
+      .filter((f) => allowed.has(f.id));
+  }, [activeTab, allFaqs, searchQuery, fuse]);
+
+  const toggleItem = (id: string) => {
     setOpenItems((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
-  const filteredFaqs = faqs.filter((faq) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return faq.question.toLowerCase().includes(query) || faq.answer.toLowerCase().includes(query);
-  });
-
-  // JSON-LD graph:
-  //   1. FAQPage        — Q&A rich-result eligibility
-  //   2. Article        — Hybrid coverage (editorially-curated help content)
-  //   3. BreadcrumbList — SERP crumb trail
-  //
-  // Article schema is emitted alongside FAQPage because /help is
-  // editorially curated content — each Q&A was researched and written.
-  // This gives us E-A-T attribution (expertise, authoritativeness,
-  // trustworthiness) through `author` + `publisher` + `dateModified`
-  // without conflicting with the FAQ rich-result.
-  const helpJsonLd = graph(
-    faqPageSchema(faqs.map((faq) => ({ question: faq.question, answer: faq.answer }))),
-    articleSchema({
-      url: '/help',
-      headline: 'Hire Adda Help Center — Frequently Asked Questions',
-      description:
-        'Curated answers to the most common questions about using Hire Adda — account setup, job search, applications, password reset, privacy, and mobile apps.',
-      datePublished: '2026-01-01T00:00:00+05:30',
-      dateModified: '2026-04-01T00:00:00+05:30',
-      authorName: 'Hire Adda Editorial Team',
-      authorUrl: '/about',
-      articleSection: 'Help & Support',
-      keywords: ['help', 'FAQ', 'support', 'job search help', 'employer help'],
-      speakableCssSelectors: ['h1', '.hero-subtitle'],
-    }),
-    breadcrumbSchema([
-      { name: 'Home', url: '/' },
-      { name: 'Help & FAQ', url: '/help' },
-    ]),
+  // JSON-LD: full FAQPage with every visible FAQ. We always emit the
+  // English corpus in the schema (search engines crawl one canonical
+  // language; hreflang on the URL signals translations). FAQs are kept in
+  // a single graph alongside Article + Breadcrumb schema for E-A-T.
+  const englishFaqs = useMemo(() => getFaqsForLocale(DEFAULT_LOCALE), []);
+  const helpJsonLd = useMemo(
+    () =>
+      graph(
+        faqPageSchema(englishFaqs.map((f) => ({ question: f.question, answer: f.answer }))),
+        articleSchema({
+          url: '/help',
+          headline: 'Hire Adda Help Center — Frequently Asked Questions',
+          description:
+            'Curated answers to the most common questions about using Hire Adda — account setup, job search, applications, password reset, billing, and more.',
+          datePublished: '2026-01-01T00:00:00+05:30',
+          dateModified: '2026-04-01T00:00:00+05:30',
+          authorName: 'Hire Adda Editorial Team',
+          authorUrl: '/about',
+          articleSection: 'Help & Support',
+          keywords: ['help', 'FAQ', 'support', 'job search help', 'employer help', 'billing'],
+          speakableCssSelectors: ['h1', '.hero-subtitle'],
+        }),
+        breadcrumbSchema([
+          { name: 'Home', url: '/' },
+          { name: 'Help & FAQ', url: '/help' },
+        ]),
+      ),
+    [englishFaqs],
   );
 
   return (
     <PublicLayout>
       <JsonLd id="jsonld-help" data={helpJsonLd} />
-      {/* Hero Section */}
+
+      {/* Hero */}
       <section className="from-primary-50 relative overflow-hidden bg-gradient-to-br via-white to-[var(--accent-light)]">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-4xl font-bold tracking-tight text-[var(--text)] sm:text-5xl">
               Help <span className="text-primary">Center</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-[var(--text-secondary)]">
+            <p className="hero-subtitle mx-auto mt-6 max-w-2xl text-lg text-[var(--text-secondary)]">
               Find answers to common questions about using Hire Adda. Can&apos;t find what
               you&apos;re looking for? Contact our support team.
             </p>
 
-            {/* E-A-T signals — author byline, last-reviewed date, reviewer.
-                Helps Google assess expertise, authoritativeness, trustworthiness
-                on what is effectively YMYL content (jobs affect livelihoods). */}
+            {/* E-A-T signals — author byline, last-reviewed, reviewer team. */}
             <div className="mx-auto mt-6 flex max-w-2xl flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
               <span>
                 By{' '}
-                <a href="/about" className="text-primary hover:underline">
+                <Link href="/about" className="text-primary hover:underline">
                   Hire Adda Editorial Team
-                </a>
+                </Link>
               </span>
               <span aria-hidden="true">·</span>
               <span>
@@ -161,37 +161,93 @@ export default function HelpPage() {
               <span>Reviewed by Support &amp; Trust team</span>
             </div>
 
-            {/* Breadcrumbs — rendered in the hero for visual parity with schema */}
             <div className="mt-6 flex justify-center">
               <Breadcrumbs items={[{ name: 'Help & FAQ' }]} withSchema={false} />
             </div>
 
-            {/* Search Bar */}
-            <div className="relative mx-auto mt-8 max-w-xl">
-              <div className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[var(--text-muted)]">
-                <Search className="h-5 w-5" />
+            {/* Search + Language picker row */}
+            <div className="mx-auto mt-8 grid max-w-3xl gap-3 sm:grid-cols-[1fr_auto]">
+              <div className="relative">
+                <div className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[var(--text-muted)]">
+                  <Search className="h-5 w-5" />
+                </div>
+                <input
+                  type="search"
+                  placeholder='Try "forgot password", "GST invoice", "post a job"...'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border border-[var(--border)] bg-white pr-4 pl-12 text-[var(--text)] shadow-sm transition-colors duration-200 placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
+                  aria-label="Search FAQs"
+                />
+                <span className="text-primary pointer-events-none absolute top-1/2 right-3 inline-flex -translate-y-1/2 items-center gap-1 text-xs font-medium">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  AI search
+                </span>
               </div>
-              <input
-                type="text"
-                placeholder="Search for help topics..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border border-[var(--border)] bg-white pr-4 pl-12 text-[var(--text)] shadow-sm transition-colors duration-200 placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-              />
+              <select
+                value={locale}
+                onChange={(e) => setLocale(e.target.value as LocaleCode)}
+                aria-label="Language"
+                className="focus:border-primary focus:ring-primary/20 h-12 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-medium text-[var(--text)] shadow-sm focus:ring-2 focus:outline-none"
+              >
+                {SUPPORTED_LOCALES.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.nativeLabel}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section className="bg-white py-16 sm:py-24">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10">
-            <h2 className="text-2xl font-bold text-[var(--text)]">Frequently Asked Questions</h2>
-            <p className="mt-2 text-[var(--text-secondary)]">
+      {/* Tabbed FAQ Section */}
+      <section className="bg-white py-12 sm:py-16">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          {/* Tabs */}
+          <div className="mb-8 flex flex-wrap gap-2 border-b border-[var(--border)] pb-1">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.key;
+              const count =
+                tab.key === 'all'
+                  ? allFaqs.length
+                  : allFaqs.filter((f) => f.category === tab.key).length;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  {tab.label[locale]}
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                      isActive
+                        ? 'bg-primary-light text-primary'
+                        : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mb-6 flex items-baseline justify-between">
+            <h2 className="text-2xl font-bold text-[var(--text)]">
+              {activeTab === 'all'
+                ? 'Frequently Asked Questions'
+                : TABS.find((t) => t.key === activeTab)?.label[locale]}
+            </h2>
+            <p className="text-sm text-[var(--text-secondary)]">
               {filteredFaqs.length === 0
                 ? 'No results found. Try a different search term.'
-                : `Showing ${filteredFaqs.length} of ${faqs.length} questions`}
+                : `${filteredFaqs.length} ${filteredFaqs.length === 1 ? 'question' : 'questions'}`}
             </p>
           </div>
 
@@ -201,13 +257,19 @@ export default function HelpPage() {
               return (
                 <div
                   key={faq.id}
+                  id={`faq-${faq.id}`}
                   className="rounded-xl border border-[var(--border)] bg-white transition-shadow hover:shadow-sm"
                 >
                   <button
                     onClick={() => toggleItem(faq.id)}
-                    className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left"
+                    className="flex w-full items-start justify-between gap-4 px-6 py-4 text-left"
                   >
-                    <span className="font-medium text-[var(--text)]">{faq.question}</span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+                        {CATEGORY_LABELS[faq.category][locale]}
+                      </p>
+                      <p className="mt-0.5 font-medium text-[var(--text)]">{faq.question}</p>
+                    </div>
                     <ChevronDown
                       className={`h-5 w-5 shrink-0 text-[var(--text-muted)] transition-transform duration-200 ${
                         isOpen ? 'rotate-180' : ''
@@ -261,13 +323,18 @@ export default function HelpPage() {
               Our support team is ready to assist you. Reach out through any of the channels below.
             </p>
           </div>
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-[var(--border)] bg-white p-6 text-center">
               <div className="bg-primary-light mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl">
                 <Mail className="text-primary h-6 w-6" />
               </div>
               <h3 className="font-semibold text-[var(--text)]">Email Support</h3>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">support@hireadda.in</p>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}`}
+                className="text-primary mt-1 block text-sm hover:underline"
+              >
+                {SUPPORT_EMAIL}
+              </a>
               <p className="mt-1 text-xs text-[var(--text-muted)]">Response within 24 hours</p>
             </div>
             <div className="rounded-xl border border-[var(--border)] bg-white p-6 text-center">
@@ -275,8 +342,26 @@ export default function HelpPage() {
                 <Phone className="text-primary h-6 w-6" />
               </div>
               <h3 className="font-semibold text-[var(--text)]">Phone Support</h3>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">+91 1800-123-4567</p>
-              <p className="mt-1 text-xs text-[var(--text-muted)]">Mon-Fri, 9 AM - 6 PM IST</p>
+              <a
+                href={GENERIC_HELPLINE.href}
+                className="text-primary mt-1 block text-sm hover:underline"
+              >
+                {GENERIC_HELPLINE.display}
+              </a>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">{GENERIC_HELPLINE_HOURS}</p>
+            </div>
+            <div className="border-l-primary rounded-xl border border-l-4 border-[var(--border)] bg-white p-6 text-center">
+              <div className="bg-primary-light mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl">
+                <Phone className="text-primary h-6 w-6" />
+              </div>
+              <h3 className="font-semibold text-[var(--text)]">Employer Helpline</h3>
+              <a
+                href={EMPLOYER_HELPLINE.href}
+                className="text-primary mt-1 block text-sm font-semibold hover:underline"
+              >
+                {EMPLOYER_HELPLINE.display}
+              </a>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">{EMPLOYER_HELPLINE_HOURS}</p>
             </div>
             <div className="rounded-xl border border-[var(--border)] bg-white p-6 text-center">
               <div className="bg-primary-light mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl">

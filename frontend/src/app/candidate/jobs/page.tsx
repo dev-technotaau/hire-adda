@@ -29,6 +29,7 @@ import {
   Send,
   GitCompareArrows,
   CheckCircle,
+  Crown,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -42,8 +43,29 @@ import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import Tooltip from '@/components/ui/Tooltip';
 import SearchBar from '@/components/ui/SearchBar';
+import KeywordSyntaxHelp from '@/components/job-search/KeywordSyntaxHelp';
+import { useActionTrigger } from '@/hooks/use-action-trigger';
 import AutoSuggest from '@/components/ui/AutoSuggest';
-import AdvancedFilters, {
+// AdvancedFilters is the heavy filter UI (~600 LoC + multiple chip-input
+// + autocomplete dependencies). Dynamic-imported per Phase 18 of the
+// master plan to slice the initial bundle on /candidate/jobs. The named
+// exports (ActiveFilterTags, FilterSection, FacetBucket) stay statically
+// imported — ActiveFilterTags renders above-the-fold inside the sticky
+// search header, and the type imports are erased at compile time.
+const AdvancedFilters = dynamic(
+  () => import('@/components/ui/AdvancedFilters').then((m) => m.default),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-3" aria-label="Loading filters">
+        <Skeleton variant="rect" height={32} />
+        <Skeleton variant="rect" height={120} />
+        <Skeleton variant="rect" height={120} />
+      </div>
+    ),
+  },
+);
+import {
   ActiveFilterTags,
   type FilterSection,
   type FacetBucket,
@@ -64,6 +86,8 @@ import {
   useClearFieldHistory,
 } from '@/hooks/use-field-history';
 import { useAuthStore } from '@/store/auth.store';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { useUpgradeModal } from '@/components/billing/UpgradeModal';
 import { savedSearchService } from '@/services/saved-search.service';
 import { candidateService } from '@/services/candidate.service';
 import { recommendationService } from '@/services/recommendation.service';
@@ -84,6 +108,8 @@ import RadiusSlider from '@/components/jobs/RadiusSlider';
 import CompareBar from '@/components/jobs/CompareBar';
 import CompareModal from '@/components/jobs/CompareModal';
 import SwipeableCard from '@/components/jobs/SwipeableCard';
+import CandidateJobCard from '@/components/jobs/CandidateJobCard';
+import CandidateCompactJobCard from '@/components/jobs/CandidateCompactJobCard';
 const MapView = dynamic(() => import('@/components/jobs/MapView'), {
   ssr: false,
   loading: () => (
@@ -495,6 +521,9 @@ function filtersToSearchParams(filters: JobSearchFilters, postedDays: string): U
 export default function JobSearchPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { hasFeature } = useEntitlements();
+  const upgrade = useUpgradeModal();
+  const isPremiumCandidate = hasFeature('feature.candidate_top_visibility');
 
   // ── State ──
   const [filters, setFilters] = useState<JobSearchFilters>(() =>
@@ -594,6 +623,15 @@ export default function JobSearchPage() {
       showToast.error(error.message || 'Failed to save search');
     },
   });
+
+  // Post-auth action triggers — when a guest bounces here from a public
+  // CTA with `?action=save_search` or `?action=create_alert`, open the
+  // save-search modal automatically (it doubles as the alert-create UI
+  // since SavedSearch can be marked alert-on by the user). The hook
+  // strips the `action` param after firing to prevent re-trigger on
+  // back-button / re-render.
+  useActionTrigger('save_search', () => setShowSaveSearch(true));
+  useActionTrigger('create_alert', () => setShowSaveSearch(true));
 
   // ── Saved job IDs ──
   useEffect(() => {
@@ -967,19 +1005,52 @@ export default function JobSearchPage() {
           </p>
         </div>
 
+        {/* Top-visibility upsell — hidden for Premium candidates. Shown
+            here so candidates who're actively job-hunting see it on every
+            session. */}
+        {!isPremiumCandidate && (
+          <button
+            type="button"
+            onClick={() => upgrade.open({ feature: 'feature.candidate_top_visibility' })}
+            className="group flex w-full items-start gap-3 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 text-left transition-colors hover:from-blue-100 hover:to-indigo-100 dark:border-blue-900/30 dark:from-blue-900/20 dark:to-indigo-900/20"
+          >
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-blue-600 text-white shadow">
+              <Crown className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-[var(--text)]">
+                Get matched first with Candidate Premium
+              </p>
+              <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
+                Boosted profiles get 4× more recruiter views. Includes Verified Badge, AI Resume
+                Premium and 7-day Profile Boost — ₹199/month.
+              </p>
+            </div>
+            <span className="hidden items-center gap-1 self-center rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors group-hover:bg-blue-700 sm:inline-flex">
+              <Sparkles className="h-4 w-4" /> Upgrade
+            </span>
+          </button>
+        )}
+        {upgrade.modal}
+
         {/* ── Search Bar ── */}
         <Card>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <SearchBar
-              placeholder="Job title, skills, or company..."
-              searchType="jobs"
-              defaultValue={keyword}
-              onSearch={handleKeywordSearch}
-              onSelect={handleKeywordSelect}
-              size="md"
-              fullWidth
-              className="flex-1"
-            />
+            <div className="relative flex-1">
+              <SearchBar
+                placeholder="Job title, skills, or company..."
+                searchType="jobs"
+                defaultValue={keyword}
+                onSearch={handleKeywordSearch}
+                onSelect={handleKeywordSelect}
+                size="md"
+                fullWidth
+              />
+              {/* Operator syntax popover — `+react -php "remote work"` */}
+              <div className="absolute top-1/2 right-2 -translate-y-1/2">
+                <KeywordSyntaxHelp />
+              </div>
+            </div>
             <ExperienceSelect
               value={experienceValue}
               onChange={handleExperienceChange}
@@ -1273,7 +1344,7 @@ export default function JobSearchPage() {
                           selectedJobId === job.id && 'ring-primary ring-2',
                         )}
                       >
-                        <CompactJobCard
+                        <CandidateCompactJobCard
                           job={job}
                           candidateSkills={candidateSkills}
                           userLat={userLat}
@@ -1339,7 +1410,7 @@ export default function JobSearchPage() {
                         onClick={() => setSelectedJobId(job.id)}
                         className="cursor-pointer"
                       >
-                        <CompactJobCard
+                        <CandidateCompactJobCard
                           job={job}
                           candidateSkills={candidateSkills}
                           userLat={userLat}
@@ -1370,7 +1441,7 @@ export default function JobSearchPage() {
                     visibleJobs.map((job) => {
                       const card =
                         viewMode === 'compact' ? (
-                          <CompactJobCard
+                          <CandidateCompactJobCard
                             key={job.id}
                             job={job}
                             searchKeyword={keyword}
@@ -1385,7 +1456,7 @@ export default function JobSearchPage() {
                             onToggleCompare={() => handleToggleCompare(job.id)}
                           />
                         ) : (
-                          <JobCard
+                          <CandidateJobCard
                             key={job.id}
                             job={job}
                             searchKeyword={keyword}
@@ -1460,7 +1531,7 @@ export default function JobSearchPage() {
                     </div>
                     {recommendedJobs.map((job) =>
                       viewMode === 'compact' ? (
-                        <CompactJobCard
+                        <CandidateCompactJobCard
                           key={job.id}
                           job={job}
                           candidateSkills={candidateSkills}
@@ -1473,7 +1544,7 @@ export default function JobSearchPage() {
                           onToggleCompare={() => handleToggleCompare(job.id)}
                         />
                       ) : (
-                        <JobCard
+                        <CandidateJobCard
                           key={job.id}
                           job={job}
                           candidateSkills={candidateSkills}
@@ -1570,570 +1641,5 @@ export default function JobSearchPage() {
         }}
       />
     </DashboardLayout>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   JOB CARD — Full List View
-   ═══════════════════════════════════════════════════════════════════════ */
-
-function JobCard({
-  job,
-  searchKeyword,
-  isSaved,
-  isApplied,
-  onSave,
-  isSaving,
-  onQuickApply,
-  isApplying,
-  candidateSkills,
-  userLat,
-  userLng,
-  isComparing,
-  onToggleCompare,
-}: {
-  job: Job;
-  searchKeyword?: string;
-  isSaved: boolean;
-  isApplied?: boolean;
-  onSave: () => void;
-  isSaving: boolean;
-  onQuickApply?: () => void;
-  isApplying?: boolean;
-  candidateSkills?: Set<string>;
-  userLat?: number;
-  userLng?: number;
-  isComparing?: boolean;
-  onToggleCompare?: () => void;
-}) {
-  const showLPA = (job.currency || 'INR').toUpperCase() === 'INR' && job.salaryType === 'ANNUAL';
-  const distanceKm =
-    userLat && userLng && job.latitude && job.longitude
-      ? haversineKm(userLat, userLng, job.latitude, job.longitude)
-      : undefined;
-  const isNew = isPostedWithin(job.createdAt, 24);
-  const isHot =
-    (job.urgencyLevel === 'URGENT' || job.urgencyLevel === 'IMMEDIATE') &&
-    isPostedWithin(job.createdAt, 72);
-  const canQuickApply =
-    job.applyMethod === 'IN_PLATFORM' &&
-    (!job.screeningQuestions || job.screeningQuestions.length === 0);
-
-  const skillMatchCount =
-    candidateSkills?.size && job.skillsRequired?.length
-      ? job.skillsRequired.filter((s) => candidateSkills.has(s.toLowerCase())).length
-      : 0;
-  const skillMatchPct = job.skillsRequired?.length
-    ? Math.round((skillMatchCount / job.skillsRequired.length) * 100)
-    : 0;
-
-  return (
-    <Card className="hover:border-primary/20 transition-all hover:shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-1 gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--bg-tertiary)]">
-            {job.isConfidential ? (
-              <Briefcase className="h-6 w-6 text-[var(--text-muted)]" />
-            ) : job.company?.logo ? (
-              <img
-                src={job.company.logo}
-                alt={job.company.companyName}
-                className="h-10 w-10 rounded-lg object-contain"
-              />
-            ) : (
-              <Building2 className="h-6 w-6 text-[var(--text-muted)]" />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <Tooltip content={`View details for ${job.title}`}>
-                <Link
-                  href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-                  className="hover:text-primary text-base font-semibold text-[var(--text)] transition-colors"
-                >
-                  <HighlightText text={job.title} highlight={searchKeyword} />
-                </Link>
-              </Tooltip>
-              {isNew && (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">
-                  <Zap className="h-2.5 w-2.5" />
-                  New
-                </span>
-              )}
-              {isHot && (
-                <span className="bg-secondary-50 text-secondary inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold">
-                  <Flame className="h-2.5 w-2.5" />
-                  Hot
-                </span>
-              )}
-            </div>
-            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
-              {job.isConfidential ? (
-                <span className="text-[var(--text-muted)]">Confidential Company</span>
-              ) : (
-                <>
-                  {job.clientCompanyName ? (
-                    <>
-                      <HighlightText text={job.clientCompanyName} highlight={searchKeyword} />{' '}
-                      <span className="text-xs text-[var(--text-muted)]">
-                        via {job.company?.companyName}
-                      </span>
-                    </>
-                  ) : (
-                    <HighlightText
-                      text={job.company?.companyName || ''}
-                      highlight={searchKeyword}
-                    />
-                  )}
-                  {job.company?.isVerified ? (
-                    <span
-                      className="inline-flex items-center gap-0.5 rounded-full bg-[var(--success-light)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--success-dark)]"
-                      title="This company has been verified via GST registration"
-                    >
-                      <ShieldCheck className="h-3 w-3" />
-                      GST Verified
-                    </span>
-                  ) : (
-                    <span
-                      className="inline-flex items-center gap-0.5 rounded-full bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)]"
-                      title="This company has not been verified"
-                    >
-                      Not Verified
-                    </span>
-                  )}
-                </>
-              )}
-            </p>
-
-            {/* Meta row */}
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" /> {job.location}
-                {job.additionalLocations.length > 0 && (
-                  <span>+{job.additionalLocations.length}</span>
-                )}
-              </span>
-              <span className="flex items-center gap-1">
-                <Briefcase className="h-3.5 w-3.5" /> {job.experienceMin}-
-                {job.experienceMax || job.experienceMin}+ yrs
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" /> {formatRelativeDate(job.createdAt)}
-              </span>
-              {typeof job._applicationCount === 'number' && (
-                <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" />
-                  {job._applicationCount > 50
-                    ? '50+ applicants'
-                    : job._applicationCount < 10
-                      ? '< 10 applicants'
-                      : `${job._applicationCount} applicants`}
-                </span>
-              )}
-              {distanceKm != null && (
-                <span
-                  className={cn(
-                    'flex items-center gap-1',
-                    distanceKm < 10 ? 'text-emerald-600' : distanceKm < 30 ? 'text-amber-600' : '',
-                  )}
-                >
-                  <Navigation className="h-3.5 w-3.5" />
-                  {distanceKm < 1 ? '<1 km' : `${distanceKm.toFixed(1)} km`}
-                </span>
-              )}
-            </div>
-
-            {/* Description snippet */}
-            {job.description && (
-              <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[var(--text-muted)]">
-                {truncate(job.description.replace(/<[^>]+>/g, ''), 200)}
-              </p>
-            )}
-
-            {/* Badges */}
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {job.type && (
-                <Badge variant="info" size="sm">
-                  {JOB_TYPE_LABELS[job.type] || job.type}
-                </Badge>
-              )}
-              {job.workMode && (
-                <Badge variant="neutral" size="sm">
-                  {WORK_MODE_LABELS[job.workMode] || job.workMode}
-                </Badge>
-              )}
-              {job.urgencyLevel === 'URGENT' && (
-                <Badge variant="warning" size="sm">
-                  Urgent
-                </Badge>
-              )}
-              {job.urgencyLevel === 'IMMEDIATE' && (
-                <Badge variant="error" size="sm">
-                  Immediate
-                </Badge>
-              )}
-              {job.isFeatured && (
-                <Badge variant="secondary" size="sm">
-                  Featured
-                </Badge>
-              )}
-              {job.isPwdFriendly && (
-                <Badge variant="success" size="sm">
-                  PwD Friendly
-                </Badge>
-              )}
-              {job.visaSponsorshipAvailable && (
-                <Badge variant="info" size="sm">
-                  Visa Sponsorship
-                </Badge>
-              )}
-              {job.functionalArea && (
-                <Badge variant="neutral" size="sm">
-                  {FUNCTIONAL_AREA_LABELS[job.functionalArea]}
-                </Badge>
-              )}
-            </div>
-
-            {/* Skills */}
-            {(job.skillsRequired?.length ?? 0) > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-1">
-                {skillMatchCount > 0 && (
-                  <span
-                    className={cn(
-                      'mr-1 inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                      skillMatchPct >= 70
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : skillMatchPct >= 40
-                          ? 'bg-amber-50 text-amber-700'
-                          : 'bg-slate-100 text-slate-600',
-                    )}
-                  >
-                    {skillMatchCount}/{job.skillsRequired.length} skills match ({skillMatchPct}%)
-                  </span>
-                )}
-                {job.skillsRequired.slice(0, 6).map((skill) => {
-                  const isProfileMatch = candidateSkills?.has(skill.toLowerCase());
-                  const isKeywordMatch =
-                    !isProfileMatch &&
-                    searchKeyword &&
-                    searchKeyword
-                      .toLowerCase()
-                      .split(/[\s,]+/)
-                      .some((t) => t.length > 1 && skill.toLowerCase().includes(t));
-                  return (
-                    <Tag
-                      key={skill}
-                      label={skill}
-                      size="sm"
-                      variant={isProfileMatch || isKeywordMatch ? 'success' : 'primary'}
-                    />
-                  );
-                })}
-                {job.skillsRequired.length > 6 && (
-                  <Tag label={`+${job.skillsRequired.length - 6}`} size="sm" />
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right column: salary + actions */}
-        <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end sm:gap-2">
-          <div className="text-right">
-            <p className="text-sm font-semibold text-[var(--text)]">
-              {showLPA
-                ? formatSalaryAsLPA(job.salaryMin, job.salaryMax)
-                : formatSalaryRange(job.salaryMin, job.salaryMax, job.currency)}
-            </p>
-            {job.salaryType && !showLPA && (
-              <span className="text-xs text-[var(--text-muted)]">
-                {job.salaryType === 'ANNUAL' ? '/yr' : job.salaryType === 'MONTHLY' ? '/mo' : '/hr'}
-              </span>
-            )}
-            {job.salaryNegotiable && (
-              <span className="block text-[10px] text-[var(--success)]">Negotiable</span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {/* Applied indicator / Quick Apply */}
-            {isApplied ? (
-              <Tooltip content="View your application">
-                <Link
-                  href={ROUTES.CANDIDATE.APPLICATIONS}
-                  className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-2.5 py-1.5 text-xs font-medium text-[var(--success)] transition-colors hover:bg-[var(--success)]/20"
-                >
-                  <CheckCircle className="h-3 w-3" />
-                  Applied
-                </Link>
-              </Tooltip>
-            ) : canQuickApply && onQuickApply ? (
-              <Button
-                size="sm"
-                onClick={onQuickApply}
-                isLoading={isApplying}
-                className="text-xs"
-                tooltip="Apply instantly without screening questions"
-              >
-                <Send className="mr-1 h-3 w-3" />
-                Quick Apply
-              </Button>
-            ) : null}
-
-            {/* External apply indicator */}
-            {!isApplied && job.applyMethod === 'EXTERNAL_URL' && (
-              <Tooltip content="Apply on external website">
-                <Link
-                  href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-                  className="bg-primary/10 text-primary hover:bg-primary/20 flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Apply
-                </Link>
-              </Tooltip>
-            )}
-
-            {/* Compare button */}
-            {onToggleCompare && (
-              <button
-                onClick={onToggleCompare}
-                className={cn(
-                  'cursor-pointer rounded-lg p-2 transition-colors',
-                  isComparing
-                    ? 'text-primary bg-primary/10'
-                    : 'hover:text-primary text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
-                )}
-                title={isComparing ? 'Remove from comparison' : 'Add to comparison'}
-                aria-label={isComparing ? 'Remove from comparison' : 'Add to comparison'}
-              >
-                <GitCompareArrows className="h-5 w-5" />
-              </button>
-            )}
-
-            {/* Save button */}
-            <button
-              onClick={onSave}
-              disabled={isSaving}
-              className={cn(
-                'cursor-pointer rounded-lg p-2 transition-colors disabled:opacity-50',
-                isSaved
-                  ? 'text-primary bg-primary/10'
-                  : 'hover:text-primary text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
-              )}
-              title={isSaved ? 'Unsave job' : 'Save job'}
-              aria-label={isSaved ? 'Unsave job' : 'Save job'}
-            >
-              {isSaved ? <BookmarkCheck className="h-5 w-5" /> : <Bookmark className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   COMPACT JOB CARD — Condensed Row View
-   ═══════════════════════════════════════════════════════════════════════ */
-
-function CompactJobCard({
-  job,
-  searchKeyword,
-  isSaved,
-  isApplied,
-  onSave,
-  isSaving,
-  candidateSkills,
-  userLat,
-  userLng,
-  isComparing,
-  onToggleCompare,
-}: {
-  job: Job;
-  searchKeyword?: string;
-  isSaved: boolean;
-  isApplied?: boolean;
-  onSave: () => void;
-  isSaving: boolean;
-  candidateSkills?: Set<string>;
-  userLat?: number;
-  userLng?: number;
-  isComparing?: boolean;
-  onToggleCompare?: () => void;
-}) {
-  const showLPA = (job.currency || 'INR').toUpperCase() === 'INR' && job.salaryType === 'ANNUAL';
-  const isNew = isPostedWithin(job.createdAt, 24);
-  const distanceKm =
-    userLat && userLng && job.latitude && job.longitude
-      ? haversineKm(userLat, userLng, job.latitude, job.longitude)
-      : undefined;
-
-  const skillMatchCount =
-    candidateSkills?.size && job.skillsRequired?.length
-      ? job.skillsRequired.filter((s) => candidateSkills.has(s.toLowerCase())).length
-      : 0;
-  const skillMatchPct = job.skillsRequired?.length
-    ? Math.round((skillMatchCount / job.skillsRequired.length) * 100)
-    : 0;
-
-  return (
-    <div className="group hover:border-primary/20 flex items-center gap-3 rounded-xl border border-[var(--border)] bg-white px-4 py-3 transition-all hover:shadow-sm">
-      {/* Logo */}
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)]">
-        {job.isConfidential ? (
-          <Briefcase className="h-5 w-5 text-[var(--text-muted)]" />
-        ) : job.company?.logo ? (
-          <img
-            src={job.company.logo}
-            alt={job.company.companyName}
-            className="h-8 w-8 rounded-md object-contain"
-          />
-        ) : (
-          <Building2 className="h-5 w-5 text-[var(--text-muted)]" />
-        )}
-      </div>
-
-      {/* Main info */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <Tooltip content={`View details for ${job.title}`}>
-            <Link
-              href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-              className="hover:text-primary truncate text-sm font-semibold text-[var(--text)] transition-colors"
-            >
-              <HighlightText text={job.title} highlight={searchKeyword} />
-            </Link>
-          </Tooltip>
-          {isNew && (
-            <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">
-              New
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-          <span className="truncate">
-            {job.isConfidential
-              ? 'Confidential'
-              : job.clientCompanyName
-                ? `${job.clientCompanyName} via ${job.company?.companyName}`
-                : job.company?.companyName}
-          </span>
-          <span className="shrink-0">|</span>
-          <span className="flex shrink-0 items-center gap-0.5">
-            <MapPin className="h-3 w-3" />
-            {job.location}
-          </span>
-          <span className="shrink-0">|</span>
-          <span className="shrink-0">
-            {showLPA
-              ? formatSalaryAsLPA(job.salaryMin, job.salaryMax)
-              : formatSalaryRange(job.salaryMin, job.salaryMax, job.currency)}
-          </span>
-          <span className="shrink-0">|</span>
-          <span className="shrink-0">{formatRelativeDate(job.createdAt)}</span>
-          {distanceKm != null && (
-            <>
-              <span className="shrink-0">|</span>
-              <span
-                className={cn(
-                  'flex shrink-0 items-center gap-0.5',
-                  distanceKm < 10 ? 'text-emerald-600' : distanceKm < 30 ? 'text-amber-600' : '',
-                )}
-              >
-                <Navigation className="h-3 w-3" />
-                {distanceKm < 1 ? '<1 km' : `${distanceKm.toFixed(1)} km`}
-              </span>
-            </>
-          )}
-        </div>
-        {/* Skills row */}
-        {(job.skillsRequired?.length ?? 0) > 0 && (
-          <div className="mt-1 flex flex-wrap items-center gap-1">
-            {skillMatchCount > 0 && (
-              <span
-                className={cn(
-                  'mr-0.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                  skillMatchPct >= 70
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : skillMatchPct >= 40
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-slate-100 text-slate-600',
-                )}
-              >
-                {skillMatchPct}%
-              </span>
-            )}
-            {job.skillsRequired.slice(0, 4).map((skill) => {
-              const isMatch = candidateSkills?.has(skill.toLowerCase());
-              return (
-                <span
-                  key={skill}
-                  className={cn(
-                    'rounded px-1.5 py-0.5 text-[10px]',
-                    isMatch
-                      ? 'bg-emerald-50 font-medium text-emerald-700'
-                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]',
-                  )}
-                >
-                  {skill}
-                </span>
-              );
-            })}
-            {job.skillsRequired.length > 4 && (
-              <span className="text-[10px] text-[var(--text-muted)]">
-                +{job.skillsRequired.length - 4}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="flex shrink-0 items-center gap-1.5">
-        {isApplied && (
-          <span className="flex items-center gap-1 rounded-lg bg-[var(--success)]/10 px-2 py-1 text-[10px] font-medium text-[var(--success)]">
-            <CheckCircle className="h-3 w-3" />
-            Applied
-          </span>
-        )}
-        <Tooltip content="View job details">
-          <Link
-            href={ROUTES.CANDIDATE.JOB_DETAIL(job.id)}
-            className="bg-primary/10 text-primary hover:bg-primary/20 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
-          >
-            View
-          </Link>
-        </Tooltip>
-        {onToggleCompare && (
-          <button
-            onClick={onToggleCompare}
-            className={cn(
-              'cursor-pointer rounded-lg p-1.5 transition-colors',
-              isComparing
-                ? 'text-primary bg-primary/10'
-                : 'hover:text-primary text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
-            )}
-            title={isComparing ? 'Remove from comparison' : 'Compare'}
-            aria-label={isComparing ? 'Remove from comparison' : 'Add to comparison'}
-          >
-            <GitCompareArrows className="h-4 w-4" />
-          </button>
-        )}
-        <button
-          onClick={onSave}
-          disabled={isSaving}
-          className={cn(
-            'cursor-pointer rounded-lg p-1.5 transition-colors disabled:opacity-50',
-            isSaved
-              ? 'text-primary bg-primary/10'
-              : 'hover:text-primary text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
-          )}
-          title={isSaved ? 'Unsave' : 'Save'}
-          aria-label={isSaved ? 'Unsave job' : 'Save job'}
-        >
-          {isSaved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
-        </button>
-      </div>
-    </div>
   );
 }

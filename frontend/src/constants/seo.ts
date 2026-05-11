@@ -60,13 +60,14 @@ export const SEO_CONFIG = {
   // ── Verification IDs — all detected by scripts/validate-structured-data.mjs
   // while still set to REPLACE_WITH_REAL_ID. Populate as each account is linked.
   verification: {
-    google: 'REPLACE_WITH_REAL_ID', // Search Console → HTML tag verification
-    bing: 'REPLACE_WITH_REAL_ID', // Bing Webmaster → `msvalidate.01` value
-    yandex: 'REPLACE_WITH_REAL_ID', // Yandex Webmaster → meta content value
-    pinterest: 'REPLACE_WITH_REAL_ID', // Pinterest → domain claim token
+    google: '6t6H27efXgrkrxH7xHPuqe-MQ8cuH0tPCN4qpEGsHPQ', // Search Console → HTML tag verification
+    bing: 'EBDFBE5D1DEF42A491D7B9391A636C39', // Bing Webmaster → `msvalidate.01` value
+    yandex: '93fdd397728b3ddc', // Yandex Webmaster → meta content value
+    pinterest: 'd48fc1f32fcc73aef3817076dd8f557f', // Pinterest → domain claim token
     facebook: 'REPLACE_WITH_REAL_ID', // Meta Business → domain verification
     baidu: 'REPLACE_WITH_REAL_ID', // Baidu webmaster (China market)
-    norton: 'REPLACE_WITH_REAL_ID', // Norton safe-web verification
+    norton:
+      'AJVDSXU2P0-XMHO8JLCSIMMY2HKHM24GQFY2VFR6O-QZJAEH467-COACZQQ3ZRLA7ROUS1F3-38TI3FESK631H5PV2AW9YFZXZNZBMIA219AQ4TGPT3OPNL9LLPVM73I', // Norton safe-web verification
     naver: 'REPLACE_WITH_REAL_ID', // Naver (Korea) site ownership
   },
 

@@ -62,6 +62,11 @@ router.get(
   candidateController.getResumeReadiness
 );
 router.get(
+  '/me/resume/templates',
+  restrictTo(Role.CANDIDATE),
+  candidateController.listResumeTemplates
+);
+router.get(
   '/me/resume/generate',
   restrictTo(Role.CANDIDATE),
   candidateController.generateResumePdf

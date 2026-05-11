@@ -135,10 +135,9 @@ export const candidateListService = {
     candidateId: string,
     notes: string,
   ): Promise<ApiResponse<CandidateListMember>> {
-    const res = await api.patch(
-      `/candidate-lists/${listId}/candidates/${candidateId}/notes`,
-      { notes },
-    );
+    const res = await api.patch(`/candidate-lists/${listId}/candidates/${candidateId}/notes`, {
+      notes,
+    });
     return res.data;
   },
 };

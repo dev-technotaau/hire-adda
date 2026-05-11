@@ -29,7 +29,12 @@ export default function AwardsSection({ form, updateField }: ProfileSectionProps
       header={
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--text)]">Awards & Achievements</h2>
-          <Button size="sm" variant="outline" onClick={addAward} tooltip="Add a new award or achievement">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={addAward}
+            tooltip="Add a new award or achievement"
+          >
             <Plus className="mr-1 h-4 w-4" /> Add
           </Button>
         </div>

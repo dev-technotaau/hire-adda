@@ -13,6 +13,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import Tooltip from '@/components/ui/Tooltip';
 import Modal from '@/components/ui/Modal';
+import RatingBadge from '@/components/reviews/RatingBadge';
 import { showToast } from '@/components/ui/Toast';
 import { useAppliedJobs, useWithdrawApplication } from '@/hooks/use-jobs';
 import { ROUTES } from '@/constants/routes';
@@ -117,7 +118,9 @@ export default function ApplicationsPage() {
               description="Apply to jobs to see your applications here."
               action={
                 <Link href={ROUTES.CANDIDATE.JOBS} title="Browse available job listings">
-                  <Button size="sm" tooltip="Browse available jobs">Browse Jobs</Button>
+                  <Button size="sm" tooltip="Browse available jobs">
+                    Browse Jobs
+                  </Button>
                 </Link>
               }
             />
@@ -142,7 +145,11 @@ export default function ApplicationsPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setWithdrawTarget(null)} tooltip="Cancel withdrawal">
+              <Button
+                variant="outline"
+                onClick={() => setWithdrawTarget(null)}
+                tooltip="Cancel withdrawal"
+              >
                 Cancel
               </Button>
               <Button
@@ -205,7 +212,21 @@ function ApplicationCard({
                 {job?.title || 'Job Position'}
               </Link>
             </Tooltip>
-            <p className="text-sm text-[var(--text-muted)]">{job?.company?.companyName}</p>
+            <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
+              <span>{job?.company?.companyName}</span>
+              {((job?.company as { totalReviews?: number })?.totalReviews ?? 0) > 0 && (
+                <RatingBadge
+                  rating={(job?.company as { averageRating?: number })?.averageRating ?? 0}
+                  count={(job?.company as { totalReviews?: number })?.totalReviews ?? 0}
+                  size="xs"
+                  href={
+                    (job?.company as { slug?: string | null })?.slug
+                      ? `/companies/${encodeURIComponent((job?.company as { slug?: string | null }).slug!)}/reviews`
+                      : undefined
+                  }
+                />
+              )}
+            </p>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
               {job?.location && (
                 <span className="flex items-center gap-1">

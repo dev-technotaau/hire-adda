@@ -11,10 +11,7 @@ export async function GET() {
     const { accessToken } = await getTokensFromCookies();
 
     if (!accessToken) {
-      return NextResponse.json(
-        { status: 'error', message: 'Not authenticated' },
-        { status: 401 },
-      );
+      return NextResponse.json({ status: 'error', message: 'Not authenticated' }, { status: 401 });
     }
 
     return NextResponse.json({ socketToken: accessToken });

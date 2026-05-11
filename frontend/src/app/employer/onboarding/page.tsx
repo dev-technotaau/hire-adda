@@ -38,6 +38,8 @@ import {
   Pencil,
 } from 'lucide-react';
 import OnboardingShell, { type OnboardingStep } from '@/components/onboarding/OnboardingShell';
+import AuthSupportFooter from '@/components/support/AuthSupportFooter';
+import EmployerHelplineBanner from '@/components/support/EmployerHelplineBanner';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import { useOnboarding, markOnboardingComplete } from '@/hooks/use-onboarding';
 import Button from '@/components/ui/Button';
@@ -601,7 +603,10 @@ export default function EmployerOnboardingPage() {
 
         markOnboardingComplete('ha_employer_onboarding');
         showToast.success('Company profile created!', 'Welcome to Hire Adda');
-        router.push(ROUTES.EMPLOYER.DASHBOARD);
+        // Send the new employer to the pricing page so they can pick a paid
+        // plan immediately, or fall through to the dashboard via the
+        // "Continue with Free Plan" CTA (EMP_FREE was auto-granted at signup).
+        router.push('/pricing?from=onboarding');
       } catch (err) {
         const apiErr = err as unknown as ApiError;
         showToast.error(apiErr?.message || 'Failed to save profile. Please try again.');
@@ -2981,7 +2986,9 @@ export default function EmployerOnboardingPage() {
         highestVisitedStep={highestVisitedStep}
         canSkip={canSkip}
       >
+        <EmployerHelplineBanner compact variant="rounded" className="mb-4" />
         {renderStepContent()}
+        <AuthSupportFooter pageContext="onboarding-employer" audience="employer" />
       </OnboardingShell>
     </>
   );

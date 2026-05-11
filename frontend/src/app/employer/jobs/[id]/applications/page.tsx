@@ -14,6 +14,8 @@ import {
   Star,
   AlertCircle,
   ChevronDown,
+  Crown,
+  Zap,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
@@ -22,6 +24,9 @@ import Badge from '@/components/ui/Badge';
 import Tabs from '@/components/ui/Tabs';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
+import QuotaBar from '@/components/billing/QuotaBar';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { useUpgradeModal } from '@/components/billing/UpgradeModal';
 import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import Tag from '@/components/ui/Tag';
@@ -89,11 +94,22 @@ export default function JobApplicationsPage() {
   const params = useParams();
   const jobId = params.id as string;
   const queryClient = useQueryClient();
+  const { hasFeature, remaining, allocated } = useEntitlements();
+  const upgrade = useUpgradeModal();
 
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+
+  // Quota-exhausted upsell — banner shows when:
+  //   - employer doesn't have unlimited applications, AND
+  //   - their APPLICATIONS quota is at zero or low (<10% remaining).
+  const appsAllocated = allocated('APPLICATIONS');
+  const appsRemaining = remaining('APPLICATIONS');
+  const isUnlimited = hasFeature('feature.unlimited_applications');
+  const showQuotaUpsell =
+    !isUnlimited && appsAllocated > 0 && appsRemaining <= Math.max(1, appsAllocated * 0.1);
 
   const { data: jobData } = useQuery({
     queryKey: QUERY_KEYS.JOBS.DETAIL(jobId),
@@ -168,6 +184,34 @@ export default function JobApplicationsPage() {
   return (
     <DashboardLayout requiredRole={['EMPLOYER']}>
       <div className="space-y-6">
+        {/* Application quota upsell — shown when employer is at/near the limit */}
+        {showQuotaUpsell && (
+          <button
+            type="button"
+            onClick={() => upgrade.open({ feature: 'feature.unlimited_applications' })}
+            className="group flex w-full items-start gap-3 rounded-xl border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 p-4 text-left transition-colors hover:from-amber-100 hover:to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20"
+          >
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-amber-500 text-white shadow">
+              <Crown className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-amber-900 dark:text-amber-100">
+                {appsRemaining === 0
+                  ? `You've used all ${appsAllocated} applications on this plan`
+                  : `Only ${appsRemaining} of ${appsAllocated} applications left`}
+              </p>
+              <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-200/80">
+                Upgrade to Premium for unlimited applications, 3 job posts, top search visibility,
+                and 20 CV unlocks.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1 self-center rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors group-hover:bg-amber-700">
+              <Zap className="h-4 w-4" /> Upgrade
+            </span>
+          </button>
+        )}
+        {upgrade.modal}
+
         {/* Back Button */}
         <Tooltip content="Return to job details">
           <Link
@@ -180,14 +224,17 @@ export default function JobApplicationsPage() {
         </Tooltip>
 
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Applications</h1>
-          {job && (
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Manage applications for{' '}
-              <span className="font-medium text-[var(--text)]">{job.title}</span>
-            </p>
-          )}
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--text)]">Applications</h1>
+            {job && (
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
+                Manage applications for{' '}
+                <span className="font-medium text-[var(--text)]">{job.title}</span>
+              </p>
+            )}
+          </div>
+          <QuotaBar units={['APPLICATIONS', 'CV_UNLOCK']} />
         </div>
 
         {/* Status Tabs */}

@@ -268,11 +268,7 @@ export const clearFieldHistory = async (
  * GET /api/v1/search/suggest?q=mum&category=location&region=IN&limit=10
  * GET /api/v1/search/suggest?q=&category=revenue_range&limit=50
  */
-export const suggest = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const suggest = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const q = (req.query.q as string) || '';
     const category = req.query.category as string;

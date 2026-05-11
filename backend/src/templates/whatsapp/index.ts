@@ -296,3 +296,313 @@ export const securityAlertWhatsapp = (action: string): WhatsappTemplate => ({
   ],
   text: `Security alert: ${action} was detected on your Hire Adda account. If this wasn't you, secure your account immediately.`,
 });
+
+// ===============================
+// Billing / Payments
+// ===============================
+
+const inrWa = (paise: number): string => `Rs.${(paise / 100).toFixed(2)}`;
+
+export const orderPlacedWhatsapp = (
+  planName: string,
+  amountPaise: number,
+  payUrl: string
+): WhatsappTemplate => ({
+  templateName: 'billing_order_placed',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: planName },
+        { type: 'text', text: inrWa(amountPaise) },
+      ],
+    },
+    { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: payUrl }] },
+  ],
+  text: `Order created — ${planName} (${inrWa(amountPaise)}). Complete payment: ${payUrl}`,
+});
+
+export const paymentSuccessWhatsapp = (
+  planName: string,
+  amountPaise: number,
+  validUntil: string
+): WhatsappTemplate => ({
+  templateName: 'billing_payment_success',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: planName },
+        { type: 'text', text: inrWa(amountPaise) },
+        { type: 'text', text: validUntil },
+      ],
+    },
+  ],
+  text: `Payment of ${inrWa(amountPaise)} received. ${planName} is active until ${validUntil}.`,
+});
+
+export const paymentFailedWhatsapp = (planName: string, retryUrl: string): WhatsappTemplate => ({
+  templateName: 'billing_payment_failed',
+  languageCode: 'en',
+  components: [
+    { type: 'body', parameters: [{ type: 'text', text: planName }] },
+    { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: retryUrl }] },
+  ],
+  text: `Payment failed for ${planName}. No money debited. Retry: ${retryUrl}`,
+});
+
+export const subscriptionRenewedWhatsapp = (
+  planName: string,
+  amountPaise: number,
+  nextChargeAt: string
+): WhatsappTemplate => ({
+  templateName: 'billing_subscription_renewed',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: planName },
+        { type: 'text', text: inrWa(amountPaise) },
+        { type: 'text', text: nextChargeAt },
+      ],
+    },
+  ],
+  text: `${planName} renewed for ${inrWa(amountPaise)}. Next charge: ${nextChargeAt}.`,
+});
+
+export const subscriptionFailedWhatsapp = (
+  planName: string,
+  graceUntil: string,
+  updateUrl: string
+): WhatsappTemplate => ({
+  templateName: 'billing_subscription_failed',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: planName },
+        { type: 'text', text: graceUntil },
+      ],
+    },
+    {
+      type: 'button',
+      sub_type: 'url',
+      index: '0',
+      parameters: [{ type: 'text', text: updateUrl }],
+    },
+  ],
+  text: `Renewal failed for ${planName}. Update payment method by ${graceUntil}: ${updateUrl}`,
+});
+
+export const subscriptionActivatedWhatsapp = (
+  planName: string,
+  manageUrl: string
+): WhatsappTemplate => ({
+  templateName: 'billing_subscription_activated',
+  languageCode: 'en',
+  components: [
+    { type: 'body', parameters: [{ type: 'text', text: planName }] },
+    {
+      type: 'button',
+      sub_type: 'url',
+      index: '0',
+      parameters: [{ type: 'text', text: manageUrl }],
+    },
+  ],
+  text: `${planName} subscription activated. Manage: ${manageUrl}`,
+});
+
+export const subscriptionCancelledWhatsapp = (
+  planName: string,
+  validUntil: string
+): WhatsappTemplate => ({
+  templateName: 'billing_subscription_cancelled',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: planName },
+        { type: 'text', text: validUntil },
+      ],
+    },
+  ],
+  text: `${planName} subscription cancelled. Access until ${validUntil}.`,
+});
+
+export const renewalReminderWhatsapp = (
+  planName: string,
+  daysLeft: number,
+  renewUrl: string
+): WhatsappTemplate => ({
+  templateName: 'billing_renewal_reminder',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: planName },
+        { type: 'text', text: String(daysLeft) },
+      ],
+    },
+    { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: renewUrl }] },
+  ],
+  text: `${planName} expires in ${daysLeft} day(s). Renew: ${renewUrl}`,
+});
+
+export const planExpiredWhatsapp = (planName: string, renewUrl: string): WhatsappTemplate => ({
+  templateName: 'billing_plan_expired',
+  languageCode: 'en',
+  components: [
+    { type: 'body', parameters: [{ type: 'text', text: planName }] },
+    { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: renewUrl }] },
+  ],
+  text: `Your ${planName} has expired. Renew to restore access: ${renewUrl}`,
+});
+
+export const refundProcessedWhatsapp = (
+  amountPaise: number,
+  refundId: string
+): WhatsappTemplate => ({
+  templateName: 'billing_refund_processed',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: inrWa(amountPaise) },
+        { type: 'text', text: refundId },
+      ],
+    },
+  ],
+  text: `Refund of ${inrWa(amountPaise)} processed (ID: ${refundId}). Allow 5-7 business days.`,
+});
+
+export const customQuoteReadyWhatsapp = (
+  companyName: string,
+  totalPaise: number,
+  acceptUrl: string
+): WhatsappTemplate => ({
+  templateName: 'billing_custom_quote_ready',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: companyName },
+        { type: 'text', text: inrWa(totalPaise) },
+      ],
+    },
+    {
+      type: 'button',
+      sub_type: 'url',
+      index: '0',
+      parameters: [{ type: 'text', text: acceptUrl }],
+    },
+  ],
+  text: `Custom quote for ${companyName}: ${inrWa(totalPaise)}. Accept: ${acceptUrl}`,
+});
+
+export const fraudAlertWhatsapp = (
+  signal: string,
+  severity: string,
+  reviewUrl: string
+): WhatsappTemplate => ({
+  templateName: 'billing_fraud_alert',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: signal },
+        { type: 'text', text: severity },
+      ],
+    },
+    {
+      type: 'button',
+      sub_type: 'url',
+      index: '0',
+      parameters: [{ type: 'text', text: reviewUrl }],
+    },
+  ],
+  text: `[FRAUD ${severity}] ${signal} — Review: ${reviewUrl}`,
+});
+
+export const quoteReceivedWhatsapp = (
+  companyName: string,
+  contactPerson: string,
+  reviewUrl: string
+): WhatsappTemplate => ({
+  templateName: 'billing_quote_received',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: companyName },
+        { type: 'text', text: contactPerson },
+      ],
+    },
+    {
+      type: 'button',
+      sub_type: 'url',
+      index: '0',
+      parameters: [{ type: 'text', text: reviewUrl }],
+    },
+  ],
+  text: `New CV Enterprise quote from ${companyName} (${contactPerson}). Open: ${reviewUrl}`,
+});
+
+export const planUpgradedWhatsapp = (
+  fromPlanName: string,
+  toPlanName: string,
+  manageUrl: string
+): WhatsappTemplate => ({
+  templateName: 'billing_plan_upgraded',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: fromPlanName },
+        { type: 'text', text: toPlanName },
+      ],
+    },
+    {
+      type: 'button',
+      sub_type: 'url',
+      index: '0',
+      parameters: [{ type: 'text', text: manageUrl }],
+    },
+  ],
+  text: `Upgraded from ${fromPlanName} to ${toPlanName}. Manage: ${manageUrl}`,
+});
+
+export const planDowngradedWhatsapp = (
+  fromPlanName: string,
+  toPlanName: string,
+  manageUrl: string
+): WhatsappTemplate => ({
+  templateName: 'billing_plan_downgraded',
+  languageCode: 'en',
+  components: [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: fromPlanName },
+        { type: 'text', text: toPlanName },
+      ],
+    },
+    {
+      type: 'button',
+      sub_type: 'url',
+      index: '0',
+      parameters: [{ type: 'text', text: manageUrl }],
+    },
+  ],
+  text: `Switched from ${fromPlanName} to ${toPlanName} as scheduled. Manage: ${manageUrl}`,
+});

@@ -234,7 +234,11 @@ export default function VerificationPage() {
               title="No verification requests"
               description="Submit a verification request to build trust with candidates."
               action={
-                <Button onClick={() => setShowForm(true)} size="sm" tooltip="Submit a new verification request">
+                <Button
+                  onClick={() => setShowForm(true)}
+                  size="sm"
+                  tooltip="Submit a new verification request"
+                >
                   Submit Request
                 </Button>
               }

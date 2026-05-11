@@ -329,7 +329,12 @@ export default function EmployerTicketDetailPage() {
                   </div>
                 </div>
               ) : (
-                <Button variant="primary" size="sm" onClick={() => setShowSatisfaction(true)} tooltip="Provide feedback">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowSatisfaction(true)}
+                  tooltip="Provide feedback"
+                >
                   Rate Your Experience
                 </Button>
               )}

@@ -1,6 +1,9 @@
 import Logo from '@/components/common/Logo';
 import ManageCookiesButton from '@/components/common/ManageCookiesButton';
+import PaymentMethodsBar from '@/components/common/PaymentMethodsBar';
+import TrustBadges from '@/components/common/TrustBadges';
 import Tooltip from '@/components/ui/Tooltip';
+import FooterMegaSection from '@/components/layout/FooterMegaSection';
 import { ROUTES } from '@/constants/routes';
 import Link from 'next/link';
 
@@ -12,14 +15,14 @@ const footerLinks = {
     { label: 'Press', href: ROUTES.PUBLIC.CONTACT },
   ],
   jobSeekers: [
-    { label: 'Browse Jobs', href: ROUTES.AUTH.LOGIN },
+    { label: 'Browse Jobs', href: ROUTES.AUTH.LOGIN_CANDIDATE },
     { label: 'Career Advice', href: ROUTES.PUBLIC.HELP },
-    { label: 'Resume Builder', href: ROUTES.AUTH.LOGIN },
+    { label: 'Resume Builder', href: ROUTES.AUTH.LOGIN_CANDIDATE },
     { label: 'Salary Guide', href: ROUTES.PUBLIC.HELP },
   ],
   employers: [
-    { label: 'Post a Job', href: ROUTES.AUTH.REGISTER },
-    { label: 'Search Candidates', href: ROUTES.AUTH.LOGIN },
+    { label: 'Post a Job', href: ROUTES.AUTH.REGISTER_EMPLOYER },
+    { label: 'Search Candidates', href: ROUTES.AUTH.LOGIN_EMPLOYER },
     { label: 'Pricing', href: ROUTES.PUBLIC.CONTACT },
     { label: 'Employer Resources', href: ROUTES.PUBLIC.HELP },
   ],
@@ -40,6 +43,10 @@ const footerLinks = {
 export default function Footer() {
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--bg-secondary)]">
+      {/* Footer mega-section (Phase 11) — Find Jobs / Popular Jobs /
+          Jobs by Department. Stacked above the existing footer columns
+          and visually separated by a thin horizontal divider. */}
+      <FooterMegaSection />
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
           {/* Company */}
@@ -151,8 +158,21 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* Payments accepted */}
+        <div className="mt-12 border-t border-[var(--border)] pt-10">
+          <h3 className="mb-5 text-center text-sm font-semibold tracking-wider text-[var(--text)] uppercase">
+            Payments we accept
+          </h3>
+          <PaymentMethodsBar />
+        </div>
+
+        {/* Trust & credibility badges */}
+        <div className="mt-10 border-t border-[var(--border)] pt-8">
+          <TrustBadges />
+        </div>
+
         {/* Bottom bar */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)] pt-8 sm:flex-row">
+        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)] pt-8 sm:flex-row">
           <Logo size="md" />
           <p className="text-sm text-[var(--text-muted)]">
             &copy; {new Date().getFullYear()} Hire Adda. All rights reserved.

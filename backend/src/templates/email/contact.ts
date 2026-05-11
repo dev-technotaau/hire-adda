@@ -34,7 +34,10 @@ export const contactFormSubmission = (
         ${subtitle(`${name} has submitted a message via the contact form.`)}
         ${infoBox([
           { label: 'Name', value: name },
-          { label: 'Email', value: `<a href="mailto:${email}" style="color:${BRAND.primary};">${email}</a>` },
+          {
+            label: 'Email',
+            value: `<a href="mailto:${email}" style="color:${BRAND.primary};">${email}</a>`,
+          },
           { label: 'Subject', value: subject },
         ])}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;">

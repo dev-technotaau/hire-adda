@@ -411,7 +411,11 @@ export default function CandidateApplicationDetailPage() {
             be undone.
           </p>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowWithdrawModal(false)} tooltip="Cancel withdrawal">
+            <Button
+              variant="outline"
+              onClick={() => setShowWithdrawModal(false)}
+              tooltip="Cancel withdrawal"
+            >
               Cancel
             </Button>
             <Button

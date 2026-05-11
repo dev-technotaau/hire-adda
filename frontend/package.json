@@ -45,6 +45,7 @@
     "date-fns": "^4.1.0",
     "firebase": "^12.9.0",
     "framer-motion": "^12.34.0",
+    "fuse.js": "^7.3.0",
     "isomorphic-dompurify": "^3.0.0-rc.2",
     "js-cookie": "^3.0.5",
     "leaflet": "^1.9.4",

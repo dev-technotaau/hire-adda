@@ -2,7 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Bell, CheckCheck, Info, CheckCircle, AlertTriangle, XCircle, Trash2 } from 'lucide-react';
+import {
+  Bell,
+  CheckCheck,
+  Info,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Trash2,
+  Heart,
+  UserPlus,
+  Star,
+  ShieldAlert,
+} from 'lucide-react';
+import { useAuthStore } from '@/store/auth.store';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -31,24 +44,71 @@ const typeColors: Record<NotificationType, string> = {
   ERROR: 'text-[var(--error)] bg-red-50',
 };
 
-const filterTabs = [
+/**
+ * Filter tabs.
+ *
+ * Keys with `CAT:` prefix are category filters (free strings on the
+ * Notification model — `followed_company_new_job`, `company_follower`,
+ * etc.). The query builder below splits prefix from value before
+ * sending the request.
+ *
+ * Other keys are NotificationType enum values (INFO/SUCCESS/…) or
+ * the special "ALL" / "UNREAD" pseudo-filters.
+ */
+type TabDef = { key: string; label: string; icon?: typeof Info };
+
+const COMMON_TABS: TabDef[] = [
   { key: 'ALL', label: 'All' },
   { key: 'UNREAD', label: 'Unread' },
-  { key: 'INFO', label: 'Info' },
-  { key: 'SUCCESS', label: 'Success' },
-  { key: 'WARNING', label: 'Warning' },
-  { key: 'ERROR', label: 'Error' },
+];
+
+const TYPE_TABS: TabDef[] = [
+  { key: 'INFO', label: 'Info', icon: Info },
+  { key: 'SUCCESS', label: 'Success', icon: CheckCircle },
+  { key: 'WARNING', label: 'Warning', icon: AlertTriangle },
+  { key: 'ERROR', label: 'Error', icon: XCircle },
+];
+
+const CANDIDATE_CATEGORY_TABS: TabDef[] = [
+  { key: 'CAT:followed_company_new_job', label: 'New jobs from following', icon: Heart },
+  { key: 'CAT:followed_company_update', label: 'Following updates', icon: Heart },
+];
+
+const EMPLOYER_CATEGORY_TABS: TabDef[] = [
+  { key: 'CAT:company_follower', label: 'New followers', icon: UserPlus },
+  { key: 'CAT:company_new_review', label: 'New reviews', icon: Star },
+];
+
+const SUPER_ADMIN_CATEGORY_TABS: TabDef[] = [
+  { key: 'CAT:review_auto_flagged', label: 'Auto-flagged reviews', icon: ShieldAlert },
 ];
 
 export default function NotificationsPage() {
   const [filter, setFilter] = useState('ALL');
   const [page, setPage] = useState(1);
+  const role = useAuthStore((s) => s.user?.role);
 
+  // Role-aware tab list — candidates see follow-related categories;
+  // employers see new-follower / new-review categories; super-admin
+  // sees review auto-flag alerts. All roles see the common +
+  // type-based tabs.
+  const filterTabs: TabDef[] = [
+    ...COMMON_TABS,
+    ...(role === 'CANDIDATE' ? CANDIDATE_CATEGORY_TABS : []),
+    ...(role === 'EMPLOYER' ? EMPLOYER_CATEGORY_TABS : []),
+    ...(role === 'SUPER_ADMIN' ? SUPER_ADMIN_CATEGORY_TABS : []),
+    ...TYPE_TABS,
+  ];
+
+  const isCategoryFilter = filter.startsWith('CAT:');
   const queryFilters = {
     page,
     limit: PAGINATION.NOTIFICATIONS_PER_PAGE,
     ...(filter === 'UNREAD' ? { isRead: false } : {}),
-    ...(!['ALL', 'UNREAD'].includes(filter) ? { type: filter as NotificationType } : {}),
+    ...(isCategoryFilter ? { category: filter.slice(4) } : {}),
+    ...(!['ALL', 'UNREAD'].includes(filter) && !isCategoryFilter
+      ? { type: filter as NotificationType }
+      : {}),
   };
 
   const { data, isLoading } = useNotifications(queryFilters);
@@ -70,7 +130,12 @@ export default function NotificationsPage() {
             <h1 className="text-2xl font-bold text-[var(--text)]">Notifications</h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">Stay updated on your activity</p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => markAll.mutate()} tooltip="Mark all notifications as read">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => markAll.mutate()}
+            tooltip="Mark all notifications as read"
+          >
             <CheckCheck className="mr-1.5 h-4 w-4" /> Mark All Read
           </Button>
         </div>

@@ -520,7 +520,11 @@ export const requestMfaRecovery = async (email: string): Promise<void> => {
 
   // Check account lock
   if (user.lockUntil && user.lockUntil > new Date()) {
-    throw new AppError('Account is temporarily locked. Please try again later.', 423, 'ACCOUNT_LOCKED');
+    throw new AppError(
+      'Account is temporarily locked. Please try again later.',
+      423,
+      'ACCOUNT_LOCKED'
+    );
   }
 
   const otp = generateOtp(getOtpLength());

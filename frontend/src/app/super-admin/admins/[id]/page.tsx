@@ -182,7 +182,11 @@ export default function AdminDetailPage() {
             <p className="mt-2 text-sm text-[var(--text-muted)]">
               The admin you&apos;re looking for doesn&apos;t exist or has been removed.
             </p>
-            <Button className="mt-6" onClick={() => router.push(ROUTES.SUPER_ADMIN.ADMINS)} tooltip="Return to admin list">
+            <Button
+              className="mt-6"
+              onClick={() => router.push(ROUTES.SUPER_ADMIN.ADMINS)}
+              tooltip="Return to admin list"
+            >
               Back to Admins
             </Button>
           </div>
@@ -217,9 +221,7 @@ export default function AdminDetailPage() {
                       ? `${admin.firstName} ${admin.lastName}`
                       : 'Admin User'}
                   </h1>
-                  <Badge variant={admin.role === 'ADMIN' ? 'info' : 'success'}>
-                    {admin.role}
-                  </Badge>
+                  <Badge variant={admin.role === 'ADMIN' ? 'info' : 'success'}>{admin.role}</Badge>
                   {admin.isActive ? (
                     <Badge variant="success" size="sm">
                       Active
@@ -365,11 +367,7 @@ export default function AdminDetailPage() {
                       </Badge>
                     }
                   />
-                  <InfoItem
-                    icon={Calendar}
-                    label="Joined"
-                    value={formatDate(admin.createdAt)}
-                  />
+                  <InfoItem icon={Calendar} label="Joined" value={formatDate(admin.createdAt)} />
                   <InfoItem
                     icon={Clock}
                     label="Last Active"
@@ -444,7 +442,7 @@ export default function AdminDetailPage() {
                   {activityData.data.items.map((log: AuditLog) => (
                     <div
                       key={log.id}
-                      className="border-l-2 border-[var(--primary)] pl-4 pb-4 last:pb-0"
+                      className="border-l-2 border-[var(--primary)] pb-4 pl-4 last:pb-0"
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -472,7 +470,9 @@ export default function AdminDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-sm text-[var(--text-muted)]">No activity logs found</p>
+                <p className="text-center text-sm text-[var(--text-muted)]">
+                  No activity logs found
+                </p>
               )}
             </Card>
           )}
@@ -503,8 +503,7 @@ export default function AdminDetailPage() {
                           <div className="mt-1 space-y-1 text-sm text-[var(--text-muted)]">
                             <p className="flex items-center gap-1">
                               <Globe className="h-3 w-3" />
-                              {session.browser || 'Unknown Browser'} •{' '}
-                              {session.os || 'Unknown OS'}
+                              {session.browser || 'Unknown Browser'} • {session.os || 'Unknown OS'}
                             </p>
                             <p className="flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
@@ -512,7 +511,10 @@ export default function AdminDetailPage() {
                             </p>
                             <p className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              Last active: {session.lastActivityAt ? formatRelativeDate(session.lastActivityAt) : 'Unknown'}
+                              Last active:{' '}
+                              {session.lastActivityAt
+                                ? formatRelativeDate(session.lastActivityAt)
+                                : 'Unknown'}
                             </p>
                           </div>
                         </div>
@@ -545,30 +547,13 @@ export default function AdminDetailPage() {
                   value={activityData?.data?.total || 0}
                   variant="primary"
                 />
-                <StatCard
-                  icon={User}
-                  label="Users Managed"
-                  value="—"
-                  variant="info"
-                />
-                <StatCard
-                  icon={Shield}
-                  label="Moderations"
-                  value="—"
-                  variant="warning"
-                />
-                <StatCard
-                  icon={CheckCircle}
-                  label="Approvals"
-                  value="—"
-                  variant="success"
-                />
+                <StatCard icon={User} label="Users Managed" value="—" variant="info" />
+                <StatCard icon={Shield} label="Moderations" value="—" variant="warning" />
+                <StatCard icon={CheckCircle} label="Approvals" value="—" variant="success" />
               </div>
 
               <Card>
-                <h3 className="mb-4 text-lg font-semibold text-[var(--text)]">
-                  Action Breakdown
-                </h3>
+                <h3 className="mb-4 text-lg font-semibold text-[var(--text)]">Action Breakdown</h3>
                 <p className="text-sm text-[var(--text-muted)]">
                   Detailed statistics coming soon...
                 </p>
@@ -579,9 +564,7 @@ export default function AdminDetailPage() {
           {/* Permissions Tab */}
           {activeTab === 'permissions' && (
             <Card>
-              <h3 className="mb-4 text-lg font-semibold text-[var(--text)]">
-                Admin Capabilities
-              </h3>
+              <h3 className="mb-4 text-lg font-semibold text-[var(--text)]">Admin Capabilities</h3>
               <div className="space-y-4">
                 <PermissionItem
                   label="User Management"
@@ -687,7 +670,11 @@ export default function AdminDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)} tooltip="Cancel deletion">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+                tooltip="Cancel deletion"
+              >
                 Cancel
               </Button>
               <Button
@@ -718,7 +705,11 @@ export default function AdminDetailPage() {
           size="sm"
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowResetMfaModal(false)} tooltip="Cancel MFA reset">
+              <Button
+                variant="outline"
+                onClick={() => setShowResetMfaModal(false)}
+                tooltip="Cancel MFA reset"
+              >
                 Cancel
               </Button>
               <Button

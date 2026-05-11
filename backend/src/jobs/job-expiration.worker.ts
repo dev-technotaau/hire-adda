@@ -38,7 +38,11 @@ export async function handleJobExpiration(job: Job) {
         try {
           const { addReindexJob } = await import('./es-reindex.queue');
           for (const expJob of expiredJobs) {
-            await addReindexJob({ indexType: 'job', documentId: expJob.id, action: 'delete' }).catch(() => {});
+            await addReindexJob({
+              indexType: 'job',
+              documentId: expJob.id,
+              action: 'delete',
+            }).catch(() => {});
           }
         } catch (error) {
           logger.error('Failed to queue ES reindex for expired jobs:', error);

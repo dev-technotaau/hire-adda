@@ -41,6 +41,10 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/?utm_source=pwa&utm_medium=app',
     scope: '/',
     display: 'standalone',
+    // Display-override is widened to a string list at the cast boundary
+    // below — Next.js's `Manifest` type doesn't yet include 'tabbed'
+    // (added Chromium 134, May 2024). Both 'tabbed' and the other valid
+    // values pass through the JSON serialiser unchanged.
     display_override: ['window-controls-overlay', 'standalone', 'minimal-ui', 'browser'],
     orientation: 'portrait-primary',
 
@@ -107,9 +111,24 @@ export default function manifest(): MetadataRoute.Manifest {
     // ── Home-screen shortcuts ────────────────────────────────────────────
     shortcuts: [
       {
-        name: 'Find Jobs',
+        name: 'Search Jobs',
         short_name: 'Jobs',
-        description: 'Search and browse job openings',
+        description: 'Browse the public job board',
+        // Public listing surface — works for both auth + guest users.
+        url: '/jobs?utm_source=pwa&utm_medium=shortcut',
+        icons: [{ src: '/shortcuts/search-jobs.png', sizes: '96x96', type: 'image/png' }],
+      },
+      {
+        name: 'Browse Companies',
+        short_name: 'Companies',
+        description: 'Explore verified employers',
+        url: '/companies?utm_source=pwa&utm_medium=shortcut',
+        icons: [{ src: '/shortcuts/search-jobs.png', sizes: '96x96', type: 'image/png' }],
+      },
+      {
+        name: 'My Jobs',
+        short_name: 'My Jobs',
+        description: 'Your saved + applied jobs (auth-required)',
         url: '/candidate/jobs?utm_source=pwa&utm_medium=shortcut',
         icons: [{ src: '/shortcuts/search-jobs.png', sizes: '96x96', type: 'image/png' }],
       },
@@ -164,6 +183,18 @@ export default function manifest(): MetadataRoute.Manifest {
    */
   const extensions = {
     /**
+     * `tabbed` display-override mode (Chromium 134+) — power users
+     * pin Hire Adda as a multi-tab native window for parallel job
+     * searches. Inserted at the front of the chain so capable
+     * platforms pick it; older platforms walk down to standalone.
+     *
+     * Why outside `base.display_override`: Next.js's typed `Manifest`
+     * doesn't include 'tabbed' yet, so we layer it here and serialise
+     * the merged manifest at the cast boundary at the bottom.
+     */
+    display_override: ['tabbed', 'window-controls-overlay', 'standalone', 'minimal-ui', 'browser'],
+
+    /**
      * `handle_links: 'preferred'` — when Hire Adda is installed, matching
      * `hireadda.in` links opened from other apps route to the PWA by
      * default instead of the browser. Users can override per-link via
@@ -178,6 +209,27 @@ export default function manifest(): MetadataRoute.Manifest {
      */
     edge_side_panel: {
       preferred_width: 420,
+    },
+
+    /**
+     * Tabbed-PWA tab-strip behaviour. When the OS shows our window in
+     * tabbed mode, the new-tab button opens the public job board so
+     * each tab starts on a useful entry surface.
+     */
+    tab_strip: {
+      new_tab_button: { url: '/jobs' },
+      home_tab: {
+        scope_patterns: [{ pathname: '/' }, { pathname: '/jobs/*' }, { pathname: '/companies/*' }],
+      },
+    },
+
+    /**
+     * Note-taking shortcut — Chromium platforms register Hire Adda as a
+     * potential "new note" handler so users can paste/share quickly to
+     * the candidate dashboard's notes area.
+     */
+    note_taking: {
+      new_note_url: '/candidate/profile?action=note',
     },
 
     /**

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
 import Tooltip from './Tooltip';
+import OperatorTogglePill from '@/components/job-search/OperatorTogglePill';
 
 /* ---------- types ---------- */
 
@@ -213,7 +214,7 @@ function FilterSectionBlock({
             {section.label}
             {value && (
               <span className="bg-primary/10 text-primary flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold">
-                1
+                {section.type === 'multiselect' ? value.split(/[,|]/).filter(Boolean).length : 1}
               </span>
             )}
           </span>
@@ -245,44 +246,66 @@ function FilterSectionBlock({
           )}
 
           {section.type === 'multiselect' && (
-            <div
-              data-lenis-prevent
-              className="max-h-48 space-y-1 overflow-y-auto overscroll-contain"
-            >
-              {optionsWithCounts.map(({ key, label, count }) => {
-                const selectedValues = value ? value.split(',') : [];
-                const isChecked = selectedValues.includes(key);
-                return (
-                  <label
-                    key={key}
-                    className={cn(
-                      'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors',
-                      isChecked
-                        ? 'text-primary bg-[var(--primary-light)]'
-                        : 'text-[var(--text)] hover:bg-[var(--bg-secondary)]',
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => {
-                        const newValues = isChecked
-                          ? selectedValues.filter((v) => v !== key)
-                          : [...selectedValues, key];
-                        onChange(newValues.length > 0 ? newValues.join(',') : undefined);
-                      }}
-                      className="text-primary focus:ring-primary/20 h-3.5 w-3.5 rounded border-[var(--border)]"
-                    />
-                    <span className="flex-1 truncate text-sm">{label}</span>
-                    {count !== undefined && (
-                      <span className="shrink-0 text-xs text-[var(--text-muted)]">
-                        {count.toLocaleString()}
-                      </span>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
+            <>
+              {/* AND/OR operator toggle pill — when 2+ values are
+                  selected, surfaces the search semantics and lets the
+                  user flip between "all of" (AND, comma-separated) and
+                  "any of" (OR, pipe-separated). Per Phase 19 + plan
+                  §3.3 of the master plan. */}
+              {value && (value.includes(',') || value.includes('|')) && (
+                <div className="mb-2 flex items-center justify-end">
+                  <OperatorTogglePill
+                    value={value.includes('|') ? 'OR' : 'AND'}
+                    onChange={(nextOp) => {
+                      // Flip the joiner without re-parsing values.
+                      const positives = value.split(/[,|]/).filter(Boolean);
+                      onChange(positives.join(nextOp === 'OR' ? '|' : ',') || undefined);
+                    }}
+                  />
+                </div>
+              )}
+              <div
+                data-lenis-prevent
+                className="max-h-48 space-y-1 overflow-y-auto overscroll-contain"
+              >
+                {optionsWithCounts.map(({ key, label, count }) => {
+                  // Parse with both `,` and `|` separators so the
+                  // checkbox state survives operator toggling.
+                  const sep = value && value.includes('|') ? '|' : ',';
+                  const selectedValues = value ? value.split(/[,|]/).filter(Boolean) : [];
+                  const isChecked = selectedValues.includes(key);
+                  return (
+                    <label
+                      key={key}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors',
+                        isChecked
+                          ? 'text-primary bg-[var(--primary-light)]'
+                          : 'text-[var(--text)] hover:bg-[var(--bg-secondary)]',
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          const newValues = isChecked
+                            ? selectedValues.filter((v) => v !== key)
+                            : [...selectedValues, key];
+                          onChange(newValues.length > 0 ? newValues.join(sep) : undefined);
+                        }}
+                        className="text-primary focus:ring-primary/20 h-3.5 w-3.5 rounded border-[var(--border)]"
+                      />
+                      <span className="flex-1 truncate text-sm">{label}</span>
+                      {count !== undefined && (
+                        <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                          {count.toLocaleString()}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </>
           )}
 
           {section.type === 'radio' && (
@@ -480,9 +503,27 @@ export function ActiveFilterTags({
       if (val) {
         const options = section.options || {};
         if (section.type === 'multiselect') {
-          const vals = val.split(',');
-          const labels = vals.map((v) => options[v] || v).join(', ');
-          activeTags.push({ key: section.key, label: section.label, displayValue: labels });
+          // Operator-aware: "any of" / "all of" / "except". Reflects
+          // the URL grammar (`,` AND, `|` OR, `!` NOT prefix).
+          const isOr = val.includes('|');
+          const tokens = val.split(/[,|]/).filter(Boolean);
+          const positives = tokens.filter((t) => !t.startsWith('!'));
+          const negatives = tokens.filter((t) => t.startsWith('!')).map((t) => t.slice(1));
+          const positiveLabels = positives.map((v) => options[v] || v).join(', ');
+          const negativeLabels = negatives.map((v) => options[v] || v).join(', ');
+          let display = positiveLabels;
+          if (negativeLabels) {
+            display = display
+              ? `${display} · except ${negativeLabels}`
+              : `except ${negativeLabels}`;
+          }
+          // Operator hint annotates how 2+ positives combine.
+          const opHint = positives.length >= 2 ? ` (${isOr ? 'any of' : 'all of'})` : '';
+          activeTags.push({
+            key: section.key,
+            label: `${section.label}${opHint}`,
+            displayValue: display,
+          });
         } else {
           activeTags.push({
             key: section.key,

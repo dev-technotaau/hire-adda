@@ -82,6 +82,10 @@ import type { ApiError } from '@/types/api';
 import type { CandidateProfile } from '@/types/candidate';
 import type { CompanyProfile } from '@/types/employer';
 import type { AuditLog, JobApplication, JobPost, VerificationRequest } from '@/types/admin';
+import {
+  UserFollowingPanel,
+  CompanyFollowersPanel,
+} from '@/components/super-admin/FollowDrillPanels';
 
 type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral';
 
@@ -3026,6 +3030,14 @@ export default function SuperAdminUserDetailPage() {
                         </p>
                       </div>
                     </Card>
+                  )}
+
+                  {/* Follow-graph drill-downs — only meaningful for
+                      candidates (companies they follow) and employers
+                      (followers of their company). */}
+                  {user.role === 'CANDIDATE' && <UserFollowingPanel userId={user.id} />}
+                  {user.role === 'EMPLOYER' && user.companyProfile?.id && (
+                    <CompanyFollowersPanel companyId={user.companyProfile.id} />
                   )}
                 </>
               )}

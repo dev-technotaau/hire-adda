@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticatedBackendFetch, setAuthCookies, clearAuthCookies, getTokensFromCookies } from '../_lib/proxy-helpers';
+import {
+  authenticatedBackendFetch,
+  setAuthCookies,
+  clearAuthCookies,
+  getTokensFromCookies,
+} from '../_lib/proxy-helpers';
 import { attemptServerRefresh } from '../_lib/refresh';
 
 export async function GET(request: NextRequest) {
@@ -29,7 +34,9 @@ export async function GET(request: NextRequest) {
 
         // Retry failed but tokens are still valid — preserve them so the
         // next request can succeed (e.g. after lastActiveAt propagates).
-        const errorData = await res.json().catch(() => ({ status: 'error', message: 'Not authenticated' }));
+        const errorData = await res
+          .json()
+          .catch(() => ({ status: 'error', message: 'Not authenticated' }));
         const response = NextResponse.json(errorData, { status: res.status });
         return setAuthCookies(response, tokens.accessToken, tokens.refreshToken, rememberMe);
       }

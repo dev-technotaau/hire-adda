@@ -18,7 +18,7 @@ export async function handleViewCounterFlush(_job: Job): Promise<{ flushed: numb
     for (const key of keys) {
       try {
         // Atomically get and delete — GETDEL available in Redis 6.2+
-        const countStr = await redis.call('GETDEL', key) as string | null;
+        const countStr = (await redis.call('GETDEL', key)) as string | null;
         if (!countStr) continue;
 
         const count = parseInt(countStr, 10);

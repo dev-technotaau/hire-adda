@@ -32,8 +32,10 @@ import {
   AlertTriangle,
   XCircle,
   Activity,
+  Crown,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import JobSearchHistoryChips from '@/components/job-search/JobSearchHistoryChips';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -62,6 +64,9 @@ import {
 } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { wasOnboardingSkipped } from '@/hooks/use-onboarding';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { useUpgradeModal } from '@/components/billing/UpgradeModal';
+import WhatsappSupportCard from '@/components/support/WhatsappSupportCard';
 
 // Maps backend completeness field names → candidate profile ?section= values
 const COMPLETENESS_SECTION_MAP: Record<string, string> = {
@@ -181,6 +186,12 @@ const statusColorMap: Record<string, BadgeVariant> = {
 export default function CandidateDashboard() {
   const { user } = useAuth();
   const router = useRouter();
+  const { hasFeature } = useEntitlements();
+  const upgrade = useUpgradeModal();
+  const isPremium =
+    hasFeature('feature.candidate_top_visibility') ||
+    hasFeature('feature.candidate_verified_badge') ||
+    hasFeature('feature.candidate_ai_resume_premium');
 
   const { data: dashboard, isLoading: dashLoading } = useQuery({
     queryKey: QUERY_KEYS.CANDIDATES.DASHBOARD,
@@ -411,6 +422,43 @@ export default function CandidateDashboard() {
             {getDashboardSubtitle(user?.role)}
           </p>
         </div>
+
+        {/* Recent job searches — hides itself when empty. Per Phase 12
+            of the master plan: chips render on (a) homepage, (b) /jobs
+            and /companies listing-page header, (c) candidate dashboard. */}
+        <JobSearchHistoryChips type="JOB" destination="/candidate/jobs" hideWhenEmpty />
+
+        {/* Premium upsell — hidden for users already on CAND_PREMIUM. Shown
+            on the dashboard so every login surfaces the upgrade option. */}
+        {!isPremium && (
+          <button
+            type="button"
+            onClick={() => upgrade.open({ feature: 'feature.candidate_verified_badge' })}
+            className="group flex w-full items-start gap-3 rounded-xl border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 p-4 text-left transition-colors hover:from-amber-100 hover:to-rose-100 dark:from-amber-900/20 dark:via-orange-900/20 dark:to-rose-900/20"
+          >
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-amber-500 text-white shadow">
+              <Crown className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-amber-900 dark:text-amber-100">
+                Unlock Candidate Premium — ₹199/month
+              </p>
+              <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-200/80">
+                Verified Badge · AI Resume Premium (5 templates) · 7-day Profile Boost · Top
+                visibility in recruiter searches · Priority WhatsApp support.
+              </p>
+            </div>
+            <span className="hidden items-center gap-1 self-center rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors group-hover:bg-amber-700 sm:inline-flex">
+              <Sparkles className="h-4 w-4" /> Upgrade
+            </span>
+          </button>
+        )}
+        {upgrade.modal}
+
+        {/* Premium-fulfilment surface: Premium candidates see their actual
+            Priority WhatsApp Support channel here (auto-hides for non-
+            entitled users via the card's internal entitlement check). */}
+        <WhatsappSupportCard />
 
         {/* Profile Completeness */}
         {!compLoading && profile && profile.score < 100 && (

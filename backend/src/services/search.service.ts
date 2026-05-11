@@ -887,6 +887,12 @@ class SearchService {
       isFeatured: job.isFeatured,
       isPremium: job.isPremium,
       isWalkIn: job.isWalkIn,
+      // Public-search SEO fields. `slug` powers the canonical
+      // /jobs/{slug} detail URL; `publicSearchable` lets employers
+      // opt-out per job from the public board (still indexed for
+      // private searches if needed).
+      slug: job.slug,
+      publicSearchable: job.publicSearchable !== false,
       applicationDeadline: job.applicationDeadline,
       travelRequirementPercent: job.travelRequirementPercent,
       relocationAssistance: job.relocationAssistance,
@@ -1060,6 +1066,11 @@ class SearchService {
     const document = {
       id: company.id,
       userId: company.userId,
+      // Public-search SEO fields — `slug` powers the canonical
+      // /companies/{slug} URL; `publicSearchable` is the employer's
+      // opt-out flag.
+      slug: company.slug,
+      publicSearchable: company.publicSearchable !== false,
       accountType: company.accountType,
       hiringType: company.hiringType,
       companyName: company.companyName,
@@ -1812,6 +1823,7 @@ class SearchService {
 
     const must: any[] = [];
     const filter: any[] = [];
+    const mustNot: any[] = [];
 
     if (query) {
       const BOOLEAN_OPS_RE = /\b(AND|OR|NOT)\b|[+\-"()]/;
@@ -1868,6 +1880,41 @@ class SearchService {
         },
       });
     }
+    // Multi-city filter — `?cities=delhi,noida,gurgaon` (always OR
+    // semantics per plan §3.3). String form (parsed) or array form
+    // (already split by caller). NOT operator (`!`) excludes a city
+    // even if listed in the OR set.
+    if (typeof filters.cities === 'string' && filters.cities.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { parseMultiValue } = require('../lib/operator-parser') as {
+        parseMultiValue: (s: string) => {
+          must: string[];
+          should: string[];
+          mustNot: string[];
+          op: 'AND' | 'OR';
+        };
+      };
+      const parsed = parseMultiValue(filters.cities);
+      const positives = [...parsed.must, ...parsed.should];
+      if (positives.length > 0) {
+        filter.push({
+          bool: {
+            should: positives.flatMap((c) => [
+              { term: { 'location.keyword': c } },
+              { match_phrase_prefix: { location: c } },
+            ]),
+            minimum_should_match: 1,
+          },
+        });
+      }
+      if (parsed.mustNot.length > 0) {
+        mustNot.push({
+          terms: { 'location.keyword': parsed.mustNot },
+        });
+      }
+    } else if (Array.isArray(filters.cities) && filters.cities.length > 0) {
+      filter.push({ terms: { 'location.keyword': filters.cities } });
+    }
     if (filters.type) filter.push({ term: { type: filters.type } });
     if (filters.isRemote !== undefined) filter.push({ term: { isRemote: filters.isRemote } });
     if (filters.workMode) filter.push({ term: { workMode: filters.workMode } });
@@ -1917,7 +1964,63 @@ class SearchService {
     }
     if (filters.salaryMin) filter.push({ range: { salaryMax: { gte: filters.salaryMin } } });
     if (filters.salaryMax) filter.push({ range: { salaryMin: { lte: filters.salaryMax } } });
-    if (filters.skills?.length > 0) filter.push({ terms: { skills: filters.skills } });
+    // Skills — operator-aware. Three shapes accepted:
+    //   1. Array (legacy): `filters.skills = ['react', 'node']` → ES `terms`
+    //      query (any-of). Backwards-compatible.
+    //   2. String with operators: `filters.skills = 'react|node,!php'` →
+    //      caller has not parsed yet; parse now using operator-parser.
+    //   3. Structured: `filters.skillsBool = { must, should, mustNot, op }`
+    //      → caller has already parsed. Honour AND/OR/NOT directly.
+    if (
+      filters.skillsBool &&
+      typeof filters.skillsBool === 'object' &&
+      !Array.isArray(filters.skillsBool)
+    ) {
+      const sb = filters.skillsBool as {
+        must?: string[];
+        should?: string[];
+        mustNot?: string[];
+        op?: 'AND' | 'OR';
+      };
+      if (sb.op === 'AND' && sb.must?.length) {
+        for (const s of sb.must) filter.push({ term: { skills: s } });
+      } else if (sb.should?.length) {
+        filter.push({ terms: { skills: sb.should } });
+      } else if (sb.must?.length) {
+        filter.push({ terms: { skills: sb.must } });
+      }
+      if (sb.mustNot?.length) {
+        mustNot.push({ terms: { skills: sb.mustNot } });
+      }
+    } else if (typeof filters.skills === 'string' && filters.skills.length > 0) {
+      // Inline parse — used when the public route hands us a raw URL string.
+      // Lazy require avoids a top-of-file cyclic import path.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { parseMultiValue } = require('../lib/operator-parser') as {
+        parseMultiValue: (s: string) => {
+          must: string[];
+          should: string[];
+          mustNot: string[];
+          op: 'AND' | 'OR';
+        };
+      };
+      const parsed = parseMultiValue(filters.skills);
+      if (parsed.op === 'AND' && parsed.must.length) {
+        for (const s of parsed.must) filter.push({ term: { skills: s } });
+      } else if (parsed.should.length) {
+        filter.push({ terms: { skills: parsed.should } });
+      }
+      if (parsed.mustNot.length) {
+        mustNot.push({ terms: { skills: parsed.mustNot } });
+      }
+    } else if (Array.isArray(filters.skills) && filters.skills.length > 0) {
+      // Legacy array path — existing callers (candidate.controller) pass an
+      // array. Treat as OR (any-of) which mirrors the historical behaviour.
+      filter.push({ terms: { skills: filters.skills } });
+    }
+    if (Array.isArray(filters.skillsExclude) && filters.skillsExclude.length > 0) {
+      mustNot.push({ terms: { skills: filters.skillsExclude } });
+    }
     if (filters.companyType) filter.push({ term: { companyType: filters.companyType } });
     if (filters.companySize) filter.push({ term: { companySize: filters.companySize } });
     if (filters.postedAfter || filters.postedBefore) {
@@ -1967,6 +2070,25 @@ class SearchService {
       filter.push({ term: { postingVisibility: filters.postingVisibility } });
     } else {
       filter.push({ terms: { postingVisibility: ['PUBLIC', 'BOTH'] } });
+    }
+    // Honour the per-job `publicSearchable` opt-out — employers can mark
+    // individual postings as private (no public-board listing). Public
+    // routes pass `filters.publicSearchable = true` to enforce this.
+    // Treat `false` (excluded from public) and absent fields as also
+    // matching when filtering for public to avoid stranding rows that
+    // were indexed before the field existed.
+    if (filters.publicSearchable === true) {
+      filter.push({
+        bool: {
+          should: [
+            { term: { publicSearchable: true } },
+            // Backwards-compat: rows indexed before the field existed
+            // are absent rather than `true`. Treat absent as "yes".
+            { bool: { must_not: [{ exists: { field: 'publicSearchable' } }] } },
+          ],
+          minimum_should_match: 1,
+        },
+      });
     }
     filter.push({ term: { status: JOB_STATUS.OPEN } });
 
@@ -2074,7 +2196,13 @@ class SearchService {
       index: ELASTIC_INDICES.JOBS,
       query: {
         function_score: {
-          query: { bool: { must, filter } },
+          query: {
+            bool: {
+              must,
+              filter,
+              ...(mustNot.length > 0 ? { must_not: mustNot } : {}),
+            },
+          },
           functions,
           score_mode: 'sum',
           boost_mode: 'multiply',
@@ -2254,7 +2382,53 @@ class SearchService {
       }
     }
 
-    if (filters.skills?.length > 0) filter.push({ terms: { skills: filters.skills } });
+    // Skills — operator-aware (mirror of searchJobs handling).
+    if (
+      filters.skillsBool &&
+      typeof filters.skillsBool === 'object' &&
+      !Array.isArray(filters.skillsBool)
+    ) {
+      const sb = filters.skillsBool as {
+        must?: string[];
+        should?: string[];
+        mustNot?: string[];
+        op?: 'AND' | 'OR';
+      };
+      if (sb.op === 'AND' && sb.must?.length) {
+        for (const s of sb.must) filter.push({ term: { skills: s } });
+      } else if (sb.should?.length) {
+        filter.push({ terms: { skills: sb.should } });
+      } else if (sb.must?.length) {
+        filter.push({ terms: { skills: sb.must } });
+      }
+      if (sb.mustNot?.length) {
+        filter.push({ bool: { must_not: [{ terms: { skills: sb.mustNot } }] } });
+      }
+    } else if (typeof filters.skills === 'string' && filters.skills.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { parseMultiValue } = require('../lib/operator-parser') as {
+        parseMultiValue: (s: string) => {
+          must: string[];
+          should: string[];
+          mustNot: string[];
+          op: 'AND' | 'OR';
+        };
+      };
+      const parsed = parseMultiValue(filters.skills);
+      if (parsed.op === 'AND' && parsed.must.length) {
+        for (const s of parsed.must) filter.push({ term: { skills: s } });
+      } else if (parsed.should.length) {
+        filter.push({ terms: { skills: parsed.should } });
+      }
+      if (parsed.mustNot.length) {
+        filter.push({ bool: { must_not: [{ terms: { skills: parsed.mustNot } }] } });
+      }
+    } else if (Array.isArray(filters.skills) && filters.skills.length > 0) {
+      filter.push({ terms: { skills: filters.skills } });
+    }
+    if (Array.isArray(filters.skillsExclude) && filters.skillsExclude.length > 0) {
+      filter.push({ bool: { must_not: [{ terms: { skills: filters.skillsExclude } }] } });
+    }
     if (filters.location) {
       filter.push({
         bool: {
@@ -2492,6 +2666,33 @@ class SearchService {
     }
 
     const functions: any[] = [];
+
+    // Plan-promise: Candidate Premium = "Top Visibility" + "7 Days Profile Boost".
+    // Add scoring functions that bump Premium / boosted candidates to
+    // the top of the result set. We resolve userIds at query-time (one
+    // indexed Entitlement lookup per feature) — fast enough for ES
+    // searches that already touch Redis + ES.
+    try {
+      const { getUsersWithFeatureAll } = await import('./entitlement.service');
+      const [premiumIds, boostedIds] = await Promise.all([
+        getUsersWithFeatureAll('feature.candidate_top_visibility'),
+        getUsersWithFeatureAll('feature.candidate_profile_boost'),
+      ]);
+      if (premiumIds.length > 0) {
+        // Highest weight in the candidate scoring graph — effectively "top" per the plan.
+        functions.push({ filter: { terms: { userId: premiumIds } }, weight: 25 });
+      }
+      if (boostedIds.length > 0) {
+        functions.push({ filter: { terms: { userId: boostedIds } }, weight: 12 });
+      }
+    } catch (err) {
+      // Non-fatal — search still runs without the boost ranking if the
+      // entitlement lookup blows up. Logs for ops to investigate.
+      logger.warn('candidate search — premium/boost scoring skipped', {
+        err: err instanceof Error ? err.message : err,
+      });
+    }
+
     if (filters.skills?.length > 0) {
       functions.push({ filter: { terms: { skills: filters.skills } }, weight: 10 });
     }
@@ -2743,6 +2944,38 @@ class SearchService {
   }
 
   // ─── Search Employers ───────────────────────────────────────────────
+
+  /**
+   * Public companies-search — alias of searchEmployers that always
+   * forces `publicSearchable: true` and supports the public-API filter
+   * shape (cities, hasOpenJobs, sortBy, page/limit). Used by the
+   * `/api/v1/public/companies` endpoint.
+   */
+  async searchCompanies(query: any, filters: any = {}) {
+    // Translate public-API filter shape to searchEmployers internals.
+    const internalFilters: Record<string, unknown> = {
+      from: ((filters.page ?? 1) - 1) * (filters.limit ?? 20),
+      size: Math.min(filters.limit ?? 20, 30),
+    };
+    if (filters.industry) internalFilters.industry = filters.industry;
+    if (filters.location || filters.city) {
+      internalFilters.location = filters.location || filters.city;
+    }
+    if (filters.size) internalFilters.companySize = filters.size;
+    if (filters.companyType) internalFilters.companyType = filters.companyType;
+    if (filters.isVerified) internalFilters.isVerified = true;
+
+    const result = await this.searchEmployers(query, internalFilters);
+    // Public-search filter — applied client-side because the ES schema
+    // already excludes opted-out companies. Belt-and-braces: filter
+    // again here in case any indexed docs predate the field.
+    const hits = (result.hits as any[]).filter((c) => c.publicSearchable !== false);
+    return {
+      hits,
+      total: result.total,
+      facets: result.facets,
+    };
+  }
 
   async searchEmployers(query: any, filters: any = {}) {
     const must: any[] = [];
