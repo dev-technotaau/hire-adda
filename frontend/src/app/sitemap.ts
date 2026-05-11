@@ -477,36 +477,42 @@ async function fetchJobsShard(shardIndex: number): Promise<ShardItem[]> {
   const targetCount = SHARD_PAGE_SIZE;
   const startOffset = shardIndex * SHARD_PAGE_SIZE;
   // Pull pages until we've collected `targetCount` items for this shard.
-  while (items.length < targetCount) {
-    const res = await fetch(
-      `${apiBase}/public/jobs?limit=100&page=${page + Math.floor(startOffset / 100)}`,
-      { next: { revalidate: 600 } },
-    );
-    if (!res.ok) break;
-    const body = await res.json();
-    const rows: Array<{
-      slug?: string;
-      updatedAt?: string;
-      company?: { logo?: string | null };
-    }> = body?.data?.items ?? [];
-    if (rows.length === 0) break;
-    for (const r of rows) {
-      if (!r.slug) continue;
-      const logo = r.company?.logo;
-      items.push({
-        url: `${BASE_URL}/jobs/${r.slug}`,
-        lastModified: r.updatedAt ? new Date(r.updatedAt) : undefined,
-        changeFrequency: 'weekly',
-        priority: 0.7,
-        // Surface the company logo as a sitemap image so Google
-        // Images / Bing visual-search index the brand-mark on every
-        // job page. Skipped when the company has no logo.
-        ...(logo ? { images: [logo] } : {}),
-      });
-      if (items.length >= targetCount) break;
+  // Wrapped in try/catch so a backend outage during build (CI/Docker)
+  // emits an empty shard instead of crashing the entire Next.js export.
+  try {
+    while (items.length < targetCount) {
+      const res = await fetch(
+        `${apiBase}/public/jobs?limit=100&page=${page + Math.floor(startOffset / 100)}`,
+        { next: { revalidate: 600 } },
+      );
+      if (!res.ok) break;
+      const body = await res.json();
+      const rows: Array<{
+        slug?: string;
+        updatedAt?: string;
+        company?: { logo?: string | null };
+      }> = body?.data?.items ?? [];
+      if (rows.length === 0) break;
+      for (const r of rows) {
+        if (!r.slug) continue;
+        const logo = r.company?.logo;
+        items.push({
+          url: `${BASE_URL}/jobs/${r.slug}`,
+          lastModified: r.updatedAt ? new Date(r.updatedAt) : undefined,
+          changeFrequency: 'weekly',
+          priority: 0.7,
+          // Surface the company logo as a sitemap image so Google
+          // Images / Bing visual-search index the brand-mark on every
+          // job page. Skipped when the company has no logo.
+          ...(logo ? { images: [logo] } : {}),
+        });
+        if (items.length >= targetCount) break;
+      }
+      if (rows.length < 100) break;
+      page += 1;
     }
-    if (rows.length < 100) break;
-    page += 1;
+  } catch {
+    /* ignore — empty shard if backend unavailable at build time */
   }
   return items;
 }
@@ -618,39 +624,45 @@ async function fetchCompaniesShard(shardIndex: number): Promise<ShardItem[]> {
   let page = 1;
   const targetCount = SHARD_PAGE_SIZE;
   const startOffset = shardIndex * SHARD_PAGE_SIZE;
-  while (items.length < targetCount) {
-    const res = await fetch(
-      `${apiBase}/public/companies?limit=100&page=${page + Math.floor(startOffset / 100)}`,
-      { next: { revalidate: 600 } },
-    );
-    if (!res.ok) break;
-    const body = await res.json();
-    const rows: Array<{
-      slug?: string;
-      updatedAt?: string;
-      logo?: string | null;
-      coverImage?: string | null;
-    }> = body?.data?.items ?? [];
-    if (rows.length === 0) break;
-    for (const r of rows) {
-      if (!r.slug) continue;
-      // Surface the brand logo + cover image as sitemap-image entries.
-      // Google Images extracts these for visual-search and the
-      // knowledge-panel hero. Both are optional — skipped when missing.
-      const images = [r.logo, r.coverImage].filter(
-        (i): i is string => typeof i === 'string' && i.length > 0,
+  // Wrapped in try/catch so a backend outage during build (CI/Docker)
+  // emits an empty shard instead of crashing the entire Next.js export.
+  try {
+    while (items.length < targetCount) {
+      const res = await fetch(
+        `${apiBase}/public/companies?limit=100&page=${page + Math.floor(startOffset / 100)}`,
+        { next: { revalidate: 600 } },
       );
-      items.push({
-        url: `${BASE_URL}/companies/${r.slug}`,
-        lastModified: r.updatedAt ? new Date(r.updatedAt) : undefined,
-        changeFrequency: 'weekly',
-        priority: 0.6,
-        ...(images.length > 0 ? { images } : {}),
-      });
-      if (items.length >= targetCount) break;
+      if (!res.ok) break;
+      const body = await res.json();
+      const rows: Array<{
+        slug?: string;
+        updatedAt?: string;
+        logo?: string | null;
+        coverImage?: string | null;
+      }> = body?.data?.items ?? [];
+      if (rows.length === 0) break;
+      for (const r of rows) {
+        if (!r.slug) continue;
+        // Surface the brand logo + cover image as sitemap-image entries.
+        // Google Images extracts these for visual-search and the
+        // knowledge-panel hero. Both are optional — skipped when missing.
+        const images = [r.logo, r.coverImage].filter(
+          (i): i is string => typeof i === 'string' && i.length > 0,
+        );
+        items.push({
+          url: `${BASE_URL}/companies/${r.slug}`,
+          lastModified: r.updatedAt ? new Date(r.updatedAt) : undefined,
+          changeFrequency: 'weekly',
+          priority: 0.6,
+          ...(images.length > 0 ? { images } : {}),
+        });
+        if (items.length >= targetCount) break;
+      }
+      if (rows.length < 100) break;
+      page += 1;
     }
-    if (rows.length < 100) break;
-    page += 1;
+  } catch {
+    /* ignore — empty shard if backend unavailable at build time */
   }
   return items;
 }
