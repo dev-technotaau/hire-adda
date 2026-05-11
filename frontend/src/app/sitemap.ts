@@ -441,7 +441,9 @@ function curatedSlugToPath(slug: string, type: string): string | null {
     case 'JOB_CATEGORY':
       return `/jobs/category/${slug.replace(/-jobs$/, '')}`;
     case 'JOB_DEPARTMENT':
-      return `/jobs/department/${slug.replace(/-jobs$/, '')}`;
+      // Strip both the `dept-` prefix (added to avoid collision with
+      // JOB_CATEGORY slugs in the seed) AND the `-jobs` suffix.
+      return `/jobs/department/${slug.replace(/^dept-/, '').replace(/-jobs$/, '')}`;
     case 'JOB_QUALIFICATION':
       return `/jobs/qualification/${slug.replace(/-jobs$/, '')}`;
     case 'JOB_DEMAND':

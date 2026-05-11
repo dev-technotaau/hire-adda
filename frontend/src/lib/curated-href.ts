@@ -21,7 +21,8 @@ export function curatedHref(item: CuratedListing): string {
     return `/jobs/in/${city}`;
   }
   if (item.type === 'JOB_CATEGORY') return `/jobs/category/${item.slug.replace(/-jobs$/, '')}`;
-  if (item.type === 'JOB_DEPARTMENT') return `/jobs/department/${item.slug.replace(/-jobs$/, '')}`;
+  if (item.type === 'JOB_DEPARTMENT')
+    return `/jobs/department/${item.slug.replace(/^dept-/, '').replace(/-jobs$/, '')}`;
   if (item.type === 'JOB_QUALIFICATION')
     return `/jobs/qualification/${item.slug.replace(/-jobs$/, '')}`;
   if (item.type === 'JOB_COLLECTION') return `/jobs/collection/${item.slug}`;

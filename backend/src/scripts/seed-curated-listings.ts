@@ -267,6 +267,13 @@ const ENTRIES: SeedEntry[] = [
   })),
 
   // ─── JOB_DEPARTMENT (Footer > By Department) ─────────────────────────
+  // Slugs are prefixed `dept-` so they don't collide with JOB_CATEGORY
+  // slugs (both used `${name}-jobs` previously — same string keys meant
+  // the second-inserted CategoryType silently overwrote the first at
+  // upsert time, demoting 7 CATEGORY rows to DEPARTMENT type). The URL
+  // builders in `curated-href.ts` and `sitemap.ts` strip the prefix so
+  // public URLs remain `/jobs/department/<dept>` — only the DB key
+  // changes.
   ...[
     'Engineering',
     'Product',
@@ -283,7 +290,7 @@ const ENTRIES: SeedEntry[] = [
     'Manufacturing',
     'Logistics',
   ].map((dept, i) => ({
-    slug: `${dept.toLowerCase().replace(/\s+/g, '-')}-jobs`,
+    slug: `dept-${dept.toLowerCase().replace(/\s+/g, '-')}-jobs`,
     type: 'JOB_DEPARTMENT' as CuratedType,
     label: `${dept} Jobs`,
     filterPreset: { department: dept },
