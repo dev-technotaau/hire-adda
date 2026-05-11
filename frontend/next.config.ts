@@ -255,6 +255,13 @@ export default withSentryConfig(nextConfig, {
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
 
+  // Don't fail the build when sourcemap upload errors (expired/invalid
+  // SENTRY_AUTH_TOKEN, transient API failure). Sourcemaps are an
+  // observability enhancement — the deploy itself shouldn't block on them.
+  errorHandler: (err) => {
+    console.warn('[sentry] sourcemap upload failed (non-fatal):', err.message);
+  },
+
   // For all available options, see:
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 

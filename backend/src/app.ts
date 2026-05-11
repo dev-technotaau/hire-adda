@@ -1,4 +1,5 @@
 // Sentry must be imported first before any other modules
+// CI trigger: re-run after Sentry token rotation (2026-05-11)
 import './instrument';
 import type { Application, Request, Response } from 'express';
 import express, { Router } from 'express';

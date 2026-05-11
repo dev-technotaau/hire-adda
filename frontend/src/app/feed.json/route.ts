@@ -95,4 +95,5 @@ export async function GET() {
   });
 }
 
-export const revalidate = REVALIDATE_SECONDS;
+// Next.js requires a literal here (statically analyzed) — value matches REVALIDATE_SECONDS.
+export const revalidate = 1800;

@@ -153,4 +153,5 @@ export async function GET() {
 }
 
 // ISR — Next.js re-builds this route every 30min on the server.
-export const revalidate = REVALIDATE_SECONDS;
+// Literal required (statically analyzed) — matches REVALIDATE_SECONDS above.
+export const revalidate = 1800;
