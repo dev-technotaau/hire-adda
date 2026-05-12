@@ -24,15 +24,18 @@ interface Badge {
   height: number;
   /**
    * Optional Tailwind height override for the rendered <Image>. Defaults
-   * to `h-5 w-auto` (20 px tall). Badges whose SVG ships with thick
+   * to `h-6 w-auto` (24 px tall). Badges whose SVG ships with thick
    * internal whitespace (PCI-DSS, SSL, GST, Udyam, Startup-India,
    * Make-in-India) need a taller render so the visible artwork fills
-   * the 36 px tile like the Razorpay logo does.
+   * the 44 px tile like the Razorpay logo does.
    */
   imgClassName?: string;
 }
 
-const BADGE_IMG_CLASS_LARGE = 'h-7 w-auto';
+// 36 px (h-9) inside a 44 px (h-11) tile = ~82% fill. The flagged SVGs
+// have heavy internal whitespace, so anything smaller than this still
+// reads as tiny no matter how wide the tile is.
+const BADGE_IMG_CLASS_LARGE = 'h-9 w-auto';
 
 const BADGES: Badge[] = [
   {
@@ -105,7 +108,7 @@ export default function TrustBadges({ variant = 'full', className = '' }: Props)
         {BADGES.map((b) => (
           <Tooltip key={b.slug} content={b.helper}>
             <span
-              className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] bg-white px-2.5 transition hover:border-[var(--text-muted)] hover:shadow-sm"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-[var(--border)] bg-white px-3 transition hover:border-[var(--text-muted)] hover:shadow-sm"
               aria-label={b.label}
             >
               <Image
@@ -113,7 +116,7 @@ export default function TrustBadges({ variant = 'full', className = '' }: Props)
                 alt={b.label}
                 width={b.width}
                 height={b.height}
-                className={b.imgClassName ?? 'h-5 w-auto'}
+                className={b.imgClassName ?? 'h-6 w-auto'}
                 unoptimized
               />
             </span>
