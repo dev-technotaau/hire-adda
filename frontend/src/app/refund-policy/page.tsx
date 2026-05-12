@@ -17,8 +17,8 @@ const refundJsonLd = graph(
     url: '/refund-policy',
     name: 'Refund Policy',
     description:
-      'Refund and cancellation terms for Hire Adda premium plans, employer services, and paid add-ons.',
-    dateModified: '2026-02-01',
+      'Refund and cancellation terms for Hire Adda paid plans — Candidate Premium, Employer Standard/Premium, CV Lite/Pro/Enterprise, Assisted Hiring, and Vendor Connect. 2-day refund window, automated via Razorpay.',
+    dateModified: '2026-05-12',
     speakableCssSelectors: ['h1'],
   }),
   breadcrumbSchema([
@@ -31,47 +31,72 @@ const sections = [
   {
     title: 'Overview',
     content:
-      'Hire Adda is committed to providing a fair and transparent refund process for all paid services on our platform. This Refund Policy applies to all premium subscriptions, paid job postings, featured listings, and any other paid services purchased through Hire Adda. Job seekers who use our free services are not affected by this policy. By purchasing any paid service, you agree to the terms outlined in this policy.',
+      'This Refund Policy governs paid services purchased on Hire Adda — the recruitment platform operated by Opportunity Makers Group (proprietor: Harpreet Kaur, GSTIN 03EBLPK4190M1ZA). It applies to candidate premium plans, employer job-post plans, the CV-database (Talent Vault / HireDex) plans, assisted-hiring orders, and the Vendor Connect subscription. Our refund flow is automated end-to-end through Razorpay: once a refund is approved by our system or our team, the credit is initiated immediately and is returned to your original payment method without manual intervention.',
   },
   {
-    title: 'Free Services for Job Seekers',
+    title: 'Free plans (no refund needed)',
     content:
-      'Hire Adda is completely free for job seekers. All candidate features including profile creation, job search, job applications, AI-powered recommendations, and messaging are provided at no cost. Since no payment is collected from job seekers, this refund policy does not apply to candidate accounts. If you have been charged for any candidate service, please contact our support team immediately at support@Hire Adda.in for a full refund.',
+      'All candidate features on Hire Adda are free — profile creation, job search, applications, AI-powered recommendations, saved searches, alerts, messaging. The Free Job Post plan for employers (1 job, 7 days, up to 50 applications) is also free of charge. Because no money changes hands for these plans, this policy does not apply to them. If you believe you have been charged for something that should be free, email support@hireadda.in and we will reverse the charge in full.',
   },
   {
-    title: 'Employer Subscription Plans',
+    title: 'Refund window — 2 days from purchase',
     content:
-      'Employer premium plans are billed on a monthly or annual basis. You may cancel your subscription at any time from your account settings. If you cancel within the first 7 days of a new subscription or renewal, you are eligible for a full refund. Cancellations made after 7 days will not be refunded, but you will continue to have access to premium features until the end of your current billing period. Downgrading from a higher-tier plan to a lower-tier plan will take effect at the start of your next billing cycle; no partial refunds are provided for the current period.',
+      'Self-service refunds are eligible within 2 calendar days (48 hours) of the payment being captured on Razorpay. The window is enforced programmatically: after 48 hours from capture, the automated refund path is closed and the purchase is treated as fully consumed. For situations after the 2-day window, see "Goodwill refunds" below.',
   },
   {
-    title: 'Individual Job Posting Purchases',
+    title: 'Eligible plans',
     content:
-      'If you purchase individual job postings or featured listing credits outside of a subscription plan, refunds are available under the following conditions: (a) if the job posting was not published due to a platform error, you will receive a full refund or credit; (b) if you request a refund within 24 hours of purchase and the posting has not yet received any applications, a full refund will be issued; (c) if a job posting is removed by our moderation team for a policy violation, no refund will be issued. Unused job posting credits remain valid for 12 months from the date of purchase.',
+      'The refund window applies to: Candidate Premium (₹199 / 30 days); Employer Standard (₹499 / 15 days) and Employer Premium (₹999 / 30 days); CV Lite (₹1,999 / 15 days), CV Pro (₹3,999 / 30 days), and CV Enterprise (custom-quoted); Assisted Hiring (₹1,499 / 7 days); and each monthly auto-renewal of the Vendor Connect subscription (₹199 / month). For Vendor Connect specifically, the 2-day window restarts at every auto-renewal — not just at signup.',
   },
   {
-    title: 'Refund Process',
+    title: 'Cancellation is different from a refund',
     content:
-      'To request a refund, contact our support team at billing@hireadda.in or submit a support ticket through your dashboard with the subject line "Refund Request." Please include your account email, the transaction ID or invoice number, and the reason for your refund request. Our billing team will review your request within 3-5 business days. Approved refunds will be processed to the original payment method within 7-10 business days. You will receive an email confirmation once the refund has been initiated.',
+      'Cancellation and refund are two different actions. Cancellation (turning off auto-renew on Vendor Connect, or disabling renewal on a one-time plan) stops future charges and keeps your existing access running until the end of the current validity window — no money is returned. A refund returns the money to your original payment method and immediately revokes the entitlement (any unconsumed resources go back to the pool). The 2-day window applies only to refunds.',
   },
   {
-    title: 'Non-Refundable Items',
+    title: 'Resource consumption and partial refunds',
     content:
-      'The following are not eligible for refunds: (a) subscription fees after the 7-day cancellation window; (b) job postings that have been live for more than 24 hours and have received applications; (c) featured listing upgrades that have already been activated; (d) accounts suspended or terminated for violation of our Terms of Service; (e) any promotional or discounted purchases unless explicitly stated in the promotion terms. Background verification services, once initiated, are non-refundable regardless of the outcome.',
+      'A refund releases unconsumed entitlement resources — CV unlocks, job-post quota, application quota, search-result quota, vendor leads, etc. — back to the system. If you have already consumed a significant portion of the plan, we may approve a partial refund proportional to the remaining capacity instead of a full one. If the value you have already received from the plan exceeds a fair refund (for example, you have unlocked all 200 CVs on CV Lite), the refund may be declined. Partial-refund decisions are made by our billing team, with super-admin override for genuine exceptional cases.',
   },
   {
-    title: 'Disputes and Chargebacks',
+    title: 'How to request a refund',
     content:
-      'If you believe a charge is incorrect or unauthorized, please contact our support team before initiating a chargeback with your bank or payment provider. We are committed to resolving billing disputes quickly and fairly. Initiating a chargeback without first contacting us may result in a delay in resolution and possible suspension of your account pending investigation. We reserve the right to contest chargebacks that we believe are unwarranted.',
+      'Self-service: open your /billing/orders page, find the order, click "Request refund" within 2 days of purchase, and select a reason (typically "User requested"). The system validates the window and any consumed resources, then submits the refund directly to Razorpay. For orders you cannot find self-service (for example, a specific Vendor Connect monthly cycle), email support@hireadda.in with the receipt number — our billing team will action it on your behalf if you are inside the window.',
   },
   {
-    title: 'Changes to This Policy',
+    title: 'Refund timeline',
     content:
-      'Hire Adda reserves the right to modify this Refund Policy at any time. Changes will be posted on this page with an updated "Last updated" date. Material changes will be communicated to active subscribers via email. The revised policy will apply to all purchases made after the effective date of the change. Purchases made before the change will be governed by the policy in effect at the time of purchase.',
+      'Once approved, our backend calls the Razorpay refund API and the credit flows back to the original payment method. Standard refund speed is 3–5 business days for the credit to reflect on your statement (Razorpay’s "normal" speed; no fee). In urgent cases we can issue an "instant" refund where the credit reflects within minutes — a small Razorpay processing fee applies and we generally absorb it for goodwill cases. You will receive one email when the refund is initiated and a second email once Razorpay confirms it has settled.',
   },
   {
-    title: 'Contact Us',
+    title: 'Coupons, GST, and credit notes',
     content:
-      'For billing inquiries and refund requests, email us at billing@hireadda.in. For general support, contact support@hireadda.in or call +91 1800-123-4567 (Mon-Fri, 9 AM - 6 PM IST). You may also write to us at Hire Adda Technologies Pvt. Ltd., 4th Floor, Tower B, Koramangala 4th Block, Bangalore, Karnataka 560034, India.',
+      'If you used a discount coupon, the refund amount is the net amount you actually paid (price minus discount). The coupon redemption is automatically reversed so the coupon usage limit is restored (subject to that coupon’s own rules). Hire Adda prices are tax-inclusive — the 18% GST embedded in each plan is reversed proportionally on the refund, and a credit note is auto-issued under the same GSTIN that received the original tax invoice. The credit note appears in /billing/invoices.',
+  },
+  {
+    title: 'Goodwill refunds (after 2 days)',
+    content:
+      'Once the 2-day window has passed, the automated path is closed. You can still write to support@hireadda.in with your receipt number and the situation — we review goodwill refund requests case by case. Cases where we typically grant goodwill refunds include: a platform outage that prevented you from using the plan, service quality that fell short of what was promised, a duplicate charge, or a billing error on our end. Goodwill is at the company’s discretion and is not contractually owed.',
+  },
+  {
+    title: 'Non-refundable items',
+    content:
+      'The following are not eligible for a refund under any circumstance: free plans (you did not pay for them); CV Enterprise quotes once the dedicated CV access has been delivered; any plan whose entitlement has been fully consumed (every CV unlock redeemed, every job post validity fully elapsed, every assisted-hiring CV email delivered); accounts suspended for Terms of Service violations, fraud, or chargeback abuse; promotional plans where the promotion’s own terms explicitly say "non-refundable."',
+  },
+  {
+    title: 'Disputes and chargebacks',
+    content:
+      'If you believe a charge on your statement is wrong, please contact us before filing a chargeback with your card issuer or bank. We resolve most billing disputes within 2 business days via email, which is much faster than the chargeback process and avoids putting your account into our fraud-review queue. We retain the right to contest chargebacks we believe are unwarranted. Repeated unwarranted chargebacks may lead to account suspension and to a flag in our fraud-detection system that prevents future purchases.',
+  },
+  {
+    title: 'Changes to this policy',
+    content:
+      'Hire Adda may update this Refund Policy from time to time. Material changes will be communicated to active paying users by email. The revised policy applies only to purchases made on or after the effective date of the change; existing purchases continue under the policy in force at the time of purchase. Minor clarifications (rewording, formatting) take effect immediately when the "Last updated" date at the top of this page changes.',
+  },
+  {
+    title: 'Contact us',
+    content:
+      'For refund and billing matters, email support@hireadda.in or call +91 80540 50551 (Mon–Fri, 10:00 AM – 6:00 PM IST). You can also write to Opportunity Makers Group (Proprietor: Harpreet Kaur), House No. 302, Village Dhogri Road, Tehsil Nangal Salempur-1, Jalandhar, Punjab 144004, India — GSTIN 03EBLPK4190M1ZA. For general support the same channels work; billing-specific requests get routed to the right person internally.',
   },
 ];
 
@@ -88,12 +113,13 @@ export default function RefundPolicyPage() {
             </h1>
             <p className="mt-4 text-[var(--text-secondary)]">
               Last updated:{' '}
-              <time dateTime="2026-02-01" className="font-medium">
-                February 2026
+              <time dateTime="2026-05-12" className="font-medium">
+                12 May 2026
               </time>
             </p>
             <p className="mt-2 text-sm text-[var(--text-muted)]">
-              Authored by Hire Adda Legal · Reviewed by Billing &amp; Finance team
+              Aligned with the live billing engine — 2-day refund window, Razorpay-mediated
+              processing, automatic credit-note + entitlement release
             </p>
           </div>
         </div>
@@ -111,10 +137,11 @@ export default function RefundPolicyPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-xl border border-[var(--border)] bg-white p-6 sm:p-10">
             <p className="leading-relaxed text-[var(--text-secondary)]">
-              This Refund Policy governs all paid services offered by Hire Adda Technologies Pvt.
-              Ltd. (&quot;Hire Adda,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). We
-              aim to be fair and transparent in all billing matters. Please read this policy
-              carefully before making any purchase on our platform.
+              This Refund Policy governs all paid services offered on Hire Adda by Opportunity
+              Makers Group, a proprietorship of Harpreet Kaur (&quot;Hire Adda,&quot;
+              &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). It is aligned with our live
+              billing engine — every rule below is enforced in code, not just in prose. Please read
+              this carefully before making any purchase on the platform.
             </p>
 
             <div className="mt-10 space-y-10">
@@ -132,10 +159,11 @@ export default function RefundPolicyPage() {
 
             <div className="mt-10 border-t border-[var(--border)] pt-6">
               <p className="text-sm text-[var(--text-muted)]">
-                This Refund Policy is effective as of February 1, 2026. Hire Adda Technologies Pvt.
-                Ltd. is registered under the laws of India with its registered office in Bangalore,
-                Karnataka. All refund decisions are at the sole discretion of Hire Adda and are
-                final.
+                This Refund Policy is effective as of 12 May 2026. Hire Adda is operated by
+                Opportunity Makers Group, a proprietorship of Harpreet Kaur, registered under the
+                laws of India with its principal place of business at Jalandhar, Punjab (GSTIN
+                03EBLPK4190M1ZA). All refund decisions are at the sole discretion of Opportunity
+                Makers Group acting through Hire Adda, and are final.
               </p>
             </div>
           </div>

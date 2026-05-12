@@ -19,7 +19,7 @@
  * so users land on the public listing page with their filters applied.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import SearchBar from '@/components/ui/SearchBar';
@@ -94,6 +94,77 @@ export default function HeroJobSearchBar({ destination = '/jobs', className }: P
     return sections;
   }, [isAuthenticated, locationHistory, popularLocations, isLoadingPopular, clearLocationHistory]);
 
+  /* ---- focus → scroll-into-view ----
+     When the user focuses ANY field inside the search bar, smoothly
+     scroll the page so the bar sits in a comfortable typing position:
+       • Desktop (≥1024 px): centered vertically (block:'center').
+       • Mobile / tablet (<1024 px): ~15% from the top of the *visual*
+         viewport — leaves the search bar visible above the on-screen
+         keyboard, which usually claims the bottom ~50% of the screen.
+     We re-run on visualViewport `resize` because the keyboard appears
+     ~150–300 ms after focus and changes the visible height.
+     A `hasScrolled` ref prevents repeated jumps while the user is
+     still interacting (typing → autosuggest open → tab between fields).
+  */
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const hasScrolledRef = useRef(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof window === 'undefined') return;
+
+    const scrollToBar = () => {
+      const rect = el.getBoundingClientRect();
+      const elTop = rect.top + window.scrollY;
+      const elHeight = rect.height;
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+
+      // Desktop: center vertically. Mobile/tablet: anchor near the top
+      // so the keyboard doesn't cover the bar (or its dropdown).
+      const targetY = isDesktop
+        ? elTop - (viewportHeight - elHeight) / 2
+        : elTop - viewportHeight * 0.15;
+
+      window.scrollTo({
+        top: Math.max(0, targetY),
+        behavior: 'smooth',
+      });
+    };
+
+    const onFocusIn = () => {
+      if (hasScrolledRef.current) return;
+      hasScrolledRef.current = true;
+      // Double-RAF: lets the dropdown layer render + the mobile keyboard
+      // begin opening before we measure — avoids landing in a spot that
+      // gets covered a beat later by the keyboard.
+      requestAnimationFrame(() => requestAnimationFrame(scrollToBar));
+    };
+
+    const onFocusOut = (e: FocusEvent) => {
+      // Reset only when focus has fully LEFT the search bar (not when
+      // moving between its own inputs/buttons).
+      if (!el.contains(e.relatedTarget as Node | null)) {
+        hasScrolledRef.current = false;
+      }
+    };
+
+    const onVVResize = () => {
+      // Keyboard opened/closed (or orientation changed) — re-center.
+      if (hasScrolledRef.current) scrollToBar();
+    };
+
+    el.addEventListener('focusin', onFocusIn);
+    el.addEventListener('focusout', onFocusOut);
+    window.visualViewport?.addEventListener('resize', onVVResize);
+
+    return () => {
+      el.removeEventListener('focusin', onFocusIn);
+      el.removeEventListener('focusout', onFocusOut);
+      window.visualViewport?.removeEventListener('resize', onVVResize);
+    };
+  }, []);
+
   /* ---- handlers ---- */
   function submit(opts?: { keyword?: string; location?: string }) {
     const kw = (opts?.keyword ?? keyword).trim();
@@ -131,6 +202,7 @@ export default function HeroJobSearchBar({ destination = '/jobs', className }: P
 
   return (
     <div
+      ref={containerRef}
       className={`grid grid-cols-1 gap-2 rounded-2xl border border-[var(--border)] bg-white p-2 shadow-md sm:grid-cols-[1.5fr_1fr_auto_auto] sm:items-stretch sm:gap-2 lg:grid-cols-[2fr_1.4fr_auto_auto] ${className ?? ''}`}
     >
       {/* Keyword — full-featured SearchBar (autosuggest, history, trending) */}
@@ -141,7 +213,7 @@ export default function HeroJobSearchBar({ destination = '/jobs', className }: P
           defaultValue={keyword}
           onSearch={handleKeywordSearch}
           onSelect={handleKeywordSelect}
-          size="md"
+          size="lg"
           fullWidth
         />
       </div>
@@ -158,7 +230,7 @@ export default function HeroJobSearchBar({ destination = '/jobs', className }: P
           allowCreate
           createLabel={(q) => `Search in "${q}"`}
           minChars={2}
-          inputSize="md"
+          inputSize="lg"
           focusSections={locationFocusSections}
         />
       </div>
@@ -167,7 +239,7 @@ export default function HeroJobSearchBar({ destination = '/jobs', className }: P
       <ExperienceSelect
         value={experience}
         onChange={setExperience}
-        size="md"
+        size="lg"
         className="w-full sm:w-44"
       />
 

@@ -256,6 +256,12 @@ const SECTIONS: Section[] = [
         description: 'Pattern: /pricing/{slug} — full feature breakdown + offer',
         badge: 'pattern',
       },
+      {
+        label: 'Enterprise Quote — Contact Sales',
+        href: '/billing/quote',
+        description:
+          'Custom CV access plans for 1000+ unlocks, multi-user seats and dedicated support — 24h response',
+      },
     ],
   },
   {

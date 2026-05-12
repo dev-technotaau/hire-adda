@@ -81,36 +81,49 @@ export default function PricingSections({
 
   return (
     <>
-      {sections.map(({ category, icon: Icon, description }) => {
+      {sections.map(({ category, icon: Icon, description }, sectionIndex) => {
         const list = (grouped.get(category) ?? []).sort(
           (a, b) => a.displayOrder - b.displayOrder || a.basePricePaise - b.basePricePaise,
         );
         if (list.length === 0) return null;
+        // Alternate background between sections so adjacent groupings
+        // read as distinct without needing visible dividers.
+        const alternate = sectionIndex % 2 === 1;
         return (
           <section
             key={category}
             id={category.toLowerCase()}
-            className="px-4 py-12 sm:px-6 lg:px-8"
+            className={`px-4 py-14 sm:px-6 sm:py-16 lg:px-8 ${
+              alternate ? 'bg-[var(--bg-secondary)]/40' : 'bg-white'
+            }`}
           >
             <div className="mx-auto max-w-7xl">
-              <div className="mb-8 flex flex-col items-start gap-2 md:flex-row md:items-center md:gap-4">
-                <div className="bg-primary/10 text-primary flex h-12 w-12 items-center justify-center rounded-xl">
-                  <Icon className="h-6 w-6" />
+              {/* Section header — centered icon chip, bold title, supporting line.
+                  Centered layout reads cleaner across all viewport widths and
+                  gives the card grid below a calmer anchor. */}
+              <header className="mx-auto mb-10 max-w-2xl text-center sm:mb-12">
+                <div className="bg-primary/10 text-primary ring-primary/20 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl ring-1">
+                  <Icon className="h-6 w-6" aria-hidden="true" />
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-[var(--text)]">
-                    {PLAN_CATEGORY_LABELS[category]}
-                  </h2>
-                  <p className="text-sm text-[var(--text-muted)]">{description}</p>
-                </div>
-              </div>
+                <h2 className="text-2xl font-bold tracking-tight text-[var(--text)] sm:text-3xl">
+                  {PLAN_CATEGORY_LABELS[category]}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)] sm:text-base">
+                  {description}
+                </p>
+              </header>
+
+              {/* Card grid — keeps the same 1/2/3-col responsive behaviour
+                  as before, but uses `items-stretch` + `pt-4` so the
+                  highlighted-card scale doesn't visually clip the badge
+                  ribbon at the top of taller cards. */}
               <div
                 className={
                   list.length === 1
-                    ? 'mx-auto grid max-w-md grid-cols-1 gap-6'
+                    ? 'mx-auto grid max-w-md grid-cols-1 gap-6 pt-4'
                     : list.length === 2
-                      ? 'mx-auto grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2'
-                      : 'grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'
+                      ? 'mx-auto grid max-w-4xl grid-cols-1 items-stretch gap-6 pt-4 md:grid-cols-2'
+                      : 'grid grid-cols-1 items-stretch gap-6 pt-4 md:grid-cols-2 lg:grid-cols-3'
                 }
               >
                 {list.map((plan) => (

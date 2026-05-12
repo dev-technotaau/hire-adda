@@ -80,6 +80,7 @@ export default function Header() {
   // so cursor can travel from the Pricing button to the dropdown panel
   // without the menu flickering closed.
   const pricingCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pricingMenuRef = useRef<HTMLDivElement>(null);
   const cancelPricingClose = useCallback(() => {
     if (pricingCloseTimerRef.current) {
       clearTimeout(pricingCloseTimerRef.current);
@@ -96,6 +97,20 @@ export default function Header() {
     },
     [],
   );
+  // Click-outside-to-close — replaces the old fullscreen <div fixed inset-0>
+  // overlay that was a child of the wrapper and broke onMouseLeave (cursor
+  // ended up on the overlay while still "inside" the wrapper subtree, so
+  // hover-out never fired and the menu wouldn't auto-close).
+  useEffect(() => {
+    if (!pricingMenuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (pricingMenuRef.current && !pricingMenuRef.current.contains(e.target as Node)) {
+        setPricingMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [pricingMenuOpen]);
 
   const unreadCount = unreadData?.data?.count || 0;
 
@@ -174,6 +189,7 @@ export default function Header() {
               audience pages get a top-level entry without crowding the right-
               side login/register block. */}
           <div
+            ref={pricingMenuRef}
             className="relative"
             onMouseEnter={() => {
               cancelPricingClose();
@@ -192,7 +208,9 @@ export default function Header() {
               aria-haspopup="menu"
               className={cn(
                 'flex items-center gap-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                pathname.startsWith('/pricing')
+                // Highlight when the dropdown is open OR when we're on a
+                // pricing page — matches Jobs/Companies NavTrigger behavior.
+                pricingMenuOpen || pathname.startsWith('/pricing')
                   ? 'bg-primary-light text-primary'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
               )}
@@ -204,7 +222,6 @@ export default function Header() {
             </button>
             {pricingMenuOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setPricingMenuOpen(false)} />
                 <div
                   role="menu"
                   onMouseEnter={cancelPricingClose}

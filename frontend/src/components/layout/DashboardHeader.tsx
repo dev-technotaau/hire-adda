@@ -237,6 +237,7 @@ export default function DashboardHeader() {
                 searchType={searchType}
                 onSearch={handleSearch}
                 onSelect={handleSelect}
+                size="lg"
                 fullWidth
               />
             </div>
@@ -244,7 +245,7 @@ export default function DashboardHeader() {
               <ExperienceSelect
                 value={experience}
                 onChange={setExperience}
-                size="md"
+                size="lg"
                 className="w-full"
               />
             </div>
@@ -259,6 +260,7 @@ export default function DashboardHeader() {
                 allowCreate
                 createLabel={(q) => `Search in "${q}"`}
                 minChars={2}
+                inputSize="lg"
                 additionalSections={locationAdditionalSections}
                 focusSections={locationFocusSections}
               />

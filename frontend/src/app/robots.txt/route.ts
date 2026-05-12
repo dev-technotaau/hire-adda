@@ -42,6 +42,13 @@ const PUBLIC_ALLOW_PATHS = [
   '/pricing/',
   '/pricing/candidate',
   '/pricing/employer',
+  // Enterprise "Contact Sales" quote form. The rest of /billing/* is
+  // disallowed below (private user dashboard), but this single URL is
+  // a public lead-capture page. More-specific Allow > broader Disallow
+  // is honoured by Googlebot, Bingbot, YandexBot, and other modern
+  // crawlers — defence-in-depth across all rule tiers.
+  '/billing/quote',
+  '/billing/quote/',
   // Public vendor directory — `/vendors/*` is the public browse + profile
   // pages. The `/vendor/*` prefix (no `s`) is the private dashboard and
   // is disallowed below.
@@ -289,6 +296,10 @@ function buildRobotsTxt(): string {
         '/pricing/',
         '/pricing/candidate',
         '/pricing/employer',
+        // Enterprise quote form — explicit allow overrides the
+        // /billing/ disallow further down for catch-all UAs too.
+        '/billing/quote',
+        '/billing/quote/',
         '/vendors',
         '/vendors/',
         '/auth/login',
@@ -352,6 +363,11 @@ function buildRobotsTxt(): string {
         '/vendors/',
         '/pricing',
         '/pricing/',
+        // AI search engines should also surface the enterprise quote
+        // page when users ask "where do I get a bulk CV access quote
+        // on hire adda" / similar high-intent procurement queries.
+        '/billing/quote',
+        '/billing/quote/',
         '/site-map',
         '/feed.xml',
         '/feed.atom',

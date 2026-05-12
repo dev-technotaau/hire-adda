@@ -93,7 +93,10 @@ export default function TopCompanyCategoriesSlider({ className }: Props) {
       <ul
         ref={trackRef}
         role="list"
-        className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+        // `overflow-x-auto` makes overflow-y implicitly non-visible too, so we
+        // need symmetric vertical padding (py-2) — without it the cards' hover
+        // lift (`-translate-y-0.5`) + shadow gets clipped at the top edge.
+        className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
         style={{ scrollbarWidth: 'none' }}
       >
         {(isLoading ? Array.from({ length: 5 }) : items).map((raw, i) => {

@@ -13,24 +13,28 @@ const footerLinks = {
     { label: 'Contact Us', href: ROUTES.PUBLIC.CONTACT },
     { label: 'Careers', href: ROUTES.PUBLIC.CONTACT },
     { label: 'Press', href: ROUTES.PUBLIC.CONTACT },
+    { label: 'Vendors', href: ROUTES.VENDORS_PUBLIC.LIST },
   ],
   jobSeekers: [
-    { label: 'Browse Jobs', href: ROUTES.AUTH.LOGIN_CANDIDATE },
+    { label: 'Browse Jobs', href: ROUTES.PUBLIC.JOBS },
     { label: 'Career Advice', href: ROUTES.PUBLIC.HELP },
     { label: 'Resume Builder', href: ROUTES.AUTH.LOGIN_CANDIDATE },
     { label: 'Salary Guide', href: ROUTES.PUBLIC.HELP },
+    { label: 'Companies', href: ROUTES.PUBLIC.COMPANIES },
   ],
   employers: [
     { label: 'Post a Job', href: ROUTES.AUTH.REGISTER_EMPLOYER },
     { label: 'Search Candidates', href: ROUTES.AUTH.LOGIN_EMPLOYER },
     { label: 'Pricing', href: ROUTES.PUBLIC.CONTACT },
     { label: 'Employer Resources', href: ROUTES.PUBLIC.HELP },
+    { label: 'Hiring Solutions', href: ROUTES.BILLING.PRICING_EMPLOYER },
   ],
   support: [
     { label: 'Help Center', href: ROUTES.PUBLIC.HELP },
     { label: 'Privacy Policy', href: ROUTES.PUBLIC.PRIVACY },
     { label: 'Terms of Service', href: ROUTES.PUBLIC.TERMS },
     { label: 'Accessibility', href: ROUTES.PUBLIC.ACCESSIBILITY },
+    { label: 'Forgot Password', href: ROUTES.AUTH.FORGOT_PASSWORD },
   ],
   legal: [
     { label: 'Cookie Policy', href: ROUTES.PUBLIC.COOKIE_POLICY },
@@ -158,12 +162,14 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Payments accepted */}
+        {/* Payments accepted — single flat row (no per-rail headings)
+            so all Cards / UPI / Wallets / Net Banking logos sit on the
+            same horizontal line under the centered title. */}
         <div className="mt-12 border-t border-[var(--border)] pt-10">
           <h3 className="mb-5 text-center text-sm font-semibold tracking-wider text-[var(--text)] uppercase">
             Payments we accept
           </h3>
-          <PaymentMethodsBar />
+          <PaymentMethodsBar variant="compact" className="justify-center" />
         </div>
 
         {/* Trust & credibility badges */}

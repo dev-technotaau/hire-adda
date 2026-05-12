@@ -22,7 +22,17 @@ interface Badge {
   helper: string;
   width: number;
   height: number;
+  /**
+   * Optional Tailwind height override for the rendered <Image>. Defaults
+   * to `h-5 w-auto` (20 px tall). Badges whose SVG ships with thick
+   * internal whitespace (PCI-DSS, SSL, GST, Udyam, Startup-India,
+   * Make-in-India) need a taller render so the visible artwork fills
+   * the 36 px tile like the Razorpay logo does.
+   */
+  imgClassName?: string;
 }
+
+const BADGE_IMG_CLASS_LARGE = 'h-7 w-auto';
 
 const BADGES: Badge[] = [
   {
@@ -38,6 +48,7 @@ const BADGES: Badge[] = [
     helper: 'Card data is never stored on Hire Adda servers',
     width: 60,
     height: 32,
+    imgClassName: BADGE_IMG_CLASS_LARGE,
   },
   {
     slug: 'ssl-secure',
@@ -45,6 +56,7 @@ const BADGES: Badge[] = [
     helper: 'Every payment + login secured by TLS 1.3',
     width: 56,
     height: 32,
+    imgClassName: BADGE_IMG_CLASS_LARGE,
   },
   {
     slug: 'gstin-verified',
@@ -52,6 +64,7 @@ const BADGES: Badge[] = [
     helper: 'GSTIN-verified seller — tax invoice on every order',
     width: 56,
     height: 32,
+    imgClassName: BADGE_IMG_CLASS_LARGE,
   },
   {
     slug: 'msme-udyam',
@@ -59,6 +72,7 @@ const BADGES: Badge[] = [
     helper: 'Recognised Indian small-business entity',
     width: 70,
     height: 32,
+    imgClassName: BADGE_IMG_CLASS_LARGE,
   },
   {
     slug: 'startup-india',
@@ -66,6 +80,7 @@ const BADGES: Badge[] = [
     helper: 'DPIIT-recognised startup',
     width: 80,
     height: 32,
+    imgClassName: BADGE_IMG_CLASS_LARGE,
   },
   {
     slug: 'make-in-india',
@@ -73,6 +88,7 @@ const BADGES: Badge[] = [
     helper: 'Built in Bharat, for Bharat',
     width: 80,
     height: 32,
+    imgClassName: BADGE_IMG_CLASS_LARGE,
   },
 ];
 
@@ -97,7 +113,7 @@ export default function TrustBadges({ variant = 'full', className = '' }: Props)
                 alt={b.label}
                 width={b.width}
                 height={b.height}
-                className="h-5 w-auto"
+                className={b.imgClassName ?? 'h-5 w-auto'}
                 unoptimized
               />
             </span>

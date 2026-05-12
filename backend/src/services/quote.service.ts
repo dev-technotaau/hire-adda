@@ -32,7 +32,9 @@ import logger from '../config/logger';
 // =====================================================================
 
 export interface SubmitQuoteInput {
-  userId: string;
+  // Nullable — guests submit from the public pricing page without an
+  // account. Only authenticated callers attach their userId.
+  userId: string | null;
   companyName: string;
   contactPerson: string;
   designation?: string;
@@ -308,10 +310,16 @@ export async function createCustomPlanOffer(
     return { plan, offer };
   });
 
-  // Notify the employer
-  notifyEmployerOfOffer(quote.userId, result.offer, result.plan).catch((err) =>
-    logger.error('Custom offer notification failed', err)
-  );
+  // Notify the employer if the quote was submitted by a logged-in user.
+  // Guest quotes have no account to ping — the sales team contacts them
+  // out-of-band via the email/phone captured on the form.
+  if (quote.userId) {
+    notifyEmployerOfOffer(quote.userId, result.offer, result.plan).catch((err) =>
+      logger.error('Custom offer notification failed', err)
+    );
+  } else {
+    logger.info('Skipping offer notification — guest quote has no userId', { quoteId: quote.id });
+  }
 
   logger.info('Custom plan offer created', {
     offerId: result.offer.id,

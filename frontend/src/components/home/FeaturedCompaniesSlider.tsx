@@ -103,7 +103,9 @@ export default function FeaturedCompaniesSlider({ className }: Props) {
       <ul
         ref={trackRef}
         role="list"
-        className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+        // overflow-x-auto implicitly clips overflow-y too — symmetric py-2
+        // prevents the card hover-lift / shadow from being chopped at the top.
+        className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
         style={{ scrollbarWidth: 'none' }}
       >
         {(isLoading ? Array.from({ length: 5 }) : items).map((raw, i) => {

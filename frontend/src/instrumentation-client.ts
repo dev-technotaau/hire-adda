@@ -8,8 +8,21 @@ import { initBrowserOtel } from './lib/otel-browser';
 Sentry.init({
   dsn: 'https://ddac50f607355da437c26072b71f9ab1@o4510877481304064.ingest.us.sentry.io/4510877498277888',
 
-  // Add optional integrations for additional features
-  integrations: [Sentry.replayIntegration()],
+  // Integrations — explicitly enable BrowserTracing so Sentry's
+  // Performance / Insights tab gets Web Vitals percentiles + slowest
+  // transactions out of the box. `enableInp` captures Interaction-to-
+  // Next-Paint (the Core Web Vital that replaced FID in March 2024).
+  // `enableLongAnimationFrame` emits the new LoAF entries so we can see
+  // which animation frames were blocked. `enableHTTPTimings` exposes
+  // DNS / TCP / TTFB breakdowns inside Sentry's request spans.
+  integrations: [
+    Sentry.browserTracingIntegration({
+      enableInp: true,
+      enableLongAnimationFrame: true,
+      enableHTTPTimings: true,
+    }),
+    Sentry.replayIntegration(),
+  ],
 
   // Sample 10% of traces in production, 100% in development
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1,

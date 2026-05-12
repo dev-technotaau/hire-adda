@@ -14,13 +14,16 @@ export interface ExperienceValue {
 interface ExperienceSelectProps {
   value: ExperienceValue | null;
   onChange: (val: ExperienceValue | null) => void;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 const SIZE_STYLES = {
   sm: 'h-9 text-sm',
   md: 'h-11 text-sm',
+  // h-12 (48 px) matches Button lg + SearchBar lg + AutoSuggest lg so
+  // hero / listing search rows have a uniform element height.
+  lg: 'h-12 text-base',
 };
 
 function getLabel(val: ExperienceValue | null): string | null {
@@ -113,7 +116,9 @@ export default function ExperienceSelect({
         aria-expanded={open}
         aria-haspopup="listbox"
         className={cn(
-          'flex w-full items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 transition-colors',
+          // rounded-lg matches the rest of the search-row primitives
+          // (Button, SearchBar, AutoSuggest) for uniform corner radius.
+          'flex w-full items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 transition-colors',
           'focus:border-primary focus:ring-primary hover:border-[var(--text-muted)] focus:ring-1 focus:outline-none',
           SIZE_STYLES[size],
           label ? 'text-[var(--text)]' : 'text-[var(--text-muted)]',

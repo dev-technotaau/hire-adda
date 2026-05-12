@@ -40,7 +40,9 @@ export const submitQuote = async (
 ): Promise<void> => {
   try {
     const quote = await QuoteService.submitQuote({
-      userId: req.user!.id,
+      // Guests submit from the public pricing page (req.user is undefined);
+      // authenticated callers attach their id.
+      userId: req.user?.id ?? null,
       companyName: req.body.companyName,
       contactPerson: req.body.contactPerson,
       designation: req.body.designation,

@@ -3152,7 +3152,10 @@ model RazorpayWebhookEvent {
 
 model QuoteRequest {
   id               String             @id @default(uuid())
-  userId           String
+  // Nullable so guests can submit enterprise quote requests from the
+  // public pricing page without first creating an account. Logged-in
+  // submissions still attach their userId so /billing/quote/me works.
+  userId           String?
   companyName      String
   contactPerson    String
   designation      String?
@@ -3176,7 +3179,10 @@ model QuoteRequest {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // user is now optional — guests submit without an account; SetNull on
+  // delete is irrelevant when userId is already null, but keeps the FK
+  // consistent for the populated case.
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   assignedTo  User?             @relation("QuoteAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
   offers      CustomPlanOffer[]
 

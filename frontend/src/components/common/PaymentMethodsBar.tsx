@@ -20,6 +20,14 @@ interface PaymentLogo {
   /** Logo's natural ratio — used for the next/image width:height pair. */
   width: number;
   height: number;
+  /**
+   * Optional Tailwind height override for the rendered <Image>. Defaults
+   * to `h-5 w-auto` (20 px tall) which works for tight cropped logos
+   * (visa, mastercard, etc.). Logos that ship with a lot of internal
+   * whitespace in their viewBox (e.g. netbanking) need a taller render
+   * so the visible artwork fills the 36 px box like the others.
+   */
+  imgClassName?: string;
 }
 
 interface PaymentGroup {
@@ -56,7 +64,17 @@ const GROUPS: PaymentGroup[] = [
   },
   {
     title: 'Net Banking',
-    items: [{ slug: 'netbanking', label: 'Net Banking — all major banks', width: 64, height: 32 }],
+    items: [
+      {
+        slug: 'netbanking',
+        label: 'Net Banking — all major banks',
+        width: 64,
+        height: 32,
+        // Logo SVG has heavy interior whitespace — render larger so the
+        // visible artwork matches the other payment tiles visually.
+        imgClassName: 'h-7 w-auto',
+      },
+    ],
   },
 ];
 
@@ -118,7 +136,7 @@ function PaymentLogoCell({ item }: { item: PaymentLogo }) {
           alt={item.label}
           width={item.width}
           height={item.height}
-          className="h-5 w-auto"
+          className={item.imgClassName ?? 'h-5 w-auto'}
           unoptimized
         />
       </span>

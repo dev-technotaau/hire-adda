@@ -7,6 +7,7 @@ import { Role, QuoteRequestStatus } from '@prisma/client';
 import { validate } from '../validators/validate';
 import { audit } from '../middleware/audit';
 import { requireIdempotencyKey } from '../middleware/idempotency-key';
+import { verifyTurnstile } from '../middleware/turnstile';
 
 const submitSchema = z.object({
   companyName: z.string().min(2).max(160),
@@ -46,14 +47,26 @@ const listQuerySchema = z.object({
 
 // User-facing
 const userRouter = Router();
-userRouter.use(protect);
+// Quote SUBMIT is intentionally public — enterprise "Contact Sales"
+// flows must work for guests browsing the pricing page. The controller
+// stores req.user?.id (or null for guests). The other user-facing
+// routes below (/me, /me/:id, /offers/:offerId/accept) still require
+// auth and therefore sit BELOW the `userRouter.use(protect)` line.
 userRouter.post(
   '/',
   requireIdempotencyKey(),
+  // Turnstile CAPTCHA — required for all callers (guest + authed). Token
+  // is read from the `cf-turnstile-response` header, matching the pattern
+  // used by /auth/login + /auth/register. The middleware is a no-op when
+  // CF_TURNSTILE_SECRET_KEY is unset in dev, so local testing isn't
+  // blocked. Placed BEFORE schema validation to fail-fast on bot traffic
+  // without spending DB capacity on Zod parsing.
+  verifyTurnstile,
   validate({ body: submitSchema }),
-  audit('SUBMIT_QUOTE_REQUEST', 'QuoteRequest'),
+  audit('SUBMIT_QUOTE_REQUEST', 'QuoteRequest'), // audit is a no-op when req.user is undefined
   QuoteController.submitQuote
 );
+userRouter.use(protect);
 userRouter.get('/me', QuoteController.listMyQuotes);
 userRouter.get('/me/:id', validate({ params: idParamsSchema }), QuoteController.getMyQuote);
 userRouter.post(

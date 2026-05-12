@@ -303,7 +303,7 @@ export default function PublicCompanyListingShell({
                   defaultValue={filters.q ?? ''}
                   onSearch={handleKeywordSearch}
                   onSelect={handleKeywordSelect}
-                  size="md"
+                  size="lg"
                   fullWidth
                 />
               </div>
@@ -318,7 +318,7 @@ export default function PublicCompanyListingShell({
                   allowCreate
                   createLabel={(q) => `Companies in "${q}"`}
                   minChars={2}
-                  inputSize="md"
+                  inputSize="lg"
                   focusSections={locationFocusSections}
                 />
               </div>

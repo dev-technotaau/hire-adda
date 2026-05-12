@@ -79,12 +79,22 @@ function generateIdempotencyKey(): string {
 }
 
 export const quoteService = {
-  async submit(input: SubmitQuoteRequest): Promise<{ id: string; status: QuoteRequestStatus }> {
+  async submit(
+    input: SubmitQuoteRequest,
+    turnstileToken?: string,
+  ): Promise<{ id: string; status: QuoteRequestStatus }> {
     const idemKey = generateIdempotencyKey();
     const { data } = await api.post<BackendEnvelope<{ id: string; status: QuoteRequestStatus }>>(
       '/billing/quotes',
       input,
-      { headers: { 'Idempotency-Key': idemKey } },
+      {
+        headers: {
+          'Idempotency-Key': idemKey,
+          // Same header convention as /auth/login + /auth/register.
+          // Backend `verifyTurnstile` reads from either header or body.
+          ...(turnstileToken && { 'cf-turnstile-response': turnstileToken }),
+        },
+      },
     );
     return data.data;
   },

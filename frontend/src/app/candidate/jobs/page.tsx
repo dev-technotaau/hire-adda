@@ -1043,7 +1043,7 @@ export default function JobSearchPage() {
                 defaultValue={keyword}
                 onSearch={handleKeywordSearch}
                 onSelect={handleKeywordSelect}
-                size="md"
+                size="lg"
                 fullWidth
               />
               {/* Operator syntax popover — `+react -php "remote work"` */}
@@ -1054,7 +1054,7 @@ export default function JobSearchPage() {
             <ExperienceSelect
               value={experienceValue}
               onChange={handleExperienceChange}
-              size="md"
+              size="lg"
               className="w-full shrink-0 sm:w-40"
             />
             <div className="flex-1 sm:max-w-xs">
@@ -1068,7 +1068,7 @@ export default function JobSearchPage() {
                 allowCreate
                 createLabel={(q) => `Search in "${q}"`}
                 minChars={2}
-                inputSize="md"
+                inputSize="lg"
                 additionalSections={locationAdditionalSections}
                 focusSections={locationFocusSections}
               />

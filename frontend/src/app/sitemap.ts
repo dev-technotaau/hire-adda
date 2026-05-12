@@ -293,6 +293,19 @@ const STATIC_ENTRIES: SitemapEntry[] = [
     priority: 0.6,
   },
 
+  // Enterprise "Contact Sales" quote form — public lead-capture surface
+  // sits under /billing/* (which is otherwise crawler-disallowed). The
+  // explicit `Allow: /billing/quote` exception in robots.txt opens just
+  // this single URL while keeping the rest of the billing dashboard
+  // private. Priority matched to /contact since both are conversion
+  // surfaces for high-intent enterprise visitors.
+  {
+    path: '/billing/quote',
+    source: 'src/app/billing/quote/page.tsx',
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  },
+
   // Public vendor directory — the index page is stable, individual vendor
   // profile pages (/vendors/[slug]) belong in a future dynamic shard once
   // we have enough vendors to justify the build-time backend pull.

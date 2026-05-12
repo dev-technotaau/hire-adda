@@ -89,8 +89,10 @@ const SIZE_STYLES = {
     dropdown: 'text-sm',
   },
   lg: {
-    input: 'h-13 text-base pl-12 pr-10',
-    icon: 'left-3.5 h-5 w-5',
+    // h-12 (48 px) matches Button lg so SearchBar lines up cleanly with
+    // the Search button + ExperienceSelect lg + AutoSuggest lg.
+    input: 'h-12 text-base pl-11 pr-10',
+    icon: 'left-3 h-5 w-5',
     clear: 'right-3 h-5 w-5',
     dropdown: 'text-base',
   },
@@ -461,7 +463,9 @@ export default function SearchBar({
           aria-controls="search-listbox"
           aria-activedescendant={activeIndex >= 0 ? navigableItems[activeIndex]?.id : undefined}
           className={cn(
-            'w-full rounded-xl border border-[var(--border)] bg-white text-[var(--text)]',
+            // rounded-lg matches Button + AutoSuggest + ExperienceSelect for
+            // a uniform corner radius across every search-row element.
+            'w-full rounded-lg border border-[var(--border)] bg-white text-[var(--text)]',
             'transition-all duration-200 placeholder:text-[var(--text-muted)]',
             'focus:border-primary focus:ring-primary/20 focus:ring-2 focus:outline-none',
             'hover:border-[var(--text-muted)]',

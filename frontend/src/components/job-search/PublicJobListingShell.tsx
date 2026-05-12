@@ -437,7 +437,7 @@ export default function PublicJobListingShell({
                   defaultValue={filters.q ?? ''}
                   onSearch={handleKeywordSearch}
                   onSelect={handleKeywordSelect}
-                  size="md"
+                  size="lg"
                   fullWidth
                 />
                 <div className="absolute top-1/2 right-2 -translate-y-1/2">
@@ -447,7 +447,7 @@ export default function PublicJobListingShell({
               <ExperienceSelect
                 value={experienceValue}
                 onChange={handleExperienceChange}
-                size="md"
+                size="lg"
                 className="w-full shrink-0 sm:w-40"
               />
               <div className="min-w-0 flex-1 sm:max-w-xs">
@@ -461,7 +461,7 @@ export default function PublicJobListingShell({
                   allowCreate
                   createLabel={(q) => `Search in "${q}"`}
                   minChars={2}
-                  inputSize="md"
+                  inputSize="lg"
                   focusSections={locationFocusSections}
                 />
               </div>

@@ -421,10 +421,20 @@ export default async function Home() {
       {/* ================================================================
                 SECTION 1: Hero (Enhanced)
             ================================================================ */}
-      <section className="from-primary-100 to-accent-light relative overflow-hidden bg-gradient-to-br via-white">
-        {/* Decorative blobs */}
-        <div className="bg-primary/5 absolute -top-40 -right-40 h-80 w-80 rounded-full blur-3xl" />
-        <div className="bg-accent/5 absolute -bottom-40 -left-40 h-80 w-80 rounded-full blur-3xl" />
+      {/* NOTE: `overflow-hidden` is intentionally NOT on the <section>.
+          The hero search bar (keyword / location / experience) renders
+          floating dropdowns that extend below the section — clipping them
+          at the section boundary was a previous UX bug. Decorative blobs
+          are wrapped in their own overflow-hidden container below so they
+          stay contained without affecting child overflow. */}
+      <section className="from-primary-100 to-accent-light relative bg-gradient-to-br via-white">
+        {/* Decorative blobs — contained in a pointer-events-none wrapper
+            with overflow-hidden so they don't bleed into adjacent sections
+            but ALSO don't clip the search bar's autosuggest popovers. */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="bg-primary/5 absolute -top-40 -right-40 h-80 w-80 rounded-full blur-3xl" />
+          <div className="bg-accent/5 absolute -bottom-40 -left-40 h-80 w-80 rounded-full blur-3xl" />
+        </div>
 
         <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
           <div className="grid items-center gap-12 lg:grid-cols-2">
@@ -548,67 +558,132 @@ export default async function Home() {
               Four ways to find the right talent — pick the one that fits your stage.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
             {[
               {
                 title: 'Post a Job',
                 href: '/employer/jobs/new',
                 desc: 'Free job post in 2 minutes — reach thousands of candidates.',
-                accent: 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300',
+                icon: FileText,
+                badge: 'Start free',
+                accent: {
+                  iconBg: 'bg-blue-50',
+                  iconText: 'text-blue-600',
+                  iconRing: 'ring-blue-200',
+                  badgeBg: 'bg-blue-50',
+                  badgeText: 'text-blue-700',
+                  badgeRing: 'ring-blue-200',
+                  topAccent: 'before:bg-blue-500',
+                },
               },
               {
                 title: 'Search CV Database',
                 href: '/pricing/employer#employer_cv_database',
                 desc: 'Filter the Talent Vault, unlock contact details, hire faster.',
-                accent:
-                  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
+                icon: Search,
+                badge: 'From ₹1,999',
+                accent: {
+                  iconBg: 'bg-emerald-50',
+                  iconText: 'text-emerald-600',
+                  iconRing: 'ring-emerald-200',
+                  badgeBg: 'bg-emerald-50',
+                  badgeText: 'text-emerald-700',
+                  badgeRing: 'ring-emerald-200',
+                  topAccent: 'before:bg-emerald-500',
+                },
               },
               {
                 title: 'Assisted Hiring',
                 href: '/pricing/employer#employer_assisted_hiring',
                 desc: 'Our team finds 4-5 matching CVs for your role in 7 days.',
-                accent: 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+                icon: Headphones,
+                badge: '₹1,499 / role',
+                accent: {
+                  iconBg: 'bg-amber-50',
+                  iconText: 'text-amber-600',
+                  iconRing: 'ring-amber-200',
+                  badgeBg: 'bg-amber-50',
+                  badgeText: 'text-amber-700',
+                  badgeRing: 'ring-amber-200',
+                  topAccent: 'before:bg-amber-500',
+                },
               },
               {
                 title: 'Find Recruitment Partners',
                 href: '/vendors',
                 desc: 'Browse vetted staffing agencies and send hiring leads.',
-                accent: 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300',
+                icon: Users,
+                badge: 'Browse free',
+                accent: {
+                  iconBg: 'bg-purple-50',
+                  iconText: 'text-purple-600',
+                  iconRing: 'ring-purple-200',
+                  badgeBg: 'bg-purple-50',
+                  badgeText: 'text-purple-700',
+                  badgeRing: 'ring-purple-200',
+                  topAccent: 'before:bg-purple-500',
+                },
               },
-            ].map((card) => (
-              <a
-                key={card.title}
-                href={card.href}
-                className="group hover:border-primary/30 flex flex-col rounded-xl border border-[var(--border)] bg-white p-5 transition-all hover:shadow-md dark:bg-[var(--bg-secondary)]"
-              >
-                <div
-                  className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold ${card.accent}`}
-                  aria-hidden
+            ].map((card) => {
+              const Icon = card.icon;
+              return (
+                <Link
+                  key={card.title}
+                  href={card.href}
+                  className={cn(
+                    // Card shell — rounded, bordered, shadow-sm baseline.
+                    'group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm transition-all duration-200',
+                    // Hover: subtle lift + stronger shadow + primary border tint.
+                    'hover:-translate-y-1 hover:border-[var(--text-muted)]/30 hover:shadow-xl',
+                    // Top accent stripe — `before:` pseudo-element grows from
+                    // 0 → full width on hover for a confident reveal.
+                    'before:absolute before:inset-x-0 before:top-0 before:h-1 before:origin-left before:scale-x-0 before:rounded-t-2xl before:transition-transform before:duration-300 group-hover:before:scale-x-100',
+                    card.accent.topAccent,
+                  )}
                 >
-                  {card.title.charAt(0)}
-                </div>
-                <h3 className="group-hover:text-primary text-base font-semibold text-[var(--text)]">
-                  {card.title}
-                </h3>
-                <p className="mt-1 flex-1 text-sm text-[var(--text-muted)]">{card.desc}</p>
-                <span className="text-primary mt-3 inline-flex items-center gap-1 text-sm font-semibold">
-                  Learn more
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M17 8l4 4m0 0l-4 4m4-4H3"
-                    />
-                  </svg>
-                </span>
-              </a>
-            ))}
+                  {/* Top row: icon + value chip */}
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div
+                      className={cn(
+                        'flex h-12 w-12 flex-none items-center justify-center rounded-xl ring-1 transition-transform duration-200 ring-inset group-hover:scale-110',
+                        card.accent.iconBg,
+                        card.accent.iconText,
+                        card.accent.iconRing,
+                      )}
+                      aria-hidden="true"
+                    >
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <span
+                      className={cn(
+                        'inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset',
+                        card.accent.badgeBg,
+                        card.accent.badgeText,
+                        card.accent.badgeRing,
+                      )}
+                    >
+                      {card.badge}
+                    </span>
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-lg font-bold tracking-tight text-[var(--text)] sm:text-xl">
+                    {card.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-[var(--text-secondary)]">
+                    {card.desc}
+                  </p>
+
+                  {/* CTA — arrow slides right on hover, color shifts to primary */}
+                  <span className="group-hover:text-primary mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--text)] transition-colors">
+                    Learn more
+                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

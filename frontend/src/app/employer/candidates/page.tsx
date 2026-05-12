@@ -1154,14 +1154,14 @@ export default function CandidateSearchPage() {
                 searchType="candidates"
                 defaultValue={keyword}
                 onSearch={handleKeywordSearch}
-                size="md"
+                size="lg"
                 fullWidth
                 className="flex-1"
               />
               <ExperienceSelect
                 value={experienceValue}
                 onChange={handleExperienceChange}
-                size="md"
+                size="lg"
                 className="w-full shrink-0 sm:w-40"
               />
               <div className="flex-1 sm:max-w-xs">
@@ -1175,7 +1175,7 @@ export default function CandidateSearchPage() {
                   allowCreate
                   createLabel={(q) => `Search in "${q}"`}
                   minChars={2}
-                  inputSize="md"
+                  inputSize="lg"
                   additionalSections={locationAdditionalSections}
                   focusSections={locationFocusSections}
                 />

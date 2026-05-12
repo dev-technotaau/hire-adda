@@ -158,6 +158,18 @@ router.get(
   }),
   publicCtrl.searchCompanies
 );
+// IMPORTANT: this MUST stay above `/companies/:slug` — Express matches
+// routes in declaration order, and `:slug` would otherwise swallow the
+// literal `featured` path (returning a 404 from getCompanyBySlug).
+// Section 3 of the homepage: featured companies, ranked by recent
+// posting activity. Cache-keyed identically to the slow query.
+router.get(
+  '/companies/featured',
+  publicLimiter,
+  etagCache({ ttl: 30 * 60, publicCdnCache: true }),
+  cache({ ttl: 30 * 60 }),
+  publicStatsCtrl.featuredCompanies
+);
 router.get(
   '/companies/:slug',
   publicLimiter,
@@ -235,14 +247,9 @@ router.get(
   cache({ ttl: 60 * 60 }),
   publicStatsCtrl.companyCategoryStats
 );
-// Section 3: featured companies, ranked by recent posting activity.
-router.get(
-  '/companies/featured',
-  publicLimiter,
-  etagCache({ ttl: 30 * 60, publicCdnCache: true }),
-  cache({ ttl: 30 * 60 }),
-  publicStatsCtrl.featuredCompanies
-);
+// Section 3 (/companies/featured) is declared earlier in this file —
+// it must sit above the `/companies/:slug` route or Express matches the
+// parameterized handler first and the homepage section returns empty.
 // Section 4: per-role public-job counts (batched).
 router.get(
   '/role-counts',
