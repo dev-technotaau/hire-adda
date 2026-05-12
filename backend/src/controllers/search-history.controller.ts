@@ -1,7 +1,24 @@
 /**
  * Controller for /api/v1/public/search-history routes.
- * Optional auth: when `req.user` is set we use userId; otherwise we
- * fall back to a guest sessionId from the `ha_search_session` cookie.
+ *
+ * Authentication is optional: when `req.user` is set (via `optionalAuth`
+ * middleware) the user's id owns the row; otherwise a guest sessionId
+ * is used.
+ *
+ * Guest sessionId source (in priority order):
+ *   1. `x-guest-session` request header — set by the Next.js BFF route
+ *      handlers in `frontend/src/app/api/search-history/*`. The BFF
+ *      owns the cookie lifecycle (mint, attach, clear-on-migrate) so
+ *      session cookies live on the primary `hireadda.in` domain
+ *      alongside `ha_access_token` / `ha_refresh_token`, not on the
+ *      `api.*` subdomain.
+ *   2. `ha_search_session` cookie — legacy / direct-callers fallback.
+ *      Read-only here; this controller never sets the cookie itself
+ *      (that would put session state on the API subdomain and split
+ *      the cookie family across two origins).
+ *
+ * Both sources are validated against a strict v4-UUID regex before
+ * use, so a hostile or truncated value can't poison a row.
  */
 import type { Request, Response, NextFunction } from 'express';
 import {
@@ -14,14 +31,28 @@ import { BadRequestError } from '../exceptions';
 import type { SearchHistoryType } from '@prisma/client';
 
 const SESSION_COOKIE = 'ha_search_session';
+const SESSION_HEADER = 'x-guest-session';
+// Strict v4-UUID match — defends against truncated, padded, or
+// injected sessionId values being trusted by the service layer.
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function readSessionId(req: Request): string | undefined {
+  const header = req.headers[SESSION_HEADER];
+  const headerVal = Array.isArray(header) ? header[0] : header;
+  if (typeof headerVal === 'string' && UUID_V4_REGEX.test(headerVal)) {
+    return headerVal;
+  }
+  const cookieVal = req.cookies?.[SESSION_COOKIE];
+  if (typeof cookieVal === 'string' && UUID_V4_REGEX.test(cookieVal)) {
+    return cookieVal;
+  }
+  return undefined;
+}
 
 function ownerFromReq(req: Request): { userId?: string; sessionId?: string } {
-  const userId = (req as any).user?.id as string | undefined;
+  const userId = (req as { user?: { id?: string } }).user?.id;
   if (userId) return { userId };
-  // Read guest session from cookie. The frontend sets this on first
-  // search; if absent, we still allow the request — service treats
-  // missing-owner as a no-op.
-  const sessionId = req.cookies?.[SESSION_COOKIE] as string | undefined;
+  const sessionId = readSessionId(req);
   return sessionId ? { sessionId } : {};
 }
 
@@ -149,12 +180,22 @@ export const aggregates = async (req: Request, res: Response, next: NextFunction
 /**
  * Called by the auth flow on successful login. Promotes guest history
  * (sessionId-bound) into the user's history (userId-bound) with dedup.
+ *
+ * The BFF route handler that fronts this endpoint is responsible for
+ * clearing the `ha_search_session` cookie on success. This controller
+ * just performs the data migration.
  */
 export const migrate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).user?.id as string | undefined;
-    const sessionId = String(req.body?.sessionId || req.cookies?.[SESSION_COOKIE] || '');
+    const userId = (req as { user?: { id?: string } }).user?.id;
     if (!userId) throw new BadRequestError('Auth required');
+
+    // Accept sessionId from body OR header OR cookie. All values are
+    // validated against the v4-UUID format so a hostile value can't
+    // run an arbitrary migration.
+    const bodyRaw = typeof req.body?.sessionId === 'string' ? req.body.sessionId : '';
+    const sessionId = bodyRaw && UUID_V4_REGEX.test(bodyRaw) ? bodyRaw : (readSessionId(req) ?? '');
+
     if (!sessionId) {
       res.status(200).json({ status: 'success', data: { migrated: 0, dedup: 0 } });
       return;

@@ -113,8 +113,16 @@ export default function FooterMegaSection() {
         {byDepartment.length > 0 && (
           <FooterSection heading="Jobs by Department" items={byDepartment} />
         )}
+        {/* Closing divider — separates the mega-section from the
+            "Company / Job Seekers / Employers / Support / Legal"
+            column block in Footer.tsx. Sits INSIDE the max-w-7xl
+            container with the same mx-{4|6|8} padding as the inter-
+            section hrs above, so it visually aligns with every other
+            footer divider (which are all border-t inside the same
+            constrained width). Without these margins the rule would
+            span the full viewport and look inconsistent. */}
+        <hr className="mx-4 border-[var(--border)] sm:mx-6 lg:mx-8" />
       </div>
-      <hr className="border-[var(--border)]" />
     </div>
   );
 }

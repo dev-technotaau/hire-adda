@@ -1,5 +1,5 @@
-import Image from 'next/image';
 import Tooltip from '@/components/ui/Tooltip';
+import Image from 'next/image';
 
 /**
  * Public-site footer "Payments accepted" row.
@@ -22,10 +22,10 @@ interface PaymentLogo {
   height: number;
   /**
    * Optional Tailwind height override for the rendered <Image>. Defaults
-   * to `h-6 w-auto` (24 px tall) which works for tight cropped logos
+   * to `h-6 w-auto` (20 px tall) which works for tight cropped logos
    * (visa, mastercard, etc.). Logos that ship with a lot of internal
    * whitespace in their viewBox (e.g. netbanking) need a taller render
-   * so the visible artwork fills the 44 px box like the others.
+   * so the visible artwork fills the 36 px box like the others.
    */
   imgClassName?: string;
 }
@@ -70,11 +70,9 @@ const GROUPS: PaymentGroup[] = [
         label: 'Net Banking — all major banks',
         width: 64,
         height: 32,
-        // Logo SVG has heavy interior whitespace — render at 36 px
-        // inside the 44 px tile so the visible artwork (the small
-        // "NET BANKING" wordmark + icon) matches the visual weight
-        // of the tight-cropped logos in the same row.
-        imgClassName: 'h-9 w-auto',
+        // Logo SVG has heavy interior whitespace — render larger so the
+        // visible artwork matches the other payment tiles visually.
+        imgClassName: 'h-7 w-auto',
       },
     ],
   },
@@ -130,7 +128,7 @@ function PaymentLogoCell({ item }: { item: PaymentLogo }) {
   return (
     <Tooltip content={item.label}>
       <span
-        className="inline-flex h-11 items-center justify-center rounded-md border border-[var(--border)] bg-white px-3 transition hover:border-[var(--text-muted)] hover:shadow-sm"
+        className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] bg-white px-2.5 transition hover:border-[var(--text-muted)] hover:shadow-sm"
         aria-label={item.label}
       >
         <Image
@@ -138,7 +136,7 @@ function PaymentLogoCell({ item }: { item: PaymentLogo }) {
           alt={item.label}
           width={item.width}
           height={item.height}
-          className={item.imgClassName ?? 'h-6 w-auto'}
+          className={item.imgClassName ?? 'h-5 w-auto'}
           unoptimized
         />
       </span>

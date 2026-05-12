@@ -185,19 +185,60 @@ export default function HeroJobSearchBar({ destination = '/jobs', className }: P
     router.push(qs ? `${destination}?${qs}` : destination);
   }
 
+  /**
+   * Hero-only behavior: typing or selecting a suggestion only POPULATES
+   * the keyword field — it does NOT navigate. The user must click the
+   * Search button (or use one of the other fields) before navigation
+   * happens. This is intentional so the user can flow keyword → location
+   * → experience → submit without being yanked to /jobs mid-flow.
+   *
+   * Other surfaces (e.g. PublicJobListingShell) don't have a separate
+   * Search button — they're built around an "Enter = search" model
+   * because they're already ON the listing page — so they keep their
+   * existing behavior and the shared SearchBar primitive is unchanged.
+   *
+   * Focus chaining (hero only): after a value is committed in field N,
+   * focus moves to field N+1 — flight-booking-style UX. Wrapped in a
+   * single rAF so the suggestion dropdown can close + React commits
+   * the same-tick setState before we move focus, otherwise the
+   * dropdown's own outside-click handler can steal focus back.
+   */
+  function focusNextHeroField(currentIdx: number) {
+    const el = containerRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      const cells = el.querySelectorAll<HTMLElement>('[data-hero-field]');
+      const next = cells[currentIdx + 1];
+      if (!next) return;
+      // First focusable inside the next cell — input for SearchBar /
+      // AutoSuggest (text typing), button for ExperienceSelect (its
+      // trigger that opens the dropdown on Enter/Space).
+      const focusable =
+        next.querySelector<HTMLElement>('input:not([type="hidden"])') ??
+        next.querySelector<HTMLElement>('button') ??
+        next;
+      focusable.focus();
+    });
+  }
+
   function handleKeywordSearch(q: string) {
     setKeyword(q);
-    submit({ keyword: q });
+    focusNextHeroField(0);
   }
 
   function handleKeywordSelect(item: AutocompleteResult) {
     setKeyword(item.text);
-    submit({ keyword: item.text });
+    focusNextHeroField(0);
   }
 
   function handleLocationChange(v: string | string[]) {
     const val = Array.isArray(v) ? (v[0] ?? '') : v;
     setLocation(val);
+    // Only advance when a real value was committed — clearing via
+    // backspace / X-button shouldn't yank focus to the experience
+    // picker. AutoSuggest's onChange fires on selection or Enter-with-
+    // allowCreate, not on every keystroke, so this is safe.
+    if (val) focusNextHeroField(1);
   }
 
   return (
@@ -205,8 +246,10 @@ export default function HeroJobSearchBar({ destination = '/jobs', className }: P
       ref={containerRef}
       className={`grid grid-cols-1 gap-2 rounded-2xl border border-[var(--border)] bg-white p-2 shadow-md sm:grid-cols-[1.5fr_1fr_auto_auto] sm:items-stretch sm:gap-2 lg:grid-cols-[2fr_1.4fr_auto_auto] ${className ?? ''}`}
     >
-      {/* Keyword — full-featured SearchBar (autosuggest, history, trending) */}
-      <div className="min-w-0">
+      {/* Keyword — full-featured SearchBar (autosuggest, history, trending).
+          `data-hero-field` marks this cell as field 0 in the focus chain;
+          on suggestion-select / Enter, focus advances to field 1 (location). */}
+      <div className="min-w-0" data-hero-field>
         <SearchBar
           placeholder="Job title, skills, or company"
           searchType="jobs"
@@ -218,8 +261,10 @@ export default function HeroJobSearchBar({ destination = '/jobs', className }: P
         />
       </div>
 
-      {/* Location — AutoSuggest with ES suggestions + popular + recent (auth) */}
-      <div className="min-w-0">
+      {/* Location — AutoSuggest with ES suggestions + popular + recent (auth).
+          Field 1 in the focus chain: receives focus after keyword commits;
+          on its own commit, focus advances to field 2 (experience). */}
+      <div className="min-w-0" data-hero-field>
         <AutoSuggest
           placeholder="City or remote"
           value={location}
@@ -235,13 +280,18 @@ export default function HeroJobSearchBar({ destination = '/jobs', className }: P
         />
       </div>
 
-      {/* Experience — bucket picker with custom range */}
-      <ExperienceSelect
-        value={experience}
-        onChange={setExperience}
-        size="lg"
-        className="w-full sm:w-44"
-      />
+      {/* Experience — bucket picker with custom range. Wrapped so the
+          focus-chain selector has a stable cell-level element to target;
+          the trigger button inside is what actually receives focus. This
+          is field 2 — the last auto-advance step. */}
+      <div data-hero-field>
+        <ExperienceSelect
+          value={experience}
+          onChange={setExperience}
+          size="lg"
+          className="w-full sm:w-44"
+        />
+      </div>
 
       {/* Submit */}
       <Button
