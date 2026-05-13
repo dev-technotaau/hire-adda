@@ -43,10 +43,11 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
-import CompanyDetailTabs, {
+import CompanyDetailTabs from '@/components/company-search/CompanyDetailTabs';
+import {
   deriveAvailableCompanyTabs,
   type CompanyTabKey,
-} from '@/components/company-search/CompanyDetailTabs';
+} from '@/components/company-search/company-tabs-helpers';
 import CompanyTabPanels from '@/components/company-search/CompanyTabPanels';
 import CompanyJobsTab from '@/components/company-search/CompanyJobsTab';
 import CompanyFollowButton from '@/components/company-search/CompanyFollowButton';

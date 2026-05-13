@@ -35,16 +35,18 @@ import {
   ListChecks,
   type LucideIcon,
 } from 'lucide-react';
+import {
+  deriveAvailableCompanyTabs as deriveTabsHelper,
+  type CompanyTabKey,
+} from './company-tabs-helpers';
 
-export type CompanyTabKey =
-  | 'overview'
-  | 'why-work-with-us'
-  | 'culture'
-  | 'benefits'
-  | 'people'
-  | 'gallery'
-  | 'hiring'
-  | 'jobs';
+// Re-export for back-compat: any consumer that historically imported
+// `CompanyTabKey` / `deriveAvailableCompanyTabs` from this client module
+// continues to compile via the re-exports. New server-component code
+// should import directly from `./company-tabs-helpers` to avoid the
+// "client function from server" error that Next.js 16 raises.
+export type { CompanyTabKey };
+export const deriveAvailableCompanyTabs = deriveTabsHelper;
 
 interface TabDef {
   key: CompanyTabKey;
@@ -145,65 +147,6 @@ export default function CompanyDetailTabs({ openJobsCount, available }: Props) {
   );
 }
 
-/**
- * Helper — given a company-shaped object, return the set of tab keys
- * that have content. Saves the host pages from re-implementing the
- * same has-data checks. Overview + Jobs are always included; the
- * other 6 tabs are only emitted when there's data to show.
- */
-export function deriveAvailableCompanyTabs(c: {
-  description?: string | null;
-  whyWorkForUs?: string | null;
-  missionStatement?: string | null;
-  visionStatement?: string | null;
-  coreValues?: string[] | null;
-  diversityStatement?: string | null;
-  companyCulture?: string | null;
-  csrInitiatives?: string | null;
-  benefits?: string[] | null;
-  structuredPerks?: unknown;
-  workplacePolicies?: unknown;
-  leadershipTeam?: unknown;
-  employeeTestimonials?: unknown;
-  officePhotos?: unknown;
-  companyVideoUrl?: string | null;
-  interviewProcess?: string | null;
-}): Set<CompanyTabKey> {
-  const set = new Set<CompanyTabKey>(['overview', 'jobs']);
-  if (c.whyWorkForUs?.trim()) set.add('why-work-with-us');
-  if (
-    c.missionStatement?.trim() ||
-    c.visionStatement?.trim() ||
-    (c.coreValues?.length ?? 0) > 0 ||
-    c.diversityStatement?.trim() ||
-    c.companyCulture?.trim() ||
-    c.csrInitiatives?.trim()
-  ) {
-    set.add('culture');
-  }
-  if (
-    (c.benefits?.length ?? 0) > 0 ||
-    (Array.isArray(c.structuredPerks) && c.structuredPerks.length > 0) ||
-    (Array.isArray(c.workplacePolicies) && c.workplacePolicies.length > 0) ||
-    (c.workplacePolicies &&
-      typeof c.workplacePolicies === 'object' &&
-      !Array.isArray(c.workplacePolicies) &&
-      Object.keys(c.workplacePolicies as Record<string, unknown>).length > 0)
-  ) {
-    set.add('benefits');
-  }
-  if (
-    (Array.isArray(c.leadershipTeam) && c.leadershipTeam.length > 0) ||
-    (Array.isArray(c.employeeTestimonials) && c.employeeTestimonials.length > 0)
-  ) {
-    set.add('people');
-  }
-  if (
-    (Array.isArray(c.officePhotos) && c.officePhotos.length > 0) ||
-    (typeof c.companyVideoUrl === 'string' && c.companyVideoUrl.trim())
-  ) {
-    set.add('gallery');
-  }
-  if (c.interviewProcess?.trim()) set.add('hiring');
-  return set;
-}
+// `deriveAvailableCompanyTabs` lives in `./company-tabs-helpers.ts`
+// (server-safe). It is re-exported from this file for back-compat —
+// see the import block at the top of the file.

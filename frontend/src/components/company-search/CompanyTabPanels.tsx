@@ -17,7 +17,7 @@
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import SocialLinksBento, { companySocialLinks } from '@/components/common/SocialLinksBento';
-import type { CompanyTabKey } from './CompanyDetailTabs';
+import type { CompanyTabKey } from './company-tabs-helpers';
 
 /**
  * Loose shape — each tab tolerates missing fields by checking presence

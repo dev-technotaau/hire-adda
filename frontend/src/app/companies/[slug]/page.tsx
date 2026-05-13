@@ -28,10 +28,15 @@ import {
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import CompanyDetailTabs, {
+import CompanyDetailTabs from '@/components/company-search/CompanyDetailTabs';
+// Helper + type live in a non-'use client' module so this server
+// component can import them directly. Importing from CompanyDetailTabs
+// (which carries `'use client'`) raises a "client function from server"
+// error at SSR time under Next.js 16.
+import {
   deriveAvailableCompanyTabs,
   type CompanyTabKey,
-} from '@/components/company-search/CompanyDetailTabs';
+} from '@/components/company-search/company-tabs-helpers';
 import CompanyJobsTab from '@/components/company-search/CompanyJobsTab';
 import CompanyFollowButton from '@/components/company-search/CompanyFollowButton';
 import SocialLinksBento, { companySocialLinks } from '@/components/common/SocialLinksBento';
