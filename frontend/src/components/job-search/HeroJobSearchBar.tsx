@@ -37,6 +37,7 @@ import {
   useClearFieldHistory,
 } from '@/hooks/use-field-history';
 import { useAuthStore } from '@/store/auth.store';
+import { searchHistoryService } from '@/services/search-history.service';
 import type { AutocompleteResult } from '@/types/search';
 
 interface Props {
@@ -181,6 +182,32 @@ export default function HeroJobSearchBar({ destination = '/jobs', className }: P
       sp.set('experienceMin', String(experience.min));
       if (experience.max !== undefined) sp.set('experienceMax', String(experience.max));
     }
+
+    // Record this search to history — ONLY when the user provided at
+    // least one meaningful input. The chip carousel reads from the
+    // same store, and we don't want empty / no-input submits (which
+    // map to "/jobs" with no params) to pollute it.
+    //
+    // This is the only place the homepage flow writes to history;
+    // the auto-record on /jobs filter changes was removed because
+    // curated-landing mounts + pill toggles produced a flood of
+    // noise chips that users hadn't actually searched for.
+    if (kw || loc || experience) {
+      const recordFilters: Record<string, unknown> = {};
+      if (experience) {
+        recordFilters.experienceMin = experience.min;
+        if (experience.max !== undefined) recordFilters.experienceMax = experience.max;
+      }
+      searchHistoryService
+        .record({
+          searchType: 'JOB',
+          filters: recordFilters,
+          query: kw || undefined,
+          location: loc || undefined,
+        })
+        .catch(() => {});
+    }
+
     const qs = sp.toString();
     router.push(qs ? `${destination}?${qs}` : destination);
   }

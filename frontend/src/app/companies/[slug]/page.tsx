@@ -39,7 +39,10 @@ import {
 } from '@/components/company-search/company-tabs-helpers';
 import CompanyJobsTab from '@/components/company-search/CompanyJobsTab';
 import CompanyFollowButton from '@/components/company-search/CompanyFollowButton';
-import SocialLinksBento, { companySocialLinks } from '@/components/common/SocialLinksBento';
+import SocialLinksBento from '@/components/common/SocialLinksBento';
+// Helper lives in a non-'use client' module so this server component
+// can call it during SSR without raising "client function from server".
+import { companySocialLinks } from '@/components/common/social-links-helpers';
 import ReviewsByJobProfilesPreview from '@/components/reviews/ReviewsByJobProfilesPreview';
 import WriteReviewBox from '@/components/reviews/WriteReviewBox';
 import RatingBadge from '@/components/reviews/RatingBadge';

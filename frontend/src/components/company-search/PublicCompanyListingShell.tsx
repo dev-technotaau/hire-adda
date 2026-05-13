@@ -41,6 +41,7 @@ import SidebarSignupCard from '@/components/job-search/SidebarSignupCard';
 import StickyMobileBottomCta from '@/components/job-search/StickyMobileBottomCta';
 import JobSearchHistoryChips from '@/components/job-search/JobSearchHistoryChips';
 import { publicCompaniesService } from '@/services/public-companies.service';
+import { searchHistoryService } from '@/services/search-history.service';
 import { useAuthStore } from '@/store/auth.store';
 import { useSuggestLocations } from '@/hooks/use-search';
 import { useStaticSuggestions } from '@/hooks/use-suggestions';
@@ -211,12 +212,36 @@ export default function PublicCompanyListingShell({
   );
 
   // ── Handlers ──
+  // Mirror of the job-shell behaviour: only an explicit SearchBar
+  // submit (Enter) or suggestion-pick writes to the global search-
+  // history store. Industry / city / verified-only toggles and other
+  // refinements stay local — they don't pollute the chip carousel.
+  function recordKeywordSearch(q: string, nextFilters: Record<string, string>) {
+    if (!q.trim()) return;
+    searchHistoryService
+      .record({
+        searchType: 'COMPANY',
+        filters: nextFilters,
+        query: q,
+        location: nextFilters.location,
+      })
+      .catch(() => {});
+  }
+
   function handleKeywordSearch(q: string) {
-    setFilters((prev) => ({ ...prev, q }));
+    setFilters((prev) => {
+      const next = { ...prev, q };
+      recordKeywordSearch(q, next);
+      return next;
+    });
     setPage(1);
   }
   function handleKeywordSelect(item: AutocompleteResult) {
-    setFilters((prev) => ({ ...prev, q: item.text }));
+    setFilters((prev) => {
+      const next = { ...prev, q: item.text };
+      recordKeywordSearch(item.text, next);
+      return next;
+    });
     setPage(1);
   }
   function handleLocationChange(v: string | string[]) {

@@ -208,20 +208,12 @@ export default function PublicJobListingShell({
     placeholderData: (prev) => prev,
   });
 
-  // Record search to history (best-effort, fire-and-forget).
-  useEffect(() => {
-    const hasAnyFilter = Object.values(filters).some((v) => !!v);
-    if (!hasAnyFilter || !data) return;
-    searchHistoryService
-      .record({
-        searchType: 'JOB',
-        filters,
-        query: filters.q,
-        location: filters.location,
-        resultsCount: data.pagination.total,
-      })
-      .catch(() => {});
-  }, [filters, data]);
+  // History recording moved into the keyword handlers (`handleKeywordSearch`
+  // + `handleKeywordSelect`) so the chip carousel only gathers searches
+  // the user explicitly performed via the SearchBar. The previous
+  // useEffect ran on every `filters` change, which meant curated landings
+  // (`/jobs/in/bangalore`, etc.) and any pill / dropdown toggle flooded
+  // the carousel with chips the user never actually "searched for".
 
   // ── Location autosuggest (mirrors candidate/jobs/page.tsx) ──
   const { data: locationSuggestions, isLoading: isLoadingLocations } =
@@ -288,13 +280,38 @@ export default function PublicJobListingShell({
   );
 
   // ── Handlers ──
+  // SearchBar Enter / suggestion-select are the two paths we treat as
+  // an "explicit search" — they trigger a write to the global search-
+  // history store. Filter pills, location autosuggest, exp slider,
+  // advanced-filters dropdowns, etc. only update local state — they
+  // don't pollute the history carousel.
+  function recordKeywordSearch(q: string, nextFilters: Record<string, string>) {
+    if (!q.trim()) return;
+    searchHistoryService
+      .record({
+        searchType: 'JOB',
+        filters: nextFilters,
+        query: q,
+        location: nextFilters.location,
+      })
+      .catch(() => {});
+  }
+
   function handleKeywordSearch(q: string) {
-    setFilters((prev) => ({ ...prev, q }));
+    setFilters((prev) => {
+      const next = { ...prev, q };
+      recordKeywordSearch(q, next);
+      return next;
+    });
     setPage(1);
   }
 
   function handleKeywordSelect(item: AutocompleteResult) {
-    setFilters((prev) => ({ ...prev, q: item.text }));
+    setFilters((prev) => {
+      const next = { ...prev, q: item.text };
+      recordKeywordSearch(item.text, next);
+      return next;
+    });
     setPage(1);
   }
 
