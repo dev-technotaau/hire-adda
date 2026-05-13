@@ -281,11 +281,16 @@ export default async function CompanyDetailPage({
                 )}
                 {/* AEO + Speakable: deterministic one-line answer to
                     "tell me about <company name>". Voice/AI engines
-                    read this region; reuses already-rendered fields. */}
-                <p
-                  data-speakable="true"
-                  className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]"
-                >
+                    read this region (the `[data-speakable]` selector
+                    is wired into the WebPage JSON-LD's
+                    `speakableCssSelectors`), so we keep the paragraph
+                    in the DOM for SEO + crawlers + AI answer engines.
+                    Visually hidden with `sr-only` because the same
+                    facts (verified, open-jobs count, industry, size,
+                    city, founded year, website) are already visible
+                    in the badge row + meta row above — leaving it
+                    on-screen reads as duplication. */}
+                <p data-speakable="true" className="sr-only">
                   {company.companyName}
                   {company.industry ? ` is a ${company.industry} company` : ' is a company'}
                   {company.companySize ? ` with ${company.companySize} employees` : ''}

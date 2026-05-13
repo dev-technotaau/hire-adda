@@ -103,14 +103,22 @@ export default function CompanyDetailTabs({ openJobsCount, available }: Props) {
     <nav
       aria-label="Company sections"
       role="tablist"
+      // No horizontal negative-margin bleed — the previous version pulled
+      // out to the section's gutter padding (-mx-4/-mx-6/-mx-8) which
+      // was correct when the tab strip lived next to a full-width header
+      // card. After the hero restructure the strip sits inside the
+      // content grid's left column, so the bleed visibly overflows the
+      // column on both sides. Keeping just border-b inside the column
+      // gives a clean column-aligned divider.
+      //
       // `overflow-y-hidden` suppresses the spurious vertical scrollbar
       // that otherwise appears next to the tab strip. `overflow-x-auto`
       // alone resolves `overflow-y` to `auto` per spec, and the tab
       // buttons' `-mb-px` negative margin overflows the content box by
       // 1px — enough to make the y-axis "scrollable". Clipping the
-      // 1px overhang is invisible (the parent's `border-b` still draws
-      // the divider line), but kills the scrollbar.
-      className="sticky top-0 z-10 -mx-4 mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-[var(--border)] bg-white/95 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+      // 1px overhang is invisible (the border-b still draws the divider
+      // line), but kills the scrollbar.
+      className="sticky top-0 z-10 mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-[var(--border)] bg-white/95 backdrop-blur"
     >
       {visibleTabs.map((t) => {
         const Icon = t.icon;

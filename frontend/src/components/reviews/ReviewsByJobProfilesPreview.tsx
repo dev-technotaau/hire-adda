@@ -73,6 +73,24 @@ export default function ReviewsByJobProfilesPreview({
           </p>
         </div>
       )}
+
+      {/* Persistent "View all reviews" CTA. The top-right inline link
+          is gated by totalReviews > 0 — but we want a path to the full
+          reviews page even in the empty state (so visitors can read the
+          page-level write-a-review form, see the filter chips, etc.).
+          Outline style differentiates it from the filled "Write a
+          review" button in the sibling WriteReviewBox CTA. Respects
+          `hideViewAll` so callers that want a totally muted variant
+          (e.g. preview embeds) can still suppress both affordances. */}
+      {!hideViewAll && (
+        <Link
+          href={reviewsHref}
+          className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-[var(--primary)]/30 px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/5 sm:w-auto"
+        >
+          View all reviews
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      )}
     </div>
   );
 }
