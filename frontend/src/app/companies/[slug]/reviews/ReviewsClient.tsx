@@ -221,7 +221,14 @@ export default function ReviewsClient({
             onClear={() => setSidebarFilters({})}
           />
         </aside>
-        <div className="space-y-4">
+        {/* `min-w-0` is mandatory on grid/flex items whose children have
+            their own horizontal scroll (here: the chip row inside
+            ReviewFiltersBar). Without it, the grid item's default
+            `min-width: auto` lets it grow to fit its content's intrinsic
+            width — pushing the right column past `1fr` and overflowing
+            the viewport. With it, the `overflow-x-auto` inside the chip
+            row actually scrolls. */}
+        <div className="min-w-0 space-y-4">
           <ReviewFiltersBar
             totalReviews={total}
             activeChip={chip}

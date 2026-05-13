@@ -103,7 +103,14 @@ export default function CompanyDetailTabs({ openJobsCount, available }: Props) {
     <nav
       aria-label="Company sections"
       role="tablist"
-      className="sticky top-0 z-10 -mx-4 mb-6 flex gap-1 overflow-x-auto border-b border-[var(--border)] bg-white/95 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+      // `overflow-y-hidden` suppresses the spurious vertical scrollbar
+      // that otherwise appears next to the tab strip. `overflow-x-auto`
+      // alone resolves `overflow-y` to `auto` per spec, and the tab
+      // buttons' `-mb-px` negative margin overflows the content box by
+      // 1px — enough to make the y-axis "scrollable". Clipping the
+      // 1px overhang is invisible (the parent's `border-b` still draws
+      // the divider line), but kills the scrollbar.
+      className="sticky top-0 z-10 -mx-4 mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-[var(--border)] bg-white/95 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
     >
       {visibleTabs.map((t) => {
         const Icon = t.icon;

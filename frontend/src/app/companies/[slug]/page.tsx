@@ -191,151 +191,194 @@ export default async function CompanyDetailPage({
           <span className="truncate text-[var(--text)]">{company.companyName}</span>
         </nav>
 
-        <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          {/* Cover image */}
-          {company.coverImage && (
-            <div className="relative mb-6 h-48 overflow-hidden rounded-2xl sm:h-64">
-              <Image
-                src={company.coverImage}
-                alt={`${company.companyName} cover`}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 1024px"
-                unoptimized={!isOptimisableImageHost(company.coverImage)}
-                className="object-cover"
-              />
+        {/* ━━━━━━━━━━━━━━━━━━━━ FULL-WIDTH HERO ━━━━━━━━━━━━━━━━━━━━
+            Cover band stretches edge-to-edge (breaks out of the
+            max-w-7xl content rail) and ALWAYS renders — when a company
+            hasn't uploaded a cover, we fall back to a soft branded
+            gradient + Building2 silhouette + helper text so the hero
+            never collapses. The header card sits below the cover
+            inside the constrained content rail with the logo pulled
+            up via negative margin to overlap the cover edge — same
+            pattern Naukri / LinkedIn / Glassdoor use for company /
+            profile hero shells. */}
+        <div className="relative h-44 w-full overflow-hidden sm:h-56 lg:h-72">
+          {company.coverImage ? (
+            <Image
+              src={company.coverImage}
+              alt={`${company.companyName} cover`}
+              fill
+              priority
+              sizes="100vw"
+              unoptimized={!isOptimisableImageHost(company.coverImage)}
+              className="object-cover"
+            />
+          ) : (
+            <div
+              aria-label="No cover image"
+              className="from-primary/15 via-accent/5 flex h-full w-full flex-col items-center justify-center bg-gradient-to-br to-[var(--bg-tertiary)]"
+            >
+              <Building2 className="h-12 w-12 text-[var(--text-muted)] opacity-30 sm:h-16 sm:w-16" />
+              <p className="mt-2 text-xs font-medium tracking-wider text-[var(--text-muted)] uppercase">
+                No cover image
+              </p>
             </div>
           )}
+        </div>
 
+        {/* Header card — full-width container, content constrained.
+            The negative top margin pulls the card up over the cover
+            band so the logo (which has a further negative margin)
+            can overlap the cover bottom edge. */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Card padding="lg" className="relative -mt-12 sm:-mt-14 lg:-mt-16">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
+              {/* Logo tile — large, white-ring "cutout" effect over the
+                  cover. Falls back to a Building2 icon when the company
+                  hasn't uploaded a logo. */}
+              <div className="-mt-16 shrink-0 sm:-mt-20 lg:-mt-24">
+                <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-white shadow-md ring-4 ring-white sm:h-32 sm:w-32 lg:h-36 lg:w-36">
+                  {company.logo ? (
+                    <Image
+                      src={company.logo}
+                      alt={company.companyName}
+                      width={128}
+                      height={128}
+                      sizes="(max-width: 640px) 96px, (max-width: 1024px) 112px, 128px"
+                      priority
+                      unoptimized={!isOptimisableImageHost(company.logo)}
+                      className="h-24 w-24 rounded-xl object-contain sm:h-28 sm:w-28 lg:h-32 lg:w-32"
+                    />
+                  ) : (
+                    <Building2 className="h-12 w-12 text-[var(--text-muted)] sm:h-14 sm:w-14 lg:h-16 lg:w-16" />
+                  )}
+                </div>
+              </div>
+
+              {/* Middle column — name, badges, tagline, speakable AEO
+                  paragraph, meta row, type badges. */}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <h1 className="text-2xl font-bold tracking-tight text-[var(--text)] sm:text-3xl lg:text-4xl">
+                    {company.companyName}
+                  </h1>
+                  {company.isVerified && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--success-light)] px-2 py-0.5 text-[11px] font-semibold text-[var(--success-dark)]">
+                      <ShieldCheck className="h-3 w-3" />
+                      Verified
+                    </span>
+                  )}
+                  <RatingBadge
+                    rating={averageRating}
+                    count={totalReviews}
+                    size="sm"
+                    href={`/companies/${encodeURIComponent(company.slug ?? company.id)}/reviews`}
+                  />
+                </div>
+                {company.tagline && (
+                  <p className="mt-2 text-sm text-[var(--text-secondary)] sm:text-base">
+                    {company.tagline}
+                  </p>
+                )}
+                {/* AEO + Speakable: deterministic one-line answer to
+                    "tell me about <company name>". Voice/AI engines
+                    read this region; reuses already-rendered fields. */}
+                <p
+                  data-speakable="true"
+                  className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]"
+                >
+                  {company.companyName}
+                  {company.industry ? ` is a ${company.industry} company` : ' is a company'}
+                  {company.companySize ? ` with ${company.companySize} employees` : ''}
+                  {company.city || company.headquarters
+                    ? ` based in ${company.city ?? company.headquarters}`
+                    : ''}
+                  {company.foundedYear ? `, founded in ${company.foundedYear}` : ''}
+                  {`. ${openJobsCount > 0 ? `${openJobsCount} open jobs` : 'No open jobs right now'} on Hire Adda — `}
+                  {company.isVerified ? 'GST-verified employer.' : 'verified profile.'}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
+                  {company.industry && (
+                    <span className="flex items-center gap-1">
+                      <Briefcase className="h-3.5 w-3.5" /> {company.industry}
+                    </span>
+                  )}
+                  {company.companySize && (
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5" /> {company.companySize}
+                    </span>
+                  )}
+                  {(company.city || company.headquarters) && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {company.city ?? company.headquarters}
+                    </span>
+                  )}
+                  {company.foundedYear && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" /> Founded {company.foundedYear}
+                    </span>
+                  )}
+                  {company.website && (
+                    <a
+                      href={company.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary flex items-center gap-1 hover:underline"
+                    >
+                      <Globe className="h-3.5 w-3.5" />
+                      Website
+                    </a>
+                  )}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {company.companyType && (
+                    <Badge variant="info" size="sm">
+                      {company.companyType}
+                    </Badge>
+                  )}
+                  {openJobsCount > 0 && (
+                    <Badge variant="success" size="sm">
+                      {openJobsCount} open jobs
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Right column — Follow / Following toggle + follower
+                  count. `isFollowing` is intentionally omitted from
+                  initialStatus — the public endpoint response is
+                  shared across users (auth-fragmented but not per-
+                  user) so per-user follow state must come from the
+                  dedicated /follow-status endpoint that the button
+                  calls on mount (~50ms). followersCount is shared/
+                  public, safe to seed from the SSR fetch. On mobile
+                  the flex parent stacks, so this lands below the
+                  middle column naturally — full-width inside the
+                  card. */}
+              <div className="shrink-0 sm:self-start">
+                <CompanyFollowButton
+                  idOrSlug={company.slug ?? company.id}
+                  companyOwnerUserId={(company as { userId?: string | null }).userId ?? null}
+                  initialStatus={{
+                    isFollowing: false,
+                    followersCount: Number(
+                      (data as { followersCount?: number }).followersCount ?? 0,
+                    ),
+                  }}
+                />
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* ━━━━━━━━━━━━━━━━━━━━ MAIN CONTENT GRID ━━━━━━━━━━━━━━━━━━━━
+            Tabs + tab panels (left) + persistent sidebar (right).
+            Starts BELOW the full-width hero card, so the aside no
+            longer runs alongside the company header — it docks below
+            it like the user-requested Naukri-style hero pattern. */}
+        <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
             <div className="min-w-0 space-y-6">
-              <Card padding="lg">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[var(--bg-tertiary)]">
-                    {company.logo ? (
-                      <Image
-                        src={company.logo}
-                        alt={company.companyName}
-                        width={64}
-                        height={64}
-                        sizes="64px"
-                        priority
-                        unoptimized={!isOptimisableImageHost(company.logo)}
-                        className="h-16 w-16 rounded-xl object-contain"
-                      />
-                    ) : (
-                      <Building2 className="h-10 w-10 text-[var(--text-muted)]" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <h1 className="text-2xl font-bold text-[var(--text)] sm:text-3xl">
-                      {company.companyName}
-                      {company.isVerified && (
-                        <span className="ml-2 inline-flex items-center gap-0.5 rounded-full bg-[var(--success-light)] px-1.5 py-0.5 align-middle text-[10px] font-semibold text-[var(--success-dark)]">
-                          <ShieldCheck className="h-3 w-3" />
-                          Verified
-                        </span>
-                      )}
-                      <span className="ml-2 inline-flex align-middle">
-                        <RatingBadge
-                          rating={averageRating}
-                          count={totalReviews}
-                          size="sm"
-                          href={`/companies/${encodeURIComponent(company.slug ?? company.id)}/reviews`}
-                        />
-                      </span>
-                    </h1>
-                    {company.tagline && (
-                      <p className="mt-1 text-sm text-[var(--text-secondary)]">{company.tagline}</p>
-                    )}
-                    {/* AEO + Speakable: deterministic one-line answer to
-                        "tell me about <company name>". Voice/AI engines
-                        read this region; reuses already-rendered fields. */}
-                    <p
-                      data-speakable="true"
-                      className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]"
-                    >
-                      {company.companyName}
-                      {company.industry ? ` is a ${company.industry} company` : ' is a company'}
-                      {company.companySize ? ` with ${company.companySize} employees` : ''}
-                      {company.city || company.headquarters
-                        ? ` based in ${company.city ?? company.headquarters}`
-                        : ''}
-                      {company.foundedYear ? `, founded in ${company.foundedYear}` : ''}
-                      {`. ${openJobsCount > 0 ? `${openJobsCount} open jobs` : 'No open jobs right now'} on Hire Adda — `}
-                      {company.isVerified ? 'GST-verified employer.' : 'verified profile.'}
-                    </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
-                      {company.industry && (
-                        <span className="flex items-center gap-1">
-                          <Briefcase className="h-3.5 w-3.5" /> {company.industry}
-                        </span>
-                      )}
-                      {company.companySize && (
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" /> {company.companySize}
-                        </span>
-                      )}
-                      {(company.city || company.headquarters) && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {company.city ?? company.headquarters}
-                        </span>
-                      )}
-                      {company.foundedYear && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5" /> Founded {company.foundedYear}
-                        </span>
-                      )}
-                      {company.website && (
-                        <a
-                          href={company.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary flex items-center gap-1 hover:underline"
-                        >
-                          <Globe className="h-3.5 w-3.5" />
-                          Website
-                        </a>
-                      )}
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {company.companyType && (
-                        <Badge variant="info" size="sm">
-                          {company.companyType}
-                        </Badge>
-                      )}
-                      {openJobsCount > 0 && (
-                        <Badge variant="success" size="sm">
-                          {openJobsCount} open jobs
-                        </Badge>
-                      )}
-                    </div>
-                    {/* Follow / Following toggle + follower count.
-                        `isFollowing` is intentionally omitted from
-                        initialStatus — the public endpoint response
-                        is shared across users (auth-fragmented but
-                        not per-user) so per-user follow state must
-                        come from the dedicated /follow-status
-                        endpoint that the button calls on mount
-                        (~50ms). followersCount is shared/public, safe
-                        to seed from the SSR fetch. */}
-                    <div className="mt-4">
-                      <CompanyFollowButton
-                        idOrSlug={company.slug ?? company.id}
-                        companyOwnerUserId={(company as { userId?: string | null }).userId ?? null}
-                        initialStatus={{
-                          isFollowing: false,
-                          followersCount: Number(
-                            (data as { followersCount?: number }).followersCount ?? 0,
-                          ),
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
               <CompanyDetailTabs openJobsCount={openJobsCount} available={availableTabs} />
 
               {/* ════════════════ Overview tab ════════════════ */}
@@ -395,16 +438,10 @@ export default async function CompanyDetailPage({
                     <SocialLinksBento heading="Connect with us" links={socialLinks} />
                   )}
 
-                  {/* ════════════════ Reviews preview ════════════════ */}
-                  <ReviewsByJobProfilesPreview
-                    companySlug={company.slug ?? company.id}
-                    topJobProfiles={topJobProfiles}
-                    totalReviews={totalReviews}
-                  />
-                  <WriteReviewBox
-                    companySlug={company.slug ?? company.id}
-                    companyName={company.companyName}
-                  />
+                  {/* ReviewsByJobProfilesPreview + WriteReviewBox moved
+                      into the right-rail <aside> below "Quick facts"
+                      so the review CTAs are persistently visible across
+                      every tab, not just Overview. */}
 
                   {jobs.length > 0 && (
                     <Card padding="lg">
@@ -779,6 +816,21 @@ export default async function CompanyDetailPage({
                   )}
                 </dl>
               </Card>
+
+              {/* Reviews-by-job-profiles preview + write-a-review CTA
+                  live here (sidebar) instead of in the Overview tab body
+                  so they stay visible across every tab. The right rail
+                  is the natural home for review-driven CTAs since it's
+                  also where Quick facts surface the rating context. */}
+              <ReviewsByJobProfilesPreview
+                companySlug={company.slug ?? company.id}
+                topJobProfiles={topJobProfiles}
+                totalReviews={totalReviews}
+              />
+              <WriteReviewBox
+                companySlug={company.slug ?? company.id}
+                companyName={company.companyName}
+              />
             </aside>
           </div>
         </section>
