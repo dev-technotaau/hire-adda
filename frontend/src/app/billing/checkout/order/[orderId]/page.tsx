@@ -18,6 +18,7 @@ import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import { orderService } from '@/services/order.service';
 import { openRazorpayCheckout } from '@/lib/razorpay-checkout';
+import { usePricingHref } from '@/lib/pricing-href';
 import { formatPaise } from '@/types/billing';
 import type { OrderDetail, OrderStatus } from '@/types/order';
 import type { ApiError } from '@/types/api';
@@ -50,6 +51,7 @@ export default function ResumeCheckoutPage() {
   const params = useParams();
   const router = useRouter();
   const orderId = String(params?.orderId ?? '');
+  const pricingHref = usePricingHref();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -200,7 +202,7 @@ export default function ResumeCheckoutPage() {
             ) : phase === 'expired' ||
               order.status === 'CANCELLED' ||
               order.status === 'EXPIRED' ? (
-              <Link href="/pricing">
+              <Link href={pricingHref}>
                 <Button variant="primary">Start fresh checkout →</Button>
               </Link>
             ) : (

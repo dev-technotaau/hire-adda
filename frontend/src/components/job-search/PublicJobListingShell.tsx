@@ -458,7 +458,10 @@ export default function PublicJobListingShell({
                   fullWidth
                 />
                 <div className="absolute top-1/2 right-2 -translate-y-1/2">
-                  <KeywordSyntaxHelp />
+                  {/* Hidden while the keyword field has text — otherwise
+                      the `?` icon overlaps the SearchBar's own clear (×)
+                      button, which lives in the same right-edge slot. */}
+                  <KeywordSyntaxHelp hidden={Boolean(filters.q?.trim())} />
                 </div>
               </div>
               <ExperienceSelect

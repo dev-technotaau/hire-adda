@@ -606,7 +606,7 @@ export default function EmployerOnboardingPage() {
         // Send the new employer to the pricing page so they can pick a paid
         // plan immediately, or fall through to the dashboard via the
         // "Continue with Free Plan" CTA (EMP_FREE was auto-granted at signup).
-        router.push('/pricing?from=onboarding');
+        router.push('/pricing/employer?from=onboarding');
       } catch (err) {
         const apiErr = err as unknown as ApiError;
         showToast.error(apiErr?.message || 'Failed to save profile. Please try again.');

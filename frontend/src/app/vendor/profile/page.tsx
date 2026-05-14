@@ -479,7 +479,7 @@ function PublishStep({
           <Switch checked={isPublic} onChange={(e) => onTogglePublic(e.target.checked)} />
         </div>
         {!isPublic && (
-          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-stone-900">
             Your profile is currently <strong>hidden</strong>. Toggle the switch above (or click
             &quot;Publish &amp; finish&quot;) to go live.
           </div>

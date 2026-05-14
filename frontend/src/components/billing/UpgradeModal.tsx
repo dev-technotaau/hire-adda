@@ -6,6 +6,7 @@ import { Crown, Check, Zap, ArrowRight, Sparkles, X } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { ROUTES } from '@/constants/routes';
+import { usePricingHref } from '@/lib/pricing-href';
 
 /**
  * Feature → recommended plan + benefit copy. Drives the upgrade modal so
@@ -397,25 +398,50 @@ function UpgradeModalContent({
   // CV Enterprise → quote flow, others → checkout
   const checkoutHref =
     planCode === 'CVDB_ENTERPRISE' ? ROUTES.BILLING.QUOTE : ROUTES.BILLING.CHECKOUT(planCode);
+  // "View all plans" → role-scoped pricing surface
+  // (/pricing/candidate or /pricing/employer based on the logged-in
+  // user's role; vendors / unauthenticated fall back to /pricing).
+  const allPlansHref = usePricingHref();
 
   return (
-    <div className="overflow-hidden">
-      {/* Hero with gradient backdrop */}
-      <div className="relative -mx-6 -mt-6 bg-gradient-to-br from-amber-100 via-orange-50 to-rose-50 px-6 pt-7 pb-6 dark:from-amber-900/30 dark:via-orange-900/20 dark:to-rose-900/20">
+    // No `overflow-hidden` on the root — the Modal shell already
+    // clips via its rounded corners + `overflow-y-auto`, and an
+    // extra clip here was masking the gradient/strip negative
+    // margins when they overshot the Modal's actual padding.
+    <div>
+      {/* Hero with gradient backdrop.
+          Modal content area is `px-6 py-4`, so the bleed margins
+          here MUST be `-mx-6 -mt-4` (not `-mt-6`) — otherwise the
+          gradient pulls 8 px past the modal's top and the rounded
+          corner clip visually crops the crown / title row. */}
+      <div className="relative -mx-6 -mt-4 bg-gradient-to-br from-amber-100 via-orange-50 to-rose-50 px-6 py-7 dark:from-amber-900/30 dark:via-orange-900/20 dark:to-rose-900/20">
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-3 right-3 rounded-full p-1.5 text-[var(--text-muted)] transition-colors hover:bg-white/40 hover:text-[var(--text)]"
+          className="absolute top-3 right-3 rounded-full p-1.5 text-[var(--text-muted)] transition-colors hover:bg-white/50 hover:text-[var(--text)]"
         >
           <X className="h-4 w-4" />
         </button>
 
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md">
-          <Crown className="h-6 w-6" />
+        {/* Crown + title on one row instead of stacked — fills the
+            hero block visually and avoids the previous "small icon
+            floating in the top-left, title hanging below" look. The
+            close button has `pr-8` reserve so it never collides
+            with long titles. */}
+        <div className="flex items-start gap-4 pr-8">
+          <div className="flex h-14 w-14 flex-none items-center justify-center rounded-xl bg-amber-500 text-white shadow-md">
+            <Crown className="h-7 w-7" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xl font-bold tracking-tight text-[var(--text)] sm:text-2xl">
+              {title}
+            </h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">
+              {subtitle}
+            </p>
+          </div>
         </div>
-        <h2 className="mt-3 text-2xl font-bold text-[var(--text)]">{title}</h2>
-        <p className="mt-1.5 text-sm text-[var(--text-secondary)]">{subtitle}</p>
       </div>
 
       {/* Benefits */}
@@ -435,16 +461,25 @@ function UpgradeModalContent({
         </ul>
       </div>
 
-      {/* Pricing strip + CTAs */}
-      <div className="-mx-6 mt-1 -mb-6 border-t border-[var(--border)] bg-[var(--bg-secondary)] px-6 py-4">
+      {/* Pricing strip + CTAs.
+          Same margin-math caveat as the hero — Modal's vertical
+          padding is `py-4`, so the bleed here is `-mb-4` (was
+          `-mb-6` which over-shot and visually clipped the
+          "Tax inclusive · Cancel anytime" line at the modal's
+          rounded bottom). */}
+      <div className="-mx-6 -mb-4 border-t border-[var(--border)] bg-[var(--bg-secondary)] px-6 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs tracking-wider text-[var(--text-muted)] uppercase">{planName}</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+              {planName}
+            </p>
             <p className="mt-0.5 text-lg font-bold text-[var(--text)]">{priceLabel}</p>
-            <p className="text-[10.5px] text-[var(--text-muted)]">Tax inclusive · Cancel anytime</p>
+            <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+              Tax inclusive · Cancel anytime
+            </p>
           </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
-            <Link href="/pricing" onClick={onClose}>
+            <Link href={allPlansHref} onClick={onClose}>
               <Button variant="ghost" size="md">
                 View all plans
               </Button>

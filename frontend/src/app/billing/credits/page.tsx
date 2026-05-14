@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import { useEntitlements } from '@/hooks/use-entitlements';
+import { usePricingHref } from '@/lib/pricing-href';
 import type { ResolvedEntitlement, ResourceUnit } from '@/types/entitlement';
 
 const UNIT_LABELS: Partial<Record<ResourceUnit, string>> = {
@@ -24,6 +25,7 @@ const UNIT_LABELS: Partial<Record<ResourceUnit, string>> = {
 
 export default function CreditsDashboardPage() {
   const { snapshot, isLoading, isError, error, refetch } = useEntitlements();
+  const pricingHref = usePricingHref();
   // Stable "now" timestamp for the render — keeps `EntitlementCard` pure.
   // Lazy-init once; entitlement-changed Socket events re-fetch and the page
   // re-renders with a fresh snapshot, but the day-count is acceptable to
@@ -81,7 +83,7 @@ export default function CreditsDashboardPage() {
             <p className="mt-1 text-sm text-[var(--text-muted)]">
               Pick a plan to start posting jobs, unlocking CVs, and accessing premium features.
             </p>
-            <Link href="/pricing" className="mt-4 inline-block">
+            <Link href={pricingHref} className="mt-4 inline-block">
               <Button variant="primary">View plans</Button>
             </Link>
           </Card>
@@ -160,6 +162,7 @@ export default function CreditsDashboardPage() {
 }
 
 function EntitlementCard({ ent, now }: { ent: ResolvedEntitlement; now: number }) {
+  const pricingHref = usePricingHref();
   const expiry = new Date(ent.validUntil);
   const daysLeft = Math.max(0, Math.ceil((expiry.getTime() - now) / 86_400_000));
   const expiringSoon = daysLeft <= 7;
@@ -247,7 +250,7 @@ function EntitlementCard({ ent, now }: { ent: ResolvedEntitlement; now: number }
       )}
 
       <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--border)] pt-3 text-sm">
-        <Link href="/pricing">
+        <Link href={pricingHref}>
           <Button variant="outline" size="sm">
             Upgrade
           </Button>

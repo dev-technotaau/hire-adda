@@ -13,6 +13,7 @@ import { planService } from '@/services/plan.service';
 import { orderService } from '@/services/order.service';
 import { subscriptionService } from '@/services/subscription.service';
 import { type ValidatedCouponDTO } from '@/services/coupon.service';
+import { usePricingHref } from '@/lib/pricing-href';
 import CouponInput from '@/components/billing/CouponInput';
 import { openRazorpayCheckout, type RazorpayCheckoutFailure } from '@/lib/razorpay-checkout';
 import { formatPaise, type Plan } from '@/types/billing';
@@ -32,6 +33,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { user } = useAuth();
   const code = decodeURIComponent(String(params?.code ?? ''));
+  const pricingHref = usePricingHref();
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [phase, setPhase] = useState<CheckoutPhase>('loading');
@@ -179,7 +181,7 @@ export default function CheckoutPage() {
           <Card padding="lg">
             <h1 className="text-xl font-semibold text-[var(--text)]">Plan unavailable</h1>
             <p className="mt-2 text-[var(--text-muted)]">{error ?? 'Plan not found.'}</p>
-            <Link href="/pricing" className="text-primary mt-6 inline-flex items-center gap-2">
+            <Link href={pricingHref} className="text-primary mt-6 inline-flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" /> Back to pricing
             </Link>
           </Card>
@@ -195,7 +197,10 @@ export default function CheckoutPage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-3xl px-4 py-12">
-        <Link href="/pricing" className="text-primary mb-6 inline-flex items-center gap-2 text-sm">
+        <Link
+          href={pricingHref}
+          className="text-primary mb-6 inline-flex items-center gap-2 text-sm"
+        >
           <ArrowLeft className="h-4 w-4" /> Back to pricing
         </Link>
 

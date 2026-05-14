@@ -18,11 +18,13 @@ import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import BillingAddressesSection from '@/components/billing/BillingAddressesSection';
 import { paymentMethodService } from '@/services/payment-method.service';
+import { usePricingHref } from '@/lib/pricing-href';
 import type { PaymentMethodToken } from '@/types/payment-method';
 
 export default function PaymentMethodsPage() {
   const [items, setItems] = useState<PaymentMethodToken[]>([]);
   const [loading, setLoading] = useState(true);
+  const pricingHref = usePricingHref();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -85,7 +87,7 @@ export default function PaymentMethodsPage() {
               Saved cards, UPI handles and net-banking mandates used for auto-renew.
             </p>
           </div>
-          <Link href="/pricing">
+          <Link href={pricingHref}>
             <Button variant="outline">
               <Plus className="mr-2 h-4 w-4" /> Add via new purchase
             </Button>

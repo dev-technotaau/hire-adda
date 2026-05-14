@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import Spinner from '@/components/ui/Spinner';
 import Button from '@/components/ui/Button';
 import { orderService } from '@/services/order.service';
+import { usePricingHref } from '@/lib/pricing-href';
 import { formatPaise } from '@/types/billing';
 import type { OrderListItem, OrdersListResponse, OrderStatus } from '@/types/order';
 
@@ -28,6 +29,7 @@ const STATUS_PILL: Record<OrderStatus, string> = {
 export default function OrderHistoryPage() {
   const [orders, setOrders] = useState<OrdersListResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const pricingHref = usePricingHref();
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
@@ -59,7 +61,7 @@ export default function OrderHistoryPage() {
               Every plan purchase, with payment status and invoices.
             </p>
           </div>
-          <Link href="/pricing">
+          <Link href={pricingHref}>
             <Button variant="outline">Browse plans</Button>
           </Link>
         </div>
@@ -81,7 +83,7 @@ export default function OrderHistoryPage() {
             <Receipt className="text-primary mx-auto h-10 w-10" />
             <h2 className="mt-3 text-lg font-semibold text-[var(--text)]">No orders yet</h2>
             <p className="mt-1 text-sm text-[var(--text-muted)]">Pick a plan to get started.</p>
-            <Link href="/pricing" className="mt-4 inline-block">
+            <Link href={pricingHref} className="mt-4 inline-block">
               <Button variant="primary">View plans</Button>
             </Link>
           </Card>

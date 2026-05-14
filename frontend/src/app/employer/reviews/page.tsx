@@ -226,7 +226,7 @@ function ReportReviewModal({ reviewId, onClose }: { reviewId: string; onClose: (
   return (
     <Modal isOpen onClose={onClose} title="Report review" size="md">
       <div className="space-y-4">
-        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700/40 dark:bg-amber-900/10 dark:text-amber-200">
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-stone-900 dark:border-amber-700/40 dark:bg-amber-900/10 dark:text-amber-200">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
             Reports are reviewed by Hire Adda&apos;s moderation team. Reviews removed without cause

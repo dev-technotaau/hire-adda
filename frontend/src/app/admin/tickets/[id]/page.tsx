@@ -399,7 +399,7 @@ export default function AdminTicketDetailPage() {
                   />
                 </div>
                 {isInternal && (
-                  <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-stone-900">
                     <Lock className="h-3.5 w-3.5 shrink-0" />
                     This note will only be visible to admin staff.
                   </div>

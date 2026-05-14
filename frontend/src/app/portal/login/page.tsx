@@ -421,7 +421,7 @@ export default function AdminLoginPage() {
                           </p>
                         </div>
 
-                        <p className="mb-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+                        <p className="mb-4 rounded-lg bg-amber-50 p-3 text-xs text-stone-900">
                           This will <strong>disable two-factor authentication</strong> on your
                           account. You can re-enable it after signing in.
                         </p>

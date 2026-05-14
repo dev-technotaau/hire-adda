@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import { subscriptionService } from '@/services/subscription.service';
+import { usePricingHref } from '@/lib/pricing-href';
 import { formatPaise } from '@/types/billing';
 import type { SubscriptionListItem, SubscriptionStatus } from '@/types/subscription';
 
@@ -27,6 +28,7 @@ export default function SubscriptionsPage() {
   const [items, setItems] = useState<SubscriptionListItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pricingHref = usePricingHref();
 
   useEffect(() => {
     let active = true;
@@ -56,7 +58,7 @@ export default function SubscriptionsPage() {
               Manage auto-renewing plans, mandates and billing cycles.
             </p>
           </div>
-          <Link href="/pricing">
+          <Link href={pricingHref}>
             <Button variant="outline">Browse plans</Button>
           </Link>
         </div>

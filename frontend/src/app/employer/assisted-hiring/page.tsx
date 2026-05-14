@@ -201,7 +201,7 @@ export default function EmployerAssistedHiringPage() {
               title="No active assisted hiring request"
               description="Buy the Assisted Hiring plan and our team will reach out to scope your role and source candidates for you."
               action={
-                <Link href={ROUTES.BILLING.PRICING}>
+                <Link href={ROUTES.BILLING.PRICING_EMPLOYER}>
                   <Button variant="primary">View plans</Button>
                 </Link>
               }

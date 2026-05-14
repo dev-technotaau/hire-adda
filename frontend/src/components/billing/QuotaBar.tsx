@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEntitlements } from '@/hooks/use-entitlements';
+import { usePricingHref } from '@/lib/pricing-href';
 import type { ResourceUnit } from '@/types/entitlement';
 
 interface Props {
@@ -23,12 +24,18 @@ export default function QuotaBar({
   className,
 }: Props) {
   const { snapshot: snap, isLoading } = useEntitlements();
+  const pricingHref = usePricingHref();
   if (isLoading || !snap) return null;
   if (!snap.hasAnyActive) {
     return (
       <Link
-        href="/pricing"
-        className={`flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300 ${className ?? ''}`}
+        href={pricingHref}
+        // Background bumped to amber-100 (was amber-50) + text to
+        // amber-950 (was amber-800) + ring-1 amber-300 for definition.
+        // Previous combo was WCAG-AA on paper but visually faded into
+        // the warm-toned dashboard chrome — the pill kept blending in.
+        // Dark mode classes unchanged.
+        className={`inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-950 ring-1 ring-amber-300 transition-colors ring-inset hover:bg-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:ring-amber-700/40 ${className ?? ''}`}
       >
         No active plan — Upgrade →
       </Link>

@@ -46,6 +46,24 @@ async function proxyRequest(
   const fingerprint = request.headers.get('x-device-fingerprint');
   if (fingerprint) headers.set('x-device-fingerprint', fingerprint);
 
+  // App-specific custom headers the backend's middleware reads.
+  // Without explicit forwarding the proxy silently drops them and the
+  // backend rejects with "Missing/invalid X" errors that look like
+  // client-side bugs:
+  //   - Idempotency-Key — required by /billing/orders + /billing/quotes
+  //     (backend `requireIdempotencyKey()` middleware → 400 IDEMPOTENCY_KEY_REQUIRED)
+  //   - cf-turnstile-response — Turnstile CAPTCHA token used by
+  //     /billing/quotes etc. (backend `verifyTurnstile` middleware)
+  //   - x-csrf-token — backend CSRF middleware (currently bypassed
+  //     for proxy calls via x-bff-secret, but forwarded for
+  //     defence-in-depth if the bypass is ever scoped down)
+  const idempotencyKey = request.headers.get('idempotency-key');
+  if (idempotencyKey) headers.set('Idempotency-Key', idempotencyKey);
+  const turnstile = request.headers.get('cf-turnstile-response');
+  if (turnstile) headers.set('cf-turnstile-response', turnstile);
+  const csrfToken = request.headers.get('x-csrf-token');
+  if (csrfToken) headers.set('x-csrf-token', csrfToken);
+
   // Get request body
   let body: BodyInit | undefined;
   if (request.method !== 'GET' && request.method !== 'HEAD') {

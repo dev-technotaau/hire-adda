@@ -23,8 +23,22 @@ const EXAMPLES: Array<{ syntax: string; description: string }> = [
   { syntax: 'skill:react', description: 'restrict to a specific field' },
 ];
 
-export default function KeywordSyntaxHelp() {
+interface Props {
+  /**
+   * Hide the help icon entirely (returns null). Used by callers that
+   * render this popover absolutely-positioned on top of the SearchBar
+   * input — when the user has typed text, SearchBar shows its own
+   * clear (×) button in the same slot, and both icons overlap.
+   * Toggling `hidden` based on the keyword field's empty state makes
+   * the help icon yield to the clear button without changing layout.
+   */
+  hidden?: boolean;
+}
+
+export default function KeywordSyntaxHelp({ hidden = false }: Props = {}) {
   const [open, setOpen] = useState(false);
+
+  if (hidden) return null;
 
   return (
     <div className="relative inline-block">

@@ -359,7 +359,7 @@ export default function CandidateListsPage() {
                                     )}
                                   </div>
                                   {member.notes && (
-                                    <div className="mt-2 rounded bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
+                                    <div className="mt-2 rounded bg-amber-50 px-2 py-1.5 text-xs text-stone-900">
                                       <span className="font-medium">Note:</span> {member.notes}
                                     </div>
                                   )}

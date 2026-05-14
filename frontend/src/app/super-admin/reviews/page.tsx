@@ -295,7 +295,7 @@ function ModerateModal({
   return (
     <Modal isOpen onClose={onClose} title={`${target.action} review`} size="md">
       <div className="space-y-4">
-        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700/40 dark:bg-amber-900/10 dark:text-amber-200">
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-stone-900 dark:border-amber-700/40 dark:bg-amber-900/10 dark:text-amber-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             This action will be audit-logged with your user id. The review&apos;s company aggregate

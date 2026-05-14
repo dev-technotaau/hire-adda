@@ -440,10 +440,17 @@ export default function CandidateDashboard() {
               <Crown className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-amber-900 dark:text-amber-100">
+              {/* Text colours bumped to near-black neutral (stone-900 /
+                  stone-700) in light mode — `text-amber-900/800` was
+                  WCAG-AA on paper but visually washed out against the
+                  warm amber→rose gradient (warm-on-warm shares luminance,
+                  so the text reads soft even when the contrast ratio is
+                  fine). Dark mode keeps the warm amber-100/200 since
+                  dark backgrounds invert the perceived contrast direction. */}
+              <p className="font-semibold text-stone-900 dark:text-amber-100">
                 Unlock Candidate Premium — ₹199/month
               </p>
-              <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-200/80">
+              <p className="mt-0.5 text-sm text-stone-700 dark:text-amber-200/80">
                 Verified Badge · AI Resume Premium (5 templates) · 7-day Profile Boost · Top
                 visibility in recruiter searches · Priority WhatsApp support.
               </p>

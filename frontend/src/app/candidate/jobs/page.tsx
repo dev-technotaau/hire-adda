@@ -1046,9 +1046,11 @@ export default function JobSearchPage() {
                 size="lg"
                 fullWidth
               />
-              {/* Operator syntax popover — `+react -php "remote work"` */}
+              {/* Operator syntax popover — `+react -php "remote work"`.
+                  Hidden while the keyword field has text so it doesn't
+                  overlap the SearchBar's own clear (×) button. */}
               <div className="absolute top-1/2 right-2 -translate-y-1/2">
-                <KeywordSyntaxHelp />
+                <KeywordSyntaxHelp hidden={Boolean(keyword?.trim())} />
               </div>
             </div>
             <ExperienceSelect

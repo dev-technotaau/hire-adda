@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AlertTriangle, Clock, ShieldOff } from 'lucide-react';
 import { useEntitlements } from '@/hooks/use-entitlements';
 import { useBillingStore } from '@/store/billing.store';
+import { usePricingHref } from '@/lib/pricing-href';
 import Tooltip from '@/components/ui/Tooltip';
 
 /**
@@ -20,6 +21,7 @@ import Tooltip from '@/components/ui/Tooltip';
 export default function BillingAlertBadge() {
   const { snapshot: snap } = useEntitlements();
   const hasFailingRenewal = useBillingStore((s) => s.hasFailingRenewal);
+  const pricingHref = usePricingHref();
 
   const alert = useMemo<{
     href: string;
@@ -40,7 +42,10 @@ export default function BillingAlertBadge() {
 
     if (!snap.hasAnyActive) {
       return {
-        href: '/pricing',
+        // Route to the role-scoped pricing surface — derived from the
+        // auth store via `usePricingHref()` so a candidate lands on
+        // /pricing/candidate and an employer on /pricing/employer.
+        href: pricingHref,
         icon: ShieldOff,
         tone: 'info',
         label: 'No active plan — explore plans',
@@ -70,7 +75,7 @@ export default function BillingAlertBadge() {
       }
     }
     return null;
-  }, [snap, hasFailingRenewal]);
+  }, [snap, hasFailingRenewal, pricingHref]);
 
   if (!alert) return null;
 
@@ -82,11 +87,22 @@ export default function BillingAlertBadge() {
         ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20'
         : 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20';
 
+  // On desktop (lg+), the QuotaBar pill already surfaces the
+  // "No active plan — Upgrade →" CTA in the same header row. Showing
+  // this shield icon alongside it duplicates the affordance — same
+  // destination, same trigger condition. Hide the icon on lg+ ONLY
+  // for that specific state so the other 3 alert states (warning =
+  // expiring, danger = expired / failing renewal) still surface on
+  // every viewport, since QuotaBar doesn't render them at all.
+  const hideOnDesktop = alert.tone === 'info';
+
   return (
     <Tooltip content={alert.label}>
       <Link
         href={alert.href}
-        className={`relative inline-flex items-center justify-center rounded-lg p-2.5 transition-colors ${toneClass}`}
+        className={`relative inline-flex items-center justify-center rounded-lg p-2.5 transition-colors ${toneClass} ${
+          hideOnDesktop ? 'lg:hidden' : ''
+        }`}
         aria-label={alert.label}
       >
         <Icon size={18} />

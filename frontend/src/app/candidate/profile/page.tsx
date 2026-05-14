@@ -1331,7 +1331,7 @@ export default function CandidateProfilePage() {
                                 resume generation!
                               </div>
                             ) : r.canGenerate ? (
-                              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+                              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-stone-900">
                                 <AlertTriangle className="h-4 w-4" /> Resume can be generated, but
                                 could be improved
                               </div>

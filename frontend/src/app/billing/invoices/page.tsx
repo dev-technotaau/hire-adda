@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import { invoiceService } from '@/services/invoice.service';
+import { usePricingHref } from '@/lib/pricing-href';
 import { formatPaise } from '@/types/billing';
 import type { Invoice, InvoicesListResponse, InvoiceStatus } from '@/types/invoice';
 
@@ -24,6 +25,7 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const pricingHref = usePricingHref();
 
   useEffect(() => {
     let active = true;
@@ -76,7 +78,7 @@ export default function InvoicesPage() {
             <p className="mt-1 text-sm text-[var(--text-muted)]">
               Pay for a plan and your GST tax invoice will appear here automatically.
             </p>
-            <Link href="/pricing" className="mt-4 inline-block">
+            <Link href={pricingHref} className="mt-4 inline-block">
               <Button variant="primary">View plans</Button>
             </Link>
           </Card>

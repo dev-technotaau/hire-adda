@@ -17,6 +17,7 @@ import Spinner from '@/components/ui/Spinner';
 import Turnstile from '@/components/auth/Turnstile';
 import { quoteService, type MyQuoteRequest } from '@/services/quote.service';
 import { useAuth } from '@/hooks/use-auth';
+import { usePricingHref } from '@/lib/pricing-href';
 import type { ApiError } from '@/types/api';
 
 const schema = z.object({
@@ -187,9 +188,10 @@ function QuoteFormBody({
   // configured — keeps local dev usable without setting up Cloudflare.
   const turnstileConfigured = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
   const canSubmit = !turnstileConfigured || Boolean(turnstileToken);
+  const pricingHref = usePricingHref();
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <Link href="/pricing" className="text-primary mb-6 inline-flex items-center gap-2 text-sm">
+      <Link href={pricingHref} className="text-primary mb-6 inline-flex items-center gap-2 text-sm">
         <ArrowLeft className="h-4 w-4" /> Back to pricing
       </Link>
 
@@ -376,6 +378,7 @@ function QuoteFormBody({
 // track status / accept offers. Guests get this inline confirmation,
 // since the detail page is auth-gated.
 function ThankYouScreen() {
+  const pricingHref = usePricingHref();
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 text-center">
       <div className="bg-success/10 text-success mx-auto flex h-16 w-16 items-center justify-center rounded-full">
@@ -389,7 +392,7 @@ function ThankYouScreen() {
         provided. No further action needed right now.
       </p>
       <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <Link href="/pricing">
+        <Link href={pricingHref}>
           <Button variant="outline" size="lg">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to pricing
           </Button>

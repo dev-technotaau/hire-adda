@@ -84,7 +84,7 @@ export default function CancelSubscriptionPage() {
         </Link>
 
         <Card className="p-6 sm:p-8">
-          <div className="mb-6 flex items-start gap-3 rounded-lg border-l-4 border-amber-500 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-200">
+          <div className="mb-6 flex items-start gap-3 rounded-lg border-l-4 border-amber-500 bg-amber-50 p-4 text-sm text-stone-900 dark:bg-amber-900/20 dark:text-amber-200">
             <AlertTriangle className="mt-0.5 flex-shrink-0" size={18} />
             <div>
               <strong className="block">Are you sure you want to cancel?</strong>

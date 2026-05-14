@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { upgradeService, type UpgradePreview } from '@/services/upgrade.service';
 import { openRazorpayCheckout, type RazorpayCheckoutFailure } from '@/lib/razorpay-checkout';
 import { orderService } from '@/services/order.service';
+import { usePricingHref } from '@/lib/pricing-href';
 import { formatPaise } from '@/types/billing';
 import type { ApiError } from '@/types/api';
 
@@ -28,6 +29,7 @@ type Phase = 'loading' | 'ready' | 'executing' | 'opening' | 'verifying' | 'succ
 export default function UpgradePage() {
   const params = useParams();
   const router = useRouter();
+  const pricingHref = usePricingHref();
   const { user } = useAuth();
   const code = decodeURIComponent(String(params?.planCode ?? ''));
   const [preview, setPreview] = useState<UpgradePreview | null>(null);
@@ -148,7 +150,7 @@ export default function UpgradePage() {
         <div className="mx-auto max-w-2xl px-4 py-12">
           <Card padding="lg">
             <p className="text-[var(--text-muted)]">{error ?? 'Cannot prepare upgrade.'}</p>
-            <Link href="/pricing" className="text-primary mt-4 inline-flex items-center gap-2">
+            <Link href={pricingHref} className="text-primary mt-4 inline-flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" /> Back to pricing
             </Link>
           </Card>
@@ -164,7 +166,10 @@ export default function UpgradePage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-3xl px-4 py-10">
-        <Link href="/pricing" className="text-primary mb-6 inline-flex items-center gap-2 text-sm">
+        <Link
+          href={pricingHref}
+          className="text-primary mb-6 inline-flex items-center gap-2 text-sm"
+        >
           <ArrowLeft className="h-4 w-4" /> Back to pricing
         </Link>
 
