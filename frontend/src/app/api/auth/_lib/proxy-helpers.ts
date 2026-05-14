@@ -9,6 +9,67 @@ import {
   sessionCookieOptions,
 } from './config';
 
+// Hard timeout per attempt — undici's default headersTimeout is 5 min,
+// which lets a stale socket hang the BFF route forever. 30 s is well
+// above any legitimate backend latency (login peaks ~2 s under load)
+// and surfaces failures fast so the retry path can kick in.
+const BACKEND_FETCH_TIMEOUT_MS = 30_000;
+
+// Error codes that indicate a transient connection-level fault — most
+// commonly a stale keep-alive socket whose other end has gone away
+// since the last use. One retry is enough to drop the dead socket and
+// open a fresh one against the same nginx upstream.
+const RETRYABLE_FETCH_CODES = new Set([
+  'ETIMEDOUT',
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'UND_ERR_SOCKET',
+]);
+
+function isRetryableFetchError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { name?: string; code?: string; cause?: { code?: string; errors?: unknown[] } };
+  if (e.name === 'AbortError' || e.name === 'TimeoutError') return true;
+  if (e.code && RETRYABLE_FETCH_CODES.has(e.code)) return true;
+  if (e.cause?.code && RETRYABLE_FETCH_CODES.has(e.cause.code)) return true;
+  // undici surfaces multi-attempt failures as AggregateError under `cause`;
+  // any of the inner errors matching is enough to retry.
+  if (Array.isArray(e.cause?.errors)) {
+    for (const inner of e.cause.errors) {
+      const code = (inner as { code?: string })?.code;
+      if (code && RETRYABLE_FETCH_CODES.has(code)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Wrapper around fetch that adds a hard timeout and one retry on
+ * connection-level errors. Without this, a stale keep-alive socket in
+ * the Node.js dispatcher pool can cause an indefinite hang or surface
+ * as a 5xx to the browser after minutes — observed in prod when
+ * upstream nginx state shifted under long-lived FE pods.
+ */
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(BACKEND_FETCH_TIMEOUT_MS),
+      });
+    } catch (err) {
+      if (attempt === 0 && isRetryableFetchError(err)) {
+        // Small backoff so we don't retry into the same flap immediately.
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        continue;
+      }
+      throw err;
+    }
+  }
+  // Unreachable — the loop either returns or throws.
+  throw new Error('fetchWithRetry: exhausted attempts');
+}
+
 /**
  * Make an authenticated request to the backend, attaching the BFF secret
  * and forwarding relevant client headers.
@@ -40,7 +101,7 @@ export async function backendFetch(
     if (fingerprint) headers.set('x-device-fingerprint', fingerprint);
   }
 
-  return fetch(url, {
+  return fetchWithRetry(url, {
     ...fetchInit,
     headers,
     cache: 'no-store',
