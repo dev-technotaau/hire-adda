@@ -136,6 +136,16 @@ metadata:
     # WebSocket for HMR in dev (harmless in prod)
     nginx.ingress.kubernetes.io/proxy-http-version: '1.1'
     nginx.ingress.kubernetes.io/proxy-read-timeout: '60'
+    # Larger upstream response-header buffer. Default 4 KB was blown
+    # past by the BFF's POST /api/auth/login response (5 Set-Cookie
+    # lines for ha_access_token + ha_refresh_token + 3 indicator
+    # cookies — JWT-bearing cookies are ~700 bytes each + cookie
+    # attributes, total response headers ~5 KB+). Symptom on the
+    # default buffer was "upstream sent too big header" in
+    # ingress-nginx error log + 502 to the client. 16 KB is generous
+    # headroom even if we add more cookies / inflate JWT claims later.
+    nginx.ingress.kubernetes.io/proxy-buffer-size: '16k'
+    nginx.ingress.kubernetes.io/proxy-buffers-number: '8'
 spec:
   ingressClassName: nginx
   tls:

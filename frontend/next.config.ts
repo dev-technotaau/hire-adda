@@ -47,8 +47,16 @@ const nextConfig: NextConfig = {
           // actually needed.
           {
             key: 'Permissions-Policy',
+            // Delegate `picture-in-picture` and `xr-spatial-tracking` to
+            // Cloudflare's Turnstile iframe (`challenges.cloudflare.com`)
+            // — its widget probes those features on load and floods the
+            // console with "Permissions policy violation" warnings when
+            // they're denied. Turnstile doesn't actually use them; this
+            // just silences the cross-origin iframe permission denial.
+            // No security impact since `challenges.cloudflare.com` is
+            // already in `frame-src` of the CSP.
             value:
-              'camera=(), microphone=(), geolocation=(self), payment=(self), usb=(), serial=(), bluetooth=(), accelerometer=(), gyroscope=(), magnetometer=(), midi=(), publickey-credentials-get=(self), publickey-credentials-create=(self), interest-cohort=(), browsing-topics=(), clipboard-read=(self), clipboard-write=(self), display-capture=(), fullscreen=(self), picture-in-picture=(self), screen-wake-lock=(self), web-share=(self), xr-spatial-tracking=(), gamepad=(), hid=(), idle-detection=(), local-fonts=(), storage-access=(self)',
+              'camera=(), microphone=(), geolocation=(self), payment=(self), usb=(), serial=(), bluetooth=(), accelerometer=(), gyroscope=(), magnetometer=(), midi=(), publickey-credentials-get=(self), publickey-credentials-create=(self), interest-cohort=(), browsing-topics=(), clipboard-read=(self), clipboard-write=(self), display-capture=(), fullscreen=(self), picture-in-picture=(self "https://challenges.cloudflare.com"), screen-wake-lock=(self), web-share=(self), xr-spatial-tracking=(self "https://challenges.cloudflare.com"), gamepad=(), hid=(), idle-detection=(), local-fonts=(), storage-access=(self)',
           },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           // Reporting endpoint signal — browsers send CSP / NEL reports
