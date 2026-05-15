@@ -84,7 +84,9 @@ export default function PremiumLockBadge({
         >
           <span className="pointer-events-none opacity-90">{children}</span>
           <span
-            className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+            // Saturated amber + white text matches the shared upsell
+            // visual language and stays legible on warm dashboard chrome.
+            className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm dark:bg-amber-600"
             title="Premium — click to upgrade"
           >
             <Crown className="h-3 w-3" /> Premium

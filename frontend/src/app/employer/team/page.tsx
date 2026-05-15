@@ -140,21 +140,19 @@ export default function EmployerTeamPage() {
           <button
             type="button"
             onClick={() => upgrade.open({ feature: 'feature.multi_seat' })}
-            className="group flex w-full items-start gap-3 rounded-xl border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 p-4 text-left transition-colors hover:from-amber-100 hover:to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20"
+            className="group flex w-full items-start gap-3 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 p-4 text-left shadow-sm transition-all hover:from-amber-600 hover:via-amber-700 hover:to-orange-700 hover:shadow-md dark:from-amber-700 dark:via-amber-800 dark:to-orange-800"
           >
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-amber-500 text-white shadow">
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-white/20 text-white shadow-inner ring-1 ring-white/30 backdrop-blur-sm">
               <Crown className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-amber-900 dark:text-amber-100">
-                Add team members with CV Enterprise
-              </p>
-              <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-200/80">
+              <p className="font-semibold text-white">Add team members with CV Enterprise</p>
+              <p className="mt-0.5 text-sm text-white/90">
                 Multi-seat access lets your recruiters share one quota pool. Custom pricing — talk
                 to our sales team.
               </p>
             </div>
-            <span className="hidden items-center gap-1 self-center rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors group-hover:bg-amber-700 sm:inline-flex">
+            <span className="hidden items-center gap-1 self-center rounded-lg bg-white px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-amber-700 shadow-sm transition-colors group-hover:bg-amber-50 sm:inline-flex">
               Talk to sales
             </span>
           </button>

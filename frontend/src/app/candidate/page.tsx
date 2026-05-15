@@ -434,28 +434,27 @@ export default function CandidateDashboard() {
           <button
             type="button"
             onClick={() => upgrade.open({ feature: 'feature.candidate_verified_badge' })}
-            className="group flex w-full items-start gap-3 rounded-xl border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 p-4 text-left transition-colors hover:from-amber-100 hover:to-rose-100 dark:from-amber-900/20 dark:via-orange-900/20 dark:to-rose-900/20"
+            // High-contrast white-on-saturated-amber treatment — the
+            // previous light amber→rose gradient with dark text read as
+            // washed-out warm-on-warm even at WCAG-AA contrast. Pure
+            // white text on a vibrant warm gradient pops and matches
+            // the "premium upsell" visual language users expect from
+            // SaaS upgrade banners.
+            className="group flex w-full items-start gap-3 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 p-4 text-left shadow-sm transition-all hover:from-amber-600 hover:via-amber-700 hover:to-orange-700 hover:shadow-md dark:from-amber-700 dark:via-amber-800 dark:to-orange-800"
           >
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-amber-500 text-white shadow">
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-white/20 text-white shadow-inner ring-1 ring-white/30 backdrop-blur-sm">
               <Crown className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              {/* Text colours bumped to near-black neutral (stone-900 /
-                  stone-700) in light mode — `text-amber-900/800` was
-                  WCAG-AA on paper but visually washed out against the
-                  warm amber→rose gradient (warm-on-warm shares luminance,
-                  so the text reads soft even when the contrast ratio is
-                  fine). Dark mode keeps the warm amber-100/200 since
-                  dark backgrounds invert the perceived contrast direction. */}
-              <p className="font-semibold text-stone-900 dark:text-amber-100">
-                Unlock Candidate Premium — ₹199/month
-              </p>
-              <p className="mt-0.5 text-sm text-stone-700 dark:text-amber-200/80">
+              <p className="font-semibold text-white">Unlock Candidate Premium — ₹199/month</p>
+              <p className="mt-0.5 text-sm text-white/90">
                 Verified Badge · AI Resume Premium (5 templates) · 7-day Profile Boost · Top
                 visibility in recruiter searches · Priority WhatsApp support.
               </p>
             </div>
-            <span className="hidden items-center gap-1 self-center rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors group-hover:bg-amber-700 sm:inline-flex">
+            {/* Action button inverts to white-on-white-bg vs the amber
+                banner — strongest possible contrast within the same row. */}
+            <span className="hidden items-center gap-1 self-center rounded-lg bg-white px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-amber-700 shadow-sm transition-colors group-hover:bg-amber-50 sm:inline-flex">
               <Sparkles className="h-4 w-4" /> Upgrade
             </span>
           </button>

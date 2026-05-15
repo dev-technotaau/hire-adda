@@ -62,16 +62,19 @@ export default function PriorityWhatsappBanner({ role }: Props) {
       <button
         type="button"
         onClick={() => upgrade.open({ feature: featureKey })}
-        className="group flex w-full items-start gap-3 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-4 text-left transition-colors hover:from-emerald-100 hover:to-teal-100 dark:border-emerald-900/30 dark:from-emerald-900/20 dark:to-teal-900/20"
+        // Emerald variant of the shared upsell-banner pattern:
+        // saturated emerald gradient + white text + inverted white CTA.
+        // Matches the warm amber banners elsewhere for visual cohesion.
+        className="group flex w-full items-start gap-3 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 p-4 text-left shadow-sm transition-all hover:from-emerald-600 hover:via-emerald-700 hover:to-teal-700 hover:shadow-md dark:from-emerald-700 dark:via-emerald-800 dark:to-teal-800"
       >
-        <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-emerald-600 text-white shadow">
+        <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-white/20 text-white shadow-inner ring-1 ring-white/30 backdrop-blur-sm">
           <MessageCircle className="h-5 w-5" />
         </div>
         <div className="flex-1">
-          <p className="font-semibold text-emerald-900 dark:text-emerald-100">{headline}</p>
-          <p className="mt-0.5 text-sm text-emerald-800 dark:text-emerald-200/80">{subline}</p>
+          <p className="font-semibold text-white">{headline}</p>
+          <p className="mt-0.5 text-sm text-white/90">{subline}</p>
         </div>
-        <span className="hidden items-center gap-1 self-center rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors group-hover:bg-emerald-800 sm:inline-flex">
+        <span className="hidden items-center gap-1 self-center rounded-lg bg-white px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-emerald-700 shadow-sm transition-colors group-hover:bg-emerald-50 sm:inline-flex">
           See plans
         </span>
       </button>

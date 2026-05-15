@@ -1612,15 +1612,15 @@ function CandidateProfilePremiumBanner() {
   if (isPremium) return null;
   return (
     <>
-      <div className="mb-4 rounded-xl border border-[var(--border)] bg-gradient-to-r from-amber-50 to-orange-50 p-4 dark:from-amber-950/20 dark:to-orange-950/20">
+      <div className="mb-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 p-4 shadow-sm dark:from-amber-700 dark:via-amber-800 dark:to-orange-800">
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white/20 text-white shadow-inner ring-1 ring-white/30 backdrop-blur-sm">
               <ShieldCheck size={18} />
             </div>
             <div>
-              <h3 className="font-semibold text-[var(--text)]">Stand out with Candidate Premium</h3>
-              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+              <h3 className="font-semibold text-white">Stand out with Candidate Premium</h3>
+              <p className="mt-0.5 text-xs text-white/90">
                 AI Resume Premium · Verified Badge · 7-day Profile Boost · Priority WhatsApp Support
                 · Top Visibility — just ₹199/month.
               </p>
@@ -1629,7 +1629,7 @@ function CandidateProfilePremiumBanner() {
           <button
             type="button"
             onClick={() => upgrade.open({ feature: 'feature.candidate_verified_badge' })}
-            className="flex-shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
+            className="flex-shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-amber-700 shadow-sm transition-colors hover:bg-amber-50"
           >
             Upgrade →
           </button>
