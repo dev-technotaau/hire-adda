@@ -44,7 +44,20 @@ export default function CouponInput({
       setCode('');
     } catch (err) {
       const apiErr = err as unknown as ApiError;
-      setError(apiErr?.message ?? 'Invalid coupon');
+      // The Zod validate middleware returns a generic
+      // "Validation failed" envelope for shape errors (e.g. user
+      // typed a 1-2 char code → backend min(3) trips). Surface that
+      // as a coupon-friendly message instead of the developer-facing
+      // string. All other backend errors (NotFoundError /
+      // BadRequestError from coupon.service) already ship clear,
+      // user-readable messages so we forward them as-is.
+      const isValidationShapeError =
+        apiErr?.code === 'VALIDATION_ERROR' ||
+        apiErr?.message?.toLowerCase() === 'validation failed';
+      const friendly = isValidationShapeError
+        ? 'Invalid coupon code. Please check and try again.'
+        : (apiErr?.message ?? 'Invalid coupon');
+      setError(friendly);
     } finally {
       setValidating(false);
     }

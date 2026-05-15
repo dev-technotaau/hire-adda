@@ -61,19 +61,37 @@ export function useSocket() {
       return;
     }
 
-    // Return existing socket if already connecting or connected
-    if (globalSocket && (socketState === 'connecting' || socketState === 'connected')) {
+    // Synchronous claim: socketState is set to 'connecting' BEFORE the
+    // async token fetch so a second useSocket() mount that fires while
+    // the first is still awaiting the token sees the in-progress state
+    // and bails. Without this lock, multiple components calling
+    // useSocket simultaneously each saw `globalSocket === null` and
+    // `socketState === 'disconnected'`, raced past the guard, awaited
+    // their own token fetch, then each created a Socket.IO client and
+    // attached its own `'notification'` listener. The result was
+    // multiple sockets in the same `user:${userId}` room, each firing
+    // a toast for the same backend emit → duplicate notification
+    // toasts on every server-side push.
+    if (globalSocket || socketState !== 'disconnected') {
       return;
     }
+    socketState = 'connecting';
 
     let cancelled = false;
 
     (async () => {
       const token = await fetchSocketToken();
-      if (cancelled || !token) return;
+      if (cancelled || !token) {
+        // Release the lock so a re-mount can try again.
+        if (!globalSocket) socketState = 'disconnected';
+        return;
+      }
+      // Defence-in-depth: another effect could have completed during
+      // our await (shouldn't, given the synchronous lock above, but
+      // cheap to verify) — bail rather than duplicating.
+      if (globalSocket) return;
 
       tokenRef.current = token;
-      socketState = 'connecting';
 
       const newSocket = io(APP_CONFIG.socketUrl, {
         auth: { token },
@@ -124,7 +142,13 @@ export function useSocket() {
 
     return () => {
       cancelled = true;
-      // Don't disconnect on unmount — keep alive for app lifecycle
+      // If we claimed the lock but never created the socket (token
+      // fetch failed or component unmounted before completion), release
+      // it so the next mount can try again.
+      if (!globalSocket && socketState === 'connecting') {
+        socketState = 'disconnected';
+      }
+      // Don't disconnect existing sockets on unmount — keep alive for app lifecycle
     };
   }, [isAuthenticated, queryClient]);
 

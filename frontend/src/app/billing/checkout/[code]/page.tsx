@@ -116,6 +116,12 @@ export default function CheckoutPage() {
     setPhase('opening');
     let success;
     try {
+      // Prefill contact so Razorpay skips its own "verify mobile" step.
+      // When the number is already verified on our side we ALSO mark it
+      // readonly so Razorpay won't ask the user to confirm/edit it. If
+      // we don't have a number, fall through to Razorpay's default
+      // contact collection.
+      const prefillContact = user.mobileNumber ?? undefined;
       success = await openRazorpayCheckout({
         key: response.razorpay.keyId,
         amount: response.razorpay.amount,
@@ -126,7 +132,9 @@ export default function CheckoutPage() {
         prefill: {
           name: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || undefined,
           email: user.email,
+          contact: prefillContact,
         },
+        readonly: prefillContact && user.isMobileVerified ? { contact: true } : undefined,
         theme: { color: '#1E5CAF' },
         notes: { receipt: response.order.receiptNumber },
         retry: { enabled: true, max_count: 2 },
@@ -229,13 +237,21 @@ export default function CheckoutPage() {
           </Card>
 
           <Card padding="lg" className="self-start">
-            <div className="flex items-center justify-between text-sm text-[var(--text-muted)]">
-              <span>Subtotal</span>
-              <span>{formatPaise(total, plan.currency)}</span>
+            {/* Order-summary line items: the LABEL stays muted so it
+                reads as a column header, but the VALUE bumps to
+                `text-[var(--text)]` so the price the user is being
+                asked to pay is the most legible thing on the row. */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[var(--text-secondary)]">Subtotal</span>
+              <span className="font-medium text-[var(--text)]">
+                {formatPaise(total, plan.currency)}
+              </span>
             </div>
-            <div className="mt-1 flex items-center justify-between text-xs text-[var(--text-muted)]">
-              <span>GST {plan.gstRatePercent}% (inclusive)</span>
-              <span>included</span>
+            <div className="mt-1 flex items-center justify-between text-xs">
+              <span className="text-[var(--text-secondary)]">
+                GST {plan.gstRatePercent}% (inclusive)
+              </span>
+              <span className="text-[var(--text-secondary)]">included</span>
             </div>
             {coupon && (
               <div className="mt-1 flex items-center justify-between text-sm text-green-700">

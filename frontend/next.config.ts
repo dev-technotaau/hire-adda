@@ -47,16 +47,22 @@ const nextConfig: NextConfig = {
           // actually needed.
           {
             key: 'Permissions-Policy',
-            // Delegate `picture-in-picture` and `xr-spatial-tracking` to
-            // Cloudflare's Turnstile iframe (`challenges.cloudflare.com`)
-            // — its widget probes those features on load and floods the
-            // console with "Permissions policy violation" warnings when
-            // they're denied. Turnstile doesn't actually use them; this
-            // just silences the cross-origin iframe permission denial.
-            // No security impact since `challenges.cloudflare.com` is
-            // already in `frame-src` of the CSP.
+            // Delegations to cross-origin iframes:
+            //   - challenges.cloudflare.com → picture-in-picture +
+            //     xr-spatial-tracking. Turnstile probes these on load
+            //     and the console floods with denial warnings otherwise;
+            //     the widget doesn't actually use them.
+            //   - api.razorpay.com → payment + accelerometer + gyroscope.
+            //     Razorpay's risk-detection bundle (`loader.min.js`) runs
+            //     device-motion biometrics inside the checkout iframe and
+            //     the Payment Request API is needed for UPI / card flows.
+            //     Without these the overlay still works but emits red
+            //     "Permissions policy violation" entries on every checkout.
+            // Both origins are already in `frame-src` of the CSP, so no
+            // new security surface — we're just letting the iframes use
+            // features they need.
             value:
-              'camera=(), microphone=(), geolocation=(self), payment=(self), usb=(), serial=(), bluetooth=(), accelerometer=(), gyroscope=(), magnetometer=(), midi=(), publickey-credentials-get=(self), publickey-credentials-create=(self), interest-cohort=(), browsing-topics=(), clipboard-read=(self), clipboard-write=(self), display-capture=(), fullscreen=(self), picture-in-picture=(self "https://challenges.cloudflare.com"), screen-wake-lock=(self), web-share=(self), xr-spatial-tracking=(self "https://challenges.cloudflare.com"), gamepad=(), hid=(), idle-detection=(), local-fonts=(), storage-access=(self)',
+              'camera=(), microphone=(), geolocation=(self), payment=(self "https://api.razorpay.com"), usb=(), serial=(), bluetooth=(), accelerometer=(self "https://api.razorpay.com"), gyroscope=(self "https://api.razorpay.com"), magnetometer=(), midi=(), publickey-credentials-get=(self), publickey-credentials-create=(self), interest-cohort=(), browsing-topics=(), clipboard-read=(self), clipboard-write=(self), display-capture=(), fullscreen=(self), picture-in-picture=(self "https://challenges.cloudflare.com"), screen-wake-lock=(self), web-share=(self), xr-spatial-tracking=(self "https://challenges.cloudflare.com"), gamepad=(), hid=(), idle-detection=(), local-fonts=(), storage-access=(self)',
           },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           // Reporting endpoint signal — browsers send CSP / NEL reports

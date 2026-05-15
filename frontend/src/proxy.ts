@@ -39,7 +39,7 @@ function nextWithCsp(): NextResponse {
   // See https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/troubleshooting/csp/
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://apis.google.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://vercel.live https://checkout.razorpay.com${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://apis.google.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://vercel.live https://checkout.razorpay.com https://cdn.razorpay.com${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live",
     "img-src 'self' data: blob: https://res.cloudinary.com https://assets.hireadda.in https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com https://vercel.live https://vercel.com https://cdn.razorpay.com",
     "font-src 'self' https://fonts.gstatic.com https://vercel.live",
