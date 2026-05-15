@@ -118,8 +118,17 @@ function Modal({ isOpen, onClose, title, children, footer, size = 'md', classNam
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            // `overflow-hidden` is required so child content
+            // (gradient heros, bleed strips with negative margins, the
+            // built-in absolute-positioned close button) respects the
+            // rounded-xl corner clip. Without it, inner blocks that
+            // overshoot via `-mx-*` / `-mb-*` paint past the rounded
+            // boundary and produce visible square corners.
+            // The inner scroll container still has its own
+            // `overflow-y-auto`, so scrolling inside the modal works
+            // independently of this clip.
             className={cn(
-              'relative flex max-h-[calc(100vh-2rem)] w-full flex-col rounded-xl bg-white shadow-[var(--shadow-xl)] outline-none',
+              'relative flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-xl bg-white shadow-[var(--shadow-xl)] outline-none',
               sizeStyles[size],
               className,
             )}

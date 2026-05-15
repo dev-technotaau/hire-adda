@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Crown, Check, Zap, ArrowRight, Sparkles, X } from 'lucide-react';
+import { Crown, Check, Zap, ArrowRight, Sparkles } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { ROUTES } from '@/constants/routes';
@@ -404,32 +404,25 @@ function UpgradeModalContent({
   const allPlansHref = usePricingHref();
 
   return (
-    // No `overflow-hidden` on the root — the Modal shell already
-    // clips via its rounded corners + `overflow-y-auto`, and an
-    // extra clip here was masking the gradient/strip negative
-    // margins when they overshot the Modal's actual padding.
     <div>
       {/* Hero with gradient backdrop.
           Modal content area is `px-6 py-4`, so the bleed margins
           here MUST be `-mx-6 -mt-4` (not `-mt-6`) — otherwise the
           gradient pulls 8 px past the modal's top and the rounded
-          corner clip visually crops the crown / title row. */}
-      <div className="relative -mx-6 -mt-4 bg-gradient-to-br from-amber-100 via-orange-50 to-rose-50 px-6 py-7 dark:from-amber-900/30 dark:via-orange-900/20 dark:to-rose-900/20">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-3 right-3 rounded-full p-1.5 text-[var(--text-muted)] transition-colors hover:bg-white/50 hover:text-[var(--text)]"
-        >
-          <X className="h-4 w-4" />
-        </button>
+          corner clip visually crops the crown / title row.
 
+          Note: NO custom close button here — the Modal shell renders
+          its own X at `absolute top-4 right-4 z-10` whenever no
+          `title` prop is passed. Adding a second one duplicated the
+          affordance. The `pr-10` reserve below keeps long titles
+          from running under that built-in X. */}
+      <div className="relative -mx-6 -mt-4 bg-gradient-to-br from-amber-100 via-orange-50 to-rose-50 px-6 py-7 dark:from-amber-900/30 dark:via-orange-900/20 dark:to-rose-900/20">
         {/* Crown + title on one row instead of stacked — fills the
             hero block visually and avoids the previous "small icon
             floating in the top-left, title hanging below" look. The
-            close button has `pr-8` reserve so it never collides
-            with long titles. */}
-        <div className="flex items-start gap-4 pr-8">
+            `pr-10` reserve keeps the title from colliding with the
+            Modal shell's built-in close button. */}
+        <div className="flex items-start gap-4 pr-10">
           <div className="flex h-14 w-14 flex-none items-center justify-center rounded-xl bg-amber-500 text-white shadow-md">
             <Crown className="h-7 w-7" />
           </div>
@@ -452,7 +445,12 @@ function UpgradeModalContent({
         <ul className="space-y-2.5">
           {bullets.map((bullet) => (
             <li key={bullet} className="flex items-start gap-2.5 text-sm text-[var(--text)]">
-              <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+              {/* White check on saturated emerald = strong figure /
+                  ground separation. The earlier emerald-100 / emerald-700
+                  combo washed both the icon stroke and the chip
+                  background into a single hue, so the check read as
+                  a vague green smudge instead of a tick. */}
+              <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm dark:bg-emerald-600">
                 <Check className="h-3 w-3" strokeWidth={3} />
               </span>
               <span>{bullet}</span>
