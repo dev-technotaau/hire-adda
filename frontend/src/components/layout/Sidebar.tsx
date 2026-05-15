@@ -45,7 +45,9 @@ import { useUIStore } from '@/store/ui.store';
 import { ROUTES } from '@/constants/routes';
 import Tooltip from '@/components/ui/Tooltip';
 import { useEntitlements } from '@/hooks/use-entitlements';
+import { getRolePricingHref } from '@/lib/pricing-href';
 import type { LucideIcon } from 'lucide-react';
+import type { Role } from '@/types/auth';
 
 export interface NavItem {
   label: string;
@@ -199,15 +201,34 @@ const superAdminNav: NavItem[] = [
   { label: 'Security', href: ROUTES.SUPER_ADMIN.SETTINGS, icon: Shield },
 ];
 
-// Billing menu — shown for CANDIDATE + EMPLOYER (paying users) below the role nav.
-const billingNav: NavItem[] = [
-  { label: 'Plans', href: ROUTES.BILLING.PRICING, icon: Tag },
-  { label: 'Credits & quotas', href: ROUTES.BILLING.CREDITS, icon: Coins },
-  { label: 'Subscriptions', href: ROUTES.BILLING.SUBSCRIPTIONS, icon: Repeat },
-  { label: 'Order history', href: ROUTES.BILLING.ORDERS, icon: Receipt },
-  { label: 'Invoices', href: ROUTES.BILLING.INVOICES, icon: FileText },
-  { label: 'Payment methods', href: ROUTES.BILLING.PAYMENT_METHODS, icon: CreditCard },
-];
+// Billing menu — shown below the role nav for paying users. Built per
+// role at render time because two items vary by role:
+//
+//   - Plans: routes to the role-scoped /pricing/{candidate,employer}
+//     page so the user doesn't land on the catch-all and have to scroll
+//     past plans that don't apply to them. Vendors fall back to
+//     /pricing since there's no dedicated vendor pricing surface yet.
+//
+//   - Subscriptions: only VENDORs hold recurring plans (VENDOR_CONNECT
+//     is the only MONTHLY billing-cycle SKU; every candidate/employer
+//     plan is ONE_TIME — see backend/src/scripts/seed-plans.ts). Hide
+//     the tab for CANDIDATE/EMPLOYER so they don't navigate to an
+//     always-empty page.
+function buildBillingNav(role: Role | undefined): NavItem[] {
+  const items: NavItem[] = [
+    { label: 'Plans', href: getRolePricingHref(role), icon: Tag },
+    { label: 'Credits & quotas', href: ROUTES.BILLING.CREDITS, icon: Coins },
+  ];
+  if (role === 'VENDOR') {
+    items.push({ label: 'Subscriptions', href: ROUTES.BILLING.SUBSCRIPTIONS, icon: Repeat });
+  }
+  items.push(
+    { label: 'Order history', href: ROUTES.BILLING.ORDERS, icon: Receipt },
+    { label: 'Invoices', href: ROUTES.BILLING.INVOICES, icon: FileText },
+    { label: 'Payment methods', href: ROUTES.BILLING.PAYMENT_METHODS, icon: CreditCard },
+  );
+  return items;
+}
 
 // Super-admin billing menu — added at bottom of super-admin nav
 const superAdminBillingNav: NavItem[] = [
@@ -245,7 +266,7 @@ export function getBillingNavItems(role: string | undefined): NavItem[] {
     case 'CANDIDATE':
     case 'EMPLOYER':
     case 'VENDOR':
-      return billingNav;
+      return buildBillingNav(role as Role);
     case 'SUPER_ADMIN':
       return superAdminBillingNav;
     default:
