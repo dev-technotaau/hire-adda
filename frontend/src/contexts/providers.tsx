@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useMaintenanceStore } from '@/store/maintenance.store';
 import { useSocket } from '@/hooks/use-socket';
 import { onAuthMessage } from '@/lib/auth-channel';
-import { pageView, fbPageView } from '@/lib/analytics';
+import { analytics } from '@/lib/analytics/track';
 import { pushService } from '@/services/push.service';
 import { useFeatureFlags } from '@/hooks/use-feature-flags';
 import { usePresenceTracker } from '@/hooks/use-presence-tracker';
@@ -165,8 +165,12 @@ function AnalyticsTracker({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    pageView(pathname);
-    fbPageView();
+    // Single call fans out to every consent-enabled provider —
+    // GA, GTM, Clarity, Hotjar, PostHog, Adobe, FB, LinkedIn,
+    // Pinterest, Reddit, X, TikTok, Quora, Bing UET, Snap.
+    // The facade swallows per-provider exceptions so a third-party
+    // SDK throwing inside `pageview` can't crash the app.
+    analytics.pageView(pathname, typeof document !== 'undefined' ? document.title : undefined);
   }, [pathname]);
 
   return <>{children}</>;

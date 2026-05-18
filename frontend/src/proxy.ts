@@ -33,18 +33,170 @@ function nextWithCsp(): NextResponse {
     ? `https://*.${firebaseDbRegion} wss://*.${firebaseDbRegion}`
     : '';
 
-  // Razorpay checkout requires its CDN script + the API/lumberjack
-  // endpoints (XHR for order verification + telemetry) + the checkout
-  // iframe origin. Without these the checkout overlay refuses to load.
-  // See https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/troubleshooting/csp/
+  // ─── Analytics provider allowlist ──────────────────────────────────
+  // Each entry is grouped so it's obvious which domains belong to which
+  // provider. Updating a provider? Touch the matching block + the
+  // corresponding <ProviderPixel> component, never one without the other.
+  //
+  //   Google Analytics 4 + GTM …… google-analytics.com, googletagmanager.com
+  //   Facebook Pixel ……………………… connect.facebook.net, facebook.com (px),
+  //                                facebook.com (tr beacon image)
+  //   Microsoft Clarity ………………… clarity.ms, c.clarity.ms, c.bing.com
+  //   LinkedIn Insight Tag …………… snap.licdn.com (loader),
+  //                                px.ads.linkedin.com (beacon)
+  //   Contentsquare (ex-Hotjar) … t.contentsquare.net (loader),
+  //                                *.contentsquare.net (telemetry +
+  //                                heatmap iframe). Contentsquare
+  //                                acquired Hotjar in Oct 2023 and
+  //                                migrated all accounts onto the
+  //                                unified UXA tracker.
+  //   Pinterest Tag …………………………… s.pinimg.com (loader),
+  //                                ct.pinterest.com (beacon)
+  //   Reddit Pixel …………………………… www.redditstatic.com (loader),
+  //                                events.redditmedia.com (beacon)
+  //   X / Twitter Pixel ……………… static.ads-twitter.com (loader),
+  //                                t.co, analytics.twitter.com (beacon)
+  //   TikTok Pixel ……………………… analytics.tiktok.com (loader+beacon),
+  //                                *.tiktokcdn.com
+  //   Quora Pixel ………………………… a.quora.com (loader),
+  //                                q.quora.com (beacon)
+  //   Microsoft Bing UET ……… bat.bing.com (loader+beacon)
+  //   Snap Pixel ……………………………… sc-static.net (loader),
+  //                                tr.snapchat.com (beacon)
+  //   PostHog ……………………………………… *.i.posthog.com, *-assets.i.posthog.com
+  //   Cloudflare Web Analytics …  static.cloudflareinsights.com (loader),
+  //                                cloudflareinsights.com (beacon)
+  //   Adobe Launch ……………………… assets.adobedtm.com (loader),
+  //                                *.adobedc.net, *.demdex.net (beacons,
+  //                                AAM), *.omtrdc.net (analytics beacon)
+  //   Razorpay checkout …………… checkout.razorpay.com, cdn.razorpay.com,
+  //                                api.razorpay.com, lumberjack.razorpay.com
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.gstatic.com https://apis.google.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://vercel.live https://checkout.razorpay.com https://cdn.razorpay.com${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
+    [
+      `script-src 'self' 'nonce-${nonce}' 'unsafe-eval'`,
+      // GA + GTM
+      'https://www.googletagmanager.com https://www.google-analytics.com',
+      // Facebook
+      'https://connect.facebook.net',
+      // Firebase / Google sign-in
+      'https://www.gstatic.com https://apis.google.com',
+      // Cloudflare Turnstile + Cloudflare Insights
+      'https://challenges.cloudflare.com https://static.cloudflareinsights.com',
+      // Vercel live preview
+      'https://vercel.live',
+      // Razorpay
+      'https://checkout.razorpay.com https://cdn.razorpay.com',
+      // Microsoft Clarity
+      'https://www.clarity.ms https://c.clarity.ms',
+      // LinkedIn Insight Tag
+      'https://snap.licdn.com',
+      // Contentsquare (Hotjar successor)
+      'https://t.contentsquare.net',
+      // Pinterest
+      'https://s.pinimg.com',
+      // Reddit
+      'https://www.redditstatic.com',
+      // X / Twitter
+      'https://static.ads-twitter.com',
+      // TikTok
+      'https://analytics.tiktok.com',
+      // Quora
+      'https://a.quora.com',
+      // Bing UET
+      'https://bat.bing.com',
+      // Snap
+      'https://sc-static.net',
+      // PostHog (cloud + asset CDN)
+      'https://*.i.posthog.com https://*-assets.i.posthog.com',
+      // Adobe Launch
+      'https://assets.adobedtm.com',
+      firebaseDbWildcard,
+    ]
+      .filter(Boolean)
+      .join(' '),
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live",
-    "img-src 'self' data: blob: https://res.cloudinary.com https://assets.hireadda.in https://lh3.googleusercontent.com https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com https://vercel.live https://vercel.com https://cdn.razorpay.com",
+    [
+      "img-src 'self' data: blob:",
+      // Assets
+      'https://res.cloudinary.com https://assets.hireadda.in https://lh3.googleusercontent.com',
+      // Facebook beacons
+      'https://www.facebook.com',
+      // GA / GTM image beacons
+      'https://www.google-analytics.com https://www.googletagmanager.com',
+      // Vercel live
+      'https://vercel.live https://vercel.com',
+      // Razorpay
+      'https://cdn.razorpay.com',
+      // Microsoft Clarity beacons
+      'https://www.clarity.ms https://c.clarity.ms https://c.bing.com',
+      // LinkedIn pixel beacon
+      'https://px.ads.linkedin.com',
+      // Contentsquare static assets / avatars
+      'https://*.contentsquare.net',
+      // Pinterest noscript pixel
+      'https://ct.pinterest.com',
+      // Reddit beacon
+      'https://events.redditmedia.com',
+      // Twitter beacon
+      'https://t.co https://analytics.twitter.com',
+      // TikTok beacon
+      'https://analytics.tiktok.com',
+      // Quora noscript pixel
+      'https://q.quora.com',
+      // Bing UET image beacon
+      'https://bat.bing.com',
+      // Snap beacon
+      'https://tr.snapchat.com',
+      // PostHog static assets
+      'https://*.i.posthog.com',
+      // Adobe AAM
+      'https://*.demdex.net https://*.everesttech.net https://*.omtrdc.net',
+    ].join(' '),
     "font-src 'self' https://fonts.gstatic.com https://vercel.live",
-    `connect-src 'self' ${apiUrl} ${wsUrl} https://www.google-analytics.com https://www.googletagmanager.com https://connect.facebook.net https://www.facebook.com https://challenges.cloudflare.com https://cloudflareinsights.com https://vercel.live https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.razorpay.com https://lumberjack.razorpay.com https://lumberjack-cx.razorpay.com${firebaseDbWildcard ? ` ${firebaseDbWildcard}` : ''}`,
-    `frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com https://vercel.live https://*.firebaseapp.com https://api.razorpay.com https://checkout.razorpay.com${firebaseDbRegion ? ` https://*.${firebaseDbRegion}` : ''}`,
+    [
+      `connect-src 'self' ${apiUrl} ${wsUrl}`,
+      // GA + GTM
+      'https://www.google-analytics.com https://www.googletagmanager.com',
+      // Facebook
+      'https://connect.facebook.net https://www.facebook.com',
+      // Turnstile + Cloudflare Insights
+      'https://challenges.cloudflare.com https://cloudflareinsights.com',
+      // Vercel
+      'https://vercel.live',
+      // Firebase
+      'https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com',
+      // Razorpay
+      'https://api.razorpay.com https://lumberjack.razorpay.com https://lumberjack-cx.razorpay.com',
+      // Microsoft Clarity telemetry
+      'https://*.clarity.ms https://c.bing.com',
+      // LinkedIn Insight (XHR)
+      'https://px.ads.linkedin.com',
+      // Contentsquare telemetry (XHR + WebSocket for live replays)
+      'https://*.contentsquare.net wss://*.contentsquare.net',
+      // Pinterest
+      'https://ct.pinterest.com',
+      // Reddit
+      'https://events.redditmedia.com',
+      // Twitter
+      'https://analytics.twitter.com https://t.co',
+      // TikTok
+      'https://analytics.tiktok.com https://*.tiktok.com',
+      // Quora
+      'https://q.quora.com https://a.quora.com',
+      // Bing UET
+      'https://bat.bing.com',
+      // Snap
+      'https://tr.snapchat.com',
+      // PostHog ingestion
+      'https://*.i.posthog.com',
+      // Adobe Analytics + AAM
+      'https://*.adobedc.net https://*.demdex.net https://*.omtrdc.net https://*.everesttech.net',
+      firebaseDbWildcard,
+    ]
+      .filter(Boolean)
+      .join(' '),
+    `frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com https://vercel.live https://*.firebaseapp.com https://api.razorpay.com https://checkout.razorpay.com https://*.contentsquare.net https://*.adobedc.net https://*.demdex.net${firebaseDbRegion ? ` https://*.${firebaseDbRegion}` : ''}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "object-src 'none'",

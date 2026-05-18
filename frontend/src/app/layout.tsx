@@ -2,6 +2,19 @@
 import FacebookPixel from '@/components/analytics/FacebookPixel';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import { GTMBody, GTMHead } from '@/components/analytics/GTM';
+import MicrosoftClarity from '@/components/analytics/MicrosoftClarity';
+import LinkedInInsight from '@/components/analytics/LinkedInInsight';
+import Contentsquare from '@/components/analytics/Contentsquare';
+import PinterestTag from '@/components/analytics/PinterestTag';
+import RedditPixel from '@/components/analytics/RedditPixel';
+import TwitterPixel from '@/components/analytics/TwitterPixel';
+import TikTokPixel from '@/components/analytics/TikTokPixel';
+import QuoraPixel from '@/components/analytics/QuoraPixel';
+import BingUET from '@/components/analytics/BingUET';
+import SnapPixel from '@/components/analytics/SnapPixel';
+import PostHog from '@/components/analytics/PostHog';
+import CloudflareAnalytics from '@/components/analytics/CloudflareAnalytics';
+import AdobeAnalytics from '@/components/analytics/AdobeAnalytics';
 import BackToTop from '@/components/common/BackToTop';
 import SmoothScroll from '@/components/common/SmoothScroll';
 import CookieConsent from '@/components/common/CookieConsent';
@@ -502,8 +515,37 @@ export default async function RootLayout({
           </SmoothScroll>
         </Providers>
         <WebVitals />
+        {/* ── Analytics providers ────────────────────────────────────
+            All scripts are CSP-nonce'd, lazy-loaded via Next.js Script
+            `afterInteractive`, and gated by the `analytics` /
+            `marketing` consent buckets in ha_cookie_consent. Each
+            component is a no-op until its NEXT_PUBLIC_* ID is set —
+            staging / preview environments can simply not provide IDs
+            and ship zero analytics traffic.
+
+            Bucket: analytics
+              GoogleAnalytics (GA4) · MicrosoftClarity · Contentsquare
+              (formerly Hotjar) · PostHog · CloudflareAnalytics ·
+              AdobeAnalytics
+            Bucket: marketing
+              FacebookPixel · LinkedInInsight · PinterestTag ·
+              RedditPixel · TwitterPixel · TikTokPixel · QuoraPixel ·
+              BingUET · SnapPixel */}
         <GoogleAnalytics nonce={nonce} />
         <FacebookPixel nonce={nonce} />
+        <MicrosoftClarity nonce={nonce} />
+        <LinkedInInsight nonce={nonce} />
+        <Contentsquare nonce={nonce} />
+        <PinterestTag nonce={nonce} />
+        <RedditPixel nonce={nonce} />
+        <TwitterPixel nonce={nonce} />
+        <TikTokPixel nonce={nonce} />
+        <QuoraPixel nonce={nonce} />
+        <BingUET nonce={nonce} />
+        <SnapPixel nonce={nonce} />
+        <PostHog nonce={nonce} />
+        <CloudflareAnalytics nonce={nonce} />
+        <AdobeAnalytics nonce={nonce} />
         <BackToTop />
         <KeyboardShortcuts />
         <CookieConsent />
