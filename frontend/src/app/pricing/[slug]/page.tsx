@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import PublicLayout from '@/components/layout/PublicLayout';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { generateMetadata as buildMetadata } from '@/components/common/SEO';
 import AuthSupportFooter from '@/components/support/AuthSupportFooter';
 import PageFaqSection from '@/components/support/PageFaqSection';
@@ -210,6 +211,16 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ slu
         subheading="Common questions about this plan, billing, and what's included."
         jsonLdId={`jsonld-faq-pricing-${slug}`}
       />
+
+      {/* Breadcrumbs — bottom placement. Schema already in JsonLd. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs
+            items={[{ name: 'Pricing', href: '/pricing' }, { name: plan.name }]}
+            withSchema={false}
+          />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

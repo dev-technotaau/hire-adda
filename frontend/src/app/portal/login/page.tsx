@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import Checkbox from '@/components/ui/Checkbox';
 import Divider from '@/components/ui/Divider';
 import Input from '@/components/ui/Input';
+import Tooltip from '@/components/ui/Tooltip';
 import { showToast } from '@/components/ui/Toast';
 import { ROLE_DASHBOARDS } from '@/constants/routes';
 import { useAuth } from '@/hooks/use-auth';
@@ -216,14 +217,15 @@ export default function AdminLoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--bg-secondary)]">
-      {/* Minimal header */}
-      <header className="flex h-16 items-center px-4 sm:px-6">
-        <Logo />
-      </header>
-
-      {/* Centered content */}
-      <main className="flex flex-1 items-center justify-center px-4 py-8">
+      {/* Centered content — logo sits directly above the auth card
+          (instead of a top-left header) so the Hire Adda brand reads
+          first, then the Admin Portal headline inside the card.
+          Mirrors the AuthLayout structure used by the rest of /auth/*. */}
+      <main className="flex flex-1 items-center justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-md">
+          <div className="mb-6 flex justify-center sm:mb-8">
+            <Logo size="lg" />
+          </div>
           <div className="rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8">
             {/* Admin Portal Header */}
             <div className="mb-6 text-center">
@@ -293,18 +295,20 @@ export default function AdminLoginPage() {
                       placeholder="Enter your password"
                       leftIcon={<Lock className="h-4 w-4" />}
                       rightIcon={
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
-                          title={showPassword ? 'Hide password' : 'Show password'}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </button>
+                        <Tooltip content={showPassword ? 'Hide password' : 'Show password'}>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </Tooltip>
                       }
                       error={errors.password?.message}
                       autoFocus

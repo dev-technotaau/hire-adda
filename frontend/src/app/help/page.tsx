@@ -4,6 +4,7 @@ import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PublicLayout from '@/components/layout/PublicLayout';
 import JsonLd from '@/components/seo/JsonLd';
 import Button from '@/components/ui/Button';
+import Select from '@/components/ui/Select';
 import Tooltip from '@/components/ui/Tooltip';
 import { useAuthStore } from '@/store/auth.store';
 import { articleSchema, breadcrumbSchema, faqPageSchema, graph } from '@/lib/json-ld';
@@ -161,10 +162,6 @@ export default function HelpPage() {
               <span>Reviewed by Support &amp; Trust team</span>
             </div>
 
-            <div className="mt-6 flex justify-center">
-              <Breadcrumbs items={[{ name: 'Help & FAQ' }]} withSchema={false} />
-            </div>
-
             {/* Search + Language picker row */}
             <div className="mx-auto mt-8 grid max-w-3xl gap-3 sm:grid-cols-[1fr_auto]">
               <div className="relative">
@@ -184,18 +181,29 @@ export default function HelpPage() {
                   AI search
                 </span>
               </div>
-              <select
-                value={locale}
-                onChange={(e) => setLocale(e.target.value as LocaleCode)}
-                aria-label="Language"
-                className="focus:border-primary focus:ring-primary/20 h-12 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-medium text-[var(--text)] shadow-sm focus:ring-2 focus:outline-none"
-              >
-                {SUPPORTED_LOCALES.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.nativeLabel}
-                  </option>
-                ))}
-              </select>
+              {/* Language switcher — uses the shared custom Select
+                  instead of the native dropdown so styling /
+                  caret-rotation / open-state ring match every other
+                  form control on the site. `min-w-[160px]` keeps the
+                  trigger wide enough that the longest native label
+                  (e.g. "മലയാളം") doesn't truncate.
+                  The visually-hidden <label htmlFor> gives the
+                  trigger button an accessible name for screen
+                  readers without printing visible label chrome. */}
+              <div className="min-w-[160px]">
+                <label htmlFor="help-language-select" className="sr-only">
+                  Language
+                </label>
+                <Select
+                  id="help-language-select"
+                  value={locale}
+                  onChange={(v) => setLocale(v as LocaleCode)}
+                  options={SUPPORTED_LOCALES.map((l) => ({
+                    value: l.code,
+                    label: l.nativeLabel,
+                  }))}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -380,6 +388,13 @@ export default function HelpPage() {
           </div>
         </div>
       </section>
+
+      {/* Breadcrumbs — bottom placement. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'Help & FAQ' }]} withSchema={false} />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

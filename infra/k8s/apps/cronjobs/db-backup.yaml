@@ -51,6 +51,11 @@ spec:
         metadata:
           labels:
             app: db-backup
+          annotations:
+            # Skip the backups-pvc from Velero FS backup — see
+            # backup-cleanup.yaml comment for rationale (avoid
+            # backing up backups).
+            backup.velero.io/backup-volumes-excludes: backups
         spec:
           securityContext:
             runAsUser: 1001

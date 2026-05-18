@@ -24,6 +24,11 @@ spec:
       labels:
         app: roundcube
         tier: app
+      annotations:
+        # roundcube-data IS persistent and WE WANT it backed up
+        # by Velero (no native backup mechanism for the mailserver
+        # state). Exclude only the ephemeral temp/config EmptyDirs.
+        backup.velero.io/backup-volumes-excludes: roundcube-temp,roundcube-config
     spec:
       securityContext:
         runAsUser: 33 # www-data

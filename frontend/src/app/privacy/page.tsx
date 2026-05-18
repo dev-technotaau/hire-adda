@@ -104,13 +104,6 @@ export default function PrivacyPage() {
         </div>
       </section>
 
-      {/* Breadcrumbs */}
-      <div className="border-b border-[var(--border)] bg-white">
-        <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
-          <Breadcrumbs items={[{ name: 'Privacy Policy' }]} withSchema={false} />
-        </div>
-      </div>
-
       {/* Content */}
       <section className="bg-white py-12 sm:py-16">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
@@ -147,6 +140,14 @@ export default function PrivacyPage() {
           </div>
         </div>
       </section>
+
+      {/* Breadcrumbs — bottom placement, narrow rail matches the
+          policy's max-w-4xl content column above. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'Privacy Policy' }]} withSchema={false} />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

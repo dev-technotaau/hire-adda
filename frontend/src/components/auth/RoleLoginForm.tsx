@@ -370,14 +370,21 @@ export default function RoleLoginForm({ role }: RoleLoginFormProps) {
                   placeholder="Enter your password"
                   leftIcon={<Lock className="h-4 w-4" />}
                   rightIcon={
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="text-[var(--text-muted)] hover:text-[var(--text)]"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                    <Tooltip content={showPassword ? 'Hide password' : 'Show password'}>
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-[var(--text-muted)] hover:text-[var(--text)]"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </Tooltip>
                   }
                   error={errors.password?.message}
                   autoFocus

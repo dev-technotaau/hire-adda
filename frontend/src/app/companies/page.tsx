@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import PublicLayout from '@/components/layout/PublicLayout';
 import PublicCompanyListingShell from '@/components/company-search/PublicCompanyListingShell';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import JsonLd from '@/components/seo/JsonLd';
 import {
   breadcrumbSchema,
@@ -164,6 +165,13 @@ export default async function CompaniesListingPage({
         heroSubtitle="5,000+ verified employers across India — view jobs, culture, benefits"
         seoIntro="Hire Adda lists verified companies across IT, sales, marketing, fintech, healthcare, manufacturing, and more. Search by name, industry, or location; filter by company size, type, and verification status. Each company has a public profile with open jobs, culture, benefits, and tech stack."
       />
+
+      {/* Breadcrumbs — bottom placement. Schema already in JsonLd. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'Companies' }]} withSchema={false} />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

@@ -275,17 +275,20 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     leftIcon={<Lock className="h-4 w-4" />}
                     rightIcon={
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
+                      <Tooltip content={showPassword ? 'Hide password' : 'Show password'}>
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </Tooltip>
                     }
                     required
                   />
@@ -299,13 +302,20 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     leftIcon={<Lock className="h-4 w-4" />}
                     rightIcon={
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        onClick={() => setShowConfirm(!showConfirm)}
-                      >
-                        {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
+                      <Tooltip content={showConfirm ? 'Hide password' : 'Show password'}>
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() => setShowConfirm(!showConfirm)}
+                          aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                        >
+                          {showConfirm ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </Tooltip>
                     }
                     required
                   />

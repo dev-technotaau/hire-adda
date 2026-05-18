@@ -96,7 +96,53 @@ const nextConfig: NextConfig = {
           // Tk — Tracking Status. We don't track DNT users (see
           // /.well-known/dnt-policy.txt), so `N` = not tracking.
           { key: 'Tk', value: 'N' },
+          // X-Robots-Tag — HTTP-layer counterpart to the page-level
+          // `<meta name="robots">`. Same directives we already declare
+          // via Next.js metadata, but emitted as a response header so
+          // they apply to:
+          //   - non-HTML responses (PDFs, images, OG-image SVGs) where
+          //     a <meta> tag isn't possible;
+          //   - crawlers that fetch HEAD-only or short-circuit on
+          //     headers before parsing HTML.
+          // Auth + portal paths get a stricter `noindex, nofollow,
+          // nosnippet, noarchive` further down so the two layers
+          // agree on every page. When HTML and HTTP signals
+          // disagree, Google honours the MOST restrictive, so a
+          // permissive default here can never accidentally
+          // un-noindex a page that's noindex'd in HTML.
+          {
+            key: 'X-Robots-Tag',
+            value:
+              'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
+          },
           // CSP is managed by src/proxy.ts with per-request nonce
+        ],
+      },
+      {
+        // Auth + portal + every dashboard root must never be
+        // indexed. Mirrors the
+        // `robots: { index: false, follow: false }` metadata
+        // declared in:
+        //   - src/app/auth/layout.tsx
+        //   - src/app/portal/login/page.tsx
+        //   - src/app/candidate/layout.tsx
+        //   - src/app/employer/layout.tsx
+        //   - src/app/admin/layout.tsx
+        //   - src/app/super-admin/layout.tsx
+        //   - src/app/notifications/layout.tsx
+        // …plus `/vendor` (vendor dashboard — no layout file but
+        // it's an authenticated-only surface that mirrors the others).
+        //
+        // The HTTP header signal lets crawlers drop these out of the
+        // queue without spending HTML-parse budget on the response.
+        // The public `/vendors` directory is NOT caught here because
+        // its path token is `vendors`, not `vendor`.
+        source: '/(auth|portal|candidate|employer|admin|super-admin|notifications|vendor)/:path*',
+        headers: [
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex, nofollow, nosnippet, noarchive',
+          },
         ],
       },
       {

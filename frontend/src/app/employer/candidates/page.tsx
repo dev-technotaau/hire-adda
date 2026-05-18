@@ -1254,1131 +1254,1208 @@ export default function CandidateSearchPage() {
             )}
           </Card>
 
-          {/* Inline skill/company/designation/IT skill autosuggests */}
-          <Card>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <AutoSuggest
-                label="Skills"
-                placeholder="e.g. React, Node.js"
-                value={filters.skills?.split(',').filter(Boolean) ?? []}
-                onChange={(val) => {
-                  const str = Array.isArray(val) ? val.join(',') : val;
-                  handleFilterChange('skills', str || undefined);
-                }}
-                suggestions={skillOptions}
-                isLoading={isLoadingSkills}
-                onInputChange={setSkillsQuery}
-                multiple
-                allowCreate
-                createLabel={(q) => `Add "${q}"`}
-                maxSelections={15}
-                minChars={1}
-                inputSize="sm"
-                additionalSections={skillAdditionalSections}
-              />
-              <AutoSuggest
-                label="Current Company"
-                placeholder="e.g. Google"
-                value={filters.currentCompany || ''}
-                onChange={(val) =>
-                  handleFilterChange(
-                    'currentCompany',
-                    (typeof val === 'string' ? val : val[0]) || undefined,
-                  )
-                }
-                suggestions={companyOptions}
-                isLoading={isLoadingCompanies}
-                onInputChange={setCompanyQuery}
-                allowCreate
-                createLabel={(q) => `Search "${q}"`}
-                minChars={2}
-                inputSize="sm"
-                additionalSections={companyAdditionalSections}
-              />
-              <ServerAutoSuggest
-                category="role_category"
-                label="Designation"
-                placeholder="e.g. Senior Developer"
-                value={filters.designation || ''}
-                onChange={(v) =>
-                  handleFilterChange('designation', (typeof v === 'string' ? v : v[0]) || undefined)
-                }
-                allowCreate
-                inputSize="sm"
-              />
-              <ServerAutoSuggest
-                category="skill"
-                label="IT Skill / Technology"
-                placeholder="e.g. Docker, AWS"
-                value={filters.itSkill || ''}
-                onChange={(v) =>
-                  handleFilterChange('itSkill', (typeof v === 'string' ? v : v[0]) || undefined)
-                }
-                allowCreate
-                inputSize="sm"
-              />
-            </div>
-          </Card>
-
-          {/* Exclusion filters */}
-          <Card>
-            <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
-              Exclude from results
-            </p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Input
-                label="Exclude Keywords"
-                placeholder="e.g. intern, fresher"
-                value={filters.excludeKeywords || ''}
-                onChange={(e) => handleFilterChange('excludeKeywords', e.target.value || undefined)}
-                inputSize="sm"
-              />
-              <ServerAutoSuggest
-                category="company"
-                label="Exclude Company"
-                placeholder="e.g. CompetitorCo"
-                value={filters.excludeCompany || ''}
-                onChange={(v) =>
-                  handleFilterChange(
-                    'excludeCompany',
-                    (typeof v === 'string' ? v : v[0]) || undefined,
-                  )
-                }
-                allowCreate
-                inputSize="sm"
-              />
-              <ServerAutoSuggest
-                category="location"
-                label="Exclude Location"
-                placeholder="e.g. City to exclude"
-                value={filters.excludeLocation || ''}
-                onChange={(v) =>
-                  handleFilterChange(
-                    'excludeLocation',
-                    (typeof v === 'string' ? v : v[0]) || undefined,
-                  )
-                }
-                allowCreate
-                inputSize="sm"
-              />
-            </div>
-          </Card>
-
-          {/* Certifications */}
-          <Card>
-            <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Certifications</h3>
-            <ServerAutoSuggest
-              category="certification"
-              value={filters.certifications ? filters.certifications.split(',') : []}
-              onChange={(vals) =>
-                handleFilterChange('certifications', Array.isArray(vals) ? vals.join(',') : vals)
-              }
-              placeholder="Search certifications..."
-              multiple
-              maxSelections={10}
-            />
-          </Card>
-
-          {/* Professional Search */}
-          <Card>
-            <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Professional Search</h3>
-            <p className="mb-4 text-sm text-[var(--text-muted)]">
-              Search for specific education, skills, or designations
-            </p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Input
-                label="Education"
-                placeholder="e.g. B.Tech, MBA"
-                value={filters.education || ''}
-                onChange={(e) => handleFilterChange('education', e.target.value || undefined)}
-                inputSize="sm"
-              />
-              <Input
-                label="IT Skill"
-                placeholder="e.g. Python, AWS"
-                value={filters.itSkill || ''}
-                onChange={(e) => handleFilterChange('itSkill', e.target.value || undefined)}
-                inputSize="sm"
-              />
-              <Input
-                label="Designation"
-                placeholder="e.g. Senior Engineer"
-                value={filters.designation || ''}
-                onChange={(e) => handleFilterChange('designation', e.target.value || undefined)}
-                inputSize="sm"
-              />
-            </div>
-          </Card>
-
-          {/* Activity Dates */}
-          <Card>
-            <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Activity Dates</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[var(--text)]">
-                  Registered After
-                </label>
-                <DatePicker
-                  value={filters.registeredAfter || ''}
-                  onChange={(val) => handleFilterChange('registeredAfter', val || undefined)}
-                  maxDate={new Date()}
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[var(--text)]">
-                  Modified After
-                </label>
-                <DatePicker
-                  value={filters.modifiedAfter || ''}
-                  onChange={(val) => handleFilterChange('modifiedAfter', val || undefined)}
-                  maxDate={new Date()}
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* Radius Search */}
-          <Card>
-            <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Radius Search</h3>
-            <p className="mb-4 text-sm text-[var(--text-muted)]">
-              Search candidates within a specific radius of a location
-            </p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Input
-                label="Latitude"
-                type="number"
-                step="0.000001"
-                placeholder="e.g. 28.6139"
-                value={filters.latitude || ''}
-                onChange={(e) => handleFilterChange('latitude', e.target.value || undefined)}
-                inputSize="sm"
-              />
-              <Input
-                label="Longitude"
-                type="number"
-                step="0.000001"
-                placeholder="e.g. 77.2090"
-                value={filters.longitude || ''}
-                onChange={(e) => handleFilterChange('longitude', e.target.value || undefined)}
-                inputSize="sm"
-              />
-              <Input
-                label="Radius (km)"
-                type="number"
-                min="1"
-                max="1000"
-                placeholder="e.g. 50"
-                value={filters.radiusKm || ''}
-                onChange={(e) => handleFilterChange('radiusKm', e.target.value || undefined)}
-                inputSize="sm"
-              />
-            </div>
-            {filters.latitude && filters.longitude && filters.radiusKm && (
-              <p className="mt-2 text-xs text-[var(--success)]">
-                Searching within {filters.radiusKm}km of ({filters.latitude}, {filters.longitude})
-              </p>
-            )}
-          </Card>
-
-          {/* Region Presets */}
-          <Card>
-            <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
-              Quick Location Presets
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(BROAD_REGION_PRESETS).map(([key, preset]) => {
-                const isActive =
-                  preset.special === 'clear'
-                    ? !filters.location
-                    : (preset.cities?.some((c) => filters.location === c) ?? false);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => {
-                      if (preset.special === 'clear') {
-                        handleFilterChange('location', undefined);
-                        setLocationQuery('');
-                      } else if (preset.special === 'international') {
-                        handleFilterChange('location', 'International');
-                        setLocationQuery('International');
-                      } else if (preset.cities) {
-                        if (isActive) {
-                          handleFilterChange('location', undefined);
-                          setLocationQuery('');
-                        } else {
-                          handleFilterChange('location', preset.cities[0]);
-                          setLocationQuery(preset.cities[0]);
-                        }
-                      }
+          {/* ── Main layout: filter SIDEBAR (left) + results (right).
+              Mirrors the candidate /jobs page UX so the experience is
+              symmetric for both audiences. Every existing filter card
+              moves into the <aside> below — none are removed; the
+              source-of-truth IS this DOM region, simply re-anchored
+              from "above the results" to "to the left of the results".
+              On <lg, the aside collapses to hidden by default and the
+              "Filters" button in the toolbar toggles `showAdvanced`
+              to reveal it inline above the results (no separate
+              drawer — the same DOM does both). */}
+          <div className="flex flex-col gap-6 lg:flex-row">
+            <aside
+              className={cn(
+                'w-full shrink-0 space-y-4 lg:block lg:w-[340px]',
+                showAdvanced ? 'block' : 'hidden lg:block',
+              )}
+              aria-label="Candidate filters"
+            >
+              {/* Inline skill/company/designation/IT skill autosuggests */}
+              <Card>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <AutoSuggest
+                    label="Skills"
+                    placeholder="e.g. React, Node.js"
+                    value={filters.skills?.split(',').filter(Boolean) ?? []}
+                    onChange={(val) => {
+                      const str = Array.isArray(val) ? val.join(',') : val;
+                      handleFilterChange('skills', str || undefined);
                     }}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'bg-primary text-white'
-                        : 'border border-[var(--border)] bg-white text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {Object.entries(INDIAN_REGION_PRESETS).map(([region, cities]) => {
-                const isActive = cities.some((c) => filters.location === c);
-                return (
-                  <button
-                    key={region}
-                    type="button"
-                    onClick={() => {
-                      if (isActive) {
-                        handleFilterChange('location', undefined);
-                        setLocationQuery('');
-                      } else {
-                        handleFilterChange('location', cities[0]);
-                        setLocationQuery(cities[0]);
-                      }
-                    }}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'bg-primary text-white'
-                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
-                    }`}
-                  >
-                    {region}
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* Education, certifications, department, industry, work permit */}
-          <Card>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <ServerAutoSuggest
-                category="field_of_study"
-                label="Education"
-                placeholder="e.g. B.Tech, MBA"
-                value={filters.education || ''}
-                onChange={(v) =>
-                  handleFilterChange('education', (typeof v === 'string' ? v : v[0]) || undefined)
-                }
-                allowCreate
-                inputSize="sm"
-              />
-              <Select
-                label="Education Level"
-                options={toSelectOptions(EDUCATION_LEVEL_SEARCH_LABELS)}
-                value={filters.educationLevel || ''}
-                onChange={(v) => handleFilterChange('educationLevel', v || undefined)}
-                placeholder="Any level"
-                searchable
-              />
-              <ServerAutoSuggest
-                category="certification"
-                label="Certifications"
-                placeholder="e.g. AWS, PMP"
-                value={filters.certifications || ''}
-                onChange={(v) =>
-                  handleFilterChange(
-                    'certifications',
-                    (typeof v === 'string' ? v : v[0]) || undefined,
-                  )
-                }
-                allowCreate
-                inputSize="sm"
-              />
-              <ServerAutoSuggest
-                category="department"
-                label="Department"
-                placeholder="e.g. Engineering"
-                value={filters.department || ''}
-                onChange={(v) =>
-                  handleFilterChange('department', (typeof v === 'string' ? v : v[0]) || undefined)
-                }
-                allowCreate
-                inputSize="sm"
-              />
-              <ServerAutoSuggest
-                category="industry"
-                label="Industry"
-                placeholder="e.g. IT, Finance"
-                value={filters.currentIndustry || ''}
-                onChange={(v) =>
-                  handleFilterChange(
-                    'currentIndustry',
-                    (typeof v === 'string' ? v : v[0]) || undefined,
-                  )
-                }
-                allowCreate
-                inputSize="sm"
-              />
-              <ServerAutoSuggest
-                category="visa_status"
-                label="Work Permit / Visa"
-                placeholder="e.g. Indian Citizen, H-1B Visa"
-                value={filters.workPermit || ''}
-                onChange={(v) =>
-                  handleFilterChange('workPermit', (typeof v === 'string' ? v : v[0]) || undefined)
-                }
-                allowCreate
-                inputSize="sm"
-              />
-            </div>
-          </Card>
-
-          {/* Profile freshness date filters */}
-          <Card>
-            <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
-              Registration Date Presets
-            </p>
-            <div className="mb-4 flex flex-wrap gap-2">
-              {[
-                { label: 'Last 24h', days: 1 },
-                { label: 'Last 7 days', days: 7 },
-                { label: 'Last 30 days', days: 30 },
-                { label: 'Last 90 days', days: 90 },
-              ].map(({ label, days }) => {
-                const targetDate = new Date();
-                targetDate.setDate(targetDate.getDate() - days);
-                const dateStr = targetDate.toISOString().split('T')[0];
-                const isActive = filters.registeredAfter === dateStr;
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() =>
-                      handleFilterChange('registeredAfter', isActive ? undefined : dateStr)
+                    suggestions={skillOptions}
+                    isLoading={isLoadingSkills}
+                    onInputChange={setSkillsQuery}
+                    multiple
+                    allowCreate
+                    createLabel={(q) => `Add "${q}"`}
+                    maxSelections={15}
+                    minChars={1}
+                    inputSize="sm"
+                    additionalSections={skillAdditionalSections}
+                  />
+                  <AutoSuggest
+                    label="Current Company"
+                    placeholder="e.g. Google"
+                    value={filters.currentCompany || ''}
+                    onChange={(val) =>
+                      handleFilterChange(
+                        'currentCompany',
+                        (typeof val === 'string' ? val : val[0]) || undefined,
+                      )
                     }
-                    className={cn(
-                      'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary text-white'
-                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
-                    )}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <DatePicker
-                label="Registered After"
-                value={filters.registeredAfter || ''}
-                onChange={(v) => handleFilterChange('registeredAfter', v || undefined)}
-                inputSize="sm"
-                placeholder="Select date"
-                maxDate={new Date()}
-              />
-              <DatePicker
-                label="Profile Modified After"
-                value={filters.modifiedAfter || ''}
-                onChange={(v) => handleFilterChange('modifiedAfter', v || undefined)}
-                inputSize="sm"
-                placeholder="Select date"
-                maxDate={new Date()}
-              />
-            </div>
-          </Card>
-
-          {/* Proximity search (geo) */}
-          <Card>
-            <div className="mb-3 flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-[var(--text-secondary)]" />
-              <p className="text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
-                Proximity Search
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Search near location
-                </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleGetLocation}
-                    disabled={isGettingLocation}
-                    title="Detect my location"
-                    className="hover:border-primary hover:text-primary hover:bg-primary-light flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition-colors disabled:opacity-50"
-                  >
-                    {isGettingLocation ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Locate className="h-4 w-4" />
-                    )}
-                    {filters.latitude ? 'Update location' : 'Use my location'}
-                  </button>
-                  {filters.latitude && (
-                    <button
-                      type="button"
-                      onClick={clearGeoLocation}
-                      title="Clear location"
-                      className="cursor-pointer text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-                {geoLocationName && filters.latitude && (
-                  <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                    Detected: {geoLocationName}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                  Radius
-                </label>
-                <Select
-                  options={[
-                    { value: '5', label: '5 km' },
-                    { value: '10', label: '10 km' },
-                    { value: '25', label: '25 km' },
-                    { value: '50', label: '50 km' },
-                    { value: '100', label: '100 km' },
-                    { value: '200', label: '200 km' },
-                  ]}
-                  value={filters.radiusKm || ''}
-                  onChange={(v) => handleFilterChange('radiusKm', v || undefined)}
-                  placeholder="Select radius"
-                  disabled={!filters.latitude}
-                />
-              </div>
-            </div>
-            {nearbyCities.length > 0 && (
-              <div className="mt-4 border-t border-[var(--border)] pt-3">
-                <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">
-                  Nearby Cities
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {nearbyCities.map((city) => (
-                    <button
-                      key={city}
-                      type="button"
-                      onClick={() => {
-                        handleFilterChange('location', city);
-                        setLocationQuery(city);
-                      }}
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                        filters.location === city
-                          ? 'bg-primary text-white'
-                          : 'hover:bg-primary-light hover:text-primary bg-[var(--bg-secondary)] text-[var(--text-secondary)]'
-                      }`}
-                    >
-                      {city}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </Card>
-
-          {/* Active filter tags */}
-          <ActiveFilterTags
-            sections={filterSections}
-            values={filterValues}
-            onChange={handleFilterChange}
-            onClear={clearFilters}
-          />
-
-          {/* Search History */}
-          {searchHistory.length > 0 && !keyword && activeFilterCount === 0 && (
-            <Card>
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[var(--text)]">Recent Searches</h3>
-                <button
-                  onClick={async () => {
-                    await searchService.clearSearchHistory();
-                    queryClient.invalidateQueries({ queryKey: ['search-history'] });
-                  }}
-                  title="Clear search history"
-                  className="cursor-pointer text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
-                >
-                  Clear all
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {searchHistory.slice(0, 8).map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      if (item.query) {
-                        setKeyword(item.query);
-                        setFilters((prev) => ({
-                          ...prev,
-                          keyword: item.query,
-                          page: '1',
-                        }));
-                      }
-                    }}
-                    className="hover:border-primary hover:bg-primary-light hover:text-primary flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors"
-                  >
-                    <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                    <span>{item.query || 'Previous search'}</span>
-                  </button>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* Toolbar */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <PremiumLockBadge feature="feature.advanced_filters" variant="inline">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  tooltip="Toggle advanced filters"
-                >
-                  <Filter className="mr-1.5 h-4 w-4" />
-                  Advanced Filters
-                  {activeFilterCount > 0 && (
-                    <span className="bg-primary ml-1.5 flex h-5 w-5 items-center justify-center rounded-full text-xs text-white">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </Button>
-              </PremiumLockBadge>
-              {activeFilterCount > 0 && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowSaveSearch(true)}
-                    tooltip="Create candidate alert"
-                  >
-                    <Bell className="mr-1.5 h-4 w-4" />
-                    Create Alert
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowSaveSearch(true)}
-                    tooltip="Save search criteria"
-                  >
-                    <Star className="mr-1.5 h-4 w-4" />
-                    Save Search
-                  </Button>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              {/* View Mode Toggle */}
-              <div className="flex rounded-lg border border-[var(--border)] bg-white p-0.5">
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={cn(
-                    'cursor-pointer rounded-md p-1.5 transition-colors',
-                    viewMode === 'list'
-                      ? 'bg-primary text-white'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
-                  )}
-                  aria-label="List view"
-                  title="List view"
-                >
-                  <LayoutList className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('compact')}
-                  className={cn(
-                    'cursor-pointer rounded-md p-1.5 transition-colors',
-                    viewMode === 'compact'
-                      ? 'bg-primary text-white'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
-                  )}
-                  aria-label="Compact view"
-                  title="Compact view"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('map')}
-                  className={cn(
-                    'cursor-pointer rounded-md p-1.5 transition-colors',
-                    viewMode === 'map'
-                      ? 'bg-primary text-white'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
-                  )}
-                  aria-label="Map view"
-                  title="Map view"
-                >
-                  <Map className="h-4 w-4" />
-                </button>
-              </div>
-              {/* Sort Dropdown */}
-              <div className="flex items-center gap-2">
-                <label className="hidden text-sm text-[var(--text-muted)] sm:inline">
-                  Sort by:
-                </label>
-                <Select
-                  options={[
-                    { value: 'relevance', label: 'Best Match' },
-                    { value: 'profileUpdated', label: 'Recently Updated' },
-                    { value: 'lastActive', label: 'Recently Active' },
-                    { value: 'experience', label: 'Experience: High to Low' },
-                    { value: 'experience_asc', label: 'Experience: Low to High' },
-                    { value: 'salary', label: 'Salary: High to Low' },
-                    { value: 'salary_asc', label: 'Salary: Low to High' },
-                    ...(filters.latitude ? [{ value: 'distance', label: 'Nearest First' }] : []),
-                  ]}
-                  value={filters.sortBy || 'relevance'}
-                  onChange={(v) => handleFilterChange('sortBy', v || undefined)}
-                />
-              </div>
-              {pagination && (
-                <span className="text-sm whitespace-nowrap text-[var(--text-muted)]">
-                  {pagination.total.toLocaleString()} candidates found
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Advanced Filters Panel */}
-          <AdvancedFilters
-            sections={filterSections}
-            values={filterValues}
-            onChange={handleFilterChange}
-            onClear={clearFilters}
-            activeCount={activeFilterCount}
-            isOpen={showAdvanced}
-            onClose={() => setShowAdvanced(false)}
-            layout="panel"
-            title="Advanced Filters"
-          />
-
-          {/* Quick Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-[var(--text-secondary)]">Quick filters:</span>
-            <button
-              onClick={() =>
-                handleFilterChange(
-                  'lastActiveWithin',
-                  filters.lastActiveWithin === '7d' ? undefined : '7d',
-                )
-              }
-              className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                filters.lastActiveWithin === '7d'
-                  ? 'bg-primary text-white'
-                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
-              )}
-            >
-              Active last 7 days
-            </button>
-            <button
-              onClick={() =>
-                handleFilterChange(
-                  'noticePeriod',
-                  filters.noticePeriod === 'IMMEDIATE' ? undefined : 'IMMEDIATE',
-                )
-              }
-              className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                filters.noticePeriod === 'IMMEDIATE'
-                  ? 'bg-primary text-white'
-                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
-              )}
-            >
-              Immediate joiners
-            </button>
-            <button
-              onClick={() =>
-                handleFilterChange(
-                  'openToWork',
-                  filters.openToWork === 'ACTIVELY_LOOKING' ? undefined : 'ACTIVELY_LOOKING',
-                )
-              }
-              className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                filters.openToWork === 'ACTIVELY_LOOKING'
-                  ? 'bg-primary text-white'
-                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
-              )}
-            >
-              Open to work
-            </button>
-          </div>
-
-          {/* Save Search Dialog */}
-          {showSaveSearch && (
-            <Card>
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                    Save this search
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Name your search, e.g. 'Senior React developers'"
-                    value={saveSearchName}
-                    onChange={(e) => setSaveSearchName(e.target.value)}
-                    className="focus:border-primary focus:ring-primary/20 h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && saveSearchName.trim()) {
-                        saveSearchMutation.mutate(saveSearchName.trim());
-                      }
-                    }}
+                    suggestions={companyOptions}
+                    isLoading={isLoadingCompanies}
+                    onInputChange={setCompanyQuery}
+                    allowCreate
+                    createLabel={(q) => `Search "${q}"`}
+                    minChars={2}
+                    inputSize="sm"
+                    additionalSections={companyAdditionalSections}
+                  />
+                  <ServerAutoSuggest
+                    category="role_category"
+                    label="Designation"
+                    placeholder="e.g. Senior Developer"
+                    value={filters.designation || ''}
+                    onChange={(v) =>
+                      handleFilterChange(
+                        'designation',
+                        (typeof v === 'string' ? v : v[0]) || undefined,
+                      )
+                    }
+                    allowCreate
+                    inputSize="sm"
+                  />
+                  <ServerAutoSuggest
+                    category="skill"
+                    label="IT Skill / Technology"
+                    placeholder="e.g. Docker, AWS"
+                    value={filters.itSkill || ''}
+                    onChange={(v) =>
+                      handleFilterChange('itSkill', (typeof v === 'string' ? v : v[0]) || undefined)
+                    }
+                    allowCreate
+                    inputSize="sm"
                   />
                 </div>
-                <Button
-                  onClick={() => saveSearchMutation.mutate(saveSearchName.trim())}
-                  disabled={!saveSearchName.trim()}
-                  isLoading={saveSearchMutation.isPending}
-                  size="sm"
-                  tooltip="Save search"
-                >
-                  Save
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setShowSaveSearch(false);
-                    setSaveSearchName('');
-                  }}
-                  tooltip="Cancel save"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </Card>
-          )}
+              </Card>
 
-          {/* Bulk Actions Toolbar */}
-          {selectedIds.size > 0 && (
-            <Card className="border-primary bg-primary/5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (selectedIds.size === candidates.length) {
-                        clearSelection();
-                      } else {
-                        selectAll();
-                      }
-                    }}
-                    className="text-primary hover:text-primary-dark flex cursor-pointer items-center gap-1.5 text-sm font-medium"
-                    title="Toggle select all"
-                  >
-                    {selectedIds.size === candidates.length ? (
-                      <CheckSquare className="h-4 w-4" />
-                    ) : (
-                      <Square className="h-4 w-4" />
-                    )}
-                    {selectedIds.size === candidates.length ? 'Deselect' : 'Select'} all on page
-                  </button>
-                  <span className="text-sm font-medium text-[var(--text)]">
-                    {selectedIds.size} candidate{selectedIds.size !== 1 ? 's' : ''} selected
-                  </span>
+              {/* Exclusion filters */}
+              <Card>
+                <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
+                  Exclude from results
+                </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Input
+                    label="Exclude Keywords"
+                    placeholder="e.g. intern, fresher"
+                    value={filters.excludeKeywords || ''}
+                    onChange={(e) =>
+                      handleFilterChange('excludeKeywords', e.target.value || undefined)
+                    }
+                    inputSize="sm"
+                  />
+                  <ServerAutoSuggest
+                    category="company"
+                    label="Exclude Company"
+                    placeholder="e.g. CompetitorCo"
+                    value={filters.excludeCompany || ''}
+                    onChange={(v) =>
+                      handleFilterChange(
+                        'excludeCompany',
+                        (typeof v === 'string' ? v : v[0]) || undefined,
+                      )
+                    }
+                    allowCreate
+                    inputSize="sm"
+                  />
+                  <ServerAutoSuggest
+                    category="location"
+                    label="Exclude Location"
+                    placeholder="e.g. City to exclude"
+                    value={filters.excludeLocation || ''}
+                    onChange={(v) =>
+                      handleFilterChange(
+                        'excludeLocation',
+                        (typeof v === 'string' ? v : v[0]) || undefined,
+                      )
+                    }
+                    allowCreate
+                    inputSize="sm"
+                  />
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const userIds = candidates
-                        .filter((c) => selectedIds.has(c.id))
-                        .map((c) => c.userId);
-                      bulkSaveMutation.mutate(userIds);
-                    }}
-                    disabled={bulkSaveMutation.isPending}
-                    tooltip="Save selected"
-                  >
-                    <Bookmark className="mr-1.5 h-4 w-4" />
-                    Save All
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBulkActionOpen(true)}
-                    tooltip="Shortlist selected"
-                  >
-                    <UserCheck className="mr-1.5 h-4 w-4" />
-                    Shortlist
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => bulkExportMutation.mutate(Array.from(selectedIds))}
-                    disabled={bulkExportMutation.isPending}
-                    isLoading={bulkExportMutation.isPending}
-                    tooltip="Export as XLSX"
-                  >
-                    <Download className="mr-1.5 h-4 w-4" />
-                    Export
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => bulkExportResumesMutation.mutate(Array.from(selectedIds))}
-                    disabled={bulkExportResumesMutation.isPending}
-                    isLoading={bulkExportResumesMutation.isPending}
-                    tooltip="Export resumes as ZIP"
-                  >
-                    <FileDown className="mr-1.5 h-4 w-4" />
-                    Export Resumes
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearSelection}
-                    tooltip="Clear selection"
-                  >
-                    <X className="mr-1.5 h-4 w-4" />
-                    Clear
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          )}
+              </Card>
 
-          {/* Results */}
-          {viewMode === 'map' ? (
-            <div className="h-[calc(100vh-350px)] min-h-[600px]">
-              <CandidateMapView
-                candidates={candidates}
-                savedCandidateIds={savedCandidateIds}
-                onSaveCandidate={(id) => toggleSaveMutation.mutate(id)}
-                onSearchArea={handleSearchArea}
-              />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <Card key={i}>
-                    <Skeleton variant="card" />
-                  </Card>
-                ))
-              ) : candidates.length > 0 ? (
-                candidates.map((candidate) => {
-                  const card =
-                    viewMode === 'compact' ? (
-                      <CompactCandidateCard
-                        key={candidate.id}
-                        candidate={candidate}
-                        searchKeyword={keyword}
-                        requiredSkills={requiredSkills}
-                        isSaved={savedCandidateIds.has(candidate.userId)}
-                        onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
-                        isSaving={
-                          toggleSaveMutation.isPending &&
-                          toggleSaveMutation.variables === candidate.userId
-                        }
-                        isSelected={selectedIds.has(candidate.id)}
-                        onToggleSelect={() => toggleSelect(candidate.id)}
-                        isComparing={compareIds.includes(candidate.id)}
-                        onToggleCompare={() => handleToggleCompare(candidate.id)}
-                      />
-                    ) : (
-                      <CandidateCard
-                        key={candidate.id}
-                        candidate={candidate}
-                        searchKeyword={keyword}
-                        requiredSkills={requiredSkills}
-                        isSaved={savedCandidateIds.has(candidate.userId)}
-                        onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
-                        isSaving={
-                          toggleSaveMutation.isPending &&
-                          toggleSaveMutation.variables === candidate.userId
-                        }
-                        actionedStatus={actionedCandidates[candidate.id]}
-                        onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
-                        onSelect={() => openJobPicker(candidate.id, 'select')}
-                        onResumeDownload={() => handleResumeDownload(candidate.userId)}
-                        isSelected={selectedIds.has(candidate.id)}
-                        onToggleSelect={() => toggleSelect(candidate.id)}
-                        isComparing={compareIds.includes(candidate.id)}
-                        onToggleCompare={() => handleToggleCompare(candidate.id)}
-                      />
-                    );
-
-                  return isTouchDevice ? (
-                    <SwipeableCard
-                      key={candidate.id}
-                      enabled={true}
-                      onSave={() => toggleSaveMutation.mutate(candidate.userId)}
-                      onDismiss={() => {
-                        // Track dismissed candidate (optional analytics)
-                      }}
-                    >
-                      {card}
-                    </SwipeableCard>
-                  ) : (
-                    <div key={candidate.id}>{card}</div>
-                  );
-                })
-              ) : (
-                <EmptyState
-                  icon={Search}
-                  title="No candidates found"
-                  description="Try adjusting your search criteria or filters."
-                  action={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={clearFilters}
-                      tooltip="Clear all filters"
-                    >
-                      Clear Filters
-                    </Button>
+              {/* Certifications */}
+              <Card>
+                <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Certifications</h3>
+                <ServerAutoSuggest
+                  category="certification"
+                  value={filters.certifications ? filters.certifications.split(',') : []}
+                  onChange={(vals) =>
+                    handleFilterChange(
+                      'certifications',
+                      Array.isArray(vals) ? vals.join(',') : vals,
+                    )
                   }
+                  placeholder="Search certifications..."
+                  multiple
+                  maxSelections={10}
                 />
-              )}
-            </div>
-          )}
+              </Card>
 
-          {/* AI Recommendations */}
-          {recommendedCandidates.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 pt-4">
-                <Sparkles className="text-primary h-4 w-4" />
-                <h3 className="text-sm font-semibold text-[var(--text)]">Recommended for You</h3>
-                <Badge variant="info" size="sm">
-                  AI-Powered
-                </Badge>
-              </div>
-              <p className="text-xs text-[var(--text-muted)]">
-                Based on your recent open job postings and hiring patterns
-              </p>
-              <div className="space-y-4">
-                {recommendedCandidates.slice(0, 5).map((candidate) => {
-                  const card =
-                    viewMode === 'compact' ? (
-                      <CompactCandidateCard
-                        key={candidate.id}
-                        candidate={candidate as CandidateProfile}
-                        searchKeyword={keyword}
-                        requiredSkills={requiredSkills}
-                        isSaved={savedCandidateIds.has(candidate.userId)}
-                        onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
-                        isSaving={
-                          toggleSaveMutation.isPending &&
-                          toggleSaveMutation.variables === candidate.userId
-                        }
-                        isSelected={selectedIds.has(candidate.id)}
-                        onToggleSelect={() => toggleSelect(candidate.id)}
-                        isComparing={compareIds.includes(candidate.id)}
-                        onToggleCompare={() => handleToggleCompare(candidate.id)}
-                      />
-                    ) : (
-                      <CandidateCard
-                        key={candidate.id}
-                        candidate={candidate as CandidateProfile}
-                        searchKeyword={keyword}
-                        requiredSkills={requiredSkills}
-                        isSaved={savedCandidateIds.has(candidate.userId)}
-                        onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
-                        isSaving={
-                          toggleSaveMutation.isPending &&
-                          toggleSaveMutation.variables === candidate.userId
-                        }
-                        actionedStatus={actionedCandidates[candidate.id]}
-                        onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
-                        onSelect={() => openJobPicker(candidate.id, 'select')}
-                        onResumeDownload={() => handleResumeDownload(candidate.userId)}
-                        isSelected={selectedIds.has(candidate.id)}
-                        onToggleSelect={() => toggleSelect(candidate.id)}
-                        isComparing={compareIds.includes(candidate.id)}
-                        onToggleCompare={() => handleToggleCompare(candidate.id)}
-                      />
-                    );
-                  return <div key={candidate.id}>{card}</div>;
-                })}
-              </div>
-            </div>
-          )}
-
-          {pagination && pagination.totalPages > 1 && (
-            <Pagination
-              currentPage={pagination.page}
-              totalPages={pagination.totalPages}
-              onPageChange={handlePageChange}
-              totalItems={pagination.total}
-              pageSize={pagination.limit}
-            />
-          )}
-          {/* Job Picker Modal */}
-          {jobPickerOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-              <div className="w-full max-w-lg rounded-xl bg-[var(--bg)] shadow-xl">
-                <div className="flex items-center justify-between border-b border-[var(--border)] p-4">
-                  <h3 className="text-lg font-semibold text-[var(--text)]">
-                    {jobPickerAction === 'shortlist' ? 'Shortlist' : 'Select'} for Job
-                  </h3>
-                  <button
-                    onClick={() => setJobPickerOpen(false)}
-                    title="Close"
-                    className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
+              {/* Professional Search */}
+              <Card>
+                <h3 className="mb-3 text-base font-semibold text-[var(--text)]">
+                  Professional Search
+                </h3>
+                <p className="mb-4 text-sm text-[var(--text-muted)]">
+                  Search for specific education, skills, or designations
+                </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Input
+                    label="Education"
+                    placeholder="e.g. B.Tech, MBA"
+                    value={filters.education || ''}
+                    onChange={(e) => handleFilterChange('education', e.target.value || undefined)}
+                    inputSize="sm"
+                  />
+                  <Input
+                    label="IT Skill"
+                    placeholder="e.g. Python, AWS"
+                    value={filters.itSkill || ''}
+                    onChange={(e) => handleFilterChange('itSkill', e.target.value || undefined)}
+                    inputSize="sm"
+                  />
+                  <Input
+                    label="Designation"
+                    placeholder="e.g. Senior Engineer"
+                    value={filters.designation || ''}
+                    onChange={(e) => handleFilterChange('designation', e.target.value || undefined)}
+                    inputSize="sm"
+                  />
                 </div>
-                <div className="p-4">
-                  <div className="relative mb-3">
-                    <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
-                    <input
-                      type="text"
-                      placeholder="Search your jobs..."
-                      value={jobSearch}
-                      onChange={(e) => setJobSearch(e.target.value)}
-                      className="focus:border-primary w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] py-2 pr-3 pl-10 text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none"
+              </Card>
+
+              {/* Activity Dates */}
+              <Card>
+                <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Activity Dates</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                      Registered After
+                    </label>
+                    <DatePicker
+                      value={filters.registeredAfter || ''}
+                      onChange={(val) => handleFilterChange('registeredAfter', val || undefined)}
+                      maxDate={new Date()}
                     />
                   </div>
-                  <div className="max-h-72 space-y-1 overflow-y-auto">
-                    {(myJobsData?.data?.items || [])
-                      .filter(
-                        (job: { title: string; status: string }) =>
-                          job.status === 'OPEN' &&
-                          job.title.toLowerCase().includes(jobSearch.toLowerCase()),
-                      )
-                      .map((job: { id: string; title: string; location: string }) => (
-                        <button
-                          key={job.id}
-                          type="button"
-                          title={`Select ${job.title}`}
-                          onClick={() => {
-                            if (jobPickerAction === 'shortlist') {
-                              shortlistMutation.mutate({
-                                candidateId: jobPickerCandidateId,
-                                jobId: job.id,
-                              });
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                      Modified After
+                    </label>
+                    <DatePicker
+                      value={filters.modifiedAfter || ''}
+                      onChange={(val) => handleFilterChange('modifiedAfter', val || undefined)}
+                      maxDate={new Date()}
+                    />
+                  </div>
+                </div>
+              </Card>
+
+              {/* Radius Search */}
+              <Card>
+                <h3 className="mb-3 text-base font-semibold text-[var(--text)]">Radius Search</h3>
+                <p className="mb-4 text-sm text-[var(--text-muted)]">
+                  Search candidates within a specific radius of a location
+                </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Input
+                    label="Latitude"
+                    type="number"
+                    step="0.000001"
+                    placeholder="e.g. 28.6139"
+                    value={filters.latitude || ''}
+                    onChange={(e) => handleFilterChange('latitude', e.target.value || undefined)}
+                    inputSize="sm"
+                  />
+                  <Input
+                    label="Longitude"
+                    type="number"
+                    step="0.000001"
+                    placeholder="e.g. 77.2090"
+                    value={filters.longitude || ''}
+                    onChange={(e) => handleFilterChange('longitude', e.target.value || undefined)}
+                    inputSize="sm"
+                  />
+                  <Input
+                    label="Radius (km)"
+                    type="number"
+                    min="1"
+                    max="1000"
+                    placeholder="e.g. 50"
+                    value={filters.radiusKm || ''}
+                    onChange={(e) => handleFilterChange('radiusKm', e.target.value || undefined)}
+                    inputSize="sm"
+                  />
+                </div>
+                {filters.latitude && filters.longitude && filters.radiusKm && (
+                  <p className="mt-2 text-xs text-[var(--success)]">
+                    Searching within {filters.radiusKm}km of ({filters.latitude},{' '}
+                    {filters.longitude})
+                  </p>
+                )}
+              </Card>
+
+              {/* Region Presets */}
+              <Card>
+                <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
+                  Quick Location Presets
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(BROAD_REGION_PRESETS).map(([key, preset]) => {
+                    const isActive =
+                      preset.special === 'clear'
+                        ? !filters.location
+                        : (preset.cities?.some((c) => filters.location === c) ?? false);
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          if (preset.special === 'clear') {
+                            handleFilterChange('location', undefined);
+                            setLocationQuery('');
+                          } else if (preset.special === 'international') {
+                            handleFilterChange('location', 'International');
+                            setLocationQuery('International');
+                          } else if (preset.cities) {
+                            if (isActive) {
+                              handleFilterChange('location', undefined);
+                              setLocationQuery('');
                             } else {
-                              selectMutation.mutate({
-                                candidateId: jobPickerCandidateId,
-                                jobId: job.id,
-                              });
+                              handleFilterChange('location', preset.cities[0]);
+                              setLocationQuery(preset.cities[0]);
                             }
-                          }}
-                          disabled={shortlistMutation.isPending || selectMutation.isPending}
-                          className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                          }
+                        }}
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                          isActive
+                            ? 'bg-primary text-white'
+                            : 'border border-[var(--border)] bg-white text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {Object.entries(INDIAN_REGION_PRESETS).map(([region, cities]) => {
+                    const isActive = cities.some((c) => filters.location === c);
+                    return (
+                      <button
+                        key={region}
+                        type="button"
+                        onClick={() => {
+                          if (isActive) {
+                            handleFilterChange('location', undefined);
+                            setLocationQuery('');
+                          } else {
+                            handleFilterChange('location', cities[0]);
+                            setLocationQuery(cities[0]);
+                          }
+                        }}
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                          isActive
+                            ? 'bg-primary text-white'
+                            : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+                        }`}
+                      >
+                        {region}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Card>
+
+              {/* Education, certifications, department, industry, work permit */}
+              <Card>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <ServerAutoSuggest
+                    category="field_of_study"
+                    label="Education"
+                    placeholder="e.g. B.Tech, MBA"
+                    value={filters.education || ''}
+                    onChange={(v) =>
+                      handleFilterChange(
+                        'education',
+                        (typeof v === 'string' ? v : v[0]) || undefined,
+                      )
+                    }
+                    allowCreate
+                    inputSize="sm"
+                  />
+                  <Select
+                    label="Education Level"
+                    options={toSelectOptions(EDUCATION_LEVEL_SEARCH_LABELS)}
+                    value={filters.educationLevel || ''}
+                    onChange={(v) => handleFilterChange('educationLevel', v || undefined)}
+                    placeholder="Any level"
+                    searchable
+                  />
+                  <ServerAutoSuggest
+                    category="certification"
+                    label="Certifications"
+                    placeholder="e.g. AWS, PMP"
+                    value={filters.certifications || ''}
+                    onChange={(v) =>
+                      handleFilterChange(
+                        'certifications',
+                        (typeof v === 'string' ? v : v[0]) || undefined,
+                      )
+                    }
+                    allowCreate
+                    inputSize="sm"
+                  />
+                  <ServerAutoSuggest
+                    category="department"
+                    label="Department"
+                    placeholder="e.g. Engineering"
+                    value={filters.department || ''}
+                    onChange={(v) =>
+                      handleFilterChange(
+                        'department',
+                        (typeof v === 'string' ? v : v[0]) || undefined,
+                      )
+                    }
+                    allowCreate
+                    inputSize="sm"
+                  />
+                  <ServerAutoSuggest
+                    category="industry"
+                    label="Industry"
+                    placeholder="e.g. IT, Finance"
+                    value={filters.currentIndustry || ''}
+                    onChange={(v) =>
+                      handleFilterChange(
+                        'currentIndustry',
+                        (typeof v === 'string' ? v : v[0]) || undefined,
+                      )
+                    }
+                    allowCreate
+                    inputSize="sm"
+                  />
+                  <ServerAutoSuggest
+                    category="visa_status"
+                    label="Work Permit / Visa"
+                    placeholder="e.g. Indian Citizen, H-1B Visa"
+                    value={filters.workPermit || ''}
+                    onChange={(v) =>
+                      handleFilterChange(
+                        'workPermit',
+                        (typeof v === 'string' ? v : v[0]) || undefined,
+                      )
+                    }
+                    allowCreate
+                    inputSize="sm"
+                  />
+                </div>
+              </Card>
+
+              {/* Profile freshness date filters */}
+              <Card>
+                <p className="mb-3 text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
+                  Registration Date Presets
+                </p>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {[
+                    { label: 'Last 24h', days: 1 },
+                    { label: 'Last 7 days', days: 7 },
+                    { label: 'Last 30 days', days: 30 },
+                    { label: 'Last 90 days', days: 90 },
+                  ].map(({ label, days }) => {
+                    const targetDate = new Date();
+                    targetDate.setDate(targetDate.getDate() - days);
+                    const dateStr = targetDate.toISOString().split('T')[0];
+                    const isActive = filters.registeredAfter === dateStr;
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() =>
+                          handleFilterChange('registeredAfter', isActive ? undefined : dateStr)
+                        }
+                        className={cn(
+                          'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                          isActive
+                            ? 'bg-primary text-white'
+                            : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <DatePicker
+                    label="Registered After"
+                    value={filters.registeredAfter || ''}
+                    onChange={(v) => handleFilterChange('registeredAfter', v || undefined)}
+                    inputSize="sm"
+                    placeholder="Select date"
+                    maxDate={new Date()}
+                  />
+                  <DatePicker
+                    label="Profile Modified After"
+                    value={filters.modifiedAfter || ''}
+                    onChange={(v) => handleFilterChange('modifiedAfter', v || undefined)}
+                    inputSize="sm"
+                    placeholder="Select date"
+                    maxDate={new Date()}
+                  />
+                </div>
+              </Card>
+
+              {/* Proximity search (geo) */}
+              <Card>
+                <div className="mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-[var(--text-secondary)]" />
+                  <p className="text-xs font-semibold tracking-wider text-[var(--text-secondary)] uppercase">
+                    Proximity Search
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="sm:col-span-2">
+                    <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                      Search near location
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleGetLocation}
+                        disabled={isGettingLocation}
+                        title="Detect my location"
+                        className="hover:border-primary hover:text-primary hover:bg-primary-light flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition-colors disabled:opacity-50"
+                      >
+                        {isGettingLocation ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Locate className="h-4 w-4" />
+                        )}
+                        {filters.latitude ? 'Update location' : 'Use my location'}
+                      </button>
+                      {filters.latitude && (
+                        <button
+                          type="button"
+                          onClick={clearGeoLocation}
+                          title="Clear location"
+                          className="cursor-pointer text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
                         >
-                          <div>
-                            <p className="font-medium text-[var(--text)]">{job.title}</p>
-                            <p className="text-xs text-[var(--text-muted)]">{job.location}</p>
-                          </div>
+                          Clear
                         </button>
-                      ))}
-                    {(myJobsData?.data?.items || []).filter(
-                      (job: { status: string; title: string }) =>
-                        job.status === 'OPEN' &&
-                        job.title.toLowerCase().includes(jobSearch.toLowerCase()),
-                    ).length === 0 && (
-                      <p className="py-8 text-center text-sm text-[var(--text-muted)]">
-                        No open jobs found.
+                      )}
+                    </div>
+                    {geoLocationName && filters.latitude && (
+                      <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                        Detected: {geoLocationName}
                       </p>
                     )}
                   </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                      Radius
+                    </label>
+                    <Select
+                      options={[
+                        { value: '5', label: '5 km' },
+                        { value: '10', label: '10 km' },
+                        { value: '25', label: '25 km' },
+                        { value: '50', label: '50 km' },
+                        { value: '100', label: '100 km' },
+                        { value: '200', label: '200 km' },
+                      ]}
+                      value={filters.radiusKm || ''}
+                      onChange={(v) => handleFilterChange('radiusKm', v || undefined)}
+                      placeholder="Select radius"
+                      disabled={!filters.latitude}
+                    />
+                  </div>
+                </div>
+                {nearbyCities.length > 0 && (
+                  <div className="mt-4 border-t border-[var(--border)] pt-3">
+                    <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">
+                      Nearby Cities
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {nearbyCities.map((city) => (
+                        <button
+                          key={city}
+                          type="button"
+                          onClick={() => {
+                            handleFilterChange('location', city);
+                            setLocationQuery(city);
+                          }}
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                            filters.location === city
+                              ? 'bg-primary text-white'
+                              : 'hover:bg-primary-light hover:text-primary bg-[var(--bg-secondary)] text-[var(--text-secondary)]'
+                          }`}
+                        >
+                          {city}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              {/* Advanced Filters Panel — moved from the old main-
+                  column "below the toolbar" position into the
+                  sidebar so the categorized filter sections live
+                  alongside the inline filter cards above. `layout`
+                  switches to "sidebar" (always-visible vertical
+                  accordion variant) and `isOpen` is hard-coded
+                  true — no inline collapse on desktop. The mobile
+                  show/hide is now handled by the `showAdvanced`
+                  class swap on the `<aside>` itself, so this
+                  component doesn't need an `onClose` either. */}
+              <AdvancedFilters
+                sections={filterSections}
+                values={filterValues}
+                onChange={handleFilterChange}
+                onClear={clearFilters}
+                activeCount={activeFilterCount}
+                isOpen
+                layout="sidebar"
+                title="Advanced Filters"
+              />
+
+              {/* Quick Filter Pills — moved into the sidebar so the
+                  one-tap shortcuts live next to the rest of the
+                  filter controls instead of floating in the
+                  results column. */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-[var(--text-secondary)]">
+                  Quick filters:
+                </span>
+                <button
+                  onClick={() =>
+                    handleFilterChange(
+                      'lastActiveWithin',
+                      filters.lastActiveWithin === '7d' ? undefined : '7d',
+                    )
+                  }
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    filters.lastActiveWithin === '7d'
+                      ? 'bg-primary text-white'
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
+                  )}
+                >
+                  Active last 7 days
+                </button>
+                <button
+                  onClick={() =>
+                    handleFilterChange(
+                      'noticePeriod',
+                      filters.noticePeriod === 'IMMEDIATE' ? undefined : 'IMMEDIATE',
+                    )
+                  }
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    filters.noticePeriod === 'IMMEDIATE'
+                      ? 'bg-primary text-white'
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
+                  )}
+                >
+                  Immediate joiners
+                </button>
+                <button
+                  onClick={() =>
+                    handleFilterChange(
+                      'openToWork',
+                      filters.openToWork === 'ACTIVELY_LOOKING' ? undefined : 'ACTIVELY_LOOKING',
+                    )
+                  }
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    filters.openToWork === 'ACTIVELY_LOOKING'
+                      ? 'bg-primary text-white'
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]',
+                  )}
+                >
+                  Open to work
+                </button>
+              </div>
+            </aside>
+
+            {/* Main results column — Active filter tags, search
+                history, toolbar, save-search dialog, bulk-actions
+                bar, results grid + pagination. Closes before the
+                Modal/Compare overlays at the page bottom. */}
+            <div className="min-w-0 flex-1 space-y-4">
+              {/* Active filter tags */}
+              <ActiveFilterTags
+                sections={filterSections}
+                values={filterValues}
+                onChange={handleFilterChange}
+                onClear={clearFilters}
+              />
+
+              {/* Search History */}
+              {searchHistory.length > 0 && !keyword && activeFilterCount === 0 && (
+                <Card>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-[var(--text)]">Recent Searches</h3>
+                    <button
+                      onClick={async () => {
+                        await searchService.clearSearchHistory();
+                        queryClient.invalidateQueries({ queryKey: ['search-history'] });
+                      }}
+                      title="Clear search history"
+                      className="cursor-pointer text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--error)]"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {searchHistory.slice(0, 8).map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          if (item.query) {
+                            setKeyword(item.query);
+                            setFilters((prev) => ({
+                              ...prev,
+                              keyword: item.query,
+                              page: '1',
+                            }));
+                          }
+                        }}
+                        className="hover:border-primary hover:bg-primary-light hover:text-primary flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors"
+                      >
+                        <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                        <span>{item.query || 'Previous search'}</span>
+                      </button>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* Toolbar */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  {/* Mobile-only filter trigger. On desktop the
+                  filters sidebar is always visible to the left,
+                  so this button is hidden via `lg:hidden`. On
+                  mobile it toggles `showAdvanced` which swaps the
+                  aside's `hidden`/`block` class so the same filter
+                  DOM appears in-line above the results (no separate
+                  drawer — single source of filter UI). The
+                  PremiumLockBadge gate is preserved so non-premium
+                  employers still get the upgrade prompt. */}
+                  <PremiumLockBadge feature="feature.advanced_filters" variant="inline">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      tooltip={showAdvanced ? 'Hide filters' : 'Show filters'}
+                      className="lg:hidden"
+                    >
+                      <Filter className="mr-1.5 h-4 w-4" />
+                      {showAdvanced ? 'Hide filters' : 'Filters'}
+                      {activeFilterCount > 0 && (
+                        <span className="bg-primary ml-1.5 flex h-5 w-5 items-center justify-center rounded-full text-xs text-white">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                    </Button>
+                  </PremiumLockBadge>
+                  {activeFilterCount > 0 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSaveSearch(true)}
+                        tooltip="Create candidate alert"
+                      >
+                        <Bell className="mr-1.5 h-4 w-4" />
+                        Create Alert
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowSaveSearch(true)}
+                        tooltip="Save search criteria"
+                      >
+                        <Star className="mr-1.5 h-4 w-4" />
+                        Save Search
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* View Mode Toggle */}
+                  <div className="flex rounded-lg border border-[var(--border)] bg-white p-0.5">
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={cn(
+                        'cursor-pointer rounded-md p-1.5 transition-colors',
+                        viewMode === 'list'
+                          ? 'bg-primary text-white'
+                          : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
+                      )}
+                      aria-label="List view"
+                      title="List view"
+                    >
+                      <LayoutList className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('compact')}
+                      className={cn(
+                        'cursor-pointer rounded-md p-1.5 transition-colors',
+                        viewMode === 'compact'
+                          ? 'bg-primary text-white'
+                          : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
+                      )}
+                      aria-label="Compact view"
+                      title="Compact view"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('map')}
+                      className={cn(
+                        'cursor-pointer rounded-md p-1.5 transition-colors',
+                        viewMode === 'map'
+                          ? 'bg-primary text-white'
+                          : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]',
+                      )}
+                      aria-label="Map view"
+                      title="Map view"
+                    >
+                      <Map className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {/* Sort Dropdown */}
+                  <div className="flex items-center gap-2">
+                    <label className="hidden text-sm text-[var(--text-muted)] sm:inline">
+                      Sort by:
+                    </label>
+                    <Select
+                      options={[
+                        { value: 'relevance', label: 'Best Match' },
+                        { value: 'profileUpdated', label: 'Recently Updated' },
+                        { value: 'lastActive', label: 'Recently Active' },
+                        { value: 'experience', label: 'Experience: High to Low' },
+                        { value: 'experience_asc', label: 'Experience: Low to High' },
+                        { value: 'salary', label: 'Salary: High to Low' },
+                        { value: 'salary_asc', label: 'Salary: Low to High' },
+                        ...(filters.latitude
+                          ? [{ value: 'distance', label: 'Nearest First' }]
+                          : []),
+                      ]}
+                      value={filters.sortBy || 'relevance'}
+                      onChange={(v) => handleFilterChange('sortBy', v || undefined)}
+                    />
+                  </div>
+                  {pagination && (
+                    <span className="text-sm whitespace-nowrap text-[var(--text-muted)]">
+                      {pagination.total.toLocaleString()} candidates found
+                    </span>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Comparison Features */}
+              {/* Save Search Dialog */}
+              {showSaveSearch && (
+                <Card>
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                        Save this search
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Name your search, e.g. 'Senior React developers'"
+                        value={saveSearchName}
+                        onChange={(e) => setSaveSearchName(e.target.value)}
+                        className="focus:border-primary focus:ring-primary/20 h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:ring-2 focus:outline-none"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && saveSearchName.trim()) {
+                            saveSearchMutation.mutate(saveSearchName.trim());
+                          }
+                        }}
+                      />
+                    </div>
+                    <Button
+                      onClick={() => saveSearchMutation.mutate(saveSearchName.trim())}
+                      disabled={!saveSearchName.trim()}
+                      isLoading={saveSearchMutation.isPending}
+                      size="sm"
+                      tooltip="Save search"
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowSaveSearch(false);
+                        setSaveSearchName('');
+                      }}
+                      tooltip="Cancel save"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </Card>
+              )}
+
+              {/* Bulk Actions Toolbar */}
+              {selectedIds.size > 0 && (
+                <Card className="border-primary bg-primary/5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          if (selectedIds.size === candidates.length) {
+                            clearSelection();
+                          } else {
+                            selectAll();
+                          }
+                        }}
+                        className="text-primary hover:text-primary-dark flex cursor-pointer items-center gap-1.5 text-sm font-medium"
+                        title="Toggle select all"
+                      >
+                        {selectedIds.size === candidates.length ? (
+                          <CheckSquare className="h-4 w-4" />
+                        ) : (
+                          <Square className="h-4 w-4" />
+                        )}
+                        {selectedIds.size === candidates.length ? 'Deselect' : 'Select'} all on page
+                      </button>
+                      <span className="text-sm font-medium text-[var(--text)]">
+                        {selectedIds.size} candidate{selectedIds.size !== 1 ? 's' : ''} selected
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const userIds = candidates
+                            .filter((c) => selectedIds.has(c.id))
+                            .map((c) => c.userId);
+                          bulkSaveMutation.mutate(userIds);
+                        }}
+                        disabled={bulkSaveMutation.isPending}
+                        tooltip="Save selected"
+                      >
+                        <Bookmark className="mr-1.5 h-4 w-4" />
+                        Save All
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBulkActionOpen(true)}
+                        tooltip="Shortlist selected"
+                      >
+                        <UserCheck className="mr-1.5 h-4 w-4" />
+                        Shortlist
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => bulkExportMutation.mutate(Array.from(selectedIds))}
+                        disabled={bulkExportMutation.isPending}
+                        isLoading={bulkExportMutation.isPending}
+                        tooltip="Export as XLSX"
+                      >
+                        <Download className="mr-1.5 h-4 w-4" />
+                        Export
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => bulkExportResumesMutation.mutate(Array.from(selectedIds))}
+                        disabled={bulkExportResumesMutation.isPending}
+                        isLoading={bulkExportResumesMutation.isPending}
+                        tooltip="Export resumes as ZIP"
+                      >
+                        <FileDown className="mr-1.5 h-4 w-4" />
+                        Export Resumes
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearSelection}
+                        tooltip="Clear selection"
+                      >
+                        <X className="mr-1.5 h-4 w-4" />
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Results */}
+              {viewMode === 'map' ? (
+                <div className="h-[calc(100vh-350px)] min-h-[600px]">
+                  <CandidateMapView
+                    candidates={candidates}
+                    savedCandidateIds={savedCandidateIds}
+                    onSaveCandidate={(id) => toggleSaveMutation.mutate(id)}
+                    onSearchArea={handleSearchArea}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {isLoading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <Card key={i}>
+                        <Skeleton variant="card" />
+                      </Card>
+                    ))
+                  ) : candidates.length > 0 ? (
+                    candidates.map((candidate) => {
+                      const card =
+                        viewMode === 'compact' ? (
+                          <CompactCandidateCard
+                            key={candidate.id}
+                            candidate={candidate}
+                            searchKeyword={keyword}
+                            requiredSkills={requiredSkills}
+                            isSaved={savedCandidateIds.has(candidate.userId)}
+                            onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
+                            isSaving={
+                              toggleSaveMutation.isPending &&
+                              toggleSaveMutation.variables === candidate.userId
+                            }
+                            isSelected={selectedIds.has(candidate.id)}
+                            onToggleSelect={() => toggleSelect(candidate.id)}
+                            isComparing={compareIds.includes(candidate.id)}
+                            onToggleCompare={() => handleToggleCompare(candidate.id)}
+                          />
+                        ) : (
+                          <CandidateCard
+                            key={candidate.id}
+                            candidate={candidate}
+                            searchKeyword={keyword}
+                            requiredSkills={requiredSkills}
+                            isSaved={savedCandidateIds.has(candidate.userId)}
+                            onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
+                            isSaving={
+                              toggleSaveMutation.isPending &&
+                              toggleSaveMutation.variables === candidate.userId
+                            }
+                            actionedStatus={actionedCandidates[candidate.id]}
+                            onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
+                            onSelect={() => openJobPicker(candidate.id, 'select')}
+                            onResumeDownload={() => handleResumeDownload(candidate.userId)}
+                            isSelected={selectedIds.has(candidate.id)}
+                            onToggleSelect={() => toggleSelect(candidate.id)}
+                            isComparing={compareIds.includes(candidate.id)}
+                            onToggleCompare={() => handleToggleCompare(candidate.id)}
+                          />
+                        );
+
+                      return isTouchDevice ? (
+                        <SwipeableCard
+                          key={candidate.id}
+                          enabled={true}
+                          onSave={() => toggleSaveMutation.mutate(candidate.userId)}
+                          onDismiss={() => {
+                            // Track dismissed candidate (optional analytics)
+                          }}
+                        >
+                          {card}
+                        </SwipeableCard>
+                      ) : (
+                        <div key={candidate.id}>{card}</div>
+                      );
+                    })
+                  ) : (
+                    <EmptyState
+                      icon={Search}
+                      title="No candidates found"
+                      description="Try adjusting your search criteria or filters."
+                      action={
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={clearFilters}
+                          tooltip="Clear all filters"
+                        >
+                          Clear Filters
+                        </Button>
+                      }
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* AI Recommendations */}
+              {recommendedCandidates.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pt-4">
+                    <Sparkles className="text-primary h-4 w-4" />
+                    <h3 className="text-sm font-semibold text-[var(--text)]">
+                      Recommended for You
+                    </h3>
+                    <Badge variant="info" size="sm">
+                      AI-Powered
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Based on your recent open job postings and hiring patterns
+                  </p>
+                  <div className="space-y-4">
+                    {recommendedCandidates.slice(0, 5).map((candidate) => {
+                      const card =
+                        viewMode === 'compact' ? (
+                          <CompactCandidateCard
+                            key={candidate.id}
+                            candidate={candidate as CandidateProfile}
+                            searchKeyword={keyword}
+                            requiredSkills={requiredSkills}
+                            isSaved={savedCandidateIds.has(candidate.userId)}
+                            onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
+                            isSaving={
+                              toggleSaveMutation.isPending &&
+                              toggleSaveMutation.variables === candidate.userId
+                            }
+                            isSelected={selectedIds.has(candidate.id)}
+                            onToggleSelect={() => toggleSelect(candidate.id)}
+                            isComparing={compareIds.includes(candidate.id)}
+                            onToggleCompare={() => handleToggleCompare(candidate.id)}
+                          />
+                        ) : (
+                          <CandidateCard
+                            key={candidate.id}
+                            candidate={candidate as CandidateProfile}
+                            searchKeyword={keyword}
+                            requiredSkills={requiredSkills}
+                            isSaved={savedCandidateIds.has(candidate.userId)}
+                            onToggleSave={() => toggleSaveMutation.mutate(candidate.userId)}
+                            isSaving={
+                              toggleSaveMutation.isPending &&
+                              toggleSaveMutation.variables === candidate.userId
+                            }
+                            actionedStatus={actionedCandidates[candidate.id]}
+                            onShortlist={() => openJobPicker(candidate.id, 'shortlist')}
+                            onSelect={() => openJobPicker(candidate.id, 'select')}
+                            onResumeDownload={() => handleResumeDownload(candidate.userId)}
+                            isSelected={selectedIds.has(candidate.id)}
+                            onToggleSelect={() => toggleSelect(candidate.id)}
+                            isComparing={compareIds.includes(candidate.id)}
+                            onToggleCompare={() => handleToggleCompare(candidate.id)}
+                          />
+                        );
+                      return <div key={candidate.id}>{card}</div>;
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {pagination && pagination.totalPages > 1 && (
+                <Pagination
+                  currentPage={pagination.page}
+                  totalPages={pagination.totalPages}
+                  onPageChange={handlePageChange}
+                  totalItems={pagination.total}
+                  pageSize={pagination.limit}
+                />
+              )}
+              {/* Job Picker Modal */}
+              {jobPickerOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                  <div className="w-full max-w-lg rounded-xl bg-[var(--bg)] shadow-xl">
+                    <div className="flex items-center justify-between border-b border-[var(--border)] p-4">
+                      <h3 className="text-lg font-semibold text-[var(--text)]">
+                        {jobPickerAction === 'shortlist' ? 'Shortlist' : 'Select'} for Job
+                      </h3>
+                      <button
+                        onClick={() => setJobPickerOpen(false)}
+                        title="Close"
+                        className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text)]"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <div className="p-4">
+                      <div className="relative mb-3">
+                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+                        <input
+                          type="text"
+                          placeholder="Search your jobs..."
+                          value={jobSearch}
+                          onChange={(e) => setJobSearch(e.target.value)}
+                          className="focus:border-primary w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] py-2 pr-3 pl-10 text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none"
+                        />
+                      </div>
+                      <div className="max-h-72 space-y-1 overflow-y-auto">
+                        {(myJobsData?.data?.items || [])
+                          .filter(
+                            (job: { title: string; status: string }) =>
+                              job.status === 'OPEN' &&
+                              job.title.toLowerCase().includes(jobSearch.toLowerCase()),
+                          )
+                          .map((job: { id: string; title: string; location: string }) => (
+                            <button
+                              key={job.id}
+                              type="button"
+                              title={`Select ${job.title}`}
+                              onClick={() => {
+                                if (jobPickerAction === 'shortlist') {
+                                  shortlistMutation.mutate({
+                                    candidateId: jobPickerCandidateId,
+                                    jobId: job.id,
+                                  });
+                                } else {
+                                  selectMutation.mutate({
+                                    candidateId: jobPickerCandidateId,
+                                    jobId: job.id,
+                                  });
+                                }
+                              }}
+                              disabled={shortlistMutation.isPending || selectMutation.isPending}
+                              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                            >
+                              <div>
+                                <p className="font-medium text-[var(--text)]">{job.title}</p>
+                                <p className="text-xs text-[var(--text-muted)]">{job.location}</p>
+                              </div>
+                            </button>
+                          ))}
+                        {(myJobsData?.data?.items || []).filter(
+                          (job: { status: string; title: string }) =>
+                            job.status === 'OPEN' &&
+                            job.title.toLowerCase().includes(jobSearch.toLowerCase()),
+                        ).length === 0 && (
+                          <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+                            No open jobs found.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* /main column */}
+          </div>
+          {/* /sidebar + main flex container */}
+
+          {/* Comparison Features — overlays / sticky bars that
+              sit on top of the page, outside the sidebar+main
+              flex container so they span the full viewport. */}
           <CompareBar
             candidates={compareCandidates}
             onRemove={(id) => setCompareIds((prev) => prev.filter((cid) => cid !== id))}

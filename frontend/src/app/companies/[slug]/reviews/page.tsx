@@ -9,8 +9,8 @@
  */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import PublicLayout from '@/components/layout/PublicLayout';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import JsonLd from '@/components/seo/JsonLd';
 import {
   breadcrumbSchema,
@@ -251,22 +251,6 @@ export default async function CompanyReviewsPage({
     <PublicLayout>
       <JsonLd data={graph(...schemas)} />
       <main className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
-        <nav aria-label="Breadcrumb" className="mb-4 text-xs text-[var(--text-muted)]">
-          <Link href="/" className="hover:underline">
-            Home
-          </Link>
-          <span className="mx-1">›</span>
-          <Link href="/companies" className="hover:underline">
-            Companies
-          </Link>
-          <span className="mx-1">›</span>
-          <Link href={`/companies/${slug}`} className="hover:underline">
-            {company.companyName}
-          </Link>
-          <span className="mx-1">›</span>
-          <span className="text-[var(--text-secondary)]">Reviews</span>
-        </nav>
-
         <ReviewsClient
           slug={slug}
           companyName={company.companyName}
@@ -274,6 +258,19 @@ export default async function CompanyReviewsPage({
           initialStats={stats as InitialStats | null}
           appOrigin={appOrigin}
         />
+
+        {/* Breadcrumbs — bottom placement. Schema is part of the
+            page's combined `breadcrumbSchema()` JSON-LD graph above. */}
+        <div className="mt-10 border-t border-[var(--border)] pt-4">
+          <Breadcrumbs
+            items={[
+              { name: 'Companies', href: '/companies' },
+              { name: company.companyName, href: `/companies/${slug}` },
+              { name: 'Reviews' },
+            ]}
+            withSchema={false}
+          />
+        </div>
       </main>
     </PublicLayout>
   );

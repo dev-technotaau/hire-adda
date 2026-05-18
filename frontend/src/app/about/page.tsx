@@ -115,13 +115,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Breadcrumbs */}
-      <div className="border-b border-[var(--border)] bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <Breadcrumbs items={[{ name: 'About' }]} withSchema={false} />
-        </div>
-      </div>
-
       {/* Mission Section */}
       <section className="bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -348,6 +341,14 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      {/* Breadcrumbs — bottom-of-content placement (above site footer)
+          for consistency. Schema already in the page's JSON-LD graph. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'About' }]} withSchema={false} />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

@@ -99,13 +99,6 @@ export default function AccessibilityPage() {
         </div>
       </section>
 
-      {/* Breadcrumbs */}
-      <div className="border-b border-[var(--border)] bg-white">
-        <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
-          <Breadcrumbs items={[{ name: 'Accessibility' }]} withSchema={false} />
-        </div>
-      </div>
-
       {/* Content */}
       <section className="bg-white py-12 sm:py-16">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
@@ -142,6 +135,13 @@ export default function AccessibilityPage() {
           </div>
         </div>
       </section>
+
+      {/* Breadcrumbs — bottom placement, narrow rail. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'Accessibility' }]} withSchema={false} />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

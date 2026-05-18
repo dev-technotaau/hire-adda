@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { isOptimisableImageHost } from '@/lib/image-host';
 import PublicLayout from '@/components/layout/PublicLayout';
 import PublicJobCard from '@/components/job-search/PublicJobCard';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import JsonLd from '@/components/seo/JsonLd';
 import {
   breadcrumbSchema,
@@ -16,16 +17,7 @@ import {
   localBusinessSchema,
 } from '@/lib/json-ld';
 import { generateMetadata as buildMetadata } from '@/components/common/SEO';
-import {
-  Building2,
-  MapPin,
-  Briefcase,
-  ShieldCheck,
-  Users,
-  Globe,
-  Calendar,
-  ChevronRight,
-} from 'lucide-react';
+import { Building2, MapPin, Briefcase, ShieldCheck, Users, Globe, Calendar } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import CompanyDetailTabs from '@/components/company-search/CompanyDetailTabs';
@@ -176,21 +168,6 @@ export default async function CompanyDetailPage({
     <PublicLayout>
       <JsonLd id="jsonld-company-detail" data={jsonLd} />
       <main className="bg-[var(--bg)]">
-        <nav
-          aria-label="Breadcrumb"
-          className="mx-auto flex max-w-7xl items-center gap-1 px-4 pt-6 text-xs text-[var(--text-muted)] sm:px-6 lg:px-8"
-        >
-          <Link href="/" className="hover:text-[var(--text)]">
-            Home
-          </Link>
-          <ChevronRight className="h-3 w-3" />
-          <Link href="/companies" className="hover:text-[var(--text)]">
-            Companies
-          </Link>
-          <ChevronRight className="h-3 w-3" />
-          <span className="truncate text-[var(--text)]">{company.companyName}</span>
-        </nav>
-
         {/* ━━━━━━━━━━━━━━━━━━━━ FULL-WIDTH HERO ━━━━━━━━━━━━━━━━━━━━
             Cover band stretches edge-to-edge (breaks out of the
             max-w-7xl content rail) and ALWAYS renders — when a company
@@ -839,6 +816,21 @@ export default async function CompanyDetailPage({
             </aside>
           </div>
         </section>
+
+        {/* Breadcrumbs — sit at the bottom of the page (above the
+            site footer) instead of the traditional top placement, for
+            visual consistency with Contact / Job-detail / etc. The
+            JSON-LD BreadcrumbList is already emitted via
+            `breadcrumbSchema()` inside the `jsonLd` graph above, so
+            we pass `withSchema={false}` to avoid duplicate schema. */}
+        <div className="border-t border-[var(--border)] bg-white">
+          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+            <Breadcrumbs
+              items={[{ name: 'Companies', href: '/companies' }, { name: company.companyName }]}
+              withSchema={false}
+            />
+          </div>
+        </div>
       </main>
     </PublicLayout>
   );

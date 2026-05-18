@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import PublicLayout from '@/components/layout/PublicLayout';
 import PublicJobListingShell from '@/components/job-search/PublicJobListingShell';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import JsonLd from '@/components/seo/JsonLd';
 import {
   breadcrumbSchema,
@@ -166,6 +167,14 @@ export default async function JobsListingPage({
         heroSubtitle="Browse 12,000+ openings across India — verified employers, fast hiring, no scams"
         seoIntro="Hire Adda lists jobs across every Indian city and state, from freshers to senior roles. Search by job title, skills, or company; filter by location, experience, salary, work mode, shift, and more. Apply with one click, save jobs for later, and set alerts so the right roles find you."
       />
+
+      {/* Breadcrumbs — bottom placement. Schema is already in the
+          page's combined `breadcrumbSchema()` JSON-LD above. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'Jobs' }]} withSchema={false} />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

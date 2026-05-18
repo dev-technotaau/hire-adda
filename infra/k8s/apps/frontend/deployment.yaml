@@ -49,6 +49,9 @@ spec:
       labels:
         app: frontend
         tier: app
+      annotations:
+        # `tmp` is an EmptyDir scratch — see backend/deployment.yaml.
+        backup.velero.io/backup-volumes-excludes: tmp
     spec:
       securityContext:
         runAsUser: 1001

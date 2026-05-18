@@ -105,6 +105,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      # Capture the current commit's committer-timestamp in ISO 8601
+      # and expose it as a step output for the Docker build below.
+      # This auto-bumps the site's last-modified meta on every push
+      # so crawlers (Bing, Yandex, Baidu, FB unfurler, Slack/Discord
+      # previews, Google JSON-LD freshness) see the actual deploy
+      # date — no manual hand-editing of a date constant needed.
+      - name: Capture last-commit timestamp
+        id: last_commit
+        run: echo "iso=$(git log -1 --format=%cI)" >> "$GITHUB_OUTPUT"
+
       - name: Build and push frontend
         uses: docker/build-push-action@v7
         with:
@@ -150,6 +160,7 @@ jobs:
             NEXT_PUBLIC_POSTHOG_HOST=${{ secrets.NEXT_PUBLIC_POSTHOG_HOST }}
             NEXT_PUBLIC_CF_BEACON_TOKEN=${{ secrets.NEXT_PUBLIC_CF_BEACON_TOKEN }}
             NEXT_PUBLIC_ADOBE_LAUNCH_URL=${{ secrets.NEXT_PUBLIC_ADOBE_LAUNCH_URL }}
+            NEXT_PUBLIC_SITE_LAST_MODIFIED=${{ steps.last_commit.outputs.iso }}
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
             NEXT_PUBLIC_ENABLE_MOCK_DATA=false

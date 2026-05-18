@@ -131,13 +131,6 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Breadcrumbs */}
-      <div className="border-b border-[var(--border)] bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <Breadcrumbs items={[{ name: 'Contact' }]} withSchema={false} />
-        </div>
-      </div>
-
       {/* Contact Form & Info */}
       <section className="bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -254,6 +247,16 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+
+      {/* Breadcrumbs — bottom-of-content placement (above site footer)
+          for visual consistency with company-detail / job-detail.
+          BreadcrumbList JSON-LD is already in the page's combined
+          `breadcrumbSchema()` graph above, so `withSchema={false}`. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'Contact' }]} withSchema={false} />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

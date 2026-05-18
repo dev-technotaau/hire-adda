@@ -17,6 +17,9 @@ import {
   GraduationCap,
   Tag,
   Users,
+  Info,
+  Mail,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
@@ -31,11 +34,39 @@ import BillingAlertBadge from '@/components/billing/BillingAlertBadge';
 import NavMegaMenu, { MobileNavMegaMenu } from '@/components/layout/NavMegaMenu';
 import type { Role } from '@/types/auth';
 
-const publicNavItems = [
-  { label: 'Home', href: ROUTES.PUBLIC.HOME },
-  { label: 'About', href: ROUTES.PUBLIC.ABOUT },
-  { label: 'Contact', href: ROUTES.PUBLIC.CONTACT },
-  { label: 'Help', href: ROUTES.PUBLIC.HELP },
+// Home stays as the only top-level public link. About / Contact /
+// Help collapsed into the Resources dropdown below to stop the
+// header from feeling cluttered next to Jobs / Companies / Pricing.
+// Those three routes still exist and remain reachable from
+// Resources + the footer + sitemap — nothing was deleted.
+const publicNavItems = [{ label: 'Home', href: ROUTES.PUBLIC.HOME }];
+
+interface ResourcesMenuChild {
+  label: string;
+  sublabel: string;
+  href: string;
+  icon: typeof Info;
+}
+
+const resourcesMenuItems: ResourcesMenuChild[] = [
+  {
+    label: 'About',
+    sublabel: 'Our story, mission and the team behind Hire Adda',
+    href: ROUTES.PUBLIC.ABOUT,
+    icon: Info,
+  },
+  {
+    label: 'Contact',
+    sublabel: 'Reach out to sales, support or the partnerships team',
+    href: ROUTES.PUBLIC.CONTACT,
+    icon: Mail,
+  },
+  {
+    label: 'Help Centre',
+    sublabel: 'FAQs, guides and troubleshooting for every workflow',
+    href: ROUTES.PUBLIC.HELP,
+    icon: HelpCircle,
+  },
 ];
 
 interface PricingMenuChild {
@@ -76,11 +107,14 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [pricingMenuOpen, setPricingMenuOpen] = useState(false);
+  const [resourcesMenuOpen, setResourcesMenuOpen] = useState(false);
   // Hover-open with 150 ms grace period — same pattern as NavMegaMenu
-  // so cursor can travel from the Pricing button to the dropdown panel
+  // so cursor can travel from the trigger button to the dropdown panel
   // without the menu flickering closed.
   const pricingCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resourcesCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pricingMenuRef = useRef<HTMLDivElement>(null);
+  const resourcesMenuRef = useRef<HTMLDivElement>(null);
   const cancelPricingClose = useCallback(() => {
     if (pricingCloseTimerRef.current) {
       clearTimeout(pricingCloseTimerRef.current);
@@ -91,9 +125,20 @@ export default function Header() {
     cancelPricingClose();
     pricingCloseTimerRef.current = setTimeout(() => setPricingMenuOpen(false), 150);
   }, [cancelPricingClose]);
+  const cancelResourcesClose = useCallback(() => {
+    if (resourcesCloseTimerRef.current) {
+      clearTimeout(resourcesCloseTimerRef.current);
+      resourcesCloseTimerRef.current = null;
+    }
+  }, []);
+  const scheduleResourcesClose = useCallback(() => {
+    cancelResourcesClose();
+    resourcesCloseTimerRef.current = setTimeout(() => setResourcesMenuOpen(false), 150);
+  }, [cancelResourcesClose]);
   useEffect(
     () => () => {
       if (pricingCloseTimerRef.current) clearTimeout(pricingCloseTimerRef.current);
+      if (resourcesCloseTimerRef.current) clearTimeout(resourcesCloseTimerRef.current);
     },
     [],
   );
@@ -102,15 +147,26 @@ export default function Header() {
   // ended up on the overlay while still "inside" the wrapper subtree, so
   // hover-out never fired and the menu wouldn't auto-close).
   useEffect(() => {
-    if (!pricingMenuOpen) return;
+    if (!pricingMenuOpen && !resourcesMenuOpen) return;
     function handleClickOutside(e: MouseEvent) {
-      if (pricingMenuRef.current && !pricingMenuRef.current.contains(e.target as Node)) {
+      if (
+        pricingMenuOpen &&
+        pricingMenuRef.current &&
+        !pricingMenuRef.current.contains(e.target as Node)
+      ) {
         setPricingMenuOpen(false);
+      }
+      if (
+        resourcesMenuOpen &&
+        resourcesMenuRef.current &&
+        !resourcesMenuRef.current.contains(e.target as Node)
+      ) {
+        setResourcesMenuOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [pricingMenuOpen]);
+  }, [pricingMenuOpen, resourcesMenuOpen]);
 
   const unreadCount = unreadData?.data?.count || 0;
 
@@ -126,27 +182,29 @@ export default function Header() {
       setMobileMenuOpen(false);
       setUserMenuOpen(false);
       setPricingMenuOpen(false);
+      setResourcesMenuOpen(false);
     });
   }, [pathname, setMobileMenuOpen]);
 
-  // Close user menu on Escape key
+  // Close menus on Escape key
   const handleEscapeKey = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setUserMenuOpen(false);
         setMobileMenuOpen(false);
         setPricingMenuOpen(false);
+        setResourcesMenuOpen(false);
       }
     },
     [setMobileMenuOpen],
   );
 
   useEffect(() => {
-    if (userMenuOpen || mobileMenuOpen || pricingMenuOpen) {
+    if (userMenuOpen || mobileMenuOpen || pricingMenuOpen || resourcesMenuOpen) {
       document.addEventListener('keydown', handleEscapeKey);
       return () => document.removeEventListener('keydown', handleEscapeKey);
     }
-  }, [userMenuOpen, mobileMenuOpen, pricingMenuOpen, handleEscapeKey]);
+  }, [userMenuOpen, mobileMenuOpen, pricingMenuOpen, resourcesMenuOpen, handleEscapeKey]);
 
   const dashboardPath = user?.role ? ROLE_DASHBOARDS[user.role as Role] : '/';
 
@@ -154,9 +212,14 @@ export default function Header() {
     <header
       className={cn(
         'sticky top-0 z-50 w-full transition-all duration-300',
-        scrolled
-          ? 'border-b border-[var(--border)] bg-white/80 shadow-sm backdrop-blur-lg'
-          : 'bg-white',
+        // The scroll-elevated state previously layered a 1px
+        // border-b on top of the soft `shadow-sm`. The two visual
+        // separators competed — the border read as a hard line
+        // against the blurred backdrop while the shadow already
+        // carries the elevation cue. Keeping the shadow + blur
+        // gives the same "lifted" feel without the hairline that
+        // popped in/out on every scroll direction reversal.
+        scrolled ? 'bg-white/80 shadow-sm backdrop-blur-lg' : 'bg-white',
       )}
     >
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -165,7 +228,7 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-1 md:flex">
-          {publicNavItems.slice(0, 2).map((item) => (
+          {publicNavItems.map((item) => (
             <Tooltip key={item.href} content={`Go to ${item.label}`}>
               <Link
                 href={item.href}
@@ -182,7 +245,7 @@ export default function Header() {
           ))}
 
           {/* Jobs + Companies mega-menus (Phase 10). Sit between
-              Home/About and the Pricing dropdown. */}
+              Home and the Pricing dropdown. */}
           <NavMegaMenu />
 
           {/* Pricing dropdown — split here between "About" and "Contact" so
@@ -272,21 +335,78 @@ export default function Header() {
             )}
           </div>
 
-          {publicNavItems.slice(2).map((item) => (
-            <Tooltip key={item.href} content={`Go to ${item.label}`}>
-              <Link
-                href={item.href}
-                className={cn(
-                  'rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                  pathname === item.href
-                    ? 'bg-primary-light text-primary'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
-                )}
+          {/* Resources dropdown — collapses About / Contact / Help into
+              one trigger so the header doesn't feel cluttered next to
+              Jobs / Companies / Pricing. Mirrors the Pricing dropdown's
+              hover-with-grace + click-outside-to-close + ChevronDown
+              rotation + role="menu" semantics so the three behave
+              identically from a UX standpoint. */}
+          <div
+            ref={resourcesMenuRef}
+            className="relative"
+            onMouseEnter={() => {
+              cancelResourcesClose();
+              setResourcesMenuOpen(true);
+            }}
+            onMouseLeave={scheduleResourcesClose}
+          >
+            <button
+              type="button"
+              onClick={() => setResourcesMenuOpen((v) => !v)}
+              onFocus={() => {
+                cancelResourcesClose();
+                setResourcesMenuOpen(true);
+              }}
+              aria-expanded={resourcesMenuOpen}
+              aria-haspopup="menu"
+              className={cn(
+                'flex items-center gap-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                // Highlight when the dropdown is open OR when we're on
+                // any of the resource pages. Same active-route logic
+                // the Pricing trigger uses.
+                resourcesMenuOpen ||
+                  resourcesMenuItems.some((it) => pathname === it.href) ||
+                  pathname.startsWith('/help/')
+                  ? 'bg-primary-light text-primary'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
+              )}
+            >
+              Resources
+              <ChevronDown
+                className={cn('h-4 w-4 transition-transform', resourcesMenuOpen && 'rotate-180')}
+              />
+            </button>
+            {resourcesMenuOpen && (
+              <div
+                role="menu"
+                onMouseEnter={cancelResourcesClose}
+                className="animate-scale-in absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-lg"
               >
-                {item.label}
-              </Link>
-            </Tooltip>
-          ))}
+                {resourcesMenuItems.map((child) => {
+                  const Icon = child.icon;
+                  return (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      onClick={() => setResourcesMenuOpen(false)}
+                      role="menuitem"
+                      className="flex items-start gap-3 border-b border-[var(--border)] px-4 py-3 transition-colors last:border-b-0 hover:bg-[var(--bg-secondary)]"
+                    >
+                      <div className="bg-primary/10 text-primary flex h-9 w-9 flex-none items-center justify-center rounded-lg">
+                        <Icon className="h-4.5 w-4.5" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-sm font-semibold text-[var(--text)]">
+                          {child.label}
+                        </span>
+                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{child.sublabel}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Right side */}
@@ -434,7 +554,7 @@ export default function Header() {
           aria-label="Mobile navigation"
         >
           <nav className="flex flex-col px-4 py-3">
-            {publicNavItems.slice(0, 2).map((item) => (
+            {publicNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -491,20 +611,32 @@ export default function Header() {
               See all plans →
             </Link>
 
-            {publicNavItems.slice(2).map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'mt-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                  pathname === item.href
-                    ? 'bg-primary-light text-primary'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {/* Resources section — same trio (About / Contact / Help)
+                that the desktop Resources dropdown renders, flattened
+                into a labelled group so all routes remain reachable
+                without a second tap on mobile. Matches the Pricing
+                section's "header + indented links" shape just above. */}
+            <p className="mt-3 mb-1 px-3 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+              Resources
+            </p>
+            {resourcesMenuItems.map((child) => {
+              const Icon = child.icon;
+              return (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    pathname === child.href
+                      ? 'bg-primary-light text-primary'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+                  )}
+                >
+                  <Icon className="h-4 w-4 flex-none" />
+                  <span className="flex-1">{child.label}</span>
+                </Link>
+              );
+            })}
 
             {!isAuthenticated && (
               <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] pt-3">

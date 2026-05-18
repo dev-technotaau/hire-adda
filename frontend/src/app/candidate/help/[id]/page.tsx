@@ -19,6 +19,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Textarea from '@/components/ui/Textarea';
+import Tooltip from '@/components/ui/Tooltip';
 import Spinner from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ticketService } from '@/services/ticket.service';
@@ -340,42 +341,51 @@ export default function CandidateTicketDetailPage() {
             </p>
 
             <div className="mb-4 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => handleSatisfactionSelect('SATISFIED')}
-                className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
-                  satisfactionRating === 'SATISFIED'
-                    ? 'border-[var(--success)] bg-[var(--success-light)] text-[var(--success)]'
-                    : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--success)] hover:text-[var(--success)]'
-                }`}
-                title="Satisfied"
-              >
-                <ThumbsUp className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSatisfactionSelect('NEUTRAL')}
-                className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
-                  satisfactionRating === 'NEUTRAL'
-                    ? 'border-[var(--warning)] bg-[var(--warning-light)] text-[var(--warning)]'
-                    : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--warning)] hover:text-[var(--warning)]'
-                }`}
-                title="Neutral"
-              >
-                <Minus className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSatisfactionSelect('NOT_SATISFIED')}
-                className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
-                  satisfactionRating === 'NOT_SATISFIED'
-                    ? 'border-[var(--error)] bg-[var(--error-light)] text-[var(--error)]'
-                    : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--error)] hover:text-[var(--error)]'
-                }`}
-                title="Not Satisfied"
-              >
-                <ThumbsDown className="h-5 w-5" />
-              </button>
+              <Tooltip content="Satisfied">
+                <button
+                  type="button"
+                  onClick={() => handleSatisfactionSelect('SATISFIED')}
+                  className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
+                    satisfactionRating === 'SATISFIED'
+                      ? 'border-[var(--success)] bg-[var(--success-light)] text-[var(--success)]'
+                      : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--success)] hover:text-[var(--success)]'
+                  }`}
+                  aria-label="Satisfied"
+                  aria-pressed={satisfactionRating === 'SATISFIED'}
+                >
+                  <ThumbsUp className="h-5 w-5" />
+                </button>
+              </Tooltip>
+              <Tooltip content="Neutral">
+                <button
+                  type="button"
+                  onClick={() => handleSatisfactionSelect('NEUTRAL')}
+                  className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
+                    satisfactionRating === 'NEUTRAL'
+                      ? 'border-[var(--warning)] bg-[var(--warning-light)] text-[var(--warning)]'
+                      : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--warning)] hover:text-[var(--warning)]'
+                  }`}
+                  aria-label="Neutral"
+                  aria-pressed={satisfactionRating === 'NEUTRAL'}
+                >
+                  <Minus className="h-5 w-5" />
+                </button>
+              </Tooltip>
+              <Tooltip content="Not satisfied">
+                <button
+                  type="button"
+                  onClick={() => handleSatisfactionSelect('NOT_SATISFIED')}
+                  className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-2 transition-colors ${
+                    satisfactionRating === 'NOT_SATISFIED'
+                      ? 'border-[var(--error)] bg-[var(--error-light)] text-[var(--error)]'
+                      : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--error)] hover:text-[var(--error)]'
+                  }`}
+                  aria-label="Not satisfied"
+                  aria-pressed={satisfactionRating === 'NOT_SATISFIED'}
+                >
+                  <ThumbsDown className="h-5 w-5" />
+                </button>
+              </Tooltip>
             </div>
 
             {showSatisfactionComment && (

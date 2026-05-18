@@ -6,6 +6,7 @@ import StatsSection from '@/components/common/StatsSection';
 import PublicLayout from '@/components/layout/PublicLayout';
 import JsonLd from '@/components/seo/JsonLd';
 import { generateMetadata as buildMetadata } from '@/components/common/SEO';
+import { SEO_CONFIG } from '@/constants/seo';
 import Button from '@/components/ui/Button';
 import Tooltip from '@/components/ui/Tooltip';
 import {
@@ -57,7 +58,7 @@ import FeaturedCompaniesSlider from '@/components/home/FeaturedCompaniesSlider';
 import PopularRolesGrid from '@/components/home/PopularRolesGrid';
 
 export const metadata: Metadata = buildMetadata({
-  title: "Hire Adda — India's Leading Job Portal & Recruitment Platform",
+  title: "Hire Adda: India's Leading Job Portal & Recruitment Platform",
   description:
     "Find your dream job or hire top talent on India's AI-powered recruitment platform. Verified employers, smart matching, and quick apply.",
   keywords: [
@@ -73,6 +74,13 @@ export const metadata: Metadata = buildMetadata({
     'AI recruitment',
   ],
   url: '/',
+  // Surface explicit `article:published_time` /
+  // `article:modified_time` meta tags + JSON-LD dates. Pulled from
+  // SEO_CONFIG so the same constants drive the homepage,
+  // <meta name="last-modified"> in layout.tsx, and every page's
+  // schema.org graph.
+  datePublished: SEO_CONFIG.siteLaunchDate,
+  dateModified: SEO_CONFIG.siteLastModified,
 });
 
 /**
@@ -86,11 +94,16 @@ export const metadata: Metadata = buildMetadata({
 const homeJsonLd = graph(
   webPageSchema({
     url: '/',
-    name: "Hire Adda — India's Leading Job Portal & Recruitment Platform",
+    name: "Hire Adda: India's Leading Job Portal & Recruitment Platform",
     description:
       "Find your dream job or hire top talent on India's AI-powered recruitment platform. Verified employers, smart matching, and quick apply.",
     speakableCssSelectors: ['h1', '.hero-subtitle', '[data-speakable]'],
     primaryImage: '/images/og-home.png',
+    // Drives JSON-LD `datePublished` + `dateModified` — Google Search
+    // uses these to attribute freshness signals in rich results.
+    // Same source-of-truth dates as the Open Graph article:* meta tags.
+    datePublished: SEO_CONFIG.siteLaunchDate,
+    dateModified: SEO_CONFIG.siteLastModified,
   }),
   // Primary navigation — drives SERP sitelinks under the top brand result.
   siteNavigationSchema([

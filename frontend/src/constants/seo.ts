@@ -85,6 +85,27 @@ export const SEO_CONFIG = {
   publisher: 'Hire Adda',
   author: 'Hire Adda Team',
   copyrightYear: new Date().getFullYear(),
+
+  // ── Site dates ─
+  // ISO 8601 strings.
+  //
+  // `siteLaunchDate` — canonical born-on date for the platform.
+  // Drives `article:published_time` meta + JSON-LD `datePublished`
+  // on the homepage and any page that doesn't override with a more
+  // specific content date.
+  //
+  // `siteLastModified` — auto-bumped on every commit by the CI
+  // pipeline. The `.github/workflows/cd.yml` build job runs
+  // `git log -1 --format=%cI` to get the current commit's ISO
+  // 8601 committer timestamp and forwards it as a Docker
+  // `NEXT_PUBLIC_SITE_LAST_MODIFIED` build-arg, which the
+  // Dockerfile bakes into the bundle. So every prod deploy ships a
+  // fresh modified-date stamp matching the actual git history;
+  // crawlers see real freshness rather than a stale hand-edited
+  // value. The literal fallback string is only used by local dev
+  // builds (where the env var isn't set) — never reaches prod.
+  siteLaunchDate: '2026-04-01T00:00:00+05:30',
+  siteLastModified: process.env.NEXT_PUBLIC_SITE_LAST_MODIFIED ?? '2026-04-01T00:00:00+05:30',
 } as const;
 
 export type SeoConfig = typeof SEO_CONFIG;

@@ -46,6 +46,12 @@ ARG NEXT_PUBLIC_POSTHOG_HOST
 ARG NEXT_PUBLIC_CF_BEACON_TOKEN
 # Adobe Experience Platform Launch (optional, paid)
 ARG NEXT_PUBLIC_ADOBE_LAUNCH_URL
+# Last-modified site timestamp — CI populates this from
+# `git log -1 --format=%cI` so the site's <meta name="last-modified">
+# and `article:modified_time` reflect the actual commit date of every
+# deploy. Empty in local builds → SEO_CONFIG falls back to its static
+# default (only matters for prod-style image testing).
+ARG NEXT_PUBLIC_SITE_LAST_MODIFIED
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ARG NEXT_PUBLIC_SENTRY_DSN
 ARG NEXT_PUBLIC_ENABLE_MOCK_DATA

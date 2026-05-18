@@ -424,6 +424,30 @@ export default async function RootLayout({
         {/* ── Pinterest Rich Pins (article/product) ── */}
         <meta property="article:publisher" content={`${process.env.NEXT_PUBLIC_APP_URL}/about`} />
 
+        {/* ── Site-wide date signals ──
+            Sites that don't use the per-page Open Graph article:*
+            namespace (the homepage uses og:type=website, most other
+            pages too) still want explicit freshness signals for
+            crawlers. We emit three flavours covering every common
+            ingestion target:
+
+              - `last-modified` — generic crawler standard (recognised
+                by Bing, Yandex, Baidu, archive bots).
+              - `date` + `DC.date.modified` — Dublin Core conventions
+                used by academic indexers and enterprise audit tooling.
+              - `og:updated_time` — Facebook's "last reshare bump"
+                signal; the per-page `article:published_time` /
+                `article:modified_time` tags handle granular dates
+                via SEO.tsx where supplied.
+
+            Source-of-truth is `SEO_CONFIG.siteLastModified`, bumped
+            on each deploy via the `NEXT_PUBLIC_SITE_LAST_MODIFIED`
+            build-arg so the field stays accurate without code edits. */}
+        <meta name="date" content={SEO_CONFIG.siteLaunchDate} />
+        <meta name="last-modified" content={SEO_CONFIG.siteLastModified} />
+        <meta name="DC.date.modified" content={SEO_CONFIG.siteLastModified} />
+        <meta property="og:updated_time" content={SEO_CONFIG.siteLastModified} />
+
         {/* ── Sitewide JSON-LD ──
             Organization + WebSite SearchAction + WebApplication.
             Emitted on every page so Google can aggregate across the site when

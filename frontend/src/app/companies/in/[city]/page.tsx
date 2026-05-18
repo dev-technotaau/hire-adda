@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import PublicLayout from '@/components/layout/PublicLayout';
 import PublicCompanyListingShell from '@/components/company-search/PublicCompanyListingShell';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import JsonLd from '@/components/seo/JsonLd';
 import { breadcrumbSchema, collectionPageSchema, graph } from '@/lib/json-ld';
 import { generateMetadata as buildMetadata } from '@/components/common/SEO';
@@ -54,6 +55,16 @@ export default async function CompanyByCityPage({ params }: { params: Promise<{ 
         heroSubtitle={`Verified employers hiring in ${label}`}
         seoIntro={`Hire Adda lists verified employers hiring in ${label} across IT, sales, marketing, finance, healthcare, manufacturing and more. View company culture, benefits, and open jobs on each company profile. Apply with one click — all free.`}
       />
+
+      {/* Breadcrumbs — bottom placement. Schema already in JsonLd. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs
+            items={[{ name: 'Companies', href: '/companies' }, { name: label }]}
+            withSchema={false}
+          />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

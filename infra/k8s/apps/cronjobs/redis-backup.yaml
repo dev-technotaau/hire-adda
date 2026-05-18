@@ -23,6 +23,10 @@ spec:
         metadata:
           labels:
             app: redis-backup
+          annotations:
+            # Skip the backups-pvc from Velero FS backup — see
+            # backup-cleanup.yaml comment.
+            backup.velero.io/backup-volumes-excludes: backups
         spec:
           securityContext:
             runAsUser: 1001

@@ -749,13 +749,6 @@ export default function SitemapPage() {
         </div>
       </section>
 
-      {/* Breadcrumbs */}
-      <div className="border-b border-[var(--border)] bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <Breadcrumbs items={[{ name: 'Site Map' }]} withSchema={false} />
-        </div>
-      </div>
-
       {/* Sections */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
         <div className="grid gap-8 md:grid-cols-2 lg:gap-10">
@@ -852,6 +845,13 @@ export default function SitemapPage() {
           </p>
         </div>
       </section>
+
+      {/* Breadcrumbs — bottom placement. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'Site Map' }]} withSchema={false} />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

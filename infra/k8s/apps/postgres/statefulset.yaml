@@ -25,6 +25,14 @@ spec:
       labels:
         app: postgres
         tier: database
+      annotations:
+        # Skip the Postgres data PVC from Velero file-system
+        # backup. The `db-backup` CronJob already produces a
+        # logical `pg_dump | gzip` to R2 daily — that's a
+        # restorable artifact independent of Postgres version
+        # / on-disk layout, and orders of magnitude smaller than
+        # the raw heap files Velero would otherwise capture.
+        backup.velero.io/backup-volumes-excludes: postgres-data
     spec:
       securityContext:
         runAsUser: 999

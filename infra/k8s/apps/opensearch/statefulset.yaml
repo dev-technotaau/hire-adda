@@ -26,6 +26,19 @@ spec:
       labels:
         app: opensearch
         tier: search
+      annotations:
+        # Skip the OpenSearch data PVC from Velero file-system
+        # backup. The `opensearch-snapshot` CronJob captures
+        # OpenSearch state via its native S3-compatible snapshot
+        # API (delta-aware, dedup-friendly) and uploads directly
+        # to the same R2 bucket under `backups/opensearch/`.
+        # Doubling that with Velero's filesystem-level Kopia
+        # backup was the dominant R2 cost — OpenSearch's
+        # continual segment-merging defeats Kopia's content-
+        # addressed dedup, so every daily snapshot uploaded
+        # ~GB of "changed" segment files even when logical data
+        # hadn't grown.
+        backup.velero.io/backup-volumes-excludes: opensearch-data,keystore-init
     spec:
       securityContext:
         runAsUser: 1000

@@ -19,6 +19,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import PublicLayout from '@/components/layout/PublicLayout';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Textarea from '@/components/ui/Textarea';
@@ -407,6 +408,20 @@ export default function VendorDetailPage() {
           </div>
         </Modal>
       )}
+
+      {/* Breadcrumbs — bottom placement. No page-level
+          `breadcrumbSchema`, so the component emits its own
+          BreadcrumbList JSON-LD via the href on each item. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs
+            items={[
+              { name: 'Vendors', href: '/vendors' },
+              { name: data.businessName, href: `/vendors/${slug}` },
+            ]}
+          />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

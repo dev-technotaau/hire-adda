@@ -29,6 +29,15 @@ spec:
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9308'
+        # Skip the Kafka PVC from Velero file-system backup. Kafka
+        # topics are replayable from upstream sources (producers
+        # retain offsets, downstream consumers can re-fetch from
+        # earliest), so paying R2 storage to back up the broker's
+        # local log directory adds no recoverability we don't
+        # already have — and Kafka's continual log-rolling
+        # defeats Kopia's content-addressed dedup, so each backup
+        # uploaded ~hundreds of MB of "changed" segment files.
+        backup.velero.io/backup-volumes-excludes: kafka-data
     spec:
       securityContext:
         runAsUser: 1000

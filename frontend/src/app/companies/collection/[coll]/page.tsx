@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import PublicLayout from '@/components/layout/PublicLayout';
 import PublicCompanyListingShell from '@/components/company-search/PublicCompanyListingShell';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import JsonLd from '@/components/seo/JsonLd';
 import { breadcrumbSchema, collectionPageSchema, graph } from '@/lib/json-ld';
 import { generateMetadata as buildMetadata } from '@/components/common/SEO';
@@ -58,6 +59,16 @@ export default async function CompanyByCollectionPage({
         heroSubtitle={`A hand-picked Hire Adda collection of companies hiring now`}
         seoIntro={`Hire Adda's ${label} collection is hand-curated and refreshed daily. View company culture, benefits, open jobs, and tech stack on every profile. Apply with one click — all free for candidates, no scams, no recruiter spam.`}
       />
+
+      {/* Breadcrumbs — bottom placement. Schema already in JsonLd. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs
+            items={[{ name: 'Companies', href: '/companies' }, { name: label }]}
+            withSchema={false}
+          />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

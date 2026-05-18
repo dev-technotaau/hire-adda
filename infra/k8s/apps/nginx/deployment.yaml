@@ -34,6 +34,11 @@ spec:
         prometheus.io/path: '/stub_status'
         # Bump this value whenever nginx configmap changes to trigger pod rollout
         configmap/nginx-config-version: '2'
+        # tmp/cache/run are EmptyDir scratches required by the
+        # non-root nginx image (it writes pid + cache + body
+        # buffers under /tmp, /var/cache/nginx, /var/run). No
+        # persistent state — skip them in Velero's FS backup.
+        backup.velero.io/backup-volumes-excludes: tmp,cache,run
     spec:
       securityContext:
         seccompProfile:

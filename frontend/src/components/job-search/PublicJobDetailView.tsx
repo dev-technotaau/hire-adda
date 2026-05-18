@@ -28,6 +28,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Tag from '@/components/ui/Tag';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PublicJobCard from './PublicJobCard';
 import RatingBadge from '@/components/reviews/RatingBadge';
 import { useAuthGate } from '@/hooks/use-auth-gate';
@@ -64,22 +65,6 @@ export default function PublicJobDetailView({ data }: Props) {
 
   return (
     <main className="bg-[var(--bg)]">
-      {/* Breadcrumbs */}
-      <nav
-        aria-label="Breadcrumb"
-        className="mx-auto flex max-w-7xl items-center gap-1 px-4 pt-6 text-xs text-[var(--text-muted)] sm:px-6 lg:px-8"
-      >
-        <Link href="/" className="hover:text-[var(--text)]">
-          Home
-        </Link>
-        <ChevronRight className="h-3 w-3" />
-        <Link href="/jobs" className="hover:text-[var(--text)]">
-          Jobs
-        </Link>
-        <ChevronRight className="h-3 w-3" />
-        <span className="truncate text-[var(--text)]">{job.title}</span>
-      </nav>
-
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Main column */}
@@ -415,6 +400,19 @@ export default function PublicJobDetailView({ data }: Props) {
           </div>
         )}
       </section>
+
+      {/* Breadcrumbs — bottom-of-content placement matches Contact /
+          Company-detail for visual consistency. JSON-LD BreadcrumbList
+          is emitted by the parent page route via `breadcrumbSchema()`
+          in its jsonLd graph, so `withSchema={false}` here. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs
+            items={[{ name: 'Jobs', href: '/jobs' }, { name: job.title }]}
+            withSchema={false}
+          />
+        </div>
+      </div>
     </main>
   );
 }

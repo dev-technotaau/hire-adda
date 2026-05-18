@@ -15,6 +15,7 @@ import {
   Send,
 } from 'lucide-react';
 import PublicLayout from '@/components/layout/PublicLayout';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
@@ -424,6 +425,15 @@ export default function VendorsDirectoryPage() {
           )}
         </Modal>
       )}
+
+      {/* Breadcrumbs — bottom placement. No `breadcrumbSchema` is
+          declared at page level, so the component emits its own
+          BreadcrumbList JSON-LD via the href on every item. */}
+      <div className="border-t border-[var(--border)] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <Breadcrumbs items={[{ name: 'Vendors', href: '/vendors' }]} />
+        </div>
+      </div>
     </PublicLayout>
   );
 }

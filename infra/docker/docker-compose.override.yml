@@ -44,6 +44,11 @@ services:
         NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}
         NEXT_PUBLIC_CF_BEACON_TOKEN: ${NEXT_PUBLIC_CF_BEACON_TOKEN:-}
         NEXT_PUBLIC_ADOBE_LAUNCH_URL: ${NEXT_PUBLIC_ADOBE_LAUNCH_URL:-}
+        # Optional override for local prod-style builds. Empty in dev
+        # is fine — SEO_CONFIG.siteLastModified falls back to its
+        # static default. Real prod is set by the CD pipeline from
+        # the git commit timestamp.
+        NEXT_PUBLIC_SITE_LAST_MODIFIED: ${NEXT_PUBLIC_SITE_LAST_MODIFIED:-}
         NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
         SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
 

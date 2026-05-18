@@ -23,6 +23,14 @@ spec:
         metadata:
           labels:
             app: backup-cleanup
+          annotations:
+            # Skip the backups-pvc volume from Velero file-system
+            # backup — it's where the OTHER backup cron jobs
+            # (db-backup, redis-backup) drop their dump files, so
+            # backing it up via Velero would mean backups-of-backups
+            # (every Postgres dump stored twice: once as a SQL.gz
+            # in `backups/db/` and again inside Kopia's chunk store).
+            backup.velero.io/backup-volumes-excludes: backups
         spec:
           securityContext:
             runAsUser: 1001

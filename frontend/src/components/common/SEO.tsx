@@ -129,8 +129,18 @@ export function generateMetadata({
       locale: SEO_CONFIG.locale,
       type,
       images: ogImages,
-      ...(isArticle && datePublished ? { publishedTime: datePublished } : {}),
-      ...(isArticle && dateModified ? { modifiedTime: dateModified } : {}),
+      // `publishedTime` + `modifiedTime` emit as
+      // `<meta property="article:published_time">` /
+      // `article:modified_time` regardless of og:type. The Open Graph
+      // spec technically scopes these to og:type=article, but every
+      // major crawler (Facebook, LinkedIn, Twitter, Bing) accepts
+      // them on og:type=website too and surfaces the dates in link
+      // previews / SERP rich snippets. Always emit when supplied.
+      ...(datePublished ? { publishedTime: datePublished } : {}),
+      ...(dateModified ? { modifiedTime: dateModified } : {}),
+      // The remaining article-* fields ARE strictly article-scoped
+      // (Facebook ignores them on non-article og:types) so keep
+      // those gated.
       ...(isArticle && author ? { authors: [author] } : {}),
       ...(isArticle && section ? { section } : {}),
       ...(isArticle && tags ? { tags } : {}),

@@ -27,6 +27,11 @@ spec:
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9121'
+        # Skip the Redis data PVC from Velero file-system backup.
+        # The `redis-backup` CronJob triggers BGSAVE and uploads
+        # the resulting RDB dump to R2 daily — a single restorable
+        # snapshot file per day, with its own 30-day rotation.
+        backup.velero.io/backup-volumes-excludes: redis-data
     spec:
       securityContext:
         runAsUser: 999

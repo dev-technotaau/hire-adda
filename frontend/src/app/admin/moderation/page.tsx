@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import Tooltip from '@/components/ui/Tooltip';
 import Skeleton from '@/components/ui/Skeleton';
 import { adminService } from '@/services/admin.service';
 import { showToast } from '@/components/ui/Toast';
@@ -134,14 +135,16 @@ export default function ModerationPage() {
                     className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-secondary)] px-3 py-1.5 text-sm font-medium text-[var(--text)]"
                   >
                     {keyword}
-                    <button
-                      onClick={() => removeMutation.mutate(keyword)}
-                      disabled={removeMutation.isPending}
-                      className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-[var(--error-light)] hover:text-[var(--error-dark)]"
-                      title={`Remove "${keyword}"`}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+                    <Tooltip content={`Remove "${keyword}"`}>
+                      <button
+                        onClick={() => removeMutation.mutate(keyword)}
+                        disabled={removeMutation.isPending}
+                        className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-[var(--error-light)] hover:text-[var(--error-dark)]"
+                        aria-label={`Remove "${keyword}"`}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </Tooltip>
                   </span>
                 ))}
               </div>

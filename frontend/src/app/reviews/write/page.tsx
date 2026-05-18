@@ -8,6 +8,7 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import ReviewForm from '@/components/reviews/ReviewForm';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 
 export default function WriteReviewStandalonePage() {
   return (
@@ -27,6 +28,18 @@ export default function WriteReviewStandalonePage() {
         </p>
       </header>
       <ReviewForm initialCompany={null} />
+
+      {/* Breadcrumbs — bottom placement. No page-level
+          `breadcrumbSchema`, so the component emits its own
+          BreadcrumbList JSON-LD via the href on each item. */}
+      <div className="mt-10 border-t border-[var(--border)] pt-4">
+        <Breadcrumbs
+          items={[
+            { name: 'Companies', href: '/companies' },
+            { name: 'Write a review', href: '/reviews/write' },
+          ]}
+        />
+      </div>
     </main>
   );
 }

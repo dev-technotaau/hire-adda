@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { ArrowLeft, Building2, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PublicLayout from '@/components/layout/PublicLayout';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -146,7 +147,25 @@ export default function QuoteRequestForm() {
 
   // Logged-in users keep the dashboard chrome; guests see the marketing site shell.
   const Layout = isAuthenticated ? DashboardLayout : PublicLayout;
-  return <Layout>{content}</Layout>;
+  return (
+    <Layout>
+      {content}
+      {/* Breadcrumb shown only on the public (guest) marketing shell —
+          the dashboard shell already has its own sidebar navigation so
+          a bottom breadcrumb would be redundant there. Schema is
+          emitted by the parent page's `breadcrumbSchema()` JSON-LD. */}
+      {!isAuthenticated && (
+        <div className="border-t border-[var(--border)] bg-white">
+          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+            <Breadcrumbs
+              items={[{ name: 'Pricing', href: '/pricing' }, { name: 'Contact Sales' }]}
+              withSchema={false}
+            />
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
 }
 
 // ── Form body ───────────────────────────────────────────────────────────

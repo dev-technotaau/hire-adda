@@ -4,6 +4,7 @@ import PublicLayout from '@/components/layout/PublicLayout';
 import PricingSections, { ALL_PRICING_SECTIONS } from '@/components/billing/PricingSections';
 import PricingFAQ from '@/components/billing/PricingFAQ';
 import AuthSupportFooter from '@/components/support/AuthSupportFooter';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { fetchPublicPlans } from '@/lib/pricing.server';
 import { generateMetadata as buildMetadata } from '@/components/common/SEO';
 import JsonLd from '@/components/seo/JsonLd';
@@ -183,6 +184,13 @@ export default async function PricingPage({
             />
           </div>
         </section>
+
+        {/* Breadcrumbs — bottom placement. Schema already in JsonLd. */}
+        <div className="border-t border-[var(--border)] bg-white">
+          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+            <Breadcrumbs items={[{ name: 'Pricing' }]} withSchema={false} />
+          </div>
+        </div>
       </main>
     </PublicLayout>
   );

@@ -24,6 +24,12 @@ spec:
         metadata:
           labels:
             app: opensearch-snapshot
+          annotations:
+            # No PVCs mounted in this CronJob, but adding the
+            # exclude annotation keeps the convention uniform
+            # across every cronjob in this directory — Velero
+            # will simply ignore the missing volume.
+            backup.velero.io/backup-volumes-excludes: backups
         spec:
           securityContext:
             runAsUser: 1001
