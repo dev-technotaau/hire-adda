@@ -447,6 +447,27 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://connect.facebook.net" />
         <link rel="dns-prefetch" href="https://fcm.googleapis.com" />
         <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
+        {/* Analytics provider dns-prefetch hints.
+            Rendered unconditionally so Wappalyzer (and similar
+            tech-detection crawlers) can identify the stack on a
+            first-paint scan without needing to accept the cookie
+            banner — the actual analytics scripts stay strictly
+            consent-gated and only load after the user opts in.
+            Each prefetch is one cheap DNS round-trip on page
+            load and zero TLS / data exchange. */}
+        <link rel="dns-prefetch" href="https://www.clarity.ms" />
+        <link rel="dns-prefetch" href="https://snap.licdn.com" />
+        <link rel="dns-prefetch" href="https://t.contentsquare.net" />
+        <link rel="dns-prefetch" href="https://s.pinimg.com" />
+        <link rel="dns-prefetch" href="https://www.redditstatic.com" />
+        <link rel="dns-prefetch" href="https://static.ads-twitter.com" />
+        <link rel="dns-prefetch" href="https://analytics.tiktok.com" />
+        <link rel="dns-prefetch" href="https://a.quora.com" />
+        <link rel="dns-prefetch" href="https://bat.bing.com" />
+        <link rel="dns-prefetch" href="https://sc-static.net" />
+        <link rel="dns-prefetch" href="https://us.i.posthog.com" />
+        <link rel="dns-prefetch" href="https://static.cloudflareinsights.com" />
+        <link rel="dns-prefetch" href="https://assets.adobedtm.com" />
 
         {/* ── Alternate resources (AEO + discovery) ── */}
         <link
