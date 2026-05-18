@@ -1,7 +1,5 @@
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import StatsSection from '@/components/common/StatsSection';
-import PaymentMethodsBar from '@/components/common/PaymentMethodsBar';
-import TrustBadges from '@/components/common/TrustBadges';
 import PublicLayout from '@/components/layout/PublicLayout';
 import JsonLd from '@/components/seo/JsonLd';
 import { generateMetadata as buildMetadata } from '@/components/common/SEO';
@@ -128,7 +126,7 @@ export default function AboutPage() {
                 everyone involved.
               </p>
               <p className="mt-4 text-lg leading-relaxed text-[var(--text-secondary)]">
-                Founded in 2024, we set out to solve the inefficiencies that plague traditional
+                Founded in 2026, we set out to solve the inefficiencies that plague traditional
                 hiring. From AI-powered job matching to verified employer profiles, every feature we
                 build is designed to create meaningful connections between candidates and companies.
               </p>
@@ -168,7 +166,11 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Trust & Security · Payments Accepted */}
+      {/* Trust & Security — copy + 3 pillars only. The payment-
+          methods row and trust-badges row were removed because
+          they already render in the site-wide footer, so showing
+          them again here was duplicate chrome on a page users
+          will usually scroll all the way through. */}
       <section className="from-primary-50 relative overflow-hidden bg-gradient-to-br via-white to-[var(--accent-light)] py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center">
@@ -220,19 +222,6 @@ export default function AboutPage() {
                 and EMI — pick whatever works on your day.
               </p>
             </div>
-          </div>
-
-          {/* Payments accepted */}
-          <div className="mb-10">
-            <h3 className="mb-5 text-center text-sm font-semibold tracking-wider text-[var(--text-muted)] uppercase">
-              Payments we accept
-            </h3>
-            <PaymentMethodsBar />
-          </div>
-
-          {/* Credibility row */}
-          <div className="border-t border-[var(--border)] pt-8">
-            <TrustBadges />
           </div>
         </div>
       </section>

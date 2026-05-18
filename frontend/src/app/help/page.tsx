@@ -6,6 +6,7 @@ import JsonLd from '@/components/seo/JsonLd';
 import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
 import Tooltip from '@/components/ui/Tooltip';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuthStore } from '@/store/auth.store';
 import { articleSchema, breadcrumbSchema, faqPageSchema, graph } from '@/lib/json-ld';
 import {
@@ -202,6 +203,8 @@ export default function HelpPage() {
                     value: l.code,
                     label: l.nativeLabel,
                   }))}
+                  size="lg"
+                  clearable={false}
                 />
               </div>
             </div>
@@ -279,16 +282,42 @@ export default function HelpPage() {
                       <p className="mt-0.5 font-medium text-[var(--text)]">{faq.question}</p>
                     </div>
                     <ChevronDown
-                      className={`h-5 w-5 shrink-0 text-[var(--text-muted)] transition-transform duration-200 ${
+                      className={`h-5 w-5 shrink-0 text-[var(--text-muted)] transition-transform duration-300 ${
                         isOpen ? 'rotate-180' : ''
                       }`}
                     />
                   </button>
-                  {isOpen && (
-                    <div className="border-t border-[var(--border)] px-6 py-4">
-                      <p className="leading-relaxed text-[var(--text-secondary)]">{faq.answer}</p>
-                    </div>
-                  )}
+                  {/* Animated collapse — height + opacity tween via
+                      framer-motion. height: 0 → auto needs
+                      `overflow: hidden` on the motion wrapper so the
+                      inner content doesn't bleed out during the
+                      transition. The custom cubic-bezier is the
+                      Material "decelerated-easing" curve — feels
+                      smooth without being sluggish. Opacity fades
+                      slightly faster than height grows so the text
+                      is fully readable by the time the height
+                      settles. */}
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        key="content"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{
+                          height: { duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] },
+                          opacity: { duration: 0.2, ease: 'easeOut' },
+                        }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div className="border-t border-[var(--border)] px-6 py-4">
+                          <p className="leading-relaxed text-[var(--text-secondary)]">
+                            {faq.answer}
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}

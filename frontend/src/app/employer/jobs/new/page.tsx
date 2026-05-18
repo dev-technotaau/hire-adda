@@ -6,7 +6,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Briefcase,
   FileText,
-  DollarSign,
   MapPin,
   Tags,
   Eye,
@@ -76,16 +75,26 @@ function toSelectOptions(labels: Record<string, string>): SelectOption[] {
   return Object.entries(labels).map(([value, label]) => ({ value, label }));
 }
 
-type Step = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type Step = 0 | 1 | 2 | 3 | 4 | 5;
 
+// 6-step wizard: 5 input steps + final Preview.
+//
+// We deliberately consolidated what used to be 8 steps into 6 by
+// folding two pairs that asked closely-related questions:
+//   - "Compensation" + "Location & Work Mode" → one step
+//     (logistics: pay + where the job sits)
+//   - "Requirements & Inclusion" + "Screening & Posting" → one step
+//     (eligibility + how candidates apply)
+//
+// No fields were removed — both halves keep their original headings
+// inside the merged step so the form still reads as two clear
+// sub-sections per step.
 const steps = [
   { icon: Briefcase, label: 'Basics' },
   { icon: FileText, label: 'Description' },
-  { icon: DollarSign, label: 'Compensation' },
-  { icon: MapPin, label: 'Location' },
+  { icon: MapPin, label: 'Compensation & Location' },
   { icon: Tags, label: 'Skills & Tags' },
-  { icon: Check, label: 'Requirements' },
-  { icon: FileText, label: 'Screening' },
+  { icon: Check, label: 'Requirements & Screening' },
   { icon: Eye, label: 'Preview' },
 ];
 
@@ -336,15 +345,17 @@ export default function PostJobPage() {
       case 1:
         return !!form.description.trim();
       case 2:
-        return true;
-      case 3:
+        // Combined Compensation + Location step. Compensation
+        // fields are all optional; the only blocker is the
+        // location string which IS required.
         return !!form.location.trim();
-      case 4:
+      case 3:
         return form.skillsRequired.length > 0;
-      case 5:
-        return true;
-      case 6:
-        // Validate expiresAt is after applicationDeadline
+      case 4:
+        // Combined Requirements & Screening step. Eligibility
+        // fields (Requirements half) are all optional; the only
+        // blocker is the date sanity check from the Screening
+        // half — expiresAt must be after applicationDeadline.
         if (form.expiresAt && form.applicationDeadline) {
           if (new Date(form.expiresAt) < new Date(form.applicationDeadline)) {
             return false;
@@ -357,7 +368,7 @@ export default function PostJobPage() {
   };
 
   const handleNext = () => {
-    if (step < 7 && canGoNext()) setStep((step + 1) as Step);
+    if (step < 5 && canGoNext()) setStep((step + 1) as Step);
   };
 
   const handleBack = () => {
@@ -775,209 +786,225 @@ export default function PostJobPage() {
             )}
 
             {step === 2 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-[var(--text)]">Compensation</h2>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <Input
-                    label="Min Salary"
-                    type="number"
-                    placeholder="e.g. 500000"
-                    value={form.salaryMin?.toString() || ''}
-                    onChange={(e) =>
-                      updateField('salaryMin', parseInt(e.target.value) || undefined)
-                    }
+              <div className="space-y-6">
+                {/* Step 2 = the old "Compensation" + "Location & Work Mode"
+                    steps merged. Two clearly-headed sub-sections inside
+                    one parent div so the form reads as one logical
+                    "logistics" step. `space-y-6` separates the two
+                    sub-sections; each sub-section keeps `space-y-4`
+                    internally via its own wrapper. */}
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold text-[var(--text)]">Compensation</h2>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Input
+                      label="Min Salary"
+                      type="number"
+                      placeholder="e.g. 500000"
+                      value={form.salaryMin?.toString() || ''}
+                      onChange={(e) =>
+                        updateField('salaryMin', parseInt(e.target.value) || undefined)
+                      }
+                    />
+                    <Input
+                      label="Max Salary"
+                      type="number"
+                      placeholder="e.g. 1500000"
+                      value={form.salaryMax?.toString() || ''}
+                      onChange={(e) =>
+                        updateField('salaryMax', parseInt(e.target.value) || undefined)
+                      }
+                    />
+                    <Select
+                      label="Salary Type"
+                      options={toSelectOptions(SALARY_TYPE_LABELS)}
+                      value={form.salaryType || ''}
+                      onChange={(v) =>
+                        updateField('salaryType', v as CreateJobRequest['salaryType'])
+                      }
+                      placeholder="Select type"
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Select
+                      label="Currency"
+                      options={toSelectOptions(SALARY_CURRENCY_LABELS)}
+                      value={form.currency || ''}
+                      onChange={(v) => updateField('currency', v)}
+                      placeholder="Select currency"
+                    />
+                    <div className="flex items-end pb-1">
+                      <Switch
+                        label="Disclose salary on listing"
+                        checked={form.salaryDisclosed !== false}
+                        onChange={() =>
+                          updateField('salaryDisclosed', form.salaryDisclosed === false)
+                        }
+                      />
+                    </div>
+                  </div>
+                  <Switch
+                    label="Salary is negotiable"
+                    checked={form.salaryNegotiable || false}
+                    onChange={() => updateField('salaryNegotiable', !form.salaryNegotiable)}
                   />
-                  <Input
-                    label="Max Salary"
-                    type="number"
-                    placeholder="e.g. 1500000"
-                    value={form.salaryMax?.toString() || ''}
-                    onChange={(e) =>
-                      updateField('salaryMax', parseInt(e.target.value) || undefined)
-                    }
-                  />
-                  <Select
-                    label="Salary Type"
-                    options={toSelectOptions(SALARY_TYPE_LABELS)}
-                    value={form.salaryType || ''}
-                    onChange={(v) => updateField('salaryType', v as CreateJobRequest['salaryType'])}
-                    placeholder="Select type"
-                  />
+                  {(form.currency || 'INR') === 'INR' &&
+                    form.salaryType === 'ANNUAL' &&
+                    (form.salaryMin || form.salaryMax) && (
+                      <p className="text-primary text-sm font-medium">
+                        CTC: {formatSalaryAsLPA(form.salaryMin, form.salaryMax)}
+                      </p>
+                    )}
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Select
-                    label="Currency"
-                    options={toSelectOptions(SALARY_CURRENCY_LABELS)}
-                    value={form.currency || ''}
-                    onChange={(v) => updateField('currency', v)}
-                    placeholder="Select currency"
+                {/* Location sub-section — was step 3 in the
+                    pre-merge wizard. Same fields, same order,
+                    just no longer hidden behind its own
+                    `{step === 3 && ...}` guard. */}
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold text-[var(--text)]">Location & Work Mode</h2>
+                  <ServerAutoSuggest
+                    category="location"
+                    label="Location"
+                    placeholder="e.g. Bangalore, Karnataka"
+                    value={form.location}
+                    onChange={(v) => updateField('location', v as string)}
+                    allowCreate
+                    required
                   />
-                  <div className="flex items-end pb-1">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Select
+                      label="Work Mode"
+                      options={toSelectOptions(WORK_MODE_LABELS)}
+                      value={form.workMode || ''}
+                      onChange={(v) => updateField('workMode', v as CreateJobRequest['workMode'])}
+                      placeholder="Select mode"
+                    />
+                    <Select
+                      label="Shift Type"
+                      options={toSelectOptions(SHIFT_TYPE_LABELS)}
+                      value={form.shiftType || ''}
+                      onChange={(v) => updateField('shiftType', v as CreateJobRequest['shiftType'])}
+                      placeholder="Select shift"
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <Switch
-                      label="Disclose salary on listing"
-                      checked={form.salaryDisclosed !== false}
+                      label="Remote position"
+                      checked={form.isRemote || false}
+                      onChange={() => updateField('isRemote', !form.isRemote)}
+                    />
+                    <Switch
+                      label="Relocation assistance offered"
+                      checked={form.relocationAssistance || false}
                       onChange={() =>
-                        updateField('salaryDisclosed', form.salaryDisclosed === false)
+                        updateField('relocationAssistance', !form.relocationAssistance)
                       }
                     />
                   </div>
-                </div>
-                <Switch
-                  label="Salary is negotiable"
-                  checked={form.salaryNegotiable || false}
-                  onChange={() => updateField('salaryNegotiable', !form.salaryNegotiable)}
-                />
-                {(form.currency || 'INR') === 'INR' &&
-                  form.salaryType === 'ANNUAL' &&
-                  (form.salaryMin || form.salaryMax) && (
-                    <p className="text-primary text-sm font-medium">
-                      CTC: {formatSalaryAsLPA(form.salaryMin, form.salaryMax)}
-                    </p>
+                  <Input
+                    label="Travel Requirement (%)"
+                    type="number"
+                    placeholder="0"
+                    value={form.travelRequirementPercent?.toString() || ''}
+                    onChange={(e) =>
+                      updateField('travelRequirementPercent', parseInt(e.target.value) || undefined)
+                    }
+                  />
+                  <ServerAutoSuggest
+                    category="location"
+                    label="Additional Locations"
+                    placeholder="e.g. Mumbai, Delhi NCR"
+                    multiple
+                    allowCreate
+                    value={form.additionalLocations || []}
+                    onChange={(v) => updateField('additionalLocations', v as string[])}
+                  />
+                  <Switch
+                    label="Accommodation provided"
+                    checked={form.accommodationProvided || false}
+                    onChange={() =>
+                      updateField('accommodationProvided', !form.accommodationProvided)
+                    }
+                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Switch
+                      label="Walk-in interview"
+                      checked={form.isWalkIn || false}
+                      onChange={() => updateField('isWalkIn', !form.isWalkIn)}
+                    />
+                  </div>
+                  {form.isWalkIn && (
+                    <div className="space-y-4 rounded-lg border border-[var(--border)] p-4">
+                      <h3 className="text-sm font-medium text-[var(--text)]">Walk-in Details</h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <DatePicker
+                          label="Start Date & Time"
+                          value={form.walkInStartDate || ''}
+                          onChange={(v) => updateField('walkInStartDate', v)}
+                          mode="datetime"
+                        />
+                        <DatePicker
+                          label="End Date & Time"
+                          value={form.walkInEndDate || ''}
+                          onChange={(v) => updateField('walkInEndDate', v)}
+                          mode="datetime"
+                        />
+                      </div>
+                      <Input
+                        label="Time"
+                        placeholder="e.g. 10:00 AM - 4:00 PM"
+                        value={form.walkInTime || ''}
+                        onChange={(e) => updateField('walkInTime', e.target.value)}
+                      />
+                      <Input
+                        label="Venue"
+                        placeholder="Full address of walk-in venue"
+                        value={form.walkInVenue || ''}
+                        onChange={(e) => updateField('walkInVenue', e.target.value)}
+                      />
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Input
+                          label="Contact Person"
+                          placeholder="Name"
+                          value={form.walkInContactPerson || ''}
+                          onChange={(e) => updateField('walkInContactPerson', e.target.value)}
+                        />
+                        <Input
+                          label="Contact Phone"
+                          placeholder="Phone number"
+                          value={form.walkInContactPhone || ''}
+                          onChange={(e) => updateField('walkInContactPhone', e.target.value)}
+                        />
+                      </div>
+                      <Textarea
+                        label="Instructions"
+                        rows={2}
+                        placeholder="Any special instructions for walk-in candidates"
+                        value={form.walkInInstructions || ''}
+                        onChange={(e) => updateField('walkInInstructions', e.target.value)}
+                      />
+                    </div>
                   )}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      label="Contact Person"
+                      placeholder="HR Manager Name"
+                      value={form.contactPerson || ''}
+                      onChange={(e) => updateField('contactPerson', e.target.value)}
+                    />
+                    <Input
+                      label="Contact Email"
+                      type="email"
+                      placeholder="hr@company.com"
+                      value={form.contactEmail || ''}
+                      onChange={(e) => updateField('contactEmail', e.target.value)}
+                    />
+                  </div>
+                </div>
+                {/* /Location sub-section */}
               </div>
             )}
 
             {step === 3 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-[var(--text)]">Location & Work Mode</h2>
-                <ServerAutoSuggest
-                  category="location"
-                  label="Location"
-                  placeholder="e.g. Bangalore, Karnataka"
-                  value={form.location}
-                  onChange={(v) => updateField('location', v as string)}
-                  allowCreate
-                  required
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Select
-                    label="Work Mode"
-                    options={toSelectOptions(WORK_MODE_LABELS)}
-                    value={form.workMode || ''}
-                    onChange={(v) => updateField('workMode', v as CreateJobRequest['workMode'])}
-                    placeholder="Select mode"
-                  />
-                  <Select
-                    label="Shift Type"
-                    options={toSelectOptions(SHIFT_TYPE_LABELS)}
-                    value={form.shiftType || ''}
-                    onChange={(v) => updateField('shiftType', v as CreateJobRequest['shiftType'])}
-                    placeholder="Select shift"
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Switch
-                    label="Remote position"
-                    checked={form.isRemote || false}
-                    onChange={() => updateField('isRemote', !form.isRemote)}
-                  />
-                  <Switch
-                    label="Relocation assistance offered"
-                    checked={form.relocationAssistance || false}
-                    onChange={() => updateField('relocationAssistance', !form.relocationAssistance)}
-                  />
-                </div>
-                <Input
-                  label="Travel Requirement (%)"
-                  type="number"
-                  placeholder="0"
-                  value={form.travelRequirementPercent?.toString() || ''}
-                  onChange={(e) =>
-                    updateField('travelRequirementPercent', parseInt(e.target.value) || undefined)
-                  }
-                />
-                <ServerAutoSuggest
-                  category="location"
-                  label="Additional Locations"
-                  placeholder="e.g. Mumbai, Delhi NCR"
-                  multiple
-                  allowCreate
-                  value={form.additionalLocations || []}
-                  onChange={(v) => updateField('additionalLocations', v as string[])}
-                />
-                <Switch
-                  label="Accommodation provided"
-                  checked={form.accommodationProvided || false}
-                  onChange={() => updateField('accommodationProvided', !form.accommodationProvided)}
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Switch
-                    label="Walk-in interview"
-                    checked={form.isWalkIn || false}
-                    onChange={() => updateField('isWalkIn', !form.isWalkIn)}
-                  />
-                </div>
-                {form.isWalkIn && (
-                  <div className="space-y-4 rounded-lg border border-[var(--border)] p-4">
-                    <h3 className="text-sm font-medium text-[var(--text)]">Walk-in Details</h3>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <DatePicker
-                        label="Start Date & Time"
-                        value={form.walkInStartDate || ''}
-                        onChange={(v) => updateField('walkInStartDate', v)}
-                        mode="datetime"
-                      />
-                      <DatePicker
-                        label="End Date & Time"
-                        value={form.walkInEndDate || ''}
-                        onChange={(v) => updateField('walkInEndDate', v)}
-                        mode="datetime"
-                      />
-                    </div>
-                    <Input
-                      label="Time"
-                      placeholder="e.g. 10:00 AM - 4:00 PM"
-                      value={form.walkInTime || ''}
-                      onChange={(e) => updateField('walkInTime', e.target.value)}
-                    />
-                    <Input
-                      label="Venue"
-                      placeholder="Full address of walk-in venue"
-                      value={form.walkInVenue || ''}
-                      onChange={(e) => updateField('walkInVenue', e.target.value)}
-                    />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Input
-                        label="Contact Person"
-                        placeholder="Name"
-                        value={form.walkInContactPerson || ''}
-                        onChange={(e) => updateField('walkInContactPerson', e.target.value)}
-                      />
-                      <Input
-                        label="Contact Phone"
-                        placeholder="Phone number"
-                        value={form.walkInContactPhone || ''}
-                        onChange={(e) => updateField('walkInContactPhone', e.target.value)}
-                      />
-                    </div>
-                    <Textarea
-                      label="Instructions"
-                      rows={2}
-                      placeholder="Any special instructions for walk-in candidates"
-                      value={form.walkInInstructions || ''}
-                      onChange={(e) => updateField('walkInInstructions', e.target.value)}
-                    />
-                  </div>
-                )}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input
-                    label="Contact Person"
-                    placeholder="HR Manager Name"
-                    value={form.contactPerson || ''}
-                    onChange={(e) => updateField('contactPerson', e.target.value)}
-                  />
-                  <Input
-                    label="Contact Email"
-                    type="email"
-                    placeholder="hr@company.com"
-                    value={form.contactEmail || ''}
-                    onChange={(e) => updateField('contactEmail', e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {step === 4 && (
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold text-[var(--text)]">Skills, Tags & More</h2>
 
@@ -1140,185 +1167,192 @@ export default function PostJobPage() {
               </div>
             )}
 
-            {step === 5 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-[var(--text)]">
-                  Requirements & Inclusion
-                </h2>
+            {step === 4 && (
+              <div className="space-y-6">
+                {/* Step 4 = the old "Requirements & Inclusion" +
+                    "Screening & Posting" steps merged. Two
+                    clearly-headed sub-sections — eligibility on
+                    top, screening/posting on bottom. Same
+                    structure as merged step 2 above. */}
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold text-[var(--text)]">
+                    Requirements & Inclusion
+                  </h2>
 
-                {/* Diversity Tags */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
-                    Diversity & Inclusion Tags
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {DIVERSITY_TAG_OPTIONS.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => {
-                          const existing = form.diversityTags || [];
-                          updateField(
-                            'diversityTags',
-                            existing.includes(tag)
-                              ? existing.filter((t) => t !== tag)
-                              : [...existing, tag],
-                          );
-                        }}
-                        className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                          (form.diversityTags || []).includes(tag)
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'hover:border-primary/50 border-[var(--border)] text-[var(--text-muted)]'
-                        }`}
-                      >
-                        {tag}
-                      </button>
-                    ))}
+                  {/* Diversity Tags */}
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-[var(--text)]">
+                      Diversity & Inclusion Tags
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {DIVERSITY_TAG_OPTIONS.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            const existing = form.diversityTags || [];
+                            updateField(
+                              'diversityTags',
+                              existing.includes(tag)
+                                ? existing.filter((t) => t !== tag)
+                                : [...existing, tag],
+                            );
+                          }}
+                          className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                            (form.diversityTags || []).includes(tag)
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'hover:border-primary/50 border-[var(--border)] text-[var(--text-muted)]'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Switch
-                    label="PwD (Differently Abled) Friendly"
-                    checked={form.isPwdFriendly || false}
-                    onChange={() => updateField('isPwdFriendly', !form.isPwdFriendly)}
-                  />
-                  <Switch
-                    label="Visa Sponsorship Available"
-                    checked={form.visaSponsorshipAvailable || false}
-                    onChange={() =>
-                      updateField('visaSponsorshipAvailable', !form.visaSponsorshipAvailable)
-                    }
-                  />
-                  <Switch
-                    label="Background Check Required"
-                    checked={form.backgroundCheckRequired || false}
-                    onChange={() =>
-                      updateField('backgroundCheckRequired', !form.backgroundCheckRequired)
-                    }
-                  />
-                  <Switch
-                    label="Passport Required"
-                    checked={form.passportRequired || false}
-                    onChange={() => updateField('passportRequired', !form.passportRequired)}
-                  />
-                  <Switch
-                    label="Confidential Posting"
-                    checked={form.isConfidential || false}
-                    onChange={() => updateField('isConfidential', !form.isConfidential)}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Switch
+                      label="PwD (Differently Abled) Friendly"
+                      checked={form.isPwdFriendly || false}
+                      onChange={() => updateField('isPwdFriendly', !form.isPwdFriendly)}
+                    />
+                    <Switch
+                      label="Visa Sponsorship Available"
+                      checked={form.visaSponsorshipAvailable || false}
+                      onChange={() =>
+                        updateField('visaSponsorshipAvailable', !form.visaSponsorshipAvailable)
+                      }
+                    />
+                    <Switch
+                      label="Background Check Required"
+                      checked={form.backgroundCheckRequired || false}
+                      onChange={() =>
+                        updateField('backgroundCheckRequired', !form.backgroundCheckRequired)
+                      }
+                    />
+                    <Switch
+                      label="Passport Required"
+                      checked={form.passportRequired || false}
+                      onChange={() => updateField('passportRequired', !form.passportRequired)}
+                    />
+                    <Switch
+                      label="Confidential Posting"
+                      checked={form.isConfidential || false}
+                      onChange={() => updateField('isConfidential', !form.isConfidential)}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Select
+                      label="Gender Preference"
+                      options={toSelectOptions(GENDER_PREFERENCE_LABELS)}
+                      value={form.genderPreference || ''}
+                      onChange={(v) =>
+                        updateField('genderPreference', v as CreateJobRequest['genderPreference'])
+                      }
+                      placeholder="Select"
+                    />
+                    <Select
+                      label="Driving License Required"
+                      options={toSelectOptions(DRIVING_LICENSE_TYPE_LABELS)}
+                      value={form.drivingLicenseRequired || ''}
+                      onChange={(v) =>
+                        updateField(
+                          'drivingLicenseRequired',
+                          v as CreateJobRequest['drivingLicenseRequired'],
+                        )
+                      }
+                      placeholder="Select"
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      label="Minimum Age"
+                      type="number"
+                      placeholder="18"
+                      value={form.ageMin?.toString() || ''}
+                      onChange={(e) => updateField('ageMin', parseInt(e.target.value) || undefined)}
+                    />
+                    <Input
+                      label="Maximum Age"
+                      type="number"
+                      placeholder="65"
+                      value={form.ageMax?.toString() || ''}
+                      onChange={(e) => updateField('ageMax', parseInt(e.target.value) || undefined)}
+                    />
+                  </div>
+
+                  <Textarea
+                    label="Bond / Service Agreement Details"
+                    rows={2}
+                    placeholder="e.g. 2-year service bond with ₹2L penalty clause"
+                    value={form.bondDetails || ''}
+                    onChange={(e) => updateField('bondDetails', e.target.value)}
                   />
                 </div>
+                {/* Screening & Posting sub-section — was step 6
+                    in the pre-merge wizard. */}
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold text-[var(--text)]">Screening & Posting</h2>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Select
-                    label="Gender Preference"
-                    options={toSelectOptions(GENDER_PREFERENCE_LABELS)}
-                    value={form.genderPreference || ''}
-                    onChange={(v) =>
-                      updateField('genderPreference', v as CreateJobRequest['genderPreference'])
-                    }
-                    placeholder="Select"
+                  <ScreeningQuestionBuilder
+                    questions={form.screeningQuestions || []}
+                    onChange={(q) => updateField('screeningQuestions', q)}
                   />
-                  <Select
-                    label="Driving License Required"
-                    options={toSelectOptions(DRIVING_LICENSE_TYPE_LABELS)}
-                    value={form.drivingLicenseRequired || ''}
-                    onChange={(v) =>
-                      updateField(
-                        'drivingLicenseRequired',
-                        v as CreateJobRequest['drivingLicenseRequired'],
-                      )
-                    }
-                    placeholder="Select"
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Select
+                      label="Posting Visibility"
+                      options={toSelectOptions(POSTING_VISIBILITY_LABELS)}
+                      value={form.postingVisibility || ''}
+                      onChange={(v) =>
+                        updateField('postingVisibility', v as CreateJobRequest['postingVisibility'])
+                      }
+                      placeholder="Select visibility"
+                    />
+                    <Select
+                      label="Apply Method"
+                      options={toSelectOptions(APPLY_METHOD_LABELS)}
+                      value={form.applyMethod || ''}
+                      onChange={(v) =>
+                        updateField('applyMethod', v as CreateJobRequest['applyMethod'])
+                      }
+                      placeholder="Select method"
+                    />
+                  </div>
+
+                  {form.applyMethod === 'EXTERNAL_URL' && (
+                    <Input
+                      label="External Apply URL"
+                      placeholder="https://careers.company.com/apply/123"
+                      value={form.externalApplyUrl || ''}
+                      onChange={(e) => updateField('externalApplyUrl', e.target.value)}
+                      required
+                    />
+                  )}
+
+                  <DatePicker
+                    label="Schedule Publish Date & Time (leave empty to publish immediately)"
+                    value={form.scheduledPublishAt || ''}
+                    onChange={(v) => updateField('scheduledPublishAt', v)}
+                    mode="datetime"
+                  />
+
+                  <DatePicker
+                    label="Job Expiration Date & Time"
+                    helperText="Date and time when this job will automatically expire and close"
+                    value={form.expiresAt || ''}
+                    onChange={(v) => updateField('expiresAt', v)}
+                    mode="datetime"
+                    minDate={new Date()}
                   />
                 </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input
-                    label="Minimum Age"
-                    type="number"
-                    placeholder="18"
-                    value={form.ageMin?.toString() || ''}
-                    onChange={(e) => updateField('ageMin', parseInt(e.target.value) || undefined)}
-                  />
-                  <Input
-                    label="Maximum Age"
-                    type="number"
-                    placeholder="65"
-                    value={form.ageMax?.toString() || ''}
-                    onChange={(e) => updateField('ageMax', parseInt(e.target.value) || undefined)}
-                  />
-                </div>
-
-                <Textarea
-                  label="Bond / Service Agreement Details"
-                  rows={2}
-                  placeholder="e.g. 2-year service bond with ₹2L penalty clause"
-                  value={form.bondDetails || ''}
-                  onChange={(e) => updateField('bondDetails', e.target.value)}
-                />
+                {/* /Screening sub-section */}
               </div>
             )}
 
-            {step === 6 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-[var(--text)]">Screening & Posting</h2>
-
-                <ScreeningQuestionBuilder
-                  questions={form.screeningQuestions || []}
-                  onChange={(q) => updateField('screeningQuestions', q)}
-                />
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Select
-                    label="Posting Visibility"
-                    options={toSelectOptions(POSTING_VISIBILITY_LABELS)}
-                    value={form.postingVisibility || ''}
-                    onChange={(v) =>
-                      updateField('postingVisibility', v as CreateJobRequest['postingVisibility'])
-                    }
-                    placeholder="Select visibility"
-                  />
-                  <Select
-                    label="Apply Method"
-                    options={toSelectOptions(APPLY_METHOD_LABELS)}
-                    value={form.applyMethod || ''}
-                    onChange={(v) =>
-                      updateField('applyMethod', v as CreateJobRequest['applyMethod'])
-                    }
-                    placeholder="Select method"
-                  />
-                </div>
-
-                {form.applyMethod === 'EXTERNAL_URL' && (
-                  <Input
-                    label="External Apply URL"
-                    placeholder="https://careers.company.com/apply/123"
-                    value={form.externalApplyUrl || ''}
-                    onChange={(e) => updateField('externalApplyUrl', e.target.value)}
-                    required
-                  />
-                )}
-
-                <DatePicker
-                  label="Schedule Publish Date & Time (leave empty to publish immediately)"
-                  value={form.scheduledPublishAt || ''}
-                  onChange={(v) => updateField('scheduledPublishAt', v)}
-                  mode="datetime"
-                />
-
-                <DatePicker
-                  label="Job Expiration Date & Time"
-                  helperText="Date and time when this job will automatically expire and close"
-                  value={form.expiresAt || ''}
-                  onChange={(v) => updateField('expiresAt', v)}
-                  mode="datetime"
-                  minDate={new Date()}
-                />
-              </div>
-            )}
-
-            {step === 7 && (
+            {step === 5 && (
               <div className="space-y-6">
                 <h2 className="text-lg font-semibold text-[var(--text)]">
                   Preview Your Job Posting
@@ -1834,7 +1868,7 @@ export default function PostJobPage() {
             <span className="text-sm text-[var(--text-muted)]">
               Step {step + 1} of {steps.length}
             </span>
-            {step < 7 ? (
+            {step < 5 ? (
               <Button onClick={handleNext} disabled={!canGoNext()} tooltip="Continue to next step">
                 Next <ChevronRight className="ml-1 h-4 w-4" />
               </Button>

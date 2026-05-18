@@ -20,6 +20,7 @@ import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Fuse from 'fuse.js';
 import { ChevronDown, ExternalLink, Search, Sparkles } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { useFaqLocale } from '@/hooks/use-faq-locale';
@@ -161,14 +162,30 @@ export default function HelpModal({
                     </p>
                   </div>
                   <ChevronDown
-                    className={`h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    className={`h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
                   />
                 </button>
-                {isOpen && (
-                  <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)]/40 px-4 py-3 text-sm leading-relaxed text-[var(--text-secondary)]">
-                    {faq.answer}
-                  </div>
-                )}
+                {/* Smooth collapse — height + opacity tween, matches
+                    the help-page FAQ + PageFaqSection convention. */}
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      key="content"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{
+                        height: { duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] },
+                        opacity: { duration: 0.2, ease: 'easeOut' },
+                      }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)]/40 px-4 py-3 text-sm leading-relaxed text-[var(--text-secondary)]">
+                        {faq.answer}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })

@@ -20,6 +20,8 @@ import {
   Info,
   Mail,
   HelpCircle,
+  Home,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
@@ -39,7 +41,14 @@ import type { Role } from '@/types/auth';
 // header from feeling cluttered next to Jobs / Companies / Pricing.
 // Those three routes still exist and remain reachable from
 // Resources + the footer + sitemap — nothing was deleted.
-const publicNavItems = [{ label: 'Home', href: ROUTES.PUBLIC.HOME }];
+//
+// Each item carries its own lucide icon so the nav is visually
+// uniform with Jobs / Companies (which render their trigger via
+// NavMegaMenu's `Icon` prop) and the Pricing + Resources triggers
+// below — every top-level item shows an icon next to its label.
+const publicNavItems: { label: string; href: string; icon: typeof Home }[] = [
+  { label: 'Home', href: ROUTES.PUBLIC.HOME, icon: Home },
+];
 
 interface ResourcesMenuChild {
   label: string;
@@ -228,21 +237,25 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-1 md:flex">
-          {publicNavItems.map((item) => (
-            <Tooltip key={item.href} content={`Go to ${item.label}`}>
-              <Link
-                href={item.href}
-                className={cn(
-                  'rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                  pathname === item.href
-                    ? 'bg-primary-light text-primary'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
-                )}
-              >
-                {item.label}
-              </Link>
-            </Tooltip>
-          ))}
+          {publicNavItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Tooltip key={item.href} content={`Go to ${item.label}`}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    pathname === item.href
+                      ? 'bg-primary-light text-primary'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              </Tooltip>
+            );
+          })}
 
           {/* Jobs + Companies mega-menus (Phase 10). Sit between
               Home and the Pricing dropdown. */}
@@ -278,6 +291,7 @@ export default function Header() {
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
               )}
             >
+              <Tag className="h-4 w-4" />
               Pricing
               <ChevronDown
                 className={cn('h-4 w-4 transition-transform', pricingMenuOpen && 'rotate-180')}
@@ -371,6 +385,7 @@ export default function Header() {
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]',
               )}
             >
+              <BookOpen className="h-4 w-4" />
               Resources
               <ChevronDown
                 className={cn('h-4 w-4 transition-transform', resourcesMenuOpen && 'rotate-180')}
@@ -554,26 +569,31 @@ export default function Header() {
           aria-label="Mobile navigation"
         >
           <nav className="flex flex-col px-4 py-3">
-            {publicNavItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                  pathname === item.href
-                    ? 'bg-primary-light text-primary'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {publicNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    pathname === item.href
+                      ? 'bg-primary-light text-primary'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+                  )}
+                >
+                  <Icon className="h-4 w-4 flex-none" />
+                  {item.label}
+                </Link>
+              );
+            })}
 
             {/* Mobile Jobs + Companies accordion (Phase 10). */}
             <MobileNavMegaMenu onNavigate={() => setMobileMenuOpen(false)} />
 
             {/* Pricing section — header + indented audience-specific links */}
-            <p className="mt-3 mb-1 px-3 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+            <p className="mt-3 mb-1 flex items-center gap-1.5 px-3 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+              <Tag className="h-3.5 w-3.5" />
               Pricing
             </p>
             {pricingMenuItems.map((child) => {
@@ -616,7 +636,8 @@ export default function Header() {
                 into a labelled group so all routes remain reachable
                 without a second tap on mobile. Matches the Pricing
                 section's "header + indented links" shape just above. */}
-            <p className="mt-3 mb-1 px-3 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+            <p className="mt-3 mb-1 flex items-center gap-1.5 px-3 text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
+              <BookOpen className="h-3.5 w-3.5" />
               Resources
             </p>
             {resourcesMenuItems.map((child) => {
