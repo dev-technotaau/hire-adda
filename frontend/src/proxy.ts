@@ -87,8 +87,10 @@ function nextWithCsp(): NextResponse {
       'https://vercel.live',
       // Razorpay
       'https://checkout.razorpay.com https://cdn.razorpay.com',
-      // Microsoft Clarity
-      'https://www.clarity.ms https://c.clarity.ms',
+      // Microsoft Clarity — loader from www.clarity.ms, the actual
+      // tag JS from scripts.clarity.ms, beacons via c.clarity.ms.
+      // Wildcard covers all three plus future host changes.
+      'https://*.clarity.ms',
       // LinkedIn Insight Tag
       'https://snap.licdn.com',
       // Contentsquare (Hotjar successor)
@@ -107,8 +109,13 @@ function nextWithCsp(): NextResponse {
       'https://bat.bing.com',
       // Snap
       'https://sc-static.net',
-      // PostHog (cloud + asset CDN)
-      'https://*.i.posthog.com https://*-assets.i.posthog.com',
+      // PostHog (cloud ingest + asset CDN). The single wildcard
+      // matches both `us.i.posthog.com` and `us-assets.i.posthog.com`
+      // (CSP host wildcards match any leftmost-label including
+      // dashed ones). The previous `*-assets.i.posthog.com` entry
+      // was invalid CSP syntax — wildcards can only be the leftmost
+      // label, not part of one — and browsers ignored it entirely.
+      'https://*.i.posthog.com',
       // Adobe Launch
       'https://assets.adobedtm.com',
       firebaseDbWildcard,
@@ -128,16 +135,19 @@ function nextWithCsp(): NextResponse {
       'https://vercel.live https://vercel.com',
       // Razorpay
       'https://cdn.razorpay.com',
-      // Microsoft Clarity beacons
-      'https://www.clarity.ms https://c.clarity.ms https://c.bing.com',
+      // Microsoft Clarity beacons (wildcard covers all clarity.ms
+      // hosts: www, c, scripts, plus telemetry to c.bing.com).
+      'https://*.clarity.ms https://c.bing.com',
       // LinkedIn pixel beacon
       'https://px.ads.linkedin.com',
       // Contentsquare static assets / avatars
       'https://*.contentsquare.net',
       // Pinterest noscript pixel
       'https://ct.pinterest.com',
-      // Reddit beacon
-      'https://events.redditmedia.com',
+      // Reddit beacon (events.redditmedia.com is the trackEvent
+      // endpoint; alb.reddit.com is the image-pixel beacon the
+      // SDK loads on every track call — both are required).
+      'https://events.redditmedia.com https://alb.reddit.com',
       // Twitter beacon
       'https://t.co https://analytics.twitter.com',
       // TikTok beacon
@@ -168,16 +178,21 @@ function nextWithCsp(): NextResponse {
       'https://firebaseinstallations.googleapis.com https://firebaseremoteconfig.googleapis.com https://firestore.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com',
       // Razorpay
       'https://api.razorpay.com https://lumberjack.razorpay.com https://lumberjack-cx.razorpay.com',
-      // Microsoft Clarity telemetry
+      // Microsoft Clarity telemetry (all *.clarity.ms hosts +
+      // c.bing.com for the Bing-side fingerprint relay).
       'https://*.clarity.ms https://c.bing.com',
       // LinkedIn Insight (XHR)
       'https://px.ads.linkedin.com',
-      // Contentsquare telemetry (XHR + WebSocket for live replays)
-      'https://*.contentsquare.net wss://*.contentsquare.net',
+      // Contentsquare telemetry (XHR + WebSocket for live replays).
+      // The verify-installation auto-check pings
+      // tcvsapi.contentsquare.com which is on the .com TLD, NOT
+      // .net — both apexes must be allowed.
+      'https://*.contentsquare.net wss://*.contentsquare.net https://*.contentsquare.com',
       // Pinterest
       'https://ct.pinterest.com',
-      // Reddit
-      'https://events.redditmedia.com',
+      // Reddit (pixel-config XHR fetches conversion-event config
+      // before each track call; events beacon takes the actual hit).
+      'https://events.redditmedia.com https://pixel-config.reddit.com',
       // Twitter
       'https://analytics.twitter.com https://t.co',
       // TikTok
