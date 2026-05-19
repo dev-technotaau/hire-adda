@@ -24,10 +24,15 @@ interface Badge {
   height: number;
   /**
    * Optional Tailwind height override for the rendered <Image>. Defaults
-   * to `h-5 w-auto` (20 px tall). Badges whose SVG ships with thick
-   * internal whitespace (PCI-DSS, SSL, GST, Udyam, Startup-India,
-   * Make-in-India) need a taller render so the visible artwork fills
-   * the 36 px tile like the Razorpay logo does.
+   * to `h-5 w-auto` (20 px tall). Only used now for badges whose SVG is
+   * intrinsically square (Udyam, GST) — at h-5 they'd render 20 × 20
+   * which is too small next to wordmark logos. h-7 (28 px) pulls them
+   * back into visual parity. The other badges (PCI-DSS, SSL,
+   * Startup-India, Make-in-India) used to need this override too because
+   * their SVGs had heavy interior padding; the source SVGs have since
+   * been cropped to their tight content bbox (see public/icons/payments/
+   * commit) so the artwork now fills the SVG itself and `h-5 w-auto` is
+   * enough to render at a sensible width.
    */
   imgClassName?: string;
 }
@@ -48,7 +53,6 @@ const BADGES: Badge[] = [
     helper: 'Card data is never stored on Hire Adda servers',
     width: 60,
     height: 32,
-    imgClassName: BADGE_IMG_CLASS_LARGE,
   },
   {
     slug: 'ssl-secure',
@@ -56,7 +60,6 @@ const BADGES: Badge[] = [
     helper: 'Every payment + login secured by TLS 1.3',
     width: 56,
     height: 32,
-    imgClassName: BADGE_IMG_CLASS_LARGE,
   },
   {
     slug: 'gstin-verified',
@@ -80,7 +83,6 @@ const BADGES: Badge[] = [
     helper: 'DPIIT-recognised startup',
     width: 80,
     height: 32,
-    imgClassName: BADGE_IMG_CLASS_LARGE,
   },
   {
     slug: 'make-in-india',
@@ -88,7 +90,6 @@ const BADGES: Badge[] = [
     helper: 'Built in Bharat, for Bharat',
     width: 80,
     height: 32,
-    imgClassName: BADGE_IMG_CLASS_LARGE,
   },
 ];
 

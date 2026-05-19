@@ -331,7 +331,7 @@ export default function RoleRegisterForm({ role }: RoleRegisterFormProps) {
 
                 <PhoneInput
                   label="Phone Number"
-                  placeholder="9876543210"
+                  placeholder="9876xxxxxx"
                   error={errors.mobileNumber?.message}
                   helperText="Optional, for OTP verification"
                   value={watch('mobileNumber')}
@@ -424,7 +424,7 @@ export default function RoleRegisterForm({ role }: RoleRegisterFormProps) {
                     <button
                       type="button"
                       onClick={() => setLegalModal('terms')}
-                      className="text-primary hover:underline"
+                      className="text-primary underline underline-offset-2"
                       title="View Terms of Service"
                     >
                       Terms of Service
@@ -433,7 +433,7 @@ export default function RoleRegisterForm({ role }: RoleRegisterFormProps) {
                     <button
                       type="button"
                       onClick={() => setLegalModal('privacy')}
-                      className="text-primary hover:underline"
+                      className="text-primary underline underline-offset-2"
                       title="View Privacy Policy"
                     >
                       Privacy Policy

@@ -5,6 +5,7 @@ import {
   useRef,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   type KeyboardEvent,
   type ChangeEvent,
@@ -128,6 +129,17 @@ export default function SearchBar({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  /* ---- a11y: unique listbox id ----
+     Per-instance id so multiple SearchBars on the same page don't
+     collide (the public job listing shell + hero search both render
+     on /jobs, for example). `aria-controls` / `aria-owns` reference
+     this id but ONLY when the dropdown is actually in the DOM —
+     axe-core / Lighthouse flag aria-* attributes that point at a
+     non-existent target ("[aria-*] attributes do not have valid
+     values"). */
+  const reactId = useId();
+  const listboxId = `search-listbox-${reactId.replace(/[:]/g, '')}`;
   // max-h-[400px] + padding — flip upward when there's not enough room below
   const dropdownPlacement = usePopoverPlacement(containerRef, isOpen, 420);
 
@@ -413,7 +425,7 @@ export default function SearchBar({
       role="combobox"
       aria-expanded={showDropdown}
       aria-haspopup="listbox"
-      aria-owns="search-listbox"
+      aria-owns={showDropdown ? listboxId : undefined}
     >
       {/* Type tabs */}
       {showTypeTabs && (
@@ -460,8 +472,10 @@ export default function SearchBar({
           spellCheck={false}
           role="searchbox"
           aria-autocomplete="list"
-          aria-controls="search-listbox"
-          aria-activedescendant={activeIndex >= 0 ? navigableItems[activeIndex]?.id : undefined}
+          aria-controls={showDropdown ? listboxId : undefined}
+          aria-activedescendant={
+            showDropdown && activeIndex >= 0 ? navigableItems[activeIndex]?.id : undefined
+          }
           className={cn(
             // rounded-lg matches Button + AutoSuggest + ExperienceSelect for
             // a uniform corner radius across every search-row element.
@@ -493,7 +507,7 @@ export default function SearchBar({
       {showDropdown && (
         <div
           ref={dropdownRef}
-          id="search-listbox"
+          id={listboxId}
           role="listbox"
           data-lenis-prevent
           className={cn(

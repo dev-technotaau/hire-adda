@@ -147,7 +147,7 @@ export default function PageFaqSection({
           {visible.length === 0 ? (
             <p className="rounded-xl border border-dashed border-[var(--border)] bg-white px-4 py-6 text-center text-sm text-[var(--text-muted)]">
               No matches in this section. Try the{' '}
-              <Link href="/help" className="text-primary hover:underline">
+              <Link href="/help" className="text-primary underline underline-offset-2">
                 full FAQ
               </Link>{' '}
               instead.
@@ -209,7 +209,7 @@ export default function PageFaqSection({
 
         <p className="mt-6 text-center text-xs text-[var(--text-muted)]">
           Looking for something else?{' '}
-          <Link href={`/help?lang=${locale}`} className="text-primary hover:underline">
+          <Link href={`/help?lang=${locale}`} className="text-primary underline underline-offset-2">
             Browse all FAQs
           </Link>
         </p>

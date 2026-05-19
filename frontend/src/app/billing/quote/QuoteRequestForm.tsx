@@ -13,6 +13,7 @@ import Breadcrumbs from '@/components/common/Breadcrumbs';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import Textarea from '@/components/ui/Textarea';
 import Spinner from '@/components/ui/Spinner';
 import Turnstile from '@/components/auth/Turnstile';
@@ -61,6 +62,8 @@ export default function QuoteRequestForm() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(schema),
@@ -132,6 +135,8 @@ export default function QuoteRequestForm() {
       register={register}
       errors={errors}
       handleSubmit={handleSubmit}
+      setValue={setValue}
+      phoneValue={watch('phone') || ''}
       onSubmit={onSubmit}
       submitting={submitting}
       error={error}
@@ -175,6 +180,11 @@ interface QuoteFormBodyProps {
   register: ReturnType<typeof useForm<FormInput, unknown, FormValues>>['register'];
   errors: ReturnType<typeof useForm<FormInput, unknown, FormValues>>['formState']['errors'];
   handleSubmit: ReturnType<typeof useForm<FormInput, unknown, FormValues>>['handleSubmit'];
+  // Phone field is wired through PhoneInput (country-code picker) so
+  // it needs setValue + a live `watch`'d value rather than the usual
+  // `register` spread.
+  setValue: ReturnType<typeof useForm<FormInput, unknown, FormValues>>['setValue'];
+  phoneValue: string;
   onSubmit: (values: FormValues) => Promise<void>;
   submitting: boolean;
   error: string | null;
@@ -192,6 +202,8 @@ function QuoteFormBody({
   register,
   errors,
   handleSubmit,
+  setValue,
+  phoneValue,
   onSubmit,
   submitting,
   error,
@@ -276,11 +288,11 @@ function QuoteFormBody({
               {...register('email')}
               error={errors.email?.message}
             />
-            <Input
+            <PhoneInput
               label="Phone"
-              type="tel"
-              placeholder="+91 98765 43210"
-              {...register('phone')}
+              placeholder="9876xxxxxx"
+              value={phoneValue}
+              onValueChange={(val) => setValue('phone', val, { shouldValidate: true })}
               error={errors.phone?.message}
             />
             <div>

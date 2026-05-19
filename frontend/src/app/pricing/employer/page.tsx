@@ -72,7 +72,7 @@ export default async function EmployerPricingPage({
   return (
     <PublicLayout>
       <JsonLd id="jsonld-pricing-employer-service" data={employerServiceJsonLd} />
-      <main className="bg-[var(--bg)]">
+      <div className="bg-[var(--bg)]">
         <EmployerHelplineBanner />
 
         {/* Hero */}
@@ -146,7 +146,7 @@ export default async function EmployerPricingPage({
             />
           </div>
         </section>
-      </main>
+      </div>
     </PublicLayout>
   );
 }

@@ -18,6 +18,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import Textarea from '@/components/ui/Textarea';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
@@ -330,11 +331,11 @@ export default function EmployerAssistedHiringPage() {
                     }
                   />
                 </div>
-                <Input
+                <PhoneInput
                   label="Contact phone (WhatsApp)"
                   value={form.contactPhone}
-                  onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
-                  placeholder="+91 90000 00000"
+                  onValueChange={(val) => setForm({ ...form, contactPhone: val })}
+                  placeholder="9876xxxxxx"
                   disabled={
                     request.status === 'DELIVERED' ||
                     request.status === 'COMPLETED' ||

@@ -5,10 +5,23 @@ import type { NextRequest } from 'next/server';
  * Create a NextResponse.next() with CSP nonce headers attached.
  *
  * CSP notes:
+ * - script-src uses the canonical "graceful-degradation" pattern recommended
+ *   by Google's csp-evaluator + Lighthouse: per-request nonce + 'strict-dynamic'
+ *   + 'unsafe-inline' + host allowlist. Modern browsers (CSP3) honor the nonce
+ *   and IGNORE 'unsafe-inline' / host allowlists; 'strict-dynamic' then trusts
+ *   any further scripts dynamically inserted by nonce'd code (no need to keep
+ *   the host allowlist in sync with every third-party CDN they pull in).
+ *   Legacy browsers (CSP2-only) fall back to 'unsafe-inline' + the explicit
+ *   host allowlist. This sidesteps the "host allowlists can be bypassed"
+ *   warning from Lighthouse without breaking older clients.
  * - style-src requires 'unsafe-inline' — Next.js/Tailwind inject non-nonce'd inline styles
  *   at build & runtime. This is a known framework limitation, not removable without breakage.
  * - frame-ancestors 'none' is the modern CSP3 replacement for X-Frame-Options: DENY
  * - report-to (Reporting API v1) sent alongside deprecated report-uri for forward compat
+ * - require-trusted-types-for is intentionally NOT enabled: third-party scripts
+ *   (analytics, Razorpay checkout) and parts of React/Next.js still write to
+ *   DOM sinks without TT policies. Rolling this out safely needs a long
+ *   report-only observation period first.
  */
 function nextWithCsp(): NextResponse {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
@@ -74,7 +87,13 @@ function nextWithCsp(): NextResponse {
   const csp = [
     "default-src 'self'",
     [
-      `script-src 'self' 'nonce-${nonce}' 'unsafe-eval'`,
+      // Order matters for old-browser fallback: nonce first so it's the
+      // primary trust anchor, then strict-dynamic (CSP3) so trusted scripts
+      // can inject further scripts without rebuilding the allowlist on
+      // every third-party CDN bump. 'unsafe-inline' + 'self' + the explicit
+      // host allowlist below are the CSP2 fallback path (ignored by modern
+      // browsers when nonce is present).
+      `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-inline' 'unsafe-eval' 'self'`,
       // GA + GTM
       'https://www.googletagmanager.com https://www.google-analytics.com',
       // Facebook

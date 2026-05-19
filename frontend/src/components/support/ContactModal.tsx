@@ -166,7 +166,7 @@ export default function ContactModal({
                 setTicketNumber(null);
                 setForm((p) => ({ ...p, subject: '', message: '' }));
               }}
-              className="text-primary hover:underline"
+              className="text-primary underline underline-offset-2"
             >
               Send another message
             </button>

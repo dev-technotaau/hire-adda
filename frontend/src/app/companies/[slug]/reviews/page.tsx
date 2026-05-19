@@ -250,7 +250,7 @@ export default async function CompanyReviewsPage({
   return (
     <PublicLayout>
       <JsonLd data={graph(...schemas)} />
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
         <ReviewsClient
           slug={slug}
           companyName={company.companyName}
@@ -271,7 +271,7 @@ export default async function CompanyReviewsPage({
             withSchema={false}
           />
         </div>
-      </main>
+      </div>
     </PublicLayout>
   );
 }

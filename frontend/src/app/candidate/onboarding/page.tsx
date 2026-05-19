@@ -1745,7 +1745,7 @@ export default function CandidateOnboardingPage() {
 
           <PhoneInput
             label="Phone Number"
-            placeholder="9876543210"
+            placeholder="9876xxxxxx"
             value={data.phone}
             onValueChange={(val) => updateData({ phone: val })}
           />
@@ -3678,7 +3678,7 @@ export default function CandidateOnboardingPage() {
                   />
                   <PhoneInput
                     label="Phone"
-                    placeholder="9876543210"
+                    placeholder="9876xxxxxx"
                     value={ref.phone || ''}
                     onValueChange={(val) => updateReference(i, { phone: val })}
                   />

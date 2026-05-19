@@ -24,7 +24,7 @@ export default function ContactSection({ form, updateField }: ContactSectionProp
         />
         <PhoneInput
           label="Contact Phone"
-          placeholder="9876543210"
+          placeholder="9876xxxxxx"
           value={form.contactPhone || ''}
           onValueChange={(val) => updateField('contactPhone', val)}
         />

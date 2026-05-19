@@ -554,9 +554,18 @@ export default async function RootLayout({
         <OfflineBanner />
         <Providers>
           <SmoothScroll>
-            <main id="main-content" className="flex flex-1 flex-col">
+            {/* This is the skip-link target, but it's NOT the <main>
+                landmark. Every page renders inside a layout component
+                (PublicLayout / AuthLayout / DashboardLayout) — or its
+                own page-shell — that already provides a single proper
+                <main> landmark. Making this outer wrapper a <main> too
+                would cause nested <main> elements (invalid HTML +
+                duplicate-landmark a11y violation). The skip link
+                targets the id, not the element type, so accessibility
+                of "Skip to main content" is preserved. */}
+            <div id="main-content" className="flex flex-1 flex-col">
               {children}
-            </main>
+            </div>
           </SmoothScroll>
         </Providers>
         <WebVitals />

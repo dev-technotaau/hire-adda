@@ -156,10 +156,33 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
   ) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
     const detectedCode = value ? detectCode(value) : null;
-    // Internal code tracks user's manual selection from dropdown
-    const [internalCode, setInternalCode] = useState(detectedCode || defaultCode);
-    // Derive effective code: external value detection wins, fallback to internal state
-    const selectedCode = detectedCode || internalCode;
+    // Track the user's manual selection by ISO (unique per country),
+    // NOT by dial code — multiple countries share a code (US/CA on
+    // +1, UK/JE/GG/IM on +44, KZ/RU on +7, etc.). Tracking only the
+    // code meant `find(c => c.code === selectedCode)` always returned
+    // the first listed match, silently overriding the user's pick.
+    const [internalIso, setInternalIso] = useState<string | null>(null);
+
+    // Effective country resolution:
+    //   1. If the user picked a country and its dial code is still
+    //      compatible with the current value (or there's no value),
+    //      respect that pick — this is what fixes the US-vs-Canada
+    //      bug after manual selection.
+    //   2. Otherwise fall back to detecting from the value's prefix,
+    //      then to the default country code. The first +N match in
+    //      COUNTRY_CODES still wins for unprefilled / externally-set
+    //      values, which is the best we can do without ambiguity.
+    const currentCountry = useMemo(() => {
+      if (internalIso) {
+        const picked = COUNTRY_CODES.find((c) => c.iso === internalIso);
+        if (picked && (!detectedCode || picked.code === detectedCode)) {
+          return picked;
+        }
+      }
+      const code = detectedCode || defaultCode;
+      return COUNTRY_CODES.find((c) => c.code === code) || COUNTRY_CODES[0];
+    }, [internalIso, detectedCode, defaultCode]);
+    const selectedCode = currentCountry.code;
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [highlightIndex, setHighlightIndex] = useState(-1);
@@ -207,7 +230,6 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
     }, [highlightIndex]);
 
     const localValue = value ? stripCode(value, selectedCode) : '';
-    const currentCountry = COUNTRY_CODES.find((c) => c.code === selectedCode) || COUNTRY_CODES[0];
 
     const emitChange = useCallback(
       (local: string, code: string) => {
@@ -231,7 +253,7 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
     };
 
     const handleCodeSelect = (c: CountryCode) => {
-      setInternalCode(c.code);
+      setInternalIso(c.iso);
       setDropdownOpen(false);
       setSearch('');
       setHighlightIndex(-1);

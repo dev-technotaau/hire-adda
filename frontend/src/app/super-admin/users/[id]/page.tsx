@@ -61,6 +61,7 @@ import Badge from '@/components/ui/Badge';
 import Breadcrumb from '@/components/ui/Breadcrumb';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import Select from '@/components/ui/Select';
 import Switch from '@/components/ui/Switch';
 import Skeleton from '@/components/ui/Skeleton';
@@ -2710,17 +2711,17 @@ export default function SuperAdminUserDetailPage() {
                               onChange={(e) => setEditEmail(e.target.value)}
                             />
                             <div className="grid gap-4 sm:grid-cols-2">
-                              <Input
+                              <PhoneInput
                                 label="Mobile Number"
-                                placeholder="+919876543210"
+                                placeholder="9876xxxxxx"
                                 value={editMobileNumber}
-                                onChange={(e) => setEditMobileNumber(e.target.value)}
+                                onValueChange={setEditMobileNumber}
                               />
-                              <Input
+                              <PhoneInput
                                 label="WhatsApp Number"
-                                placeholder="+919876543210"
+                                placeholder="9876xxxxxx"
                                 value={editWhatsappNumber}
-                                onChange={(e) => setEditWhatsappNumber(e.target.value)}
+                                onValueChange={setEditWhatsappNumber}
                               />
                             </div>
                             <div className="grid gap-4 sm:grid-cols-2">
@@ -4148,11 +4149,11 @@ function AdminMobileSection({ userId, user, invalidateUser }: AdminSectionProps)
 
         {step === 'form' && (
           <div className="space-y-4">
-            <Input
+            <PhoneInput
               label="Mobile Number"
-              placeholder="+919876543210"
+              placeholder="9876xxxxxx"
               value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
+              onValueChange={setMobileNumber}
             />
             {user.mobileNumber && (
               <Input
@@ -4458,11 +4459,11 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
 
         {step === 'add-separate' && (
           <div className="space-y-4">
-            <Input
+            <PhoneInput
               label="WhatsApp Number"
-              placeholder="+919876543210"
+              placeholder="9876xxxxxx"
               value={whatsappNumber}
-              onChange={(e) => setWhatsappNumber(e.target.value)}
+              onValueChange={setWhatsappNumber}
             />
             <div className="flex gap-3">
               <Button
@@ -4482,11 +4483,11 @@ function AdminWhatsappSection({ userId, user, invalidateUser }: AdminSectionProp
 
         {step === 'change' && (
           <div className="space-y-4">
-            <Input
+            <PhoneInput
               label="New WhatsApp Number"
-              placeholder="+919876543210"
+              placeholder="9876xxxxxx"
               value={whatsappNumber}
-              onChange={(e) => setWhatsappNumber(e.target.value)}
+              onValueChange={setWhatsappNumber}
             />
             <Input
               label="Your Password (Super Admin)"

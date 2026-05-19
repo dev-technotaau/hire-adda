@@ -112,7 +112,7 @@ export default function VendorDetailPage() {
   if (!data || error) {
     return (
       <PublicLayout>
-        <main className="px-4 py-12">
+        <div className="px-4 py-12">
           <div className="mx-auto max-w-3xl">
             <Card padding="lg">
               <p className="text-sm text-[var(--text-muted)]">Vendor not found.</p>
@@ -124,7 +124,7 @@ export default function VendorDetailPage() {
               </Link>
             </Card>
           </div>
-        </main>
+        </div>
       </PublicLayout>
     );
   }
@@ -134,7 +134,7 @@ export default function VendorDetailPage() {
 
   return (
     <PublicLayout>
-      <main className="bg-[var(--bg)] px-4 py-10 sm:px-6 lg:px-8">
+      <div className="bg-[var(--bg)] px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl">
           <Link
             href={ROUTES.VENDORS_PUBLIC.LIST}
@@ -305,7 +305,7 @@ export default function VendorDetailPage() {
             </Section>
           </Card>
         </div>
-      </main>
+      </div>
 
       {showLeadModal && (
         <Modal

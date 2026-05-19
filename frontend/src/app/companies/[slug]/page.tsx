@@ -167,7 +167,7 @@ export default async function CompanyDetailPage({
   return (
     <PublicLayout>
       <JsonLd id="jsonld-company-detail" data={jsonLd} />
-      <main className="bg-[var(--bg)]">
+      <div className="bg-[var(--bg)]">
         {/* ━━━━━━━━━━━━━━━━━━━━ FULL-WIDTH HERO ━━━━━━━━━━━━━━━━━━━━
             Cover band stretches edge-to-edge (breaks out of the
             max-w-7xl content rail) and ALWAYS renders — when a company
@@ -831,7 +831,7 @@ export default async function CompanyDetailPage({
             />
           </div>
         </div>
-      </main>
+      </div>
     </PublicLayout>
   );
 }

@@ -86,7 +86,7 @@ export default async function PricingPage({
   return (
     <PublicLayout>
       <JsonLd id="jsonld-pricing" data={pricingJsonLd} />
-      <main className="bg-[var(--bg)]">
+      <div className="bg-[var(--bg)]">
         {/* Post-onboarding banner — shown right after the employer wizard so
             new employers can either purchase a paid plan immediately or fall
             through to the dashboard on the auto-granted Free plan. */}
@@ -191,7 +191,7 @@ export default async function PricingPage({
             <Breadcrumbs items={[{ name: 'Pricing' }]} withSchema={false} />
           </div>
         </div>
-      </main>
+      </div>
     </PublicLayout>
   );
 }

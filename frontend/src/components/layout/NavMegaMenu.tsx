@@ -23,7 +23,7 @@ import { ChevronDown, Briefcase, Building2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { curatedService, type CuratedType, type CuratedListing } from '@/services/curated.service';
-import { curatedHref } from '@/lib/curated-href';
+import { curatedHref, curatedAriaLabel } from '@/lib/curated-href';
 
 type MenuKey = 'jobs' | 'companies' | null;
 
@@ -255,6 +255,7 @@ function MenuColumn({
           <li key={item.id}>
             <Link
               href={curatedHref(item)}
+              aria-label={curatedAriaLabel(item)}
               onClick={onNavigate}
               className="hover:text-primary block rounded-md py-1 text-sm text-[var(--text-secondary)] transition-colors"
             >
@@ -305,6 +306,7 @@ export function MobileNavMegaMenu({ onNavigate }: { onNavigate?: () => void }) {
                   <li key={it.id}>
                     <Link
                       href={curatedHref(it)}
+                      aria-label={curatedAriaLabel(it)}
                       onClick={onNavigate}
                       className="hover:text-primary block rounded-md py-1 text-sm text-[var(--text-secondary)]"
                     >
@@ -350,6 +352,7 @@ export function MobileNavMegaMenu({ onNavigate }: { onNavigate?: () => void }) {
                   <li key={it.id}>
                     <Link
                       href={curatedHref(it)}
+                      aria-label={curatedAriaLabel(it)}
                       onClick={onNavigate}
                       className="hover:text-primary block rounded-md py-1 text-sm text-[var(--text-secondary)]"
                     >

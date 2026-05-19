@@ -5,6 +5,7 @@ import {
   useRef,
   useCallback,
   useEffect,
+  useId,
   type KeyboardEvent,
   type ChangeEvent,
   forwardRef,
@@ -135,6 +136,20 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
     const dropdownRef = useRef<HTMLDivElement>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
     const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+    /* ---- a11y: per-instance listbox + option ids ----
+       Multiple AutoSuggests render on the same page (hero has the
+       location picker; job listing page has filter AutoSuggests),
+       so the listbox id and option ids must be unique per instance —
+       otherwise `aria-controls` / `aria-activedescendant` resolve to
+       the wrong element. Also, the listbox only exists while
+       showDropdown is true, so we omit `aria-controls` when closed —
+       axe-core / Lighthouse flag aria-* values that point to missing
+       targets ("[aria-*] attributes do not have valid values"). */
+    const reactId = useId();
+    const idBase = `autosuggest-${reactId.replace(/[:]/g, '')}`;
+    const listboxId = `${idBase}-listbox`;
+    const optionId = (i: number | string) => `${idBase}-option-${i}`;
     // Suppresses the next onFocus-opens-dropdown behavior when we programmatically
     // refocus the input right after a single-mode selection. Without this, focus()
     // re-triggers onFocus → setIsOpen(true), undoing the setIsOpen(false) we just set.
@@ -492,9 +507,9 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
             role="combobox"
             aria-expanded={showDropdown}
             aria-autocomplete="list"
-            aria-controls="autosuggest-listbox"
+            aria-controls={showDropdown ? listboxId : undefined}
             aria-activedescendant={
-              activeIndex >= 0 ? `autosuggest-option-${activeIndex}` : undefined
+              showDropdown && activeIndex >= 0 ? optionId(activeIndex) : undefined
             }
             className={cn(
               'min-w-[80px] flex-1 border-none bg-transparent p-0 text-[var(--text)] placeholder:text-[var(--text-muted)]',
@@ -549,7 +564,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
         {showDropdown && (
           <div
             ref={dropdownRef}
-            id="autosuggest-listbox"
+            id={listboxId}
             role="listbox"
             data-lenis-prevent
             aria-multiselectable={multiple}
@@ -603,7 +618,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
                             ref={(el) => {
                               itemRefs.current[globalIdx] = el;
                             }}
-                            id={`autosuggest-option-${globalIdx}`}
+                            id={optionId(globalIdx)}
                             role="option"
                             aria-selected={activeIndex === globalIdx}
                             onClick={() => handleSelect(option.value)}
@@ -650,7 +665,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
                       ref={(el) => {
                         itemRefs.current[i] = el;
                       }}
-                      id={`autosuggest-option-${i}`}
+                      id={optionId(i)}
                       role="option"
                       aria-selected={isSelected || activeIndex === i}
                       onClick={() => handleSelect(option.value)}
@@ -706,7 +721,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
                     ref={(el) => {
                       itemRefs.current[filteredSuggestions.length] = el;
                     }}
-                    id={`autosuggest-option-${filteredSuggestions.length}`}
+                    id={optionId(filteredSuggestions.length)}
                     role="option"
                     aria-selected={activeIndex === filteredSuggestions.length}
                     onClick={() => handleCreate(inputValue)}
@@ -757,7 +772,7 @@ const AutoSuggest = forwardRef<AutoSuggestRef, AutoSuggestProps>(
                             ref={(el) => {
                               itemRefs.current[globalIdx] = el;
                             }}
-                            id={`autosuggest-option-${globalIdx}`}
+                            id={optionId(globalIdx)}
                             role="option"
                             aria-selected={isSelected || activeIndex === globalIdx}
                             onClick={() => handleSelect(option.value)}

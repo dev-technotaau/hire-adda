@@ -1585,7 +1585,11 @@ export default function JobSearchPage() {
       {showSidebar && (
         <div className="fixed inset-0 z-50 lg:hidden">
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowSidebar(false)} />
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowSidebar(false)}
+            aria-hidden="true"
+          />
           {/* Drawer */}
           <div className="absolute inset-y-0 left-0 w-[320px] max-w-[85vw] overflow-y-auto bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">

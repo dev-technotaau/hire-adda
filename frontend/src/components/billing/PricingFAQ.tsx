@@ -25,7 +25,7 @@ export default function PricingFAQ() {
             <p className="mt-1 text-sm text-[var(--text-muted)]">
               Yes. You can cancel auto-renew anytime from your dashboard and keep using the plan
               benefits till validity expires. See our{' '}
-              <Link href="/refund-policy" className="text-primary hover:underline">
+              <Link href="/refund-policy" className="text-primary underline underline-offset-2">
                 refund policy
               </Link>
               .

@@ -64,7 +64,7 @@ export default function PublicJobDetailView({ data }: Props) {
   };
 
   return (
-    <main className="bg-[var(--bg)]">
+    <div className="bg-[var(--bg)]">
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Main column */}
@@ -413,6 +413,6 @@ export default function PublicJobDetailView({ data }: Props) {
           />
         </div>
       </div>
-    </main>
+    </div>
   );
 }

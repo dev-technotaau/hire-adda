@@ -133,7 +133,11 @@ export default function HelpModal({
           <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-6 text-center">
             <p className="text-sm text-[var(--text-muted)]">
               No matches found. Try different words or{' '}
-              <Link href="/help" className="text-primary hover:underline" onClick={onClose}>
+              <Link
+                href="/help"
+                className="text-primary underline underline-offset-2"
+                onClick={onClose}
+              >
                 browse all FAQs
               </Link>
               .

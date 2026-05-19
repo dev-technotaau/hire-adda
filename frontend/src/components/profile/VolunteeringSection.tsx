@@ -217,7 +217,7 @@ export default function VolunteeringSection({ form, updateField }: ProfileSectio
                   />
                   <PhoneInput
                     label="Phone"
-                    placeholder="9876543210"
+                    placeholder="9876xxxxxx"
                     value={ref.phone || ''}
                     onValueChange={(val) => updateReference(i, { phone: val })}
                   />

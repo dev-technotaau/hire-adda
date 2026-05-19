@@ -2768,7 +2768,11 @@ function CandidateCard({
               </button>
               {contactOpen && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setContactOpen(false)} />
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setContactOpen(false)}
+                    aria-hidden="true"
+                  />
                   <div className="absolute top-full right-0 z-50 mt-1 w-44 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-1 shadow-lg">
                     {candidate.user?.email && (
                       <a

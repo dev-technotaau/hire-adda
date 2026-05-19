@@ -282,7 +282,11 @@ export default function EmployerCandidateDetailPage() {
               </Button>
               {contactOpen && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setContactOpen(false)} />
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setContactOpen(false)}
+                    aria-hidden="true"
+                  />
                   <div className="absolute top-full right-0 z-50 mt-1 w-72 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2 shadow-lg">
                     {unlockedContact ? (
                       <div className="space-y-1.5">

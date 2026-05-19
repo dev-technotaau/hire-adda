@@ -2331,7 +2331,7 @@ export default function EmployerOnboardingPage() {
         />
         <PhoneInput
           label={isIndividual ? 'Your Phone' : 'Contact Phone'}
-          placeholder="9876543210"
+          placeholder="9876xxxxxx"
           value={data.contactPhone}
           onValueChange={(val) => updateData({ contactPhone: val })}
         />

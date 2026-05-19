@@ -70,9 +70,10 @@ const GROUPS: PaymentGroup[] = [
         label: 'Net Banking — all major banks',
         width: 64,
         height: 32,
-        // Logo SVG has heavy interior whitespace — render larger so the
-        // visible artwork matches the other payment tiles visually.
-        imgClassName: 'h-7 w-auto',
+        // Source SVG was cropped to its tight content bbox (was 100x100
+        // with a thin horizontal strip in the middle), so the default
+        // `h-5 w-auto` now renders at a proper width like the other
+        // payment tiles. The earlier `h-7` override is no longer needed.
       },
     ],
   },

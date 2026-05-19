@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Menu, ChevronDown, LogOut, ExternalLink, Keyboard, Home, Search } from 'lucide-react';
+import Button from '@/components/ui/Button';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
@@ -53,9 +54,20 @@ export default function DashboardHeader() {
   const { user, logout } = useAuth();
   const { setSidebarOpen } = useUIStore();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  // Keyword is now tracked locally instead of letting <SearchBar>
+  // navigate on its own — see the submit-only flow below. The hero
+  // search bar uses the same pattern so selecting a suggestion or
+  // pressing Enter populates this field, and navigation happens only
+  // when the user clicks the Search button (mirroring user request).
+  const [keyword, setKeyword] = useState('');
   const [location, setLocation] = useState('');
   const [locationInput, setLocationInput] = useState('');
   const [experience, setExperience] = useState<ExperienceValue | null>(null);
+  // Container ref drives focus chaining between the three search-row
+  // cells: keyword → location → experience. Same `data-hero-field`
+  // marker convention as HeroJobSearchBar so the behaviour is
+  // identical (flight-booking-style auto-advance after each commit).
+  const searchRowRef = useRef<HTMLDivElement | null>(null);
 
   const { data: companyData } = useQuery({
     queryKey: QUERY_KEYS.EMPLOYERS.COMPANY,
@@ -151,14 +163,45 @@ export default function DashboardHeader() {
     }
   }, [userMenuOpen, handleEscape]);
 
-  const navigateToSearch = useCallback(
-    (query: string) => {
+  // ── Focus chaining (mirrors HeroJobSearchBar) ─────────────────
+  // After a value is committed in field N, focus moves to field N+1.
+  // Wrapped in a single rAF so the suggestion dropdown can close +
+  // React commits the same-tick setState before we move focus —
+  // otherwise the dropdown's outside-click handler can steal focus
+  // back.
+  const focusNextSearchField = useCallback((currentIdx: number) => {
+    const el = searchRowRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      const cells = el.querySelectorAll<HTMLElement>('[data-search-field]');
+      const next = cells[currentIdx + 1];
+      if (!next) return;
+      // First focusable inside the next cell — input for SearchBar /
+      // AutoSuggest, button for ExperienceSelect's dropdown trigger.
+      const focusable =
+        next.querySelector<HTMLElement>('input:not([type="hidden"])') ??
+        next.querySelector<HTMLElement>('button') ??
+        next;
+      focusable.focus();
+    });
+  }, []);
+
+  // ── Submit ────────────────────────────────────────────────────
+  // The only place that navigates. Reads current `keyword`,
+  // `location`, `experience` state — all three are optional, so
+  // hitting Search with just a keyword (or just a location, or
+  // nothing) is allowed and routes to the listing page with whatever
+  // filters the user provided.
+  const submit = useCallback(
+    (opts?: { keyword?: string; location?: string }) => {
       if (!user?.role) return;
       const basePath = SEARCH_ROUTES[user.role];
       if (!basePath) return;
+      const kw = (opts?.keyword ?? keyword).trim();
+      const loc = (opts?.location ?? location).trim();
       const params = new URLSearchParams();
-      if (query) params.set('q', query);
-      if (location) params.set('location', location);
+      if (kw) params.set('q', kw);
+      if (loc) params.set('location', loc);
       if (experience) {
         if (user.role === 'CANDIDATE') {
           // Job search uses single "experience" string like "3-5" or "12+"
@@ -175,30 +218,47 @@ export default function DashboardHeader() {
       const qs = params.toString();
       router.push(qs ? `${basePath}?${qs}` : basePath);
     },
-    [user, location, experience, router],
+    [user, keyword, location, experience, router],
   );
 
+  // ── Field handlers (populate-only, no navigation) ─────────────
+  // SearchBar's onSearch fires on Enter; onSelect fires on
+  // dropdown selection. Both used to call navigateToSearch and
+  // jump to /jobs immediately, which meant the user couldn't add
+  // location/experience filters before searching. Now they only
+  // commit the chosen keyword and advance focus to the next cell;
+  // the user clicks Search to actually navigate.
   const handleSearch = useCallback(
     (query: string) => {
-      navigateToSearch(query);
+      setKeyword(query);
+      focusNextSearchField(0);
     },
-    [navigateToSearch],
+    [focusNextSearchField],
   );
 
   const handleSelect = useCallback(
     (item: AutocompleteResult) => {
-      navigateToSearch(item.text);
+      setKeyword(item.text);
+      focusNextSearchField(0);
     },
-    [navigateToSearch],
+    [focusNextSearchField],
   );
 
   const handleLocationChange = useCallback(
     (value: string | string[]) => {
       const loc = typeof value === 'string' ? value : value[0] || '';
       setLocation(loc);
-      if (loc) addLocationHistory.mutate(loc);
+      if (loc) {
+        addLocationHistory.mutate(loc);
+        // Auto-advance to the experience field only when the user
+        // actually picked a value — clearing via backspace / X-button
+        // shouldn't yank focus forward. AutoSuggest's onChange fires
+        // on selection or Enter-with-allowCreate, not on every
+        // keystroke, so this is safe.
+        focusNextSearchField(1);
+      }
     },
-    [addLocationHistory],
+    [addLocationHistory, focusNextSearchField],
   );
 
   const openCommandPalette = () => {
@@ -228,28 +288,33 @@ export default function DashboardHeader() {
           <Logo size="md" href={dashboardPath} />
         </div>
 
-        {/* Center — Search section */}
+        {/* Center — Search section.
+            Same submit-only behaviour as the homepage HeroJobSearchBar:
+            typing or picking a suggestion ONLY populates the keyword
+            field (does NOT navigate). The user is then free to choose
+            a location and experience and only navigates when they
+            click the Search button. Location + experience remain
+            optional — the button works with any subset of the three
+            fields filled in. Mirrors `HeroJobSearchBar.tsx`. */}
         {hasSearchPage ? (
-          <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 px-6 md:flex">
-            <div className="w-full max-w-sm">
+          <div
+            ref={searchRowRef}
+            className="hidden min-w-0 flex-1 items-center justify-center gap-2 px-6 md:flex"
+          >
+            <div className="min-w-0 flex-1 lg:max-w-sm" data-search-field>
               <SearchBar
                 placeholder={searchPlaceholder}
                 searchType={searchType}
+                defaultValue={keyword}
                 onSearch={handleSearch}
                 onSelect={handleSelect}
                 size="lg"
                 fullWidth
               />
             </div>
-            <div className="hidden w-36 shrink-0 lg:block">
-              <ExperienceSelect
-                value={experience}
-                onChange={setExperience}
-                size="lg"
-                className="w-full"
-              />
-            </div>
-            <div className="hidden w-full max-w-[220px] lg:block">
+            {/* Field 1 — Location. Hidden until lg so md screens keep
+                the keyword + button only. */}
+            <div className="hidden w-full max-w-[220px] lg:block" data-search-field>
               <AutoSuggest
                 placeholder="Location"
                 value={location}
@@ -265,6 +330,25 @@ export default function DashboardHeader() {
                 focusSections={locationFocusSections}
               />
             </div>
+            {/* Field 2 — Experience. Last auto-advance step. */}
+            <div className="hidden w-36 shrink-0 lg:block" data-search-field>
+              <ExperienceSelect
+                value={experience}
+                onChange={setExperience}
+                size="lg"
+                className="w-full"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              leftIcon={<Search className="h-4 w-4" />}
+              onClick={() => submit()}
+              tooltip="Search"
+            >
+              Search
+            </Button>
           </div>
         ) : (
           <div className="hidden min-w-0 flex-1 px-6 md:block">
@@ -358,7 +442,11 @@ export default function DashboardHeader() {
 
             {userMenuOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setUserMenuOpen(false)}
+                  aria-hidden="true"
+                />
                 <div className="animate-scale-in absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-lg">
                   {/* User info */}
                   <div className="border-b border-[var(--border)] px-4 py-3">

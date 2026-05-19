@@ -129,7 +129,7 @@ export default function VendorsDirectoryPage() {
 
   return (
     <PublicLayout>
-      <main className="bg-[var(--bg)]">
+      <div className="bg-[var(--bg)]">
         <section className="bg-gradient-to-b from-[var(--bg-secondary)] to-[var(--bg)] px-4 py-12 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text)] sm:text-4xl">
@@ -266,7 +266,7 @@ export default function VendorsDirectoryPage() {
             )}
           </div>
         </section>
-      </main>
+      </div>
 
       {showAutoModal && (
         <Modal

@@ -41,10 +41,10 @@ export default function TeamsVendorsWidget() {
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-base font-semibold text-[var(--text)]">Teams &amp; Vendors</h3>
           <div className="flex gap-3 text-xs">
-            <Link href="/super-admin/teams" className="text-primary hover:underline">
+            <Link href="/super-admin/teams" className="text-primary underline underline-offset-2">
               All teams →
             </Link>
-            <Link href="/super-admin/vendors" className="text-primary hover:underline">
+            <Link href="/super-admin/vendors" className="text-primary underline underline-offset-2">
               All vendors →
             </Link>
           </div>

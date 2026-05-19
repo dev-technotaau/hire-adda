@@ -425,6 +425,22 @@ export default async function Home() {
 
   return (
     <PublicLayout>
+      {/* LCP preload — Lighthouse measured a 7.9s "resource load delay"
+          on this image even with `priority` + `fetchPriority="high"` on
+          the <Image>, because Next.js's auto-emitted preload lands AFTER
+          the render-blocking CSS chunks in <head>. React 19 hoists this
+          <link> to the very top of <head>, so the browser discovers the
+          hero asset on the first byte of HTML and races it in parallel
+          with the CSS. Desktop-only (`media="(min-width:1024px)"`) so
+          mobile clients — where the illustration is `hidden lg:block` —
+          don't waste bandwidth on it. */}
+      <link
+        rel="preload"
+        as="image"
+        href="/images/hero-illustration.svg"
+        fetchPriority="high"
+        media="(min-width: 1024px)"
+      />
       <AuthHomeRedirect />
       {/* Homepage structured-data graph — WebPage + SiteNavigationElement
           + dedicated hero SearchAction. Sitewide Organization + WebSite +
@@ -995,7 +1011,7 @@ export default async function Home() {
                       <point.icon className="h-4 w-4 text-[var(--success)]" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-[var(--text)]">{point.title}</h4>
+                      <h3 className="font-semibold text-[var(--text)]">{point.title}</h3>
                       <p className="text-sm text-[var(--text-secondary)]">{point.description}</p>
                     </div>
                   </li>
@@ -1036,7 +1052,7 @@ export default async function Home() {
               <Link
                 href="/contact"
                 title="Go to contact page"
-                className="text-primary hover:underline"
+                className="text-primary underline underline-offset-2"
               >
                 contact us
               </Link>

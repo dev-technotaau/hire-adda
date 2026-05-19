@@ -10,6 +10,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import PhoneInput from '@/components/ui/PhoneInput';
 import ServerAutoSuggest from '@/components/ui/ServerAutoSuggest';
 import ServerSuggestionInput from '@/components/ui/ServerSuggestionInput';
 import DatePicker from '@/components/ui/DatePicker';
@@ -682,11 +683,11 @@ export default function EditJobPage() {
                     value={form.walkInContactPerson || ''}
                     onChange={(e) => handleChange('walkInContactPerson', e.target.value)}
                   />
-                  <Input
+                  <PhoneInput
                     label="Contact Phone"
-                    placeholder="+91 98765 43210"
+                    placeholder="9876xxxxxx"
                     value={form.walkInContactPhone || ''}
-                    onChange={(e) => handleChange('walkInContactPhone', e.target.value)}
+                    onValueChange={(val) => handleChange('walkInContactPhone', val)}
                   />
                 </div>
                 <Textarea

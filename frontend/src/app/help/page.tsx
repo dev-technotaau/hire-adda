@@ -151,7 +151,7 @@ export default function HelpPage() {
             <div className="mx-auto mt-6 flex max-w-2xl flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
               <span>
                 By{' '}
-                <Link href="/about" className="text-primary hover:underline">
+                <Link href="/about" className="text-primary underline underline-offset-2">
                   Hire Adda Editorial Team
                 </Link>
               </span>

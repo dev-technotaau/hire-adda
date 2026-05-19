@@ -46,7 +46,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { curatedService, type CuratedListing } from '@/services/curated.service';
-import { curatedHref } from '@/lib/curated-href';
+import { curatedHref, curatedAriaLabel } from '@/lib/curated-href';
 
 /** Maps slug → icon. Falls back to a generic icon for unmapped slugs. */
 const ICON_BY_SLUG: Record<string, LucideIcon> = {
@@ -145,6 +145,7 @@ export default function JobsCategoriesChipsSection({ limit = 13, className }: Pr
             <li key={item.id} role="listitem" className={`lg:col-span-2 ${placement}`}>
               <Link
                 href={curatedHref(item)}
+                aria-label={curatedAriaLabel(item)}
                 className="group flex h-full flex-col items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-[var(--primary)]/40 hover:shadow-md"
               >
                 <span className="text-primary flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary)]/10 transition-colors group-hover:bg-[var(--primary)]/20">

@@ -228,7 +228,7 @@ export default function PersonalSection({ form, updateField, profile }: Personal
           <div className="grid gap-4 sm:grid-cols-2">
             <PhoneInput
               label="Phone"
-              placeholder="9876543210"
+              placeholder="9876xxxxxx"
               value={form.phone || ''}
               onValueChange={(val) => updateField('phone', val)}
             />
@@ -352,7 +352,7 @@ export default function PersonalSection({ form, updateField, profile }: Personal
             <div className="grid gap-4 sm:grid-cols-2">
               <PhoneInput
                 label="Alternate Phone"
-                placeholder="9876543210"
+                placeholder="9876xxxxxx"
                 value={form.alternatePhone || ''}
                 onValueChange={(val) => updateField('alternatePhone', val)}
               />

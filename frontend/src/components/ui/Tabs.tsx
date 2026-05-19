@@ -50,7 +50,15 @@ function Tabs({
               type="button"
               role="tab"
               aria-selected={isActive}
-              aria-controls={`tabpanel-${tab.key}`}
+              // Only the active tab's panel is rendered in the DOM
+              // (see the single `<div role="tabpanel" id={panelId}>`
+              // below, which itself is gated on `children`). axe-core
+              // / Lighthouse flag aria-controls values that point at a
+              // non-existent id — so we omit aria-controls on inactive
+              // tabs (and on the active one too if no panel rendered).
+              // The back-link via `aria-labelledby` on the active
+              // panel still wires the pair for assistive tech.
+              aria-controls={isActive && children ? panelId : undefined}
               tabIndex={isActive ? 0 : -1}
               onClick={() => onChange(tab.key)}
               className={cn(

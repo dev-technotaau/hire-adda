@@ -104,7 +104,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ slu
   return (
     <PublicLayout>
       <JsonLd id="jsonld-pricing-plan" data={planJsonLd} />
-      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <Link
           href="/pricing"
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text)]"
@@ -202,7 +202,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ slu
           audience={audience}
           defaultCategory="BILLING"
         />
-      </main>
+      </div>
 
       <PageFaqSection
         pageContext="pricing-detail"

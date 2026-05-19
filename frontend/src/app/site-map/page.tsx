@@ -826,19 +826,19 @@ export default function SitemapPage() {
         <div className="mt-12 rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] p-6 text-center text-sm text-[var(--text-muted)] sm:p-8">
           <p>
             Looking for something you can&apos;t find?{' '}
-            <Link href="/contact" className="text-primary hover:underline">
+            <Link href="/contact" className="text-primary underline underline-offset-2">
               Get in touch
             </Link>{' '}
             or explore our{' '}
-            <Link href="/help" className="text-primary hover:underline">
+            <Link href="/help" className="text-primary underline underline-offset-2">
               Help Center
             </Link>
             . Search engines: see{' '}
-            <Link href="/sitemap.xml" className="text-primary hover:underline">
+            <Link href="/sitemap.xml" className="text-primary underline underline-offset-2">
               /sitemap.xml
             </Link>{' '}
             and{' '}
-            <Link href="/robots.txt" className="text-primary hover:underline">
+            <Link href="/robots.txt" className="text-primary underline underline-offset-2">
               /robots.txt
             </Link>
             .

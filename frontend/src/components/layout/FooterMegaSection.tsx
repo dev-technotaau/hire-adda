@@ -23,7 +23,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { curatedService, type CuratedListing, type CuratedType } from '@/services/curated.service';
-import { curatedHref } from '@/lib/curated-href';
+import { curatedHref, curatedAriaLabel } from '@/lib/curated-href';
 
 const ROWS_DEFAULT = 5;
 const COLUMNS = 5;
@@ -44,12 +44,20 @@ function FooterSection({ heading, items }: SectionProps) {
       <h3 className="mb-5 text-sm font-bold tracking-wider text-[var(--text)] uppercase">
         {heading}
       </h3>
-      <ul className="grid gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-5">
+      {/* 2 cols on mobile (matches the Quick Links / Job Seekers /
+          Employers columns in Footer.tsx) → 5 cols on lg+. Default
+          was 1 col which left a lot of dead space below each label
+          on phones; bumping to 2 mirrors the rest of the footer and
+          fills the row. Font size aligned to text-sm site-wide so
+          the mega-section labels don't look smaller than the
+          Footer column links sitting directly below them. */}
+      <ul className="grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-5">
         {visible.map((item) => (
           <li key={item.id}>
             <Link
               href={curatedHref(item)}
-              className="block rounded text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--primary)] sm:text-sm"
+              aria-label={curatedAriaLabel(item)}
+              className="block rounded text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--primary)]"
             >
               {item.label}
             </Link>

@@ -180,7 +180,19 @@ export default function Header() {
   const unreadCount = unreadData?.data?.count || 0;
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10);
+    // Only re-render when the boolean actually flips — without this
+    // guard, every scroll event setState'd the same value and React
+    // re-rendered the entire header tree, multiplying the per-tick
+    // cost (and contributing to Lighthouse "forced reflow" warnings
+    // when combined with other scroll listeners on the page).
+    let last = false;
+    const handleScroll = () => {
+      const next = window.scrollY > 10;
+      if (next !== last) {
+        last = next;
+        setScrolled(next);
+      }
+    };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -474,7 +486,11 @@ export default function Header() {
 
                 {userMenuOpen && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setUserMenuOpen(false)}
+                      aria-hidden="true"
+                    />
                     <div className="animate-scale-in absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-lg">
                       <div className="border-b border-[var(--border)] px-4 py-3">
                         <p className="text-sm font-medium text-[var(--text)]">
@@ -552,7 +568,7 @@ export default function Header() {
               className="rounded-lg p-2.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] md:hidden"
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileMenuOpen}
-              aria-controls="mobile-nav"
+              aria-controls={mobileMenuOpen ? 'mobile-nav' : undefined}
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>

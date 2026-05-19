@@ -661,7 +661,7 @@ function MobileVerificationSection() {
           {!hasMobile && (
             <PhoneInput
               label="Mobile Number"
-              placeholder="9876543210"
+              placeholder="9876xxxxxx"
               value={mobileNumber}
               onValueChange={setMobileNumber}
             />
@@ -703,7 +703,7 @@ function MobileVerificationSection() {
         <form onSubmit={handleInitiateChange} className="max-w-md space-y-4">
           <PhoneInput
             label="New Mobile Number"
-            placeholder="9876543210"
+            placeholder="9876xxxxxx"
             value={mobileNumber}
             onValueChange={setMobileNumber}
             error={errors.mobileNumber}
@@ -1015,7 +1015,7 @@ function WhatsAppVerificationSection() {
           </div>
           <PhoneInput
             label="New WhatsApp Number"
-            placeholder="9876543210"
+            placeholder="9876xxxxxx"
             value={newWhatsappNumber}
             onValueChange={setNewWhatsappNumber}
             required

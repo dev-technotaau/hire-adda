@@ -441,7 +441,10 @@ function PublishStep({
             <p className="mt-1 text-sm text-[var(--text-muted)]">
               Review your details below and toggle visibility to publish your profile in the public
               directory at{' '}
-              <a href={ROUTES.VENDORS_PUBLIC.LIST} className="text-primary hover:underline">
+              <a
+                href={ROUTES.VENDORS_PUBLIC.LIST}
+                className="text-primary underline underline-offset-2"
+              >
                 /vendors
               </a>
               .

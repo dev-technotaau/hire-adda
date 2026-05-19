@@ -32,7 +32,7 @@ export default async function CandidatePricingPage({
 
   return (
     <PublicLayout>
-      <main className="bg-[var(--bg)]">
+      <div className="bg-[var(--bg)]">
         {/* Hero */}
         <section className="bg-gradient-to-b from-[var(--bg-secondary)] to-[var(--bg)] px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl text-center">
@@ -101,7 +101,7 @@ export default async function CandidatePricingPage({
             />
           </div>
         </section>
-      </main>
+      </div>
     </PublicLayout>
   );
 }
